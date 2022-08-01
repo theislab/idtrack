@@ -43,7 +43,8 @@ class VerifyOrganism:
             Todo.
         """
         formal_name = self.get_formal_name()
-        return self.ensembl_release_dataframe.loc[formal_name]["ensembl_release"]
+        # returns int not float!
+        return int(self.ensembl_release_dataframe.loc[formal_name]["ensembl_release"])
 
     def _get_formal_name(self):
         """Todo.
