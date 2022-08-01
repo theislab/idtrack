@@ -12,6 +12,7 @@ import pandas as pd
 
 from ._database_manager import DatabaseManager
 from ._dataset import Dataset
+from ._graph_history import GraphHistory
 from ._verify_organism import VerifyOrganism
 
 # TODO LIST:
@@ -83,9 +84,7 @@ def initialize_minimal(
         st.initialize_form_conversion()
 
     if initialize_graph:
-        g: Optional[GraphHistory_Depracated] = GraphHistory_Depracated(
-            dm, target_format_graph, narrow=narrow_edge_attributes
-        )
+        g: Optional[GraphHistory] = GraphHistory(dm, narrow=narrow_edge_attributes)
     else:
         g = None
 
@@ -101,6 +100,10 @@ def clean_disk_minimal(db_manager: DatabaseManager, form_list: Optional[list] = 
     Args:
         db_manager: Todo.
         form_list: Todo.
+
+    Raises:
+        FileNotFoundError: Todo.
+        ValueError: Todo.
     """
     logger_config()
 
@@ -151,6 +154,9 @@ def random_dataset(
 
     Returns:
         Todo.
+
+    Raises:
+        ValueError: Todo.
     """
     if (id_count and percentage) or (not id_count and not percentage):
         raise ValueError

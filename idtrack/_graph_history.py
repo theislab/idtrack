@@ -89,7 +89,7 @@ class GraphHistory:
             db_manager = dbman_s["transcript"].change_release(ensembl_release)  # Does not matter which form.
             rc = db_manager.get_db("relationcurrent", save_after_calculation=db_manager.store_raw_always)
 
-            for ind, entry in rc.iterrows():
+            for _ind, entry in rc.iterrows():
                 for e1_str, e2_str in (("transcript", "gene"), ("translation", "transcript")):
 
                     e1 = entry[e1_str]
@@ -129,7 +129,7 @@ class GraphHistory:
             self.log.info(f"Edges between external IDs to Ensembl IDs is being added for '{f}'.")
             rc = st.initialize_external_conversion()
 
-            for ind, entry in rc.iterrows():
+            for _ind, entry in rc.iterrows():
                 e1 = entry["graph_id"]
                 e2 = entry["id_db"]
                 er = entry["release"]
@@ -145,8 +145,8 @@ class GraphHistory:
 
                     else:
                         if e2 not in g.nodes:
-                            node_attributes = {"release_dict": {edb: {er}}, "node_type": "external"}
-                            g.add_node(e2, **node_attributes)
+                            node_attributes_2 = {"release_dict": {edb: {er}}, "node_type": "external"}
+                            g.add_node(e2, **node_attributes_2)
                         elif edb not in g.nodes[e2]["release_dict"]:
                             g.nodes[e2]["release_dict"][edb] = {er}
                         elif er not in g.nodes[e2]["release_dict"][edb]:
@@ -699,59 +699,30 @@ class GraphHistory:
             self.log.info(f"The graph is being exported as '{file_path}'.")
             nx.write_gpickle(g, file_path)
 
-    def bok(self):
-        """
-        ########################  - dogru externalleri secmek: bu isi bitirmek
-        ########################  - add versionless IDs as external:
-        ########################      - node eklemeden yap bunu,
-        ########################      - ens.version -> ens olan bir node eklemek mantikli midir
-        ########################  - komsu ensembl gene_id'leri bulmak, komsuluk path'ini gostermesi
-        - Extensive testing functions
-        ########################  - Remove LRG? no
-        - Her seyi lower char yap?
-        - bir external ID girildiginde (with known db and ens release) -
-            - convert to gene
-            - step-up: look for a synynoym ensembl id via get_next_edges (akrabaglik derecesine limit koy)
-            - if synonym is returned, add the path to the main path list of recursive function
-        - bulunan pathlar arasinda en kisa ve en yuksek skorluyu sectir,
-            - report every path
-            - report everything if it had to go out of ensembl id
-        - bir ID girildiginde
-            - check if external
-            - check if ens rel ve db var mi
-            - yoksa bodozlama dal
-        - bir ID list girildiginde
-            - try to find the source and ens release
-        - amaci net belirle: amac gene duzeyinde history travel yapmak single cell datalari icin. that is all.
-        transcript ya da translation uzerinden hist travel zaten sacmaydi.
-        - sonraki surumlerde eklenecek ozellikeler
-            - ortholog gene datasi gibi ensembl'da olabilecek datalari bulmak?
-                - ortholog icin: birden fazla organismanin birlesimi graph olusturmak?
-            - hgnc to unprot tarzinda gecisler var mi? bunlari ekleyerek graph'i genisletmek..
-                - ama potensiyal sorun ens_rel gibi bir tarih belirtgeci kayboluyor.
-            - lossless compression
-            - better optimized external databases. databases will be determined for each organism/release
-            - ensembl identity, xref_identity calculation'a ekle
-        - Doc'u gelistir guzellestir
-        - Adam akilli aciklamalar yaz idtrack docs'una
-        - https://stackoverflow.com/questions/22700606/how-would-i-cross-reference-a-function-generated-by-autodoc-in-sphinx
-        - how to write test python package
-        - codecov isini coz
-        - cookie-temple ile ekle, yayinla ve publish et
-        - sonra bir daha david'e mesaj at ve sonra sfaira'ya eklemle
-        """
-        pass
-
     def _recursive_synonymous(
         self,
         _the_id,
         synonymous_ones,
         synonymous_ones_db,
+        filter_node_type: list,
         the_path: list = None,
         the_path_db: list = None,
         depth_max: int = 0,
-        filter_node_type: list = None,
     ):
+        """Todo.
+
+        Args:
+            _the_id: Todo.
+            synonymous_ones: Todo.
+            synonymous_ones_db: Todo.
+            the_path: Todo.
+            the_path_db: Todo.
+            depth_max: Todo.
+            filter_node_type: Todo.
+
+        Raises:
+            ValueError: Todo.
+        """
         input_node_type = self.graph.nodes[_the_id]["node_type"]
         _the_path = [_the_id] if the_path is None else the_path
         _the_path_db = [input_node_type] if the_path_db is None else the_path_db
@@ -763,7 +734,7 @@ class GraphHistory:
                 synonymous_ones.append(_the_path)
                 synonymous_ones_db.append(_the_path_db)
 
-            for direction, graph in (("forward", self.graph), ("reverse", self.reverse_graph)):
+            for _direction, graph in (("forward", self.graph), ("reverse", self.reverse_graph)):
 
                 _neighbours = list(graph.neighbors(_the_id))
                 for _next_neighbour in _neighbours:
@@ -792,13 +763,13 @@ class GraphHistory:
                                 _next_neighbour,
                                 synonymous_ones,
                                 synonymous_ones_db,
-                                _the_path + [_next_neighbour],
-                                _the_path_db + [gnt],
+                                filter_node_type,
+                                the_path=_the_path + [_next_neighbour],
+                                the_path_db=_the_path_db + [gnt],
                                 depth_max=depth_max,
-                                filter_node_type=filter_node_type,
                             )
 
-    def synonymous_nodes(self, the_id: str, depth_max: int, filter_node_type: Optional[list] = None):
+    def synonymous_nodes(self, the_id: str, depth_max: int, filter_node_type: list):
         """Todo.
 
         Args:
@@ -811,12 +782,10 @@ class GraphHistory:
         """
         synonymous_ones: list = []
         synonymous_ones_db: list = []
-        self._recursive_synonymous(
-            the_id, synonymous_ones, synonymous_ones_db, depth_max=depth_max, filter_node_type=filter_node_type
-        )
+        self._recursive_synonymous(the_id, synonymous_ones, synonymous_ones_db, filter_node_type, depth_max=depth_max)
 
-        remove_set = set()
-        the_ends_min = dict()
+        remove_set: set = set()
+        the_ends_min: dict = dict()
 
         for p in synonymous_ones:
             e = p[-1]
@@ -839,7 +808,17 @@ class GraphHistory:
         ]
 
     def get_active_ranges_of_id(self, the_id):
+        """Todo.
 
+        Args:
+            the_id: Todo.
+
+        Returns:
+            Todo.
+
+        Raises:
+            ValueError: Todo.
+        """
         if self.graph.nodes[the_id]["node_type"] != DB.external_search_settings["backbone_node_type"]:
             raise ValueError
 
@@ -878,6 +857,14 @@ class GraphHistory:
 
     @staticmethod
     def compact_ranges(lor):
+        """Todo.
+
+        Args:
+            lor: Todo.
+
+        Returns:
+            Todo.
+        """
         # lot = list of ranges (increasing, inclusive ranges) output of get_active_ranges_of_id
         #  O(n) time and space complexity: a forward in place compaction and copying back the elements,
         #  as then each inner step is O(1) (get/set instead of del)
@@ -892,6 +879,16 @@ class GraphHistory:
 
     @staticmethod
     def get_intersecting_ranges(lor1, lor2, compact: bool = True):
+        """Todo.
+
+        Args:
+            lor1: Todo.
+            lor2: Todo.
+            compact: Todo.
+
+        Returns:
+            Todo.
+        """
         # a and b is sorted,
         # Each list will contain lists of length 2, which represent a range (inclusive)
         # the ranges will always increase and never overlap
@@ -906,7 +903,16 @@ class GraphHistory:
         return GraphHistory.compact_ranges(result) if compact else result
 
     def get_two_nodes_coinciding_releases(self, id1, id2, compact: bool = True):
+        """Todo.
 
+        Args:
+            id1: Todo.
+            id2: Todo.
+            compact: Todo.
+
+        Returns:
+            Todo.
+        """
         r1 = self.get_active_ranges_of_id(id1)
         r2 = self.get_active_ranges_of_id(id2)
 
@@ -916,7 +922,18 @@ class GraphHistory:
 
     @staticmethod
     def get_from_release_and_reverse_vars(lor, p):
+        """Todo.
 
+        Args:
+            lor: Todo.
+            p: Todo.
+
+        Returns:
+            Todo.
+
+        Raises:
+            ValueError: Todo.
+        """
         result = list()
 
         for l1, l2 in lor:
@@ -937,15 +954,35 @@ class GraphHistory:
 
     @staticmethod
     def is_point_in_range(lor, p):
+        """Todo.
+
+        Args:
+            lor: Todo.
+            p: Todo.
+
+        Returns:
+            Todo.
+        """
         for l1, l2 in lor:
             if l1 <= p <= l2:
                 return True
         return False
 
     def _choose_relevant_synonym_helper(self, from_id, synonym_ids, to_release):
+        """Todo.
 
+        Args:
+            from_id: Todo.
+            synonym_ids: Todo.
+            to_release: Todo.
+
+        Returns:
+            Todo.
+
+        Raises:
+            ValueError: Todo.
+        """
         # synonym_ids should be ensembl of the same id (different versions)
-
         distance_to_target = list()
         candidate_ranges = list()
 
@@ -1011,17 +1048,24 @@ class GraphHistory:
         # given final release
         # given from release
 
-    def choose_relevant_synonym(
-        self, the_id: str, depth_max: int, to_release: int, filter_node_type: Optional[list] = None
-    ):
+    def choose_relevant_synonym(self, the_id: str, depth_max: int, to_release: int, filter_node_type: list):
+        """Todo.
+
+        Args:
+            the_id: Todo.
+            depth_max: Todo.
+            to_release: Todo.
+            filter_node_type: Todo.
+
+        Returns:
+            Todo.
+        """
         # help to choose z for a->x->z3,6,9
 
         # filter_node_type == 'ensembl_gene'
         syn = self.synonymous_nodes(the_id, depth_max, filter_node_type)  # it returns itself, which is important
 
-        # syn = [[syn_p, syn_db]for syn_p, syn_db in syn if len(syn_p) < 3 or all([self.graph.nodes[sp]['node_type'] in ['ensembl_transcript', 'ensembl_gene'] for sp in syn_p[1:-1]])]
-
-        syn_ids = dict()
+        syn_ids: dict = dict()
         for syn_p, syn_db in syn:
             si = syn_p[-1]
             s = self.graph.nodes[si]["ID"]
@@ -1167,7 +1211,18 @@ class GraphHistory:
         )
 
     def should_graph_reversed(self, from_id, to_release):
+        """Todo.
 
+        Args:
+            from_id: Todo.
+            to_release: Todo.
+
+        Returns:
+            Todo.
+
+        Raises:
+            ValueError: Todo.
+        """
         n = self.get_active_ranges_of_id(from_id)
         m = GraphHistory.get_from_release_and_reverse_vars(n, to_release)
 
@@ -1195,7 +1250,7 @@ class GraphHistory:
         reverse: bool,
         external_settings: dict,
         beamed_up: bool = False,
-        external_jump: int = None,
+        external_jump: float = None,
         edge_hist: list = None,
     ):
         def _external_path_maker(a_from_id, a_ens_rel, a_syn_pth, a_syn_dbp):
@@ -1273,7 +1328,7 @@ class GraphHistory:
                                 s3,
                                 external_settings,
                                 beamed_up=True,
-                                external_jump=_external_jump + 1,
+                                external_jump=_external_jump + 1.0,
                                 edge_hist=_edge_hist + alt_external_path,
                             )  # Add parallel path finding searches
 
@@ -1358,15 +1413,14 @@ class GraphHistory:
         Returns:
             Todo.
         """
-
-        es = copy.copy(DB.external_search_settings)
+        es: dict = copy.copy(DB.external_search_settings)
         idu = increase_depth_until + es["synonymous_max_depth"]
         iju = increase_jump_until + es["jump_limit"]
 
         # Todo: check if from_id exist in from_release
         #   if from_id in self.graph.nodes:
 
-        all_paths = set()
+        all_paths: set = set()
         self._recursive_path_search(from_id, from_release, to_release, all_paths, reverse, es, external_jump=np.inf)
 
         while go_external and len(all_paths) < 1:
@@ -1374,15 +1428,26 @@ class GraphHistory:
             all_paths = set()
             self._recursive_path_search(from_id, from_release, to_release, all_paths, reverse, es, external_jump=None)
             if es["synonymous_max_depth"] < idu:
-                es["synonymous_max_depth"] += 1
+                es["synonymous_max_depth"] = es["synonymous_max_depth"] + 1
             elif es["jump_limit"] < iju:
-                es["jump_limit"] += 1
+                es["jump_limit"] = es["jump_limit"] + 1
             else:
                 break
 
         return tuple(all_paths)
 
     def calculate_node_scores(self, gene_id):
+        """Todo.
+
+        Args:
+            gene_id: Todo.
+
+        Returns:
+            Todo.
+
+        Raises:
+            ValueError: Todo.
+        """
         # a metric to choose from multiple targets
         _temp = [
             i[-1]
@@ -1403,6 +1468,15 @@ class GraphHistory:
         return [len(set(the_ext)), len(set(the_tran)), len(set(the_prot))]
 
     def find_external(self, gene_id, target_db):
+        """Todo.
+
+        Args:
+            gene_id: Todo.
+            target_db: Todo.
+
+        Returns:
+            Todo.
+        """
         return [
             i[-1]
             for i, j in self.synonymous_nodes(gene_id, 2, ["external"])
@@ -1410,9 +1484,25 @@ class GraphHistory:
         ]
 
     def find_ensembl_gene(self, external_id):
+        """Todo.
+
+        Args:
+            external_id: Todo.
+
+        Returns:
+            Todo.
+        """
         return [i[0][-1] for i in self.synonymous_nodes(external_id, 2, ["ensembl_gene"])]
 
     def get_database_nodes(self, database_name):
+        """Todo.
+
+        Args:
+            database_name: Todo.
+
+        Returns:
+            Todo.
+        """
         return {
             i
             for i in self.graph.nodes
@@ -1422,6 +1512,11 @@ class GraphHistory:
 
     @cached_property
     def available_external_databases(self):
+        """Todo.
+
+        Returns:
+            Todo.
+        """
         return {
             j
             for i in self.graph.nodes
@@ -1430,6 +1525,14 @@ class GraphHistory:
         }
 
     def database_bins(self, anchor_database_name):
+        """Todo.
+
+        Args:
+            anchor_database_name: Todo.
+
+        Returns:
+            Todo.
+        """
         self.log.info(f"Database bin dictionary is being created for '{anchor_database_name}'.")
         external_nodes = self.get_database_nodes(anchor_database_name)
         bins = dict()
@@ -1565,24 +1668,25 @@ class GraphHistory:
 
         if from_release is None:
             # self.log.warning(f"Auto direction finding is not recommended: {from_id}.")
-            should_reversed, from_release = self.should_graph_reversed(from_id, to_release)
+            should_reversed, fr = self.should_graph_reversed(from_id, to_release)
         else:
             should_reversed = "forward" if from_release <= to_release else "reverse"
+            fr = copy.copy(from_release)
 
         if should_reversed == "both":
-            possible_paths_forward = self.get_possible_paths(from_id, from_release[0], to_release, reverse=False)
-            possible_paths_reverse = self.get_possible_paths(from_id, from_release[1], to_release, reverse=True)
+            possible_paths_forward = self.get_possible_paths(from_id, fr[0], to_release, reverse=False)
+            possible_paths_reverse = self.get_possible_paths(from_id, fr[1], to_release, reverse=True)
             poss_paths = tuple(list(itertools.chain(possible_paths_forward, possible_paths_reverse)))
             ff = itertools.chain(
-                itertools.repeat(from_release[0], len(possible_paths_forward)),
-                itertools.repeat(from_release[1], len(possible_paths_reverse)),
+                itertools.repeat(fr[0], len(possible_paths_forward)),
+                itertools.repeat(fr[1], len(possible_paths_reverse)),
             )
         elif should_reversed == "forward":
-            poss_paths = self.get_possible_paths(from_id, from_release, to_release, reverse=False)
-            ff = itertools.chain(itertools.repeat(from_release, len(poss_paths)))
+            poss_paths = self.get_possible_paths(from_id, fr, to_release, reverse=False)
+            ff = itertools.chain(itertools.repeat(fr, len(poss_paths)))
         elif should_reversed == "reverse":
-            poss_paths = self.get_possible_paths(from_id, from_release, to_release, reverse=True)
-            ff = itertools.chain(itertools.repeat(from_release, len(poss_paths)))
+            poss_paths = self.get_possible_paths(from_id, fr, to_release, reverse=True)
+            ff = itertools.chain(itertools.repeat(fr, len(poss_paths)))
         else:
             raise ValueError
 
@@ -1643,7 +1747,11 @@ class GraphHistory:
     #     pass
 
     def test_range_functions(self):
+        """Todo.
 
+        Returns:
+             Todo.
+        """
         base_ids = set()
         for i in self.graph.nodes:
             if self.graph.nodes[i]["node_type"] == "base_ensembl_gene":
@@ -1661,7 +1769,16 @@ class GraphHistory:
         return True
 
     def test_how_many_corresponding_path(self, from_release, to_release, go_external):
+        """Todo.
 
+        Args:
+            from_release: Todo.
+            to_release: Todo.
+            go_external: Todo.
+
+        Returns:
+             Todo.
+        """
         db_from = self.db_manager.change_release(from_release)
         ids_from = sorted(set(db_from.id_ver_from_df(db_from.get_db("ids", save_after_calculation=False))))
         to_reverse = from_release > to_release

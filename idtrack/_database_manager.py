@@ -1197,11 +1197,7 @@ class DatabaseManager:
 
         Args:
             remove_list: Todo.
-
-        Raises:
-            ValueError: Todo.
         """
-
         _, file_name = self.file_name("common", "place_holder")
         old_name = file_name + "_to_delete_temp"
         os.rename(file_name, old_name)
@@ -1230,9 +1226,6 @@ class DatabaseManager:
 
         Returns:
             Todo.
-
-        Raises:
-            ValueError: Todo.
         """
         _, file_name = self.file_name("common", "place_holder")
 
@@ -1264,9 +1257,6 @@ class DatabaseManager:
 
         Args:
             remove_list: Todo.
-
-        Raises:
-            FileNotFoundError: Todo.
         """
         self.repack_hdf5(remove_list)
 
@@ -1298,6 +1288,9 @@ class DatabaseManager:
 
         Returns:
             Todo.
+
+        Raises:
+            ValueError: Todo.
         """
         if (
             version_entry
@@ -1340,7 +1333,7 @@ class DatabaseManager:
             Todo.
 
         Raises:
-            NotImplementedError
+            NotImplementedError: Todo.
         """
         ver = list()
         for i in sorted(self.available_releases, reverse=True):

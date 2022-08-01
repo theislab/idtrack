@@ -4,10 +4,11 @@ __author__ = "Kemal Inecik"
 __email__ = "k.inecik@gmail.com"
 __version__ = "0.0.1"
 
-from ._database_manager import DatabaseManager
-from ._dataset import Dataset
-from ._db import DB
-from ._functions import (
+
+from ._database_manager import DatabaseManager  # noqa
+from ._dataset import Dataset  # noqa
+from ._db import DB  # noqa
+from ._functions import (  # noqa
     clean_disk_minimal,
     initialize_minimal,
     logger_config,
@@ -16,5 +17,5 @@ from ._functions import (
     test_external_conversion,
     test_form_conversion,
 )
-from ._graph_history import GraphHistory
-from ._verify_organism import VerifyOrganism
+from ._graph_history import GraphHistory  # noqa
+from ._verify_organism import VerifyOrganism  # noqa
