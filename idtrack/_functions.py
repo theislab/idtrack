@@ -15,20 +15,6 @@ from ._dataset import Dataset
 from ._graph_history import GraphHistory
 from ._verify_organism import VerifyOrganism
 
-# TODO LIST:
-#  -------------------------------------------------Type converter / ensembl converter'ı tamamla, ayır bir class olarak.
-#  ------------------------------------------------------------------ Bunları ayrı ayrı tut, bir arada saçma öyle zaten.
-#  ------------------------------------------------------------ Version clash'ı çöz bizdeki ve input id list arasındaki.
-#  -------------------------------------------------------------------------------------- Initialize dataset'si tamamla.
-#  ----------------------------------------------------------------------------------------------- diğer todoo'lara bak!
-#  - Basic function'ları yaz
-#  - Figure çiz
-#  - Örnek kullanım olarak websitesine koy, test et öncesinde
-#  - Documentation'u tamamla
-#  - Websiteyi tamamla
-#  - Test'e birşeyler daha ekle, covarage için
-#  - David/Leander/Felix mesaj at.
-
 
 def logger_config():
     """Todo."""
@@ -46,7 +32,6 @@ def initialize_minimal(
     initialize_datasets: bool = False,
     initialize_graph: bool = False,
     clean_up: bool = True,
-    target_format_graph: str = "pickle",
     narrow_search: bool = True,
     narrow_edge_attributes: bool = True,
     compress: bool = True,
@@ -63,7 +48,6 @@ def initialize_minimal(
         initialize_datasets: Todo.
         initialize_graph: Todo.
         clean_up: Todo.
-        target_format_graph: Todo.
         narrow_search: Todo.
         narrow_edge_attributes: Todo.
         compress: Todo.
@@ -233,10 +217,3 @@ def test_form_conversion(st: Dataset, ex, percentage):
     print(f"Input : {id_dict['Release']}")
     conv = st.convert_ensembl_form(id_dict["IDs"], "transcript")
     return conv
-
-
-# local_repo = "/home/icb/kemal.inecik/temp"
-# local_repo = "/Users/kemalinecik/Downloads/idmapping"
-# INTEGRATION OF FOLLOWINGS ?: unmapped_object, unmapped_reason, dependent_xref
-# TODO: IMPLEMENT that
-# https://stackoverflow.com/questions/9522877/pythonic-way-to-have-a-choice-of-2-3-options-as-an-argument-to-a-function/9523071
