@@ -29,8 +29,4 @@ class DB:
     no_old_node_id = "Void"
     no_new_node_id = "Retired"
 
-    external_search_settings = {
-        'jump_limit': 2,
-        'synonymous_max_depth': 3,
-        'backbone_node_type': 'ensembl_gene'
-    }
+    external_search_settings = {"jump_limit": 2, "synonymous_max_depth": 3, "backbone_node_type": "ensembl_gene"}

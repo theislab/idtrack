@@ -20,15 +20,15 @@ class DatabaseManager:
     """Todo."""
 
     def __init__(
-            self,
-            organism: str,
-            ensembl_release: int,
-            form: str,
-            local_repository: str,
-            ignore_before: int = None,
-            ignore_after: int = None,
-            compress: bool = True,
-            store_raw_always: bool = True,
+        self,
+        organism: str,
+        ensembl_release: int,
+        form: str,
+        local_repository: str,
+        ignore_before: int = None,
+        ignore_after: int = None,
+        compress: bool = True,
+        store_raw_always: bool = True,
     ):
         """Todo.
 
@@ -46,10 +46,12 @@ class DatabaseManager:
             ValueError: Todo.
         """
         # MYSQL Settings
-        self.mysql_settings = {"host": DB.mysql_host,
-                               "user": DB.myqsl_user,
-                               "password": DB.mysql_togo,
-                               "port": DB.mysql_port}
+        self.mysql_settings = {
+            "host": DB.mysql_host,
+            "user": DB.myqsl_user,
+            "password": DB.mysql_togo,
+            "port": DB.mysql_port,
+        }
 
         # Instance attributes
         self.log = logging.getLogger("dbmanager")
@@ -71,15 +73,15 @@ class DatabaseManager:
 
         # Check if it seems ok.
         if not (
-                float(ensembl_release) == int(ensembl_release)
-                and self.ignore_after >= self.ensembl_release >= self.ignore_before
-                and self.ensembl_release in self.available_releases
-                and self.form in self.available_form_of_interests
-                and (
-                        os.path.isdir(self.local_repository)
-                        and os.access(self.local_repository, os.W_OK)
-                        and os.access(self.local_repository, os.R_OK)
-                )
+            float(ensembl_release) == int(ensembl_release)
+            and self.ignore_after >= self.ensembl_release >= self.ignore_before
+            and self.ensembl_release in self.available_releases
+            and self.form in self.available_form_of_interests
+            and (
+                os.path.isdir(self.local_repository)
+                and os.access(self.local_repository, os.W_OK)
+                and os.access(self.local_repository, os.R_OK)
+            )
         ):
             raise ValueError
 
@@ -113,11 +115,9 @@ class DatabaseManager:
 
         # Sort in ascending order and return the result.
         releases_final = sorted(
-            [
-                i
-                for i in releases_final
-                if self.ignore_after >= i >= self.ignore_before  # Filter out the releases that are not of interest.
-            ]
+            i
+            for i in releases_final
+            if self.ignore_after >= i >= self.ignore_before  # Filter out the releases that are not of interest.
         )
 
         return releases_final
@@ -254,18 +254,18 @@ class DatabaseManager:
         results_query = [i[0] for i in results_query]
 
         pattern = re.compile(f"^{self.organism}_core_[0-9]+_.+$")
-        accepted_databases = sorted([i for i in results_query if pattern.match(i)])
+        accepted_databases = sorted(i for i in results_query if pattern.match(i))
         results = pd.Series(accepted_databases)
 
         return results
 
     def get_table(
-            self,
-            table_key,
-            usecols: list = None,
-            create_even_if_exist=False,
-            save_after_calculation=True,
-            overwrite_even_if_exist=False,
+        self,
+        table_key,
+        usecols: list = None,
+        create_even_if_exist=False,
+        save_after_calculation=True,
+        overwrite_even_if_exist=False,
     ):
         """Todo.
 
@@ -290,9 +290,9 @@ class DatabaseManager:
         # If the file name is not accessible for reading, or if the hdf5 file does not contain the table,
         # or explicitly prompt to do so, then download the table.
         if (
-                not os.access(file_path, os.R_OK)
-                or create_even_if_exist
-                or (not DatabaseManager.check_h5_key(file_path, hierarchy))
+            not os.access(file_path, os.R_OK)
+            or create_even_if_exist
+            or (not DatabaseManager.check_h5_key(file_path, hierarchy))
         ):
             df = self.download_table(table_key, usecols)
         else:  # Otherwise, just read the file that is already in the directory.
@@ -749,9 +749,6 @@ class DatabaseManager:
 
         Returns:
             Todo.
-
-        Raises:
-            NotImplementedError: Todo.
         """
         # Get the necessary tables from the server
         m = {"save_after_calculation": False}
@@ -785,7 +782,7 @@ class DatabaseManager:
 
         # Remove unnecessary columns and reset the index.
         stable_id_version, usecols_core, usecols_asso = DatabaseManager._determine_usecols_ids(self.form)
-        ids_only = list(set((usecols_asso + usecols_core)) - set(stable_id_version))
+        ids_only = list(set(usecols_asso + usecols_core) - set(stable_id_version))
         comb.drop(
             columns=["ensembl_id", "object_xref_id", "ensembl_object_type", "xref_id", "external_db_id"] + ids_only,
             inplace=True,
@@ -850,7 +847,7 @@ class DatabaseManager:
             # dm = DatabaseManager(fm, lr, id_form, local_dir, 100)
             # st = Dataset(dm.change_form('gene'), narrow_search=False)
             # rc = st.initialize_external_conversion()
-            ## rc['name_db'] = rc['name_db'].astype(str)
+            # rc['name_db'] = rc['name_db'].astype(str)  # not always, should be already fixed
             # b = sorted(np.unique(rc['name_db']))
             # a = {i: rc[rc['name_db'] == i] for i in b}
 
@@ -859,7 +856,7 @@ class DatabaseManager:
                     res[db_name].isin(
                         [
                             # 'ArrayExpress',
-                            'Clone-based (Ensembl) gene',
+                            "Clone-based (Ensembl) gene",
                             # 'Clone_based_ensembl_gene'
                             # 'DBASS3',
                             # 'DBASS5',
@@ -871,7 +868,7 @@ class DatabaseManager:
                             # 'EntrezGene',
                             # 'Expression Atlas',
                             # 'HGNC',
-                            'HGNC Symbol',
+                            "HGNC Symbol",
                             # 'LRG',
                             # 'LRG display in Ensembl gene',
                             # 'Locus Reference Genomic',
@@ -879,11 +876,11 @@ class DatabaseManager:
                             # 'MIM morbid',
                             # 'MIM_GENE',
                             # 'MIM_MORBID',
-                            'NCBI gene (formerly Entrezgene)',
+                            "NCBI gene (formerly Entrezgene)",
                             # 'RFAM',
                             # 'Reactome gene',
                             # 'Reactome_gene',
-                            'UniProtKB Gene Name',
+                            "UniProtKB Gene Name",
                             # 'Uniprot_gn',
                             # 'WikiGene',
                             # 'miRBase'
@@ -894,7 +891,7 @@ class DatabaseManager:
                 res = res[
                     res[db_name].isin(
                         [
-                            'CCDS',
+                            "CCDS",
                             # 'Clone-based (Ensembl) transcript', (gene covers it)
                             # 'Clone_based_ensembl_transcript',
                             # 'ENS_LRG_transcript',
@@ -914,10 +911,10 @@ class DatabaseManager:
                             # 'RefSeq mRNA predicted',
                             # 'RefSeq ncRNA',
                             # 'RefSeq ncRNA predicted',
-                            'RefSeq_mRNA',
-                            'RefSeq_mRNA_predicted',
-                            'RefSeq_ncRNA',
-                            'RefSeq_ncRNA_predicted',
+                            "RefSeq_mRNA",
+                            "RefSeq_mRNA_predicted",
+                            "RefSeq_ncRNA",
+                            "RefSeq_ncRNA_predicted",
                             # 'Transcript name',
                             # 'UCSC',
                             # 'UCSC Stable ID',
@@ -949,14 +946,14 @@ class DatabaseManager:
                             # 'Reactome',
                             # 'RefSeq peptide',
                             # 'RefSeq peptide predicted',
-                            'RefSeq_peptide',
-                            'RefSeq_peptide_predicted',
+                            "RefSeq_peptide",
+                            "RefSeq_peptide_predicted",
                             # 'UniParc',
                             # 'UniProtKB isoform',
                             # 'UniProtKB/Swiss-Prot',
                             # 'UniProtKB/TrEMBL',
-                            'Uniprot/SPTREMBL',
-                            'Uniprot/SWISSPROT',
+                            "Uniprot/SPTREMBL",
+                            "Uniprot/SWISSPROT",
                             # 'Uniprot_isoform',
                             # 'protein_id'
                         ]
@@ -967,7 +964,7 @@ class DatabaseManager:
         return res
 
     def get_db(
-            self, df_indicator, create_even_if_exist=False, save_after_calculation=True, overwrite_even_if_exist=False
+        self, df_indicator, create_even_if_exist=False, save_after_calculation=True, overwrite_even_if_exist=False
     ):
         """For saving, exporting, and naming convention.
 
@@ -1010,9 +1007,9 @@ class DatabaseManager:
         # If the file name is not accessible for reading, or if the hdf5 file does not contain the table,
         # or explicitly prompt to do so, then download the table.
         if (
-                not os.access(file_path, os.R_OK)
-                or create_even_if_exist
-                or (not DatabaseManager.check_h5_key(file_path, hierarchy))
+            not os.access(file_path, os.R_OK)
+            or create_even_if_exist
+            or (not DatabaseManager.check_h5_key(file_path, hierarchy))
         ):
 
             if main_ind == "external" and param1_ind is None:
@@ -1136,11 +1133,7 @@ class DatabaseManager:
         """
         base_file_path = os.path.basename(file_path)
 
-        if (
-                not os.access(file_path, os.R_OK)
-                or overwrite
-                or (not DatabaseManager.check_h5_key(file_path, hierarchy))
-        ):
+        if not os.access(file_path, os.R_OK) or overwrite or (not DatabaseManager.check_h5_key(file_path, hierarchy)):
 
             # Remove the file first to prevent hdf5 file to go arbitrarily larger after writing.
             if DatabaseManager.check_h5_key(file_path, hierarchy) or overwrite:
@@ -1191,7 +1184,7 @@ class DatabaseManager:
         if not np.all(dbm_the_ids[f"{self.form}_stable_id"].str.find(DB.id_ver_delimiter) == -1):
             raise ValueError
 
-        dbm_the_ids.drop_duplicates(keep='first', inplace=True)
+        dbm_the_ids.drop_duplicates(keep="first", inplace=True)
         if not dbm_the_ids[f"{self.form}_stable_id"].is_unique:
             raise ValueError
 
@@ -1306,8 +1299,12 @@ class DatabaseManager:
         Returns:
             Todo.
         """
-        if (version_entry and not pd.isna(version_entry)
-                and version_entry != DB.no_old_node_id and version_entry != DB.no_new_node_id):
+        if (
+            version_entry
+            and not pd.isna(version_entry)
+            and version_entry != DB.no_old_node_id
+            and version_entry != DB.no_new_node_id
+        ):
             if int(version_entry) != float(version_entry):
                 raise ValueError
             else:

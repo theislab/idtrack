@@ -4,22 +4,22 @@
 # k.inecik@gmail.com
 
 import copy
+import itertools
 import logging
 import os
 import random
 import warnings
-import itertools
+from collections import Counter
+from functools import cached_property
 from typing import Optional
 
-from collections import Counter
 import networkx as nx
 import numpy as np
 import pandas as pd
-from functools import cached_property
 
 from ._database_manager import DatabaseManager
-from ._db import DB
 from ._dataset import Dataset
+from ._db import DB
 
 
 class GraphHistory:
@@ -54,10 +54,7 @@ class GraphHistory:
         self.reverse_graph = self.graph.reverse(copy=False)
         self.version_info = self.graph.graph["version_info"]
 
-    def construct_graph(self,
-                        narrow: bool,
-                        form_list: list = None,
-                        narrow_external: bool = True) -> nx.MultiDiGraph:
+    def construct_graph(self, narrow: bool, form_list: list = None, narrow_external: bool = True) -> nx.MultiDiGraph:
         """Todo.
 
         Args:
@@ -74,12 +71,12 @@ class GraphHistory:
 
         def add_edge(n1, n2, ens_rel):
             if not g.has_edge(n1, n2):
-                n_edge_att = {'releases': {ens_rel}}
+                n_edge_att = {"releases": {ens_rel}}
                 g.add_edge(n1, n2, **n_edge_att)
             else:
                 if len(g.get_edge_data(n1, n2)) != 1:
                     raise ValueError
-                g[n1][n2][0]['releases'].add(ens_rel)
+                g[n1][n2][0]["releases"].add(ens_rel)
 
         form_list = self.db_manager.available_form_of_interests if not form_list else form_list
         dbman_s = {f: self.db_manager.change_form(f) for f in form_list}
@@ -104,8 +101,8 @@ class GraphHistory:
                         add_edge(e1, e2, ensembl_release)
 
         # Add versionless versions as well
-        if g.graph["version_info"] != 'without_version':
-            for f in ['gene']:  # transcript and translation does not have base
+        if g.graph["version_info"] != "without_version":
+            for f in ["gene"]:  # transcript and translation does not have base
                 for er in self.db_manager.available_releases:
                     db_manager = self.db_manager.change_form(f).change_release(er)  # Does not matter which form.
                     ids_db = db_manager.get_db("ids", save_after_calculation=False)
@@ -115,13 +112,13 @@ class GraphHistory:
                         if n not in g.nodes:
                             raise ValueError
 
-                        m = g.nodes[n]['ID']
+                        m = g.nodes[n]["ID"]
                         if m not in g.nodes:
-                            node_attributes = {'node_type': f'base_ensembl_{f}'}
+                            node_attributes = {"node_type": f"base_ensembl_{f}"}
                             g.add_node(m, **node_attributes)
 
                         add_edge(m, n, er)  # Versionless Base -> EnsID.EnsVer
-                self.log.info(f"Edges between versionless ID to version ID has been added for \'{f}\'.")
+                self.log.info(f"Edges between versionless ID to version ID has been added for '{f}'.")
 
         # Establish connection between different databases
         graph_nodes = set(g.nodes)
@@ -129,12 +126,12 @@ class GraphHistory:
         for f in form_list:
             db_manager = dbman_s[f].change_release(max(self.db_manager.available_releases))
             st = Dataset(db_manager, narrow_search=narrow_external)
-            self.log.info(f"Edges between external IDs to Ensembl IDs is being added for \'{f}\'.")
+            self.log.info(f"Edges between external IDs to Ensembl IDs is being added for '{f}'.")
             rc = st.initialize_external_conversion()
 
             for ind, entry in rc.iterrows():
-                e1 = entry['graph_id']
-                e2 = entry['id_db']
+                e1 = entry["graph_id"]
+                e2 = entry["id_db"]
                 er = entry["release"]
                 edb = entry["name_db"]
 
@@ -148,13 +145,12 @@ class GraphHistory:
 
                     else:
                         if e2 not in g.nodes:
-                            node_attributes = {'release_dict': {edb: {er}},
-                                               'node_type': 'external'}
+                            node_attributes = {"release_dict": {edb: {er}}, "node_type": "external"}
                             g.add_node(e2, **node_attributes)
-                        elif edb not in g.nodes[e2]['release_dict']:
-                            g.nodes[e2]['release_dict'][edb] = {er}
-                        elif er not in g.nodes[e2]['release_dict'][edb]:
-                            g.nodes[e2]['release_dict'][edb].add(er)
+                        elif edb not in g.nodes[e2]["release_dict"]:
+                            g.nodes[e2]["release_dict"][edb] = {er}
+                        elif er not in g.nodes[e2]["release_dict"][edb]:
+                            g.nodes[e2]["release_dict"][edb].add(er)
 
                         add_edge(e2, e1, er)  # External -> gene/transcript/translation
 
@@ -222,13 +218,13 @@ class GraphHistory:
                         {
                             _ea: np.nan
                             for _ea in [
-                            "mapping_session_id",
-                            "created",
-                            "old_db_name",
-                            "old_assembly",
-                            "new_db_name",
-                            "new_assembly",
-                        ]
+                                "mapping_session_id",
+                                "created",
+                                "old_db_name",
+                                "old_assembly",
+                                "new_db_name",
+                                "new_assembly",
+                            ]
                         }
                     )
 
@@ -275,41 +271,41 @@ class GraphHistory:
         min_available = min(db_manager.available_releases)
         if version_info == "without_version":
             graph_down_bool = (
-                    (
-                            (df["new_stable_id"] != df["old_stable_id"])  # keep branches or
-                            | (
-                                    (df["new_stable_id"] == df["old_stable_id"])  # keep self loops
-                                    & (df["score"].astype(float) < 1.0)
-                            )  # as it would not change anything
-                    )
-                    & ~pd.isna(df["old_stable_id"])  # no void entry
-                    & ~pd.isna(df["new_stable_id"])  # no retirement entry
-                    & (df["old_release"].astype(float) >= min_available)
+                (
+                    (df["new_stable_id"] != df["old_stable_id"])  # keep branches or
+                    | (
+                        (df["new_stable_id"] == df["old_stable_id"])  # keep self loops
+                        & (df["score"].astype(float) < 1.0)
+                    )  # as it would not change anything
+                )
+                & ~pd.isna(df["old_stable_id"])  # no void entry
+                & ~pd.isna(df["new_stable_id"])  # no retirement entry
+                & (df["old_release"].astype(float) >= min_available)
             )  # ignore before available.
             weight_down_bool = np.full(len(df), False)  # Zero the same id event exists
         else:
             common_down_bool = (
-                    ~pd.isna(df["old_stable_id"])  # no void entry
-                    & ~pd.isna(df["new_stable_id"])  # no retirement entry
-                    & (df["new_version"] != 0)  # remove 0 versions: like the ones ASMPATCHG00000000170.0
-                    & (df["old_version"] != 0)
-                    # ignore before available.
-                    & (df["old_release"].astype(float) >= min_available)
+                ~pd.isna(df["old_stable_id"])  # no void entry
+                & ~pd.isna(df["new_stable_id"])  # no retirement entry
+                & (df["new_version"] != 0)  # remove 0 versions: like the ones ASMPATCHG00000000170.0
+                & (df["old_version"] != 0)
+                # ignore before available.
+                & (df["old_release"].astype(float) >= min_available)
             )
             graph_down_bool = (
-                                      (df["new_stable_id"] != df["old_stable_id"])  # keep branches or
-                                      | (
-                                              (df["new_stable_id"] == df["old_stable_id"])
-                                              & (df["new_version"] == df["old_version"])  # keep self loops
-                                              & (df["score"].astype(float) < 1.0)
-                                      )  # as it would not change anything
-                              ) & common_down_bool
+                (df["new_stable_id"] != df["old_stable_id"])  # keep branches or
+                | (
+                    (df["new_stable_id"] == df["old_stable_id"])
+                    & (df["new_version"] == df["old_version"])  # keep self loops
+                    & (df["score"].astype(float) < 1.0)
+                )  # as it would not change anything
+            ) & common_down_bool
             weight_down_bool = (
-                    (
-                            (df["new_stable_id"] == df["old_stable_id"]) & (df["new_version"] != df["old_version"])
-                    )  # keep the same id events, no self loops
-                    & (~pd.isna(df["score"]))  # no undefined score
-                    & common_down_bool
+                (
+                    (df["new_stable_id"] == df["old_stable_id"]) & (df["new_version"] != df["old_version"])
+                )  # keep the same id events, no self loops
+                & (~pd.isna(df["score"]))  # no undefined score
+                & common_down_bool
             )
 
         # First dataframe will be a one that will be used to fetch edge weight later in the process.
@@ -585,12 +581,12 @@ class GraphHistory:
         self.log.info("Graph is successfully created.")
         return g
 
-
     @staticmethod
     def _remove_nongene_tree(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
 
         from idtrack._db import DB
-        forms_remove = ['transcript', 'translation']
+
+        forms_remove = ["transcript", "translation"]
 
         counter = []
         counter2 = []
@@ -604,9 +600,9 @@ class GraphHistory:
                     the_node = graph.nodes[n]
                 except KeyError:
                     continue
-                nt = the_node['node_type']
+                nt = the_node["node_type"]
 
-                if nt == f'ensembl_{f}':
+                if nt == f"ensembl_{f}":
 
                     if n.endswith(DB.no_old_node_id) or n.endswith(DB.no_new_node_id):
                         graph.remove_node(n)
@@ -615,7 +611,7 @@ class GraphHistory:
 
                         mlist = list(graph.neighbors(n))
                         for m in mlist:
-                            mt = graph.nodes[m]['node_type']
+                            mt = graph.nodes[m]["node_type"]
                             if nt == mt:
                                 kmn = [k for k in graph[n][m]]
                                 for k in kmn:
@@ -625,11 +621,11 @@ class GraphHistory:
         return graph
 
     def get_graph(
-            self,
-            narrow: bool = True,
-            create_even_if_exist: bool = False,
-            save_after_calculation: bool = True,
-            overwrite_even_if_exist: bool = False,
+        self,
+        narrow: bool = True,
+        create_even_if_exist: bool = False,
+        save_after_calculation: bool = True,
+        overwrite_even_if_exist: bool = False,
     ) -> nx.MultiDiGraph:
         """Todo.
 
@@ -689,9 +685,7 @@ class GraphHistory:
         min_ext = f"_min{self.db_manager.ignore_before}" if not np.isinf(self.db_manager.ignore_before) else ""
         max_ext = f"_max{self.db_manager.ignore_after}" if not np.isinf(self.db_manager.ignore_after) else ""
         ext = f"ens{self.db_manager.ensembl_release}{min_ext}{max_ext}{narrow_ext}"
-        return os.path.join(
-            self.db_manager.local_repository, f"graph_{self.db_manager.organism}_{ext}.pickle"
-        )
+        return os.path.join(self.db_manager.local_repository, f"graph_{self.db_manager.organism}_{ext}.pickle")
 
     def export_disk(self, g: nx.MultiDiGraph, file_path: str, overwrite: bool):
         """Todo.
@@ -748,50 +742,63 @@ class GraphHistory:
         """
         pass
 
-    def _recursive_synonymous(self, _the_id, synonymous_ones, synonymous_ones_db,
-                              the_path: list = None, the_path_db: list = None, depth_max: int = 0,
-                              filter_node_type: Optional[list] = None):
-        input_node_type = self.graph.nodes[_the_id]['node_type']
+    def _recursive_synonymous(
+        self,
+        _the_id,
+        synonymous_ones,
+        synonymous_ones_db,
+        the_path: list = None,
+        the_path_db: list = None,
+        depth_max: int = 0,
+        filter_node_type: list = None,
+    ):
+        input_node_type = self.graph.nodes[_the_id]["node_type"]
         _the_path = [_the_id] if the_path is None else the_path
         _the_path_db = [input_node_type] if the_path_db is None else the_path_db
 
         counted_elements = Counter(_the_path_db)
         if depth_max > max(counted_elements.values()):  # The depth is all node_type.
 
-            if len(_the_path) > 0 and self.graph.nodes[_the_path[-1]]['node_type'] in filter_node_type:
+            if len(_the_path) > 0 and self.graph.nodes[_the_path[-1]]["node_type"] in filter_node_type:
                 synonymous_ones.append(_the_path)
                 synonymous_ones_db.append(_the_path_db)
 
-            for direction, graph in (('forward', self.graph), ('reverse', self.reverse_graph)):
+            for direction, graph in (("forward", self.graph), ("reverse", self.reverse_graph)):
 
                 _neighbours = list(graph.neighbors(_the_id))
                 for _next_neighbour in _neighbours:
 
-                    gnt = graph.nodes[_next_neighbour]['node_type']
+                    gnt = graph.nodes[_next_neighbour]["node_type"]
 
                     if len(_the_path) >= 2:
                         l1, l2 = _the_path[-2:]  # [..., l1, l2, gnt]
-                        if (self.graph.nodes[l1]['node_type'] == gnt
-                                and gnt != 'external' and gnt != 'base_ensembl_gene'  # transcript, gene or translation
-                                and self.graph.nodes[l1]['ID'] == self.graph.nodes[_next_neighbour]['ID']):
-                            if self.graph.nodes[l1]['node_type'] != 'base_ensembl_gene':
+                        if (
+                            self.graph.nodes[l1]["node_type"] == gnt
+                            and gnt != "external"
+                            and gnt != "base_ensembl_gene"  # transcript, gene or translation
+                            and self.graph.nodes[l1]["ID"] == self.graph.nodes[_next_neighbour]["ID"]
+                        ):
+                            if self.graph.nodes[l1]["node_type"] != "base_ensembl_gene":
                                 # if all the above satisfies, then make sure the below statement.
                                 continue
 
-                    if gnt == 'external' or gnt != input_node_type:  # prevent history travel
+                    if gnt == "external" or gnt != input_node_type:  # prevent history travel
 
                         if len(graph[_the_id][_next_neighbour]) > 1:
                             raise ValueError
 
                         if _next_neighbour not in _the_path:
-                            self._recursive_synonymous(_next_neighbour,
-                                                       synonymous_ones, synonymous_ones_db,
-                                                       _the_path + [_next_neighbour],
-                                                       _the_path_db + [gnt],
-                                                       depth_max=depth_max, filter_node_type=filter_node_type)
+                            self._recursive_synonymous(
+                                _next_neighbour,
+                                synonymous_ones,
+                                synonymous_ones_db,
+                                _the_path + [_next_neighbour],
+                                _the_path_db + [gnt],
+                                depth_max=depth_max,
+                                filter_node_type=filter_node_type,
+                            )
 
-    def synonymous_nodes(self, the_id: str, depth_max: int,
-                         filter_node_type: Optional[list] = None):
+    def synonymous_nodes(self, the_id: str, depth_max: int, filter_node_type: Optional[list] = None):
         """Todo.
 
         Args:
@@ -802,10 +809,11 @@ class GraphHistory:
         Returns:
             Todo.
         """
-        synonymous_ones = []
-        synonymous_ones_db = []
-        self._recursive_synonymous(the_id, synonymous_ones, synonymous_ones_db,
-                                   depth_max=depth_max, filter_node_type=filter_node_type)
+        synonymous_ones: list = []
+        synonymous_ones_db: list = []
+        self._recursive_synonymous(
+            the_id, synonymous_ones, synonymous_ones_db, depth_max=depth_max, filter_node_type=filter_node_type
+        )
 
         remove_set = set()
         the_ends_min = dict()
@@ -824,21 +832,25 @@ class GraphHistory:
             if lp > am:
                 remove_set.add(ind)
 
-        return [[synonymous_ones[ind], synonymous_ones_db[ind]]
-                for ind in range(len(synonymous_ones)) if ind not in remove_set]
+        return [
+            [synonymous_ones[ind], synonymous_ones_db[ind]]
+            for ind in range(len(synonymous_ones))
+            if ind not in remove_set
+        ]
 
     def get_active_ranges_of_id(self, the_id):
 
-        if self.graph.nodes[the_id]['node_type'] != DB.external_search_settings["backbone_node_type"]:
+        if self.graph.nodes[the_id]["node_type"] != DB.external_search_settings["backbone_node_type"]:
             raise ValueError
 
         t_outs = self.get_next_edge_releases(from_id=the_id, reverse=True)
         t_ins = self.get_next_edge_releases(from_id=the_id, reverse=False)
 
-        inout_edges = sorted(itertools.chain(zip(t_outs, itertools.repeat(True)),
-                                             zip(t_ins, itertools.repeat(False))),
-                             reverse=False,
-                             key=lambda k: (k[0], -k[1]))
+        inout_edges = sorted(
+            itertools.chain(zip(t_outs, itertools.repeat(True)), zip(t_ins, itertools.repeat(False))),
+            reverse=False,
+            key=lambda k: (k[0], -k[1]),
+        )
 
         narrowed = []
         active_state = False
@@ -860,7 +872,7 @@ class GraphHistory:
                 else:
                     narrowed.append(ens_rel)
                     active_state = False
-        narrowed = [narrowed[i: i + 2] for i in range(0, len(narrowed), 2)]
+        narrowed = [narrowed[i : i + 2] for i in range(0, len(narrowed), 2)]
         # outputs always increasing, inclusive ranges, for get_intersecting_ranges
         return narrowed
 
@@ -876,7 +888,7 @@ class GraphHistory:
             else:
                 next_index += 1
                 lor[next_index] = lor[index + 1]
-        return lor[:next_index + 1]
+        return lor[: next_index + 1]
 
     @staticmethod
     def get_intersecting_ranges(lor1, lor2, compact: bool = True):
@@ -884,9 +896,12 @@ class GraphHistory:
         # Each list will contain lists of length 2, which represent a range (inclusive)
         # the ranges will always increase and never overlap
 
-        result = [[max(first[0], second[0]), min(first[1], second[1])]
-                  for first in lor1 for second in lor2
-                  if max(first[0], second[0]) <= min(first[1], second[1])]
+        result = [
+            [max(first[0], second[0]), min(first[1], second[1])]
+            for first in lor1
+            for second in lor2
+            if max(first[0], second[0]) <= min(first[1], second[1])
+        ]
 
         return GraphHistory.compact_ranges(result) if compact else result
 
@@ -934,7 +949,7 @@ class GraphHistory:
         distance_to_target = list()
         candidate_ranges = list()
 
-        if self.graph.nodes[from_id]['node_type'] != DB.external_search_settings["backbone_node_type"]:
+        if self.graph.nodes[from_id]["node_type"] != DB.external_search_settings["backbone_node_type"]:
 
             for syn_id in synonym_ids:
                 n = self.get_active_ranges_of_id(syn_id)
@@ -968,8 +983,11 @@ class GraphHistory:
                     flattened_fir = [i for j in from_id_range for i in j]
                     distances_to_rel = [abs(to_release - i) for i in flattened_fir]
                     minimum_distance = min(distances_to_rel)
-                    new_to_release = [edge_rel for ind, edge_rel in enumerate(flattened_fir)
-                                      if minimum_distance == distances_to_rel[ind]]
+                    new_to_release = [
+                        edge_rel
+                        for ind, edge_rel in enumerate(flattened_fir)
+                        if minimum_distance == distances_to_rel[ind]
+                    ]
 
                 for syn_id in synonym_ids:
                     for ntr in new_to_release:
@@ -993,14 +1011,15 @@ class GraphHistory:
         # given final release
         # given from release
 
-    def choose_relevant_synonym(self, the_id: str, depth_max: int, to_release: int,
-                                filter_node_type: Optional[list] = None):
+    def choose_relevant_synonym(
+        self, the_id: str, depth_max: int, to_release: int, filter_node_type: Optional[list] = None
+    ):
         # help to choose z for a->x->z3,6,9
 
         # filter_node_type == 'ensembl_gene'
         syn = self.synonymous_nodes(the_id, depth_max, filter_node_type)  # it returns itself, which is important
 
-        #syn = [[syn_p, syn_db]for syn_p, syn_db in syn if len(syn_p) < 3 or all([self.graph.nodes[sp]['node_type'] in ['ensembl_transcript', 'ensembl_gene'] for sp in syn_p[1:-1]])]
+        # syn = [[syn_p, syn_db]for syn_p, syn_db in syn if len(syn_p) < 3 or all([self.graph.nodes[sp]['node_type'] in ['ensembl_transcript', 'ensembl_gene'] for sp in syn_p[1:-1]])]
 
         syn_ids = dict()
         for syn_p, syn_db in syn:
@@ -1023,8 +1042,7 @@ class GraphHistory:
                 for_filtering = [i == a1 for i in si_list]
 
                 for b1, b2 in zip(
-                    itertools.compress(syn_p_list, for_filtering),
-                    itertools.compress(syn_db_list, for_filtering)
+                    itertools.compress(syn_p_list, for_filtering), itertools.compress(syn_db_list, for_filtering)
                 ):
                     result.append([a1, a2, a3, b1, b2])
 
@@ -1051,18 +1069,18 @@ class GraphHistory:
         for node_after in nx.neighbors(self.graph if not reverse else self.reverse_graph, from_id):
 
             # This forces to follow the same form tree during the recursion
-            if self.graph.nodes[node_after]['node_type'] == self.graph.nodes[from_id]['node_type']:
+            if self.graph.nodes[node_after]["node_type"] == self.graph.nodes[from_id]["node_type"]:
 
                 for multi_edge_id, an_edge in (
-                        (self.graph if not reverse else self.reverse_graph).get_edge_data(from_id, node_after).items()
+                    (self.graph if not reverse else self.reverse_graph).get_edge_data(from_id, node_after).items()
                 ):
                     self_loop = node_after == from_id
                     edge_release = an_edge["old_release"] if not reverse else an_edge["new_release"]
 
                     if (
-                            (not reverse and edge_release >= from_release)
-                            or (reverse and edge_release <= from_release)
-                            or (not reverse and np.isinf(an_edge["new_release"]))
+                        (not reverse and edge_release >= from_release)
+                        or (reverse and edge_release <= from_release)
+                        or (not reverse and np.isinf(an_edge["new_release"]))
                     ):  # keep last node
 
                         list_to_add = [edge_release, self_loop, from_id, node_after, multi_edge_id]
@@ -1071,9 +1089,9 @@ class GraphHistory:
                         # node_after_ver = self.graph.nodes[node_after]["Version"]
                         from_id_id = self.graph.nodes[from_id]["ID"]
                         bool_check = (
-                                not debugging
-                                and node_after_id == from_id_id  # for the same ID transitions
-                                and from_id != node_after
+                            not debugging
+                            and node_after_id == from_id_id  # for the same ID transitions
+                            and from_id != node_after
                         )  # if it is not self loop
 
                         if bool_check and node_after_id in more_than_one_edges:  # if this happened one before
@@ -1082,7 +1100,7 @@ class GraphHistory:
                             if prev_edge_release == edge_release:
                                 raise ValueError
                             if (not reverse and prev_edge_release > edge_release) or (
-                                    reverse and prev_edge_release < edge_release
+                                reverse and prev_edge_release < edge_release
                             ):  # keep only the first possible edge!
                                 edges[prev_edge_release_index] = list_to_add
                         else:
@@ -1110,18 +1128,21 @@ class GraphHistory:
             Todo.
         """
         return list(
-            set(
-                [
-                    an_edge["old_release"] if (not np.isinf(an_edge['new_release']) and not reverse) else an_edge["new_release"]
-                    for node_after in nx.neighbors(self.graph if not reverse else self.reverse_graph, from_id)
-                    for mei, an_edge in (self.graph if not reverse else self.reverse_graph)
+            {
+                an_edge["old_release"]
+                if (not np.isinf(an_edge["new_release"]) and not reverse)
+                else an_edge["new_release"]
+                for node_after in nx.neighbors(self.graph if not reverse else self.reverse_graph, from_id)
+                for mei, an_edge in (self.graph if not reverse else self.reverse_graph)
                 .get_edge_data(from_id, node_after)
-                .items() if (self.graph.nodes[node_after]['node_type'] == self.graph.nodes[from_id]['node_type']
-                             and (node_after != from_id or
-                                  (np.isinf(an_edge['new_release']) and not reverse))  # keep inf self-loop for forward'
-                             )
-                ]
-            )
+                .items()
+                if (
+                    self.graph.nodes[node_after]["node_type"] == self.graph.nodes[from_id]["node_type"]
+                    and (
+                        node_after != from_id or (np.isinf(an_edge["new_release"]) and not reverse)
+                    )  # keep inf self-loop for forward'
+                )
+            }
         )
 
     def get_next_edge_releases_deprecated(self, from_id: str, reverse: bool):
@@ -1135,15 +1156,14 @@ class GraphHistory:
             Todo.
         """
         return list(
-            set(
-                [
-                    an_edge["old_release"] if not reverse else an_edge["new_release"]
-                    for node_after in nx.neighbors(self.graph if not reverse else self.reverse_graph, from_id)
-                    for mei, an_edge in (self.graph if not reverse else self.reverse_graph)
+            {
+                an_edge["old_release"] if not reverse else an_edge["new_release"]
+                for node_after in nx.neighbors(self.graph if not reverse else self.reverse_graph, from_id)
+                for mei, an_edge in (self.graph if not reverse else self.reverse_graph)
                 .get_edge_data(from_id, node_after)
-                .items() if self.graph.nodes[node_after]['node_type'] == self.graph.nodes[from_id]['node_type']
-                ]
-            )
+                .items()
+                if self.graph.nodes[node_after]["node_type"] == self.graph.nodes[from_id]["node_type"]
+            }
         )
 
     def should_graph_reversed(self, from_id, to_release):
@@ -1158,27 +1178,26 @@ class GraphHistory:
         lrfi = len(reverse_from_ids)
 
         if lrfi and lffi:
-            return 'both', (max(forward_from_ids), min(reverse_from_ids))
+            return "both", (max(forward_from_ids), min(reverse_from_ids))
         elif lrfi:
-            return 'reverse', min(reverse_from_ids)
+            return "reverse", min(reverse_from_ids)
         elif lffi:
-            return 'forward', max(forward_from_ids)
+            return "forward", max(forward_from_ids)
         else:
             raise ValueError
 
     def _recursive_path_search(
-            self,
-            from_id: str,
-            from_release: int,
-            to_release: int,
-            all_paths: set,
-            reverse: bool,
-            external_settings: dict,
-            beamed_up: bool = False,
-            external_jump: int = None,
-            edge_hist: list = None,
+        self,
+        from_id: str,
+        from_release: int,
+        to_release: int,
+        all_paths: set,
+        reverse: bool,
+        external_settings: dict,
+        beamed_up: bool = False,
+        external_jump: int = None,
+        edge_hist: list = None,
     ):
-
         def _external_path_maker(a_from_id, a_ens_rel, a_syn_pth, a_syn_dbp):
             a_edge_hist_alt = list()
             a_from_id_ext_path = copy.copy(a_from_id)
@@ -1195,36 +1214,51 @@ class GraphHistory:
         _external_jump = 0 if external_jump is None else external_jump
         next_edges = self.get_next_edges(from_id, from_release, reverse)
 
-        if (len(_edge_hist) == 0 and len(next_edges) == 0 and  # the step input is actually external
-                self.graph.nodes[from_id]['node_type'] != DB.external_search_settings["backbone_node_type"]):
+        if (
+            len(_edge_hist) == 0
+            and len(next_edges) == 0
+            and self.graph.nodes[from_id]["node_type"]  # the step input is actually external
+            != DB.external_search_settings["backbone_node_type"]
+        ):
             # get syn only for given release
-            s = self.choose_relevant_synonym(from_id,
-                                             depth_max=external_settings['synonymous_max_depth'],
-                                             to_release=to_release,
-                                             filter_node_type=external_settings['backbone_node_type'])
+            s = self.choose_relevant_synonym(
+                from_id,
+                depth_max=external_settings["synonymous_max_depth"],
+                to_release=to_release,
+                filter_node_type=external_settings["backbone_node_type"],
+            )
 
             for s1, s2, s3, s4, s5 in s:
                 alt_external_path = _external_path_maker(from_id, s2, s4, s5)
 
                 self._recursive_path_search(
                     # with synonym route, don't go synonym finding in the next iteration
-                    s1, s2, to_release, all_paths, s3, external_settings,
-                    beamed_up=True, external_jump=_external_jump,  # It does not count as it is starting point
-                    edge_hist=_edge_hist + alt_external_path
+                    s1,
+                    s2,
+                    to_release,
+                    all_paths,
+                    s3,
+                    external_settings,
+                    beamed_up=True,
+                    external_jump=_external_jump,  # It does not count as it is starting point
+                    edge_hist=_edge_hist + alt_external_path,
                 )  # Add parallel path finding searches
 
         else:
-            for _edge_id, (_edge_release, _only_self_loop, _from_id,
-                           _node_after, _multi_edge_id) in enumerate(next_edges):
+            for _edge_id, (_edge_release, _only_self_loop, _from_id, _node_after, _multi_edge_id) in enumerate(
+                next_edges
+            ):
 
                 # Synonymous genes of the gene of interest until the next node in the history travel.
 
-                if not beamed_up and _external_jump < external_settings['jump_limit']:
+                if not beamed_up and _external_jump < external_settings["jump_limit"]:
 
-                    s = self.choose_relevant_synonym(_from_id,
-                                                     depth_max=external_settings['synonymous_max_depth'],
-                                                     to_release=to_release,
-                                                     filter_node_type=external_settings['backbone_node_type'])
+                    s = self.choose_relevant_synonym(
+                        _from_id,
+                        depth_max=external_settings["synonymous_max_depth"],
+                        to_release=to_release,
+                        filter_node_type=external_settings["backbone_node_type"],
+                    )
 
                     for s1, s2, s3, s4, s5 in s:
                         alt_external_path = _external_path_maker(_from_id, s2, s4, s5)
@@ -1232,9 +1266,15 @@ class GraphHistory:
                         if all([eha not in _edge_hist for eha in alt_external_path]):  # prevent loops
                             self._recursive_path_search(
                                 # with synonym route, don't go synonym finding in the next iteration
-                                s1, s2, to_release, all_paths, s3, external_settings,
-                                beamed_up=True, external_jump=_external_jump + 1,
-                                edge_hist=_edge_hist + alt_external_path
+                                s1,
+                                s2,
+                                to_release,
+                                all_paths,
+                                s3,
+                                external_settings,
+                                beamed_up=True,
+                                external_jump=_external_jump + 1,
+                                edge_hist=_edge_hist + alt_external_path,
                             )  # Add parallel path finding searches
 
                 # History travel
@@ -1257,9 +1297,15 @@ class GraphHistory:
                                 _edge_hist.append(dict_key)
                         else:
                             self._recursive_path_search(
-                                _node_after, _edge_release, to_release, all_paths, reverse, external_settings,
-                                beamed_up=False, external_jump=_external_jump,
-                                edge_hist=_edge_hist + [dict_key]
+                                _node_after,
+                                _edge_release,
+                                to_release,
+                                all_paths,
+                                reverse,
+                                external_settings,
+                                beamed_up=False,
+                                external_jump=_external_jump,
+                                edge_hist=_edge_hist + [dict_key],
                             )
                     else:  # if not reverse
                         if _edge_release >= to_release:
@@ -1277,15 +1323,27 @@ class GraphHistory:
                                 _edge_hist.append(dict_key)
                         else:
                             self._recursive_path_search(
-                                _node_after, _edge_release, to_release, all_paths, reverse, external_settings,
-                                beamed_up=False, external_jump=_external_jump,
-                                edge_hist=_edge_hist + [dict_key]
+                                _node_after,
+                                _edge_release,
+                                to_release,
+                                all_paths,
+                                reverse,
+                                external_settings,
+                                beamed_up=False,
+                                external_jump=_external_jump,
+                                edge_hist=_edge_hist + [dict_key],
                             )
 
-    def get_possible_paths(self, from_id: str, from_release: int, to_release: int, reverse: bool,
-                           go_external: bool = True,
-                           increase_depth_until: int = 1,
-                           increase_jump_until: int = 0) -> tuple:
+    def get_possible_paths(
+        self,
+        from_id: str,
+        from_release: int,
+        to_release: int,
+        reverse: bool,
+        go_external: bool = True,
+        increase_depth_until: int = 1,
+        increase_jump_until: int = 0,
+    ) -> tuple:
         """Todo.
 
         Args:
@@ -1312,7 +1370,7 @@ class GraphHistory:
         self._recursive_path_search(from_id, from_release, to_release, all_paths, reverse, es, external_jump=np.inf)
 
         while go_external and len(all_paths) < 1:
-            print('-###-')
+            print("-###-")
             all_paths = set()
             self._recursive_path_search(from_id, from_release, to_release, all_paths, reverse, es, external_jump=None)
             if es["synonymous_max_depth"] < idu:
@@ -1326,17 +1384,18 @@ class GraphHistory:
 
     def calculate_node_scores(self, gene_id):
         # a metric to choose from multiple targets
-        _temp = [i[-1] for i, j in self.synonymous_nodes(gene_id, 2, ['external',
-                                                                      'ensembl_transcript',
-                                                                      'ensembl_translation'])]
+        _temp = [
+            i[-1]
+            for i, j in self.synonymous_nodes(gene_id, 2, ["external", "ensembl_transcript", "ensembl_translation"])
+        ]
         the_tran, the_prot, the_ext = [], [], []
         for i in _temp:
-            nt = self.graph.nodes[i]['node_type']
-            if nt == 'external':
+            nt = self.graph.nodes[i]["node_type"]
+            if nt == "external":
                 the_ext.append(i)
-            elif nt == 'ensembl_transcript':
+            elif nt == "ensembl_transcript":
                 the_tran.append(i)
-            elif nt == 'ensembl_translation':
+            elif nt == "ensembl_translation":
                 the_prot.append(i)
             else:
                 raise ValueError
@@ -1344,18 +1403,31 @@ class GraphHistory:
         return [len(set(the_ext)), len(set(the_tran)), len(set(the_prot))]
 
     def find_external(self, gene_id, target_db):
-        return [i[-1] for i, j in self.synonymous_nodes(gene_id, 2, ['external'])
-                if target_db in self.graph.nodes[i[-1]]['release_dict'].keys()]
+        return [
+            i[-1]
+            for i, j in self.synonymous_nodes(gene_id, 2, ["external"])
+            if target_db in self.graph.nodes[i[-1]]["release_dict"].keys()
+        ]
 
     def find_ensembl_gene(self, external_id):
-        return [i[0][-1] for i in self.synonymous_nodes(external_id, 2, ['ensembl_gene'])]
+        return [i[0][-1] for i in self.synonymous_nodes(external_id, 2, ["ensembl_gene"])]
 
     def get_database_nodes(self, database_name):
-        return {i for i in self.graph.nodes if self.graph.nodes[i]['node_type'] == 'external' and database_name in self.graph.nodes[i]["release_dict"].keys()}
+        return {
+            i
+            for i in self.graph.nodes
+            if self.graph.nodes[i]["node_type"] == "external"
+            and database_name in self.graph.nodes[i]["release_dict"].keys()
+        }
 
     @cached_property
     def available_external_databases(self):
-        return {j for i in self.graph.nodes if self.graph.nodes[i]['node_type'] == 'external' for j in self.graph.nodes[i]["release_dict"].keys()}
+        return {
+            j
+            for i in self.graph.nodes
+            if self.graph.nodes[i]["node_type"] == "external"
+            for j in self.graph.nodes[i]["release_dict"].keys()
+        }
 
     def database_bins(self, anchor_database_name):
         self.log.info(f"Database bin dictionary is being created for '{anchor_database_name}'.")
@@ -1369,7 +1441,7 @@ class GraphHistory:
         return bins
 
     def calculate_score_and_select(
-            self, all_possible_paths, reduction, remove_na, from_releases, to_release, score_of_the_queried_item
+        self, all_possible_paths, reduction, remove_na, from_releases, to_release, score_of_the_queried_item
     ) -> dict:
         """Todo.
 
@@ -1428,27 +1500,39 @@ class GraphHistory:
             final_destination = the_path[-1][1]
             if final_destination not in scores:
                 scores[final_destination] = list()
-            scores[final_destination].append([external_jump, external_step, edge_scores,
-                                              len(the_path) - external_step,
-                                              # the_path
-                                              ])
+            scores[final_destination].append(
+                [
+                    external_jump,
+                    external_step,
+                    edge_scores,
+                    len(the_path) - external_step,
+                    # the_path
+                ]
+            )
 
-        max_score = {i: sorted(scores[i],  # min external_jump, external_step of max edge_scores
-                               key=lambda k: (k[0], k[1], -k[2], k[3]), reverse=False)[0]  # choose the best & shortest
-                     for i in scores}  # choose the best route to a target, and report all targets
+        max_score = {
+            i: sorted(
+                scores[i],  # min external_jump, external_step of max edge_scores
+                key=lambda k: (k[0], k[1], -k[2], k[3]),
+                reverse=False,
+            )[
+                0
+            ]  # choose the best & shortest
+            for i in scores
+        }  # choose the best route to a target, and report all targets
 
         return max_score
 
     def convert_history(
-            self,
-            from_id: str,
-            from_release: Optional[int],
-            to_release: Optional[int],
-            final_database: Optional[str] = None,
-            reduction=np.mean,
-            remove_na="omit",
-            score_of_the_queried_item: float = 1.0,
-            node_activity_based_filter: bool = True
+        self,
+        from_id: str,
+        from_release: Optional[int],
+        to_release: Optional[int],
+        final_database: Optional[str] = None,
+        reduction=np.mean,
+        remove_na="omit",
+        score_of_the_queried_item: float = 1.0,
+        node_activity_based_filter: bool = True,
     ):
         """Todo.
 
@@ -1483,18 +1567,20 @@ class GraphHistory:
             # self.log.warning(f"Auto direction finding is not recommended: {from_id}.")
             should_reversed, from_release = self.should_graph_reversed(from_id, to_release)
         else:
-            should_reversed = 'forward' if from_release <= to_release else 'reverse'
+            should_reversed = "forward" if from_release <= to_release else "reverse"
 
-        if should_reversed == 'both':
+        if should_reversed == "both":
             possible_paths_forward = self.get_possible_paths(from_id, from_release[0], to_release, reverse=False)
             possible_paths_reverse = self.get_possible_paths(from_id, from_release[1], to_release, reverse=True)
             poss_paths = tuple(list(itertools.chain(possible_paths_forward, possible_paths_reverse)))
-            ff = itertools.chain(itertools.repeat(from_release[0], len(possible_paths_forward)),
-                                 itertools.repeat(from_release[1], len(possible_paths_reverse)))
-        elif should_reversed == 'forward':
+            ff = itertools.chain(
+                itertools.repeat(from_release[0], len(possible_paths_forward)),
+                itertools.repeat(from_release[1], len(possible_paths_reverse)),
+            )
+        elif should_reversed == "forward":
             poss_paths = self.get_possible_paths(from_id, from_release, to_release, reverse=False)
             ff = itertools.chain(itertools.repeat(from_release, len(poss_paths)))
-        elif should_reversed == 'reverse':
+        elif should_reversed == "reverse":
             poss_paths = self.get_possible_paths(from_id, from_release, to_release, reverse=True)
             ff = itertools.chain(itertools.repeat(from_release, len(poss_paths)))
         else:
@@ -1503,17 +1589,23 @@ class GraphHistory:
         if len(poss_paths) == 0:
             return None
         else:
-            converted = self.calculate_score_and_select(poss_paths, reduction, remove_na,
-                                                        ff, to_release, score_of_the_queried_item)
+            converted = self.calculate_score_and_select(
+                poss_paths, reduction, remove_na, ff, to_release, score_of_the_queried_item
+            )
             converted = choose_id_1_to_n(converted) if node_activity_based_filter and len(converted) > 0 else converted
-            if final_database is None or final_database == 'ensembl_gene':
+            if final_database is None or final_database == "ensembl_gene":
                 return converted
             elif final_database in self.available_external_databases:
-                converted = {(i, j): converted[i] for i in converted.keys() for j in self.find_external(i, final_database)}
+                converted = {
+                    (i, j): converted[i] for i in converted.keys() for j in self.find_external(i, final_database)
+                }
                 return None if len(converted) == 0 else converted
             elif final_database == "base_ensembl_gene":
-                converted = {(i, j): converted[i] for i in converted.keys() for j in
-                             [a[-1] for a, _ in self.synonymous_nodes(i, 2, ['base_ensembl_gene'])]}
+                converted = {
+                    (i, j): converted[i]
+                    for i in converted.keys()
+                    for j in [a[-1] for a, _ in self.synonymous_nodes(i, 2, ["base_ensembl_gene"])]
+                }
                 return converted
             else:
                 raise ValueError
@@ -1554,7 +1646,7 @@ class GraphHistory:
 
         base_ids = set()
         for i in self.graph.nodes:
-            if self.graph.nodes[i]["node_type"] == 'base_ensembl_gene':
+            if self.graph.nodes[i]["node_type"] == "base_ensembl_gene":
                 base_ids.add(i)
 
         for i in base_ids:
@@ -1564,7 +1656,7 @@ class GraphHistory:
             for r1, r2 in itertools.combinations(id_ranges, 2):
                 r12 = GraphHistory.get_intersecting_ranges(r1, r2, compact=False)
                 if len(r12) > 1:
-                    self.log.warning(f'For Base Ensembl ID {i}: Two associated Ensembl IDs cover the same area')
+                    self.log.warning(f"For Base Ensembl ID {i}: Two associated Ensembl IDs cover the same area")
                     return False
         return True
 
@@ -1577,8 +1669,9 @@ class GraphHistory:
         result = list()
         for ind, from_id in enumerate(ids_from):
             print(f"{ind}: {from_id}", end="")
-            lfr = len(self.get_possible_paths(from_id, from_release, to_release, reverse=to_reverse,
-                                              go_external=go_external))
+            lfr = len(
+                self.get_possible_paths(from_id, from_release, to_release, reverse=to_reverse, go_external=go_external)
+            )
             result.append([from_id, lfr])
             print(f" {lfr}")
 
@@ -1701,8 +1794,8 @@ class GraphHistory:
         if verbose:
             print(f"## Origin: {from_release}\n## Destination: {to_release}", flush=True)
             for (
-                    r1,
-                    r2,
+                r1,
+                r2,
             ) in zip(results.keys(), results.values()):
                 print_dict(r1, r2)
             print("", flush=True)

@@ -10,11 +10,9 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from idtrack._database_manager import DatabaseManager
-from idtrack._dataset import Dataset
-from idtrack._dataset import DB
-from idtrack._graph_history import GraphHistory
-from idtrack._verify_organism import VerifyOrganism
+from ._database_manager import DatabaseManager
+from ._dataset import Dataset
+from ._verify_organism import VerifyOrganism
 
 # TODO LIST:
 #  -------------------------------------------------Type converter / ensembl converter'ı tamamla, ayır bir class olarak.
@@ -77,9 +75,7 @@ def initialize_minimal(
     vdf = VerifyOrganism(organism)
     fm = vdf.get_formal_name()
     lr = vdf.get_latest_release()
-    dm = DatabaseManager(
-        fm, lr, form, local_repository, ignore_before, ignore_after, compress, store_raw_always
-    )
+    dm = DatabaseManager(fm, lr, form, local_repository, ignore_before, ignore_after, compress, store_raw_always)
     st = Dataset(dm, narrow_search=narrow_search)
 
     if initialize_datasets:
@@ -87,7 +83,9 @@ def initialize_minimal(
         st.initialize_form_conversion()
 
     if initialize_graph:
-        g: Optional[GraphHistory_Depracated] = GraphHistory_Depracated(dm, target_format_graph, narrow=narrow_edge_attributes)
+        g: Optional[GraphHistory_Depracated] = GraphHistory_Depracated(
+            dm, target_format_graph, narrow=narrow_edge_attributes
+        )
     else:
         g = None
 
