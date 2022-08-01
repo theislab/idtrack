@@ -108,8 +108,11 @@ def precommit(session: Session) -> None:
         "flake8-bandit",
         "flake8-bugbear",
         "flake8-docstrings",
+        "flake8-builtins",
+        "flake8-colors",
         "flake8-rst-docstrings",
         "isort",
+        "bandit",
         "pep8-naming",
         "pre-commit",
         "pre-commit-hooks",
@@ -133,7 +136,7 @@ def mypy(session: Session) -> None:
     """Type-check using mypy."""
     args = session.posargs or ["idtrack", "tests", "docs/conf.py"]
     session.install(".")
-    session.install("mypy", "pytest", "types-pkg-resources", "types-requests", "types-attrs")
+    session.install("mypy", "pytest", "types-pkg-resources", "types-requests", "types-attrs", "types-PyMySQL")
     session.run("mypy", *args)
 
 
