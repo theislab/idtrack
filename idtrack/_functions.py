@@ -3,7 +3,7 @@
 # Kemal Inecik
 # k.inecik@gmail.com
 
-import logging
+
 import re
 from typing import Optional
 
@@ -13,14 +13,8 @@ import pandas as pd
 from ._database_manager import DatabaseManager
 from ._dataset import Dataset
 from ._graph_history import GraphHistory
+from ._verbose import logger_config
 from ._verify_organism import VerifyOrganism
-
-
-def logger_config():
-    """Todo."""
-    logging.basicConfig(
-        level=logging.INFO, datefmt="%Y-%m-%d %H:%M:%S", format="%(asctime)s %(levelname)s:%(name)s: %(message)s"
-    )
 
 
 def initialize_minimal(

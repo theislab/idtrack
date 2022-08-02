@@ -7,11 +7,10 @@ import copy
 import itertools
 import logging
 import os
-import random
 import warnings
 from collections import Counter
 from functools import cached_property
-from typing import Optional
+from typing import Callable, Optional
 
 import networkx as nx
 import numpy as np
@@ -20,6 +19,7 @@ import pandas as pd
 from ._database_manager import DatabaseManager
 from ._dataset import Dataset
 from ._db import DB
+from ._verbose import progress_bar
 
 
 class GraphHistory:
@@ -940,7 +940,9 @@ class GraphHistory:
 
             if l1 > l2:
                 raise ValueError
-            elif p <= l1:
+            elif p == l1:
+                result.append((l1, False))  # target'e yakin uc
+            elif p < l1:
                 result.append((l1, True))  # target'e yakin uc
             elif l2 <= p:
                 result.append((l2, False))  # target'e yakin uc
@@ -986,18 +988,22 @@ class GraphHistory:
         distance_to_target = list()
         candidate_ranges = list()
 
+        # If the queried ID is not 'ensembl_gene':
+        # find the synonym_ID with the closest distance to to_release
         if self.graph.nodes[from_id]["node_type"] != DB.external_search_settings["backbone_node_type"]:
 
             for syn_id in synonym_ids:
                 n = self.get_active_ranges_of_id(syn_id)
                 m = GraphHistory.get_from_release_and_reverse_vars(n, to_release)
-
+                # Find the ranges of syn_id and find the reve
                 for m1, m2 in m:
                     min_distance_of_range = abs(m1 - to_release)
                     distance_to_target.append(min_distance_of_range)
                     candidate_ranges.append([syn_id, m1, m2])
 
         else:
+            # If the queried ID and synonyms has some overlapping ranges:
+            # find the synonym_ID which has coinciding release with from_id and closest to the to_release.
             for syn_id in synonym_ids:
 
                 n = self.get_two_nodes_coinciding_releases(from_id, syn_id)
@@ -1009,9 +1015,11 @@ class GraphHistory:
                     candidate_ranges.append([syn_id, m1, m2])
             # multiple id ve/veya multiple range output verebilir
 
+            # If the queried ID and synonyms has no overlapping ranges:
+            # find the synonym_ID with the closest distance to from_id
             if len(distance_to_target) == 0:
 
-                # Find the closest point (1 or 2 due to reverse orientation thing)
+                # Find the closest point (1 or 2 exist due to reverse orientation thing)
                 # of from_id range to the to_release, if it does not contain it.
                 from_id_range = self.get_active_ranges_of_id(from_id)
                 if GraphHistory.is_point_in_range(from_id_range, to_release):
@@ -1029,9 +1037,11 @@ class GraphHistory:
                 for syn_id in synonym_ids:
                     for ntr in new_to_release:
                         n = self.get_active_ranges_of_id(syn_id)
+                        # Find correct from_release, the closest range edge to the from_id
                         m = GraphHistory.get_from_release_and_reverse_vars(n, ntr)
-
-                        for m1, m2 in m:
+                        for m1, _ in m:
+                            # Find correct reverse_info
+                            m2 = to_release <= m1
                             min_distance_of_range = abs(m1 - ntr)
                             distance_to_target.append(min_distance_of_range)
                             candidate_ranges.append([syn_id, m1, m2])
@@ -1424,7 +1434,6 @@ class GraphHistory:
         self._recursive_path_search(from_id, from_release, to_release, all_paths, reverse, es, external_jump=np.inf)
 
         while go_external and len(all_paths) < 1:
-            print("-###-")
             all_paths = set()
             self._recursive_path_search(from_id, from_release, to_release, all_paths, reverse, es, external_jump=None)
             if es["synonymous_max_depth"] < idu:
@@ -1524,11 +1533,12 @@ class GraphHistory:
             for j in self.graph.nodes[i]["release_dict"].keys()
         }
 
-    def database_bins(self, anchor_database_name):
+    def database_bins(self, anchor_database_name, verbose: bool = True):
         """Todo.
 
         Args:
             anchor_database_name: Todo.
+            verbose: Todo.
 
         Returns:
             Todo.
@@ -1537,7 +1547,8 @@ class GraphHistory:
         external_nodes = self.get_database_nodes(anchor_database_name)
         bins = dict()
         for ind, en in enumerate(external_nodes):
-            print(ind)
+            if verbose:
+                progress_bar(ind, len(external_nodes) - 1)
             a_bin = {ene: self.calculate_node_scores(ene) for ene in self.find_ensembl_gene(en)}
             bins[en] = a_bin
 
@@ -1632,10 +1643,11 @@ class GraphHistory:
         from_release: Optional[int],
         to_release: Optional[int],
         final_database: Optional[str] = None,
-        reduction=np.mean,
+        reduction: Callable = np.mean,
         remove_na="omit",
-        score_of_the_queried_item: float = 1.0,
-        node_activity_based_filter: bool = True,
+        score_of_the_queried_item: float = np.nan,
+        go_external: bool = True,
+        prioritize_to_one_filter: bool = True,
     ):
         """Todo.
 
@@ -1647,7 +1659,8 @@ class GraphHistory:
             reduction: Todo.
             remove_na: Todo.
             score_of_the_queried_item: Todo.
-            node_activity_based_filter: Todo.
+            go_external: Todo.
+            prioritize_to_one_filter: Todo.
 
         Returns:
             Todo.
@@ -1656,9 +1669,11 @@ class GraphHistory:
             ValueError: Todo.
         """
 
-        def choose_id_1_to_n(ids: dict):
+        def prioritize_one_in_1_to_n(ids: dict):
             key_lst = list(ids.keys())
-            scores = [self.calculate_node_scores(i) for i in key_lst]
+            scores = [
+                [1 if pd.isna(ids[i][2]) or ids[i][2] > 0.8 else 0] + self.calculate_node_scores(i) for i in key_lst
+            ]
             best_score = sorted(scores, reverse=True)[0]
             return {k: ids[k] + best_score for ind, k in enumerate(key_lst) if scores[ind] == best_score}
 
@@ -1674,18 +1689,22 @@ class GraphHistory:
             fr = copy.copy(from_release)
 
         if should_reversed == "both":
-            possible_paths_forward = self.get_possible_paths(from_id, fr[0], to_release, reverse=False)
-            possible_paths_reverse = self.get_possible_paths(from_id, fr[1], to_release, reverse=True)
+            possible_paths_forward = self.get_possible_paths(
+                from_id, fr[0], to_release, go_external=go_external, reverse=False
+            )
+            possible_paths_reverse = self.get_possible_paths(
+                from_id, fr[1], to_release, go_external=go_external, reverse=True
+            )
             poss_paths = tuple(list(itertools.chain(possible_paths_forward, possible_paths_reverse)))
             ff = itertools.chain(
                 itertools.repeat(fr[0], len(possible_paths_forward)),
                 itertools.repeat(fr[1], len(possible_paths_reverse)),
             )
         elif should_reversed == "forward":
-            poss_paths = self.get_possible_paths(from_id, fr, to_release, reverse=False)
+            poss_paths = self.get_possible_paths(from_id, fr, to_release, go_external=go_external, reverse=False)
             ff = itertools.chain(itertools.repeat(fr, len(poss_paths)))
         elif should_reversed == "reverse":
-            poss_paths = self.get_possible_paths(from_id, fr, to_release, reverse=True)
+            poss_paths = self.get_possible_paths(from_id, fr, to_release, go_external=go_external, reverse=True)
             ff = itertools.chain(itertools.repeat(fr, len(poss_paths)))
         else:
             raise ValueError
@@ -1696,7 +1715,9 @@ class GraphHistory:
             converted = self.calculate_score_and_select(
                 poss_paths, reduction, remove_na, ff, to_release, score_of_the_queried_item
             )
-            converted = choose_id_1_to_n(converted) if node_activity_based_filter and len(converted) > 0 else converted
+            converted = (
+                prioritize_one_in_1_to_n(converted) if prioritize_to_one_filter and len(converted) > 0 else converted
+            )
             if final_database is None or final_database == "ensembl_gene":
                 return converted
             elif final_database in self.available_external_databases:
@@ -1713,19 +1734,6 @@ class GraphHistory:
                 return converted
             else:
                 raise ValueError
-
-    def convert_multiple(self, from_id_lst: list, *args, **kwargs):
-        """Todo.
-
-        Args:
-            from_id_lst: Todo.
-            args: Todo.
-            kwargs: Todo.
-
-        Returns:
-            Todo.
-        """
-        return [self.convert_history(from_id, *args, **kwargs) for from_id in from_id_lst]
 
     def get_tree_with_id(self, the_id):
         """Todo.
@@ -1768,13 +1776,16 @@ class GraphHistory:
                     return False
         return True
 
-    def test_how_many_corresponding_path(self, from_release, to_release, go_external):
+    def test_how_many_corresponding_path(
+        self, from_release: int, to_release: int, go_external: bool, verbose: bool = True
+    ):
         """Todo.
 
         Args:
             from_release: Todo.
             to_release: Todo.
             go_external: Todo.
+            verbose: Todo.
 
         Returns:
              Todo.
@@ -1785,64 +1796,33 @@ class GraphHistory:
 
         result = list()
         for ind, from_id in enumerate(ids_from):
-            print(f"{ind}: {from_id}", end="")
+            if verbose:
+                progress_bar(ind, len(ids_from) - 1)
             lfr = len(
                 self.get_possible_paths(from_id, from_release, to_release, reverse=to_reverse, go_external=go_external)
             )
             result.append([from_id, lfr])
-            print(f" {lfr}")
 
         return result
 
-    def check_history_voyage_quality_stream(self, rep=500, top_percent=100, fix_from=None, fix_to=None):
-        """Todo.
-
-        Args:
-            rep: Todo.
-            top_percent: Todo.
-            fix_from: Todo.
-            fix_to: Todo.
-
-        Raises:
-            ValueError: Todo.
-        """
-        a = set()
-        if not (0 <= top_percent <= 100):
-            raise ValueError
-        for _ in itertools.repeat(rep):
-            kk = int(len(self.db_manager.available_releases) / 100 * (100 - top_percent))
-            i = random.choice(self.db_manager.available_releases[kk:]) if not fix_from else fix_from
-            j = random.choice(self.db_manager.available_releases[kk:]) if not fix_to else fix_to
-            if i != j and (i, j) not in a:
-                self.check_history_voyage_quality(i, j, verbose=True)
-                a.add(
-                    (i, j),
-                )
-
-    def check_history_voyage_quality(self, from_release, to_release, verbose=True):
+    def test_history_travel_ensembl_to_ensembl(
+        self, from_release, to_release, go_external, prioritize_to_one_filter, verbose=True
+    ):
         """Todo.
 
         Args:
             from_release: Todo.
             to_release: Todo.
+            go_external: Todo.
+            prioritize_to_one_filter: Todo.
             verbose: Todo.
 
         Returns:
             Todo.
 
         Raises:
-            NotImplementedError: Todo.
+            ValueError: Todo.
         """
-
-        def print_dict(entry_key, entry):
-            if isinstance(entry, int):
-                print(f"- {entry_key}: {entry}", flush=True)
-            elif isinstance(entry, dict):
-                tpr = 0 if len(entry) == 0 else f"{len(entry)} with {sum(map(len, entry.values()))}"
-                print(f"- {entry_key}: {tpr}", flush=True)
-            else:
-                print(f"- {entry_key}: {len(entry)}", flush=True)
-
         db_from = self.db_manager.change_release(from_release)
         db_to = self.db_manager.change_release(to_release)
 
@@ -1851,14 +1831,32 @@ class GraphHistory:
 
         ids_to_s = set(db_to.get_db("ids", save_after_calculation=False)["gene_stable_id"])
 
-        lost_ids, one_to_one_ids = list(), dict()
-        query_not_in_the_graph, history_voyage_failed = list(), list()
-        none_found_but_the_same_id_exist, found_ids_not_accurate = list(), dict()
+        lost_item = list()
+        one_to_one_ids = dict()
+        query_not_in_the_graph = list()
+        history_voyage_failed = list()
+        lost_item_but_the_same_id_exists = list()
+        found_ids_not_accurate = dict()
         one_to_multiple_count = dict()
 
-        for i in ids_from:
+        converted_item_dict = dict()
+        converted_item_dict2 = dict()
+
+        for ind, i in enumerate(ids_from):
+            if verbose:
+                progress_bar(ind, len(ids_from) - 1)
+
             try:
-                conv = self.convert_history(i, from_release, to_release)
+                converted_item = self.convert_history(
+                    i,
+                    from_release,
+                    to_release,
+                    final_database="ensembl_gene",
+                    go_external=go_external,
+                    prioritize_to_one_filter=prioritize_to_one_filter,
+                )
+                converted_item_dict[i] = converted_item
+
             except nx.exception.NetworkXError:
                 query_not_in_the_graph.append(i)
                 continue
@@ -1866,55 +1864,49 @@ class GraphHistory:
                 history_voyage_failed.append((i, e))
                 continue
 
-            if conv is None:
+            if converted_item is None:
                 i_id = self.graph.nodes[i]["ID"]
                 if i_id in ids_to_s:
-                    none_found_but_the_same_id_exist.append(i)
-                lost_ids.append(i)
+                    lost_item_but_the_same_id_exists.append(i)
+                lost_item.append(i)
             else:
-                if len(conv) == 1:
-                    one_to_one_ids[i] = list(conv.keys())
-                elif len(conv) > 1:
-                    one_to_multiple_count[i] = list(conv.keys())
+                if len(converted_item) == 1:
+                    one_to_one_ids[i] = list(converted_item.keys())
+                elif len(converted_item) > 1:
+                    one_to_multiple_count[i] = list(converted_item.keys())
                 else:
-                    raise NotImplementedError
+                    raise ValueError
 
-                for c in conv.keys():
+                # How much of the converted IDs show the same ID
+                for c in converted_item.keys():
+                    if c in converted_item_dict2:
+                        converted_item_dict2[c].append(i)
+                    else:
+                        converted_item_dict2[c] = [i]
+
+                for c in converted_item.keys():
                     if c not in ids_to:
                         if i not in found_ids_not_accurate:
                             found_ids_not_accurate[i] = list()
                         found_ids_not_accurate[i].append(c)
 
-        # one to one
-        # one to many
-        # many to many
-        # best score only ile yukarıdakiler
-
-        # conv'ların ne kadarı aynı ID'yi gösteriyor
         # multilerin ne kadarı unique ne kadarı clash içinde
         # ne kadar ID in the destination not mapped to origin
 
-        # Todo: conv'ı et ve ne kadar intersect etmiş, ne kadar 1:n ne kadar n:1 n:n var onları keşfet
+        # Todo: converted_item'ı et ve ne kadar intersect etmiş, ne kadar 1:n ne kadar n:1 n:n var onları keşfet
 
         results = {
-            "Origin Total ID": len(ids_from),
-            "Destination Total ID": len(ids_to),
-            "Total 'None' Count": lost_ids,
-            "Total One-to-One Count": one_to_one_ids,
-            "Total One-to-Multiple Count": one_to_multiple_count,
+            "Origin IDs": ids_from,
+            "Destination IDs": ids_to,
+            "Converted IDs": converted_item_dict,
+            "Lost Item": lost_item,
+            "Lost Item but the same ID Exists": lost_item_but_the_same_id_exists,
+            "One-to-One": one_to_one_ids,
+            "One-to-Multiple": one_to_multiple_count,
             "Query not in the Graph Error": query_not_in_the_graph,
             "Conversion Failed due to Program Error": history_voyage_failed,
-            "Found 'None' but the same ID Exists": none_found_but_the_same_id_exist,
             "Found IDs are not accurate": found_ids_not_accurate,
+            "Converted ID Clashes": converted_item_dict2,
         }
-
-        if verbose:
-            print(f"## Origin: {from_release}\n## Destination: {to_release}", flush=True)
-            for (
-                r1,
-                r2,
-            ) in zip(results.keys(), results.values()):
-                print_dict(r1, r2)
-            print("", flush=True)
 
         return results

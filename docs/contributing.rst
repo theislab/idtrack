@@ -12,7 +12,7 @@ Here is a list of important resources for contributors:
 - `Issue Tracker`_
 - `Code of Conduct`_
 
-.. _BSD license: https://opensource.org/licenses/BSD
+.. _BSD license: https://opensource.org/licenses/BSD-3-Clause
 .. _Source Code: https://github.com/theislab/idtrack
 .. _Documentation: https://idtrack.readthedocs.io/
 .. _Issue Tracker: https://github.com/theislab/idtrack/issues
