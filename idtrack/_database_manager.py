@@ -65,7 +65,7 @@ class DatabaseManager:
         self.ignore_after = ignore_after if ignore_after else np.inf
 
         # Protected attributes
-        self.available_form_of_interests = ["gene", "transcript", "translation"]
+        self.available_form_of_interests = ["gene", "transcript", "translation"]  # Warning: the order is important.
         self._available_version_info = ["add_version", "without_version", "with_version"]
         self._comp_hdf5 = {"complevel": 9, "complib": "blosc:zlib"} if self.compress else dict()
         self._column_sep = "_COL_"

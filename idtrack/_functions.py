@@ -12,7 +12,7 @@ import pandas as pd
 
 from ._database_manager import DatabaseManager
 from ._dataset import Dataset
-from ._graph_history import GraphHistory
+from ._track import Track
 from ._verbose import logger_config
 from ._verify_organism import VerifyOrganism
 
@@ -62,7 +62,7 @@ def initialize_minimal(
         st.initialize_form_conversion()
 
     if initialize_graph:
-        g: Optional[GraphHistory] = GraphHistory(dm, narrow=narrow_edge_attributes)
+        g: Optional[Track] = Track(dm, narrow=narrow_edge_attributes)
     else:
         g = None
 

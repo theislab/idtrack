@@ -17,5 +17,5 @@ from ._functions import (  # noqa
     test_external_conversion,
     test_form_conversion,
 )
-from ._graph_history import GraphHistory  # noqa
+from ._track import Track  # noqa
 from ._verify_organism import VerifyOrganism  # noqa
