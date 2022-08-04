@@ -17,8 +17,8 @@ import pandas as pd
 
 from ._database_manager import DatabaseManager
 from ._db import DB
-from ._verbose import progress_bar
 from ._graph import Graph
+from ._verbose import progress_bar
 
 
 class Track:
@@ -26,10 +26,16 @@ class Track:
 
     # ENSG00000263464
     def __init__(self, db_manager: DatabaseManager, **kwargs):
+        """Todo.
 
+        Args:
+            db_manager: Todo.
+            kwargs: Todo.
+        """
         self.log = logging.getLogger("track")
         self.db_manager = db_manager
         graph_creator = Graph(self.db_manager)
+
         # Calculate/Load the graph
         self.graph = graph_creator.get_graph(**kwargs)
         self.reverse_graph = self.graph.reverse(copy=False)
@@ -44,6 +50,7 @@ class Track:
         the_path: list = None,
         the_path_db: list = None,
         depth_max: int = 0,
+        from_release: int = None,
     ):
         """Todo.
 
@@ -55,6 +62,7 @@ class Track:
             the_path_db: Todo.
             depth_max: Todo.
             filter_node_type: Todo.
+            from_release: Todo.
 
         Raises:
             ValueError: Todo.
@@ -78,6 +86,7 @@ class Track:
                     gnt = graph.nodes[_next_neighbour]["node_type"]
 
                     if len(_the_path) >= 2:
+                        # prevent bouncing getween transcript and gene id.versions
                         l1, l2 = _the_path[-2:]  # [..., l1, l2, gnt]
                         if (
                             self.graph.nodes[l1]["node_type"] == gnt
@@ -95,6 +104,19 @@ class Track:
                             raise ValueError
 
                         if _next_neighbour not in _the_path:
+
+                            if from_release is not None:
+                                the_edge = graph[_the_id][_next_neighbour]
+                                if "releases" in the_edge:
+                                    if from_release not in the_edge["releases"]:
+                                        continue
+                                elif "release_dict" in the_edge:
+                                    rd = the_edge["release_dict"]
+                                    if from_release not in itertools.chain.from_iterable(rd.values()):
+                                        continue
+                                else:
+                                    raise ValueError
+
                             self._recursive_synonymous(
                                 _next_neighbour,
                                 synonymous_ones,
@@ -105,20 +127,28 @@ class Track:
                                 depth_max=depth_max,
                             )
 
-    def synonymous_nodes(self, the_id: str, depth_max: int, filter_node_type: list):
+    def synonymous_nodes(self, the_id: str, depth_max: int, filter_node_type: list, from_release: int = None):
         """Todo.
 
         Args:
             the_id: Todo.
             depth_max: Todo.
             filter_node_type: Todo.
+            from_release: Todo.
 
         Returns:
             Todo.
         """
         synonymous_ones: list = []
         synonymous_ones_db: list = []
-        self._recursive_synonymous(the_id, synonymous_ones, synonymous_ones_db, filter_node_type, depth_max=depth_max)
+        self._recursive_synonymous(
+            the_id,
+            synonymous_ones,
+            synonymous_ones_db,
+            filter_node_type,
+            depth_max=depth_max,
+            from_release=from_release,
+        )
 
         remove_set: set = set()
         the_ends_min: dict = dict()
@@ -131,6 +161,7 @@ class Track:
                 the_ends_min[e] = lp
 
         for ind in range(len(synonymous_ones)):
+            # choose the minimum path to the same target
             e = synonymous_ones[ind][-1]
             am = the_ends_min[e]
             lp = len(synonymous_ones[ind])
@@ -165,10 +196,10 @@ class Track:
             raise ValueError
         elif len(t_outs) == 0:
             assert self.graph.nodes[the_id]["Version"] == DB.no_old_node_id, the_id
-            t_outs = [min(self.graph.graph['confident_for_release'])]
+            t_outs = [min(self.graph.graph["confident_for_release"])]
         elif len(t_ins) == 0:
             assert self.graph.nodes[the_id]["Version"] == DB.no_new_node_id, the_id
-            t_ins = [max(self.graph.graph['confident_for_release'])]
+            t_ins = [max(self.graph.graph["confident_for_release"])]
 
         inout_edges = sorted(
             itertools.chain(zip(t_outs, itertools.repeat(True)), zip(t_ins, itertools.repeat(False))),
@@ -196,7 +227,7 @@ class Track:
                 else:
                     narrowed.append(ens_rel)
                     active_state = False
-        narrowed = [narrowed[i: i + 2] for i in range(0, len(narrowed), 2)]
+        narrowed = [narrowed[i : i + 2] for i in range(0, len(narrowed), 2)]
         # outputs always increasing, inclusive ranges, for get_intersecting_ranges
         return narrowed
 
@@ -416,7 +447,9 @@ class Track:
         # given final release
         # given from release
 
-    def choose_relevant_synonym(self, the_id: str, depth_max: int, to_release: int, filter_node_type: list):
+    def choose_relevant_synonym(
+        self, the_id: str, depth_max: int, to_release: int, filter_node_type: list, from_release: int = None
+    ):
         """Todo.
 
         Args:
@@ -424,6 +457,7 @@ class Track:
             depth_max: Todo.
             to_release: Todo.
             filter_node_type: Todo.
+            from_release: Todo
 
         Returns:
             Todo.
@@ -431,7 +465,8 @@ class Track:
         # help to choose z for a->x->z3,6,9
 
         # filter_node_type == 'ensembl_gene'
-        syn = self.synonymous_nodes(the_id, depth_max, filter_node_type)  # it returns itself, which is important
+        syn = self.synonymous_nodes(the_id, depth_max, filter_node_type, from_release=from_release)
+        # it returns itself, which is important
 
         syn_ids: dict = dict()
         for syn_p, syn_db in syn:
@@ -649,7 +684,19 @@ class Track:
                 depth_max=external_settings["synonymous_max_depth"],
                 to_release=to_release,
                 filter_node_type=external_settings["backbone_node_type"],
+                # do not time travel here, go with the same release
+                from_release=from_release,
             )
+
+            if len(s) == 0:
+                s = self.choose_relevant_synonym(
+                    from_id,
+                    depth_max=external_settings["synonymous_max_depth"],
+                    to_release=to_release,
+                    filter_node_type=external_settings["backbone_node_type"],
+                    # if there is way to find with the same release, go just find it in other releases.
+                    from_release=None,
+                )
 
             for s1, s2, s3, s4, s5 in s:
                 alt_external_path = _external_path_maker(from_id, s2, s4, s5)
@@ -861,7 +908,7 @@ class Track:
         """
         return [i[0][-1] for i in self.synonymous_nodes(external_id, 2, ["ensembl_gene"])]
 
-    def get_database_nodes(self, database_name):
+    def get_external_database_nodes(self, database_name):
         """Todo.
 
         Args:
@@ -902,7 +949,7 @@ class Track:
             Todo.
         """
         self.log.info(f"Database bin dictionary is being created for '{anchor_database_name}'.")
-        external_nodes = self.get_database_nodes(anchor_database_name)
+        external_nodes = self.get_external_database_nodes(anchor_database_name)
         bins = dict()
         for ind, en in enumerate(external_nodes):
             if verbose:
@@ -1005,7 +1052,7 @@ class Track:
         remove_na="omit",
         score_of_the_queried_item: float = np.nan,
         go_external: bool = True,
-        prioritize_to_one_filter: bool = True,
+        prioritize_to_one_filter: bool = False,
     ):
         """Todo.
 
@@ -1130,7 +1177,7 @@ class Track:
             if not 0 < l1 <= l2:
                 raise ValueError
 
-            return range(l1, (l2 if not np.isinf(l2) else max(self.graph.graph['confident_for_release'])) + 1)
+            return range(l1, (l2 if not np.isinf(l2) else max(self.graph.graph["confident_for_release"])) + 1)
 
         if the_id in self.graph.nodes:
             nt = self.graph.nodes[the_id]["node_type"]

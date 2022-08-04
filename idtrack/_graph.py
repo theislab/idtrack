@@ -27,7 +27,6 @@ class Graph:
 
         Args:
             db_manager: Todo.
-            kwargs: Todo.
 
         Raises:
             ValueError: Todo.
@@ -67,7 +66,7 @@ class Graph:
         # The order is important for form_list in compose_all, due to some clashing ensembl IDs.
         form_list = self.db_manager.available_form_of_interests if not form_list else form_list
         dbman_s = {f: self.db_manager.change_form(f) for f in form_list}
-        graph_s = {f: self._remove_non_gene_trees(self.construct_graph_form(narrow, dbman_s[f])) for f in form_list}
+        graph_s = {f: Graph._remove_non_gene_trees(self.construct_graph_form(narrow, dbman_s[f])) for f in form_list}
         # Fun fact: There are Ensembl protein IDs that starts with 'ENST', and sometimes there are clash of IDs.
         # Example clash: "ENST00000515292.1". It does not clash in time, they are defined in different ensembl releases.
         # Remove_non_gene_tree before compose_all.
@@ -76,7 +75,7 @@ class Graph:
             if m in graph_s and n in graph_s:
                 gm = set(graph_s[m].nodes)
                 gn = set(graph_s[n].nodes)
-                intersection = (gm & gn)
+                intersection = gm & gn
                 if len(intersection):
                     self.log.warning(f"Intersecting Ensembl nodes in two different forms: '{m}'-'{n}'.")
                     self.log.warning(f"Nodes in '{m}' will be replaced by '{n}': '{', '.join(intersection)}'.")
@@ -158,9 +157,10 @@ class Graph:
         if misplaced_external_entry > 0:
             self.log.warning(f"Misplaced external entry: {misplaced_external_entry}.")
 
-        new_form = '-'.join(form_list)
-        g.graph['name'] = f"{self.db_manager.organism}_{self.db_manager.ensembl_release}_{new_form}",
-        g.graph.graph['type'] = new_form
+        new_form = "-".join(form_list)
+        g.graph["name"] = (f"{self.db_manager.organism}_{self.db_manager.ensembl_release}_{new_form}",)
+        g.graph.graph["type"] = new_form
+        g.graph.graph["narrow_external"] = narrow_external
 
         return g
 
@@ -343,6 +343,7 @@ class Graph:
             organism=db_manager.organism,
             confident_for_release=self.db_manager.available_releases,
             version_info=version_info,
+            narrow=narrow,
         )
 
         self.log.info("Edges between across different IDs and self loops are being added.")
@@ -609,7 +610,8 @@ class Graph:
         self.log.info("Graph is successfully created.")
         return g
 
-    def _remove_non_gene_trees(self, graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
+    @staticmethod
+    def _remove_non_gene_trees(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
 
         forms_remove = ["ensembl_transcript", "ensembl_translation"]
 
