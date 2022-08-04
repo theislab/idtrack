@@ -10,7 +10,7 @@ import os
 import warnings
 from collections import Counter
 from functools import cached_property
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 import networkx as nx
 import numpy as np
@@ -25,6 +25,7 @@ from ._verbose import progress_bar
 class GraphHistory:
     """Creates ID history graph."""
 
+    # ENSG00000263464
     def __init__(self, db_manager: DatabaseManager, **kwargs):
         """Todo.
 
@@ -36,8 +37,8 @@ class GraphHistory:
             ValueError: Todo.
         """
         # Instance attributes
-        self.log = logging.getLogger("graph")
         self.db_manager = db_manager
+        self.log = logging.getLogger("graph")
         self.confident_for_release = self.db_manager.available_releases
 
         # Protected attributes
@@ -80,11 +81,15 @@ class GraphHistory:
 
         form_list = self.db_manager.available_form_of_interests if not form_list else form_list
         dbman_s = {f: self.db_manager.change_form(f) for f in form_list}
-        graph_s = [self.construct_graph_form(narrow, dbman_s[f]) for f in form_list]
-        g = nx.compose_all(graph_s)
-        g = self._remove_nongene_tree(g)
+        graph_s = {f: self._remove_nongene_tree(self.construct_graph_form(narrow, dbman_s[f])) for f in form_list}
+        # Fun fact: There are Ensembl protein IDs that starts with 'ENST', and sometimes there are clash of IDs.
+        # Example clash: "ENST00000515292.1". It does not clash in time, they are defined in different ensembl releases.
+        # Remove_non_gene_tree before compose_all.
+
+        g = nx.compose_all(list(graph_s.values()))
 
         # Establish connection between different forms
+        self.log.info("Establishing connection between different forms.")
         for ensembl_release in self.db_manager.available_releases:
             db_manager = dbman_s["transcript"].change_release(ensembl_release)  # Does not matter which form.
             rc = db_manager.get_db("relationcurrent", save_after_calculation=db_manager.store_raw_always)
@@ -102,6 +107,7 @@ class GraphHistory:
 
         # Add versionless versions as well
         if g.graph["version_info"] != "without_version":
+            self.log.info("Versionless Ensembl IDs are being connected.")
             for f in ["gene"]:  # transcript and translation does not have base
                 for er in self.db_manager.available_releases:
                     db_manager = self.db_manager.change_form(f).change_release(er)  # Does not matter which form.
@@ -121,14 +127,13 @@ class GraphHistory:
                 self.log.info(f"Edges between versionless ID to version ID has been added for '{f}'.")
 
         # Establish connection between different databases
-        graph_nodes = set(g.nodes)
+        graph_nodes_before_external = set(g.nodes)
         misplaced_external_entry = 0
         for f in form_list:
             db_manager = dbman_s[f].change_release(max(self.db_manager.available_releases))
             st = Dataset(db_manager, narrow_search=narrow_external)
-            self.log.info(f"Edges between external IDs to Ensembl IDs is being added for '{f}'.")
             rc = st.initialize_external_conversion()
-
+            self.log.info(f"Edges between external IDs to Ensembl IDs is being added for '{f}'.")
             for _ind, entry in rc.iterrows():
                 e1 = entry["graph_id"]
                 e2 = entry["id_db"]
@@ -137,12 +142,13 @@ class GraphHistory:
 
                 if e1 and e2 and er and edb:
 
-                    if e1 not in graph_nodes:
+                    if e1 not in graph_nodes_before_external:
                         raise ValueError
 
-                    if e2 in graph_nodes:
+                    if e2 in graph_nodes_before_external:
                         misplaced_external_entry += 1
-
+                        # Todo: Have a look and decide whether they are a feature or a bug.
+                        #   Decide whether it can be useful for our purposes or not.
                     else:
                         if e2 not in g.nodes:
                             node_attributes_2 = {"release_dict": {edb: {er}}, "node_type": "external"}
@@ -255,6 +261,16 @@ class GraphHistory:
             # Create edge attributes using the
             edge_a = edge_attribute_maker(rel_1, rel_2, the_weight)  # old==new
             g.add_edge(node_1, node_2, **edge_a)
+
+        def split_id(id_to_split: str, which_part: str):
+            if which_part == "ID":
+                return id_to_split.split(DB.id_ver_delimiter)[0]
+            elif which_part == "Version":
+                return (
+                    id_to_split.split(DB.id_ver_delimiter)[1] if id_to_split.count(DB.id_ver_delimiter) == 1 else np.nan
+                )  # there are max 1 as checked previously
+            else:
+                raise ValueError
 
         # Initialize important variables
         ms = ms_creator()
@@ -379,7 +395,7 @@ class GraphHistory:
         # redefinition of the latest release IDs.
         latest_nodes_last_rel = {i: -1 for i in latest_release_ids}
         latest_nodes_last_rel_locked = {i: False for i in latest_release_ids}
-        # Some entities is retired and then refined in a later release, these are to keep track of them.
+        # Some entities are retired and then refined in a later release, these are to keep track of them.
         void_added: dict = dict()
         reassignment_retirement: int = 0
 
@@ -544,6 +560,28 @@ class GraphHistory:
             fo_d_prev.update(extend_forwards_candidates)
             fo_prev_rel = copy.copy(rel_fo)
 
+        # In some cases, the table from `dm_manager.get('idhistory_narrow')` has some edges, that is completely
+        # problematic. For example, 'ENSG00000289022' gene is defined in release_105, but it does not seem to
+        # exist in the release gene id lists (neither 104, 105, 106 and also online sources).
+        # Delete the edge if there are other edges from the previous node.
+        self.log.info("Problematic nodes due of Ensembl annotations are being removed.")
+        ids_amc = set()
+        problematic_nodes = list()
+        for amc_rel in db_manager.available_releases:
+            # Create a DatabaseManager object with the release of interest.
+            amc_dm = db_manager.change_release(amc_rel)
+
+            # Get the IDs and create a dictionary from ID to Version.
+            ids_amc_df = amc_dm.get_db("ids", save_after_calculation=False)
+            ids_amc.update(set(amc_dm.id_ver_from_df(ids_amc_df)))
+        for node in g.nodes:
+            if node not in ids_amc and split_id(node, "Version") not in self._alternative_versions:
+                problematic_nodes.append(node)
+        if len(problematic_nodes) > 0:
+            self.log.warning(f"Nodes are deleted due to Ensembl annotation error: {len(problematic_nodes)}.")
+            for node in problematic_nodes:
+                g.remove_node(node)
+
         # In reverse loop, we got the latest redefinition (let's say 'x') of latest release IDs. Here, an edge is
         # added to them from x-to-inf. This is very essential for the recursive pathfinder to work robustly.
         self.log.info("Self-loops for latest release entries are being added.")
@@ -567,56 +605,39 @@ class GraphHistory:
         # Add some node features as node attributes.
         nx.set_node_attributes(g, {n: f"ensembl_{db_manager.form}" for n in g.nodes}, "node_type")
         nx.set_node_attributes(g, {n: n in latest_release_ids for n in g.nodes}, "is_latest")
-        nx.set_node_attributes(g, {n: n.split(DB.id_ver_delimiter)[0] for n in g.nodes}, "ID")
-        nx.set_node_attributes(
-            g,
-            {
-                n: n.split(DB.id_ver_delimiter)[1]
-                if n.count(DB.id_ver_delimiter) == 1
-                else np.nan  # there are max 1 as checked previously
-                for n in g.nodes
-            },
-            "Version",
-        )
+        nx.set_node_attributes(g, {n: split_id(n, "ID") for n in g.nodes}, "ID")
+        nx.set_node_attributes(g, {n: split_id(n, "Version") for n in g.nodes}, "Version")
         self.log.info("Graph is successfully created.")
         return g
 
-    @staticmethod
-    def _remove_nongene_tree(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
+    def _remove_nongene_tree(self, graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
 
-        from idtrack._db import DB
+        forms_remove = ["ensembl_transcript", "ensembl_translation"]
 
-        forms_remove = ["transcript", "translation"]
+        node_to_remove = []
+        edge_to_remove = []
 
-        counter = []
-        counter2 = []
+        for n in graph.nodes:
 
-        initial_nodes = tuple(graph.nodes)
-        for f in forms_remove:
+            the_node = graph.nodes[n]
+            nt = the_node["node_type"]
 
-            for n in initial_nodes:
+            if nt in forms_remove:
 
-                try:
-                    the_node = graph.nodes[n]
-                except KeyError:
-                    continue
-                nt = the_node["node_type"]
+                if the_node["Version"] in self._alternative_versions:
+                    node_to_remove.append(n)  # we only remove Void or retired
+                else:
+                    for m in graph.neighbors(n):
+                        mt = graph.nodes[m]["node_type"]
+                        if nt == mt:
+                            kmn = [k for k in graph[n][m]]
+                            for k in kmn:
+                                edge_to_remove.append((n, m, k))
 
-                if nt == f"ensembl_{f}":
-
-                    if n.endswith(DB.no_old_node_id) or n.endswith(DB.no_new_node_id):
-                        graph.remove_node(n)
-                        counter.append(n)
-                    else:
-
-                        mlist = list(graph.neighbors(n))
-                        for m in mlist:
-                            mt = graph.nodes[m]["node_type"]
-                            if nt == mt:
-                                kmn = [k for k in graph[n][m]]
-                                for k in kmn:
-                                    graph.remove_edge(n, m, k)
-                                    counter2.append((n, m, k))
+        for c in edge_to_remove:
+            graph.remove_edge(*c)
+        for c in node_to_remove:
+            graph.remove_node(c)
 
         return graph
 
@@ -825,6 +846,15 @@ class GraphHistory:
         t_outs = self.get_next_edge_releases(from_id=the_id, reverse=True)
         t_ins = self.get_next_edge_releases(from_id=the_id, reverse=False)
 
+        if len(t_outs) == 0 and len(t_ins) == 0:
+            raise ValueError
+        elif len(t_outs) == 0:
+            assert self.graph.nodes[the_id]["Version"] == DB.no_old_node_id, the_id
+            t_outs = [min(self.confident_for_release)]
+        elif len(t_ins) == 0:
+            assert self.graph.nodes[the_id]["Version"] == DB.no_new_node_id, the_id
+            t_ins = [max(self.confident_for_release)]
+
         inout_edges = sorted(
             itertools.chain(zip(t_outs, itertools.repeat(True)), zip(t_ins, itertools.repeat(False))),
             reverse=False,
@@ -854,6 +884,19 @@ class GraphHistory:
         narrowed = [narrowed[i : i + 2] for i in range(0, len(narrowed), 2)]
         # outputs always increasing, inclusive ranges, for get_intersecting_ranges
         return narrowed
+
+    def get_base_id_range(self, base_id):
+        """Todo.
+
+        Args:
+            base_id: Todo.
+
+        Returns:
+            Todo.
+        """
+        associated_ids = self.graph.neighbors(base_id)
+        all_ranges = sorted(r for ai in associated_ids for r in self.get_active_ranges_of_id(ai))
+        return GraphHistory.compact_ranges(all_ranges)
 
     @staticmethod
     def compact_ranges(lor):
@@ -1637,7 +1680,7 @@ class GraphHistory:
 
         return max_score
 
-    def convert_history(
+    def convert(
         self,
         from_id: str,
         from_release: Optional[int],
@@ -1754,6 +1797,133 @@ class GraphHistory:
     #     # When new release arrive, just add new nodes.
     #     pass
 
+    def node_database_release_pairs(self, the_id):
+        """Todo.
+
+        Args:
+            the_id: Todo.
+
+        Returns:
+            Todo.
+
+        Raises:
+            ValueError: Todo.
+        """
+
+        def non_inf_range(l1: int, l2: Union[float, int]):
+
+            if not 0 < l1 <= l2:
+                raise ValueError
+
+            return range(l1, (l2 if not np.isinf(l2) else max(self.confident_for_release)) + 1)
+
+        if the_id in self.graph.nodes:
+            nt = self.graph.nodes[the_id]["node_type"]
+            if nt == "external":
+                rd = self.graph.nodes[the_id]["release_dict"]
+                return [(r, p) for r in rd for p in rd[r]]
+            elif nt == "ensembl_gene":
+                return [(nt, k) for i, j in self.get_active_ranges_of_id(the_id) for k in non_inf_range(i, j)]
+            elif nt in ["ensembl_transcript", "ensembl_translation", "base_ensembl_gene"]:
+                _available = {
+                    r
+                    for ne in self.graph.neighbors(the_id)
+                    for _, s in self.graph[the_id][ne].items()
+                    for r in s["releases"]
+                }
+                return [(nt, av) for av in _available]
+            else:
+                raise ValueError
+        else:
+            return [(None, None)]
+
+    def identify_source(self, dataset_ids: list):
+        """Todo.
+
+        Args:
+            dataset_ids: Todo.
+
+        Returns:
+            Todo.
+        """
+        possible_pairs = list()
+        for di in dataset_ids:
+            possible_pairs.extend(self.node_database_release_pairs(di))
+
+        return list(Counter(possible_pairs).most_common())
+
+    def get_id_list(self, database: str, release: int):
+        """Todo.
+
+        Args:
+            database: Todo.
+            release: Todo.
+
+        Returns:
+            Todo.
+        """
+        the_key = (database, release)
+        final_list = list()
+        for n in self.graph.nodes:
+
+            if (
+                self.graph.nodes[n]["node_type"] == "ensembl_gene"
+                and self.graph.nodes[n]["Version"] in self._alternative_versions
+            ):
+                continue
+
+            pairs = self.node_database_release_pairs(n)
+            if the_key in pairs:
+                final_list.append(n)
+        return final_list
+
+    def convert_from_anndata(self, anndata_path, obs_column):
+        """Problem is anndata package will be a package requirement.
+
+        Args:
+            anndata_path: Todo.
+            obs_column: Todo.
+
+        Raises:
+            NotImplementedError: Todo.
+        """
+        raise NotImplementedError
+
+    def convert_optimized_multiple(self):
+        """Accept multiple ID list and return the most optimal set of IDs, minimizing the clashes.
+
+        Raises:
+            NotImplementedError: Todo.
+        """
+        raise NotImplementedError
+
+    # def test(self):
+    # self.get_base_id_range() is equal to release in the adjacent nodes
+    # pass
+
+    def test_range_functions_2(self, verbose: bool = True):
+        """Todo.
+
+        Args:
+            verbose: Todo.
+
+        Returns:
+            Todo.
+        """
+        for ind, ens_rel in enumerate(self.confident_for_release):
+            if verbose:
+                progress_bar(ind, len(self.confident_for_release) - 1)
+
+            db_from = self.db_manager.change_release(ens_rel)
+            ids_from = set(db_from.id_ver_from_df(db_from.get_db("ids", save_after_calculation=False)))
+
+            ids_from_graph = self.get_id_list("ensembl_gene", ens_rel)
+            ids_from_graph = set(ids_from_graph)
+
+            if ids_from != ids_from_graph:
+                return False
+        return True
+
     def test_range_functions(self):
         """Todo.
 
@@ -1847,7 +2017,7 @@ class GraphHistory:
                 progress_bar(ind, len(ids_from) - 1)
 
             try:
-                converted_item = self.convert_history(
+                converted_item = self.convert(
                     i,
                     from_release,
                     to_release,
