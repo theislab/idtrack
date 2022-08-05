@@ -66,6 +66,7 @@ class Track:
 
         Raises:
             ValueError: Todo.
+            KeyError: Todo.
         """
         input_node_type = self.graph.nodes[_the_id]["node_type"]
         _the_path = [_the_id] if the_path is None else the_path
@@ -74,7 +75,13 @@ class Track:
         counted_elements = Counter(_the_path_db)
         if depth_max > max(counted_elements.values()):  # The depth is all node_type.
 
-            if len(_the_path) > 0 and self.graph.nodes[_the_path[-1]]["node_type"] in filter_node_type:
+            if len(_the_path) > 0 and (
+                self.graph.nodes[_the_path[-1]]["node_type"] in filter_node_type
+                or (
+                    self.graph.nodes[_the_path[-1]]["node_type"] == "external"
+                    and filter_node_type in self.graph.nodes[_the_path[-1]]["release_dict"]
+                )
+            ):
                 synonymous_ones.append(_the_path)
                 synonymous_ones_db.append(_the_path_db)
 
@@ -107,15 +114,12 @@ class Track:
 
                             if from_release is not None:
                                 the_edge = graph[_the_id][_next_neighbour]
-                                if "releases" in the_edge:
-                                    if from_release not in the_edge["releases"]:
-                                        continue
-                                elif "release_dict" in the_edge:
-                                    rd = the_edge["release_dict"]
-                                    if from_release not in itertools.chain.from_iterable(rd.values()):
-                                        continue
-                                else:
-                                    raise ValueError
+                                for mei in the_edge:
+                                    try:
+                                        if from_release not in the_edge[mei]["releases"]:
+                                            continue
+                                    except KeyError as exc:  # releases not in the edge
+                                        raise KeyError(graph[_the_id]) from exc
 
                             self._recursive_synonymous(
                                 _next_neighbour,
@@ -138,9 +142,15 @@ class Track:
 
         Returns:
             Todo.
+
+        Raises:
+            ValueError: Todo.
         """
         synonymous_ones: list = []
         synonymous_ones_db: list = []
+        if filter_node_type == "external":
+            raise ValueError("Define which external database.")
+
         self._recursive_synonymous(
             the_id,
             synonymous_ones,
@@ -173,6 +183,35 @@ class Track:
             for ind in range(len(synonymous_ones))
             if ind not in remove_set
         ]
+
+    def get_active_ranges_of_id_others(self, the_id):
+        """Todo.
+
+        Args:
+            the_id: Todo.
+
+        Returns:
+            Todo.
+        """
+        pairs = self.memorized_node_database_release_pairs[the_id]
+        rels = sorted({p2 for p1, p2 in pairs})
+        return Track.list_to_ranges(rels)
+
+    @staticmethod
+    def list_to_ranges(i: list):
+        """Todo.
+
+        Args:
+            i: Todo.
+
+        Returns:
+            Todo.
+        """
+        res = list()
+        for _, a in itertools.groupby(enumerate(i), lambda pair: pair[1] - pair[0]):
+            b = list(a)
+            res.append([b[0][1], b[-1][1]])
+        return res
 
     def get_active_ranges_of_id(self, the_id):
         """Todo.
@@ -626,7 +665,10 @@ class Track:
         Raises:
             ValueError: Todo.
         """
-        n = self.get_active_ranges_of_id(from_id)
+        if self.graph.nodes[from_id]["node_type"] == DB.external_search_settings["backbone_node_type"]:
+            n = self.get_active_ranges_of_id(from_id)
+        else:
+            n = self.get_active_ranges_of_id_others(from_id)
         m = Track.get_from_release_and_reverse_vars(n, to_release)
 
         forward_from_ids = [i for i, j in m if not j]
@@ -938,6 +980,34 @@ class Track:
             for j in self.graph.nodes[i]["release_dict"].keys()
         }
 
+    @cached_property
+    def external_database_connection_form(self):
+        """Todo.
+
+        Returns:
+            Todo.
+
+        Raises:
+            ValueError: Todo.
+        """
+        aed = self.available_external_databases
+        res = dict()
+
+        for e in aed:
+            ra = list()
+            nodes = self.get_external_database_nodes(e)
+
+            for node in nodes:
+                r = [self.graph.nodes[nei]["node_type"] for nei in self.graph.neighbors(node)]
+                a = [i.split("_")[1] for i in r if i.startswith("ensembl")]
+
+                if any([i not in self.db_manager.available_form_of_interests for i in a]) and len(a) > 0:
+                    raise ValueError(a, e, node)
+
+                ra.extend(a)
+            res[e] = Counter(ra).most_common(1)[0][0]
+        return res
+
     def database_bins(self, anchor_database_name, verbose: bool = True):
         """Todo.
 
@@ -1170,6 +1240,7 @@ class Track:
 
         Raises:
             ValueError: Todo.
+            KeyError: Todo.
         """
 
         def non_inf_range(l1: int, l2: Union[float, int]):
@@ -1180,12 +1251,13 @@ class Track:
             return range(l1, (l2 if not np.isinf(l2) else max(self.graph.graph["confident_for_release"])) + 1)
 
         if the_id in self.graph.nodes:
+            # external ise database ismi digerleriyse node_type
             nt = self.graph.nodes[the_id]["node_type"]
             if nt == "external":
                 rd = self.graph.nodes[the_id]["release_dict"]
-                return [(r, p) for r in rd for p in rd[r]]
+                return {(r, p) for r in rd for p in rd[r]}
             elif nt == "ensembl_gene":
-                return [(nt, k) for i, j in self.get_active_ranges_of_id(the_id) for k in non_inf_range(i, j)]
+                return {(nt, k) for i, j in self.get_active_ranges_of_id(the_id) for k in non_inf_range(i, j)}
             elif nt in ["ensembl_transcript", "ensembl_translation", "base_ensembl_gene"]:
                 _available = {
                     r
@@ -1193,11 +1265,11 @@ class Track:
                     for _, s in self.graph[the_id][ne].items()
                     for r in s["releases"]
                 }
-                return [(nt, av) for av in _available]
+                return {(nt, av) for av in _available}
             else:
                 raise ValueError
         else:
-            return [(None, None)]
+            raise KeyError
 
     def identify_source(self, dataset_ids: list):
         """Todo.
@@ -1210,9 +1282,14 @@ class Track:
         """
         possible_pairs = list()
         for di in dataset_ids:
-            possible_pairs.extend(self.node_database_release_pairs(di))
+            possible_pairs.extend(self.memorized_node_database_release_pairs[di])
 
         return list(Counter(possible_pairs).most_common())
+
+    @cached_property
+    def memorized_node_database_release_pairs(self):  # Uses so much uncess
+        """Todo."""
+        return {n: self.node_database_release_pairs(n) for n in self.graph.nodes}
 
     def get_id_list(self, database: str, release: int):
         """Todo.
@@ -1234,7 +1311,7 @@ class Track:
             ):
                 continue
 
-            pairs = self.node_database_release_pairs(n)
+            pairs = self.memorized_node_database_release_pairs[n]
             if the_key in pairs:
                 final_list.append(n)
         return final_list

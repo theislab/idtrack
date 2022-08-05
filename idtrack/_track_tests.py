@@ -4,6 +4,9 @@
 # k.inecik@gmail.com
 
 import itertools
+import multiprocessing
+import random
+import time
 from abc import ABC
 
 import networkx as nx
@@ -74,6 +77,15 @@ class TrackTests(Track, ABC):
                     switch = False
         return switch
 
+    def is_base_is_range_correct(self):
+        """Todo."""
+        raise NotImplementedError
+
+        # get_base_id_range form function
+        # get db.manger entries
+        # get range directly from graph
+        # compare results
+
     def is_id_functions_consistent_external(self, verbose: bool = True):
         """Todo.
 
@@ -86,19 +98,26 @@ class TrackTests(Track, ABC):
         switch = True
         narrow_external = self.graph.graph["narrow_external"]
         total_iteration = len(self.graph.graph["confident_for_release"]) * len(self.available_external_databases)
+        misplace_entries = self.graph.graph["misplaced_external_entry"]
         current_iteration = 0
         for release in self.graph.graph["confident_for_release"]:
             dm = self.db_manager.change_release(release)
-            ex_rel = dm.get_db("external_relevant" if narrow_external else "external")
+            ex_rel_d = {
+                f: dm.change_form(f).get_db("external_relevant" if narrow_external else "external")
+                for f in self.db_manager.available_form_of_interests
+            }
 
             for database in self.available_external_databases:
                 if verbose:
                     progress_bar(current_iteration, total_iteration - 1)
 
+                form = self.external_database_connection_form[database]
+                ex_rel = ex_rel_d[form]
+
                 from_dm = set(ex_rel["id_db"][ex_rel["name_db"] == database])
                 from_gr = set(self.get_id_list(database, release))
 
-                if from_gr != from_dm:
+                if from_gr != from_dm and not all([i in misplace_entries for i in (from_dm - from_gr)]):
                     self.log.warning(
                         f"Inconsistent results for ID list functions (external) "
                         f"for: database '{database}', ensembl release '{release}'."
@@ -107,6 +126,10 @@ class TrackTests(Track, ABC):
                 current_iteration += 1
 
         return switch
+
+    def dataset_identification_metric(self):
+        """Todo."""
+        raise NotImplementedError
 
     def how_many_corresponding_path_ensembl(
         self, from_release: int, to_release: int, go_external: bool, verbose: bool = True
@@ -137,8 +160,61 @@ class TrackTests(Track, ABC):
 
         return result
 
+    def history_travel_testing_random(self, reverse: bool, verbose: bool = True):
+        """Todo.
+
+        Args:
+            reverse: Todo.
+            verbose: Todo.
+
+        Returns:
+            Todo.
+        """
+        fr1 = random.choice(self.graph.graph["confident_for_release"])
+        if not reverse:
+            fr2 = random.choice([i for i in self.graph.graph["confident_for_release"] if i >= fr1])
+        else:
+            fr2 = random.choice([i for i in self.graph.graph["confident_for_release"] if i < fr1])
+
+        dbs = ["ensembl_gene", "HGNC Symbol", "Uniprot/SWISSPROT"]
+        db1 = random.choice(dbs)
+        db2 = random.choice(dbs)
+
+        if verbose:
+            print(f"From={fr1}, To={fr2}, From={db1}, To={db2}")
+        res = self.history_travel_testing(
+            fr1, fr2, db1, db2, go_external=True, prioritize_to_one_filter=False, verbose=verbose, return_metrics=True
+        )
+        return res
+
+    def history_travel_testing_stream_multiprocessing(self, repeat: int, reverse: bool, verbose: bool = True):
+        """Todo.
+
+        Args:
+            repeat: Todo.
+            reverse: Todo.
+            verbose: Todo.
+        """
+        mcc = multiprocessing.cpu_count()
+        print(f"Number of CPU: {mcc}")
+
+        def func(_):
+            return self.history_travel_testing_random(reverse=reverse, verbose=False)
+
+        with multiprocessing.Pool(processes=mcc) as pool:
+            for res in pool.imap_unordered(func, range(mcc * repeat)):
+                print(res)
+
     def history_travel_testing(
-        self, from_release, to_release, from_database, to_database, go_external, prioritize_to_one_filter, verbose=True
+        self,
+        from_release: int,
+        to_release: int,
+        from_database: str,
+        to_database: str,
+        go_external: bool,
+        prioritize_to_one_filter: bool,
+        verbose: bool = True,
+        return_metrics: bool = False,
     ):
         """Todo.
 
@@ -150,6 +226,7 @@ class TrackTests(Track, ABC):
             go_external: Todo.
             prioritize_to_one_filter: Todo.
             verbose: Todo.
+            return_metrics: Todo.
 
         Returns:
             Todo.
@@ -159,30 +236,42 @@ class TrackTests(Track, ABC):
         """
         ids_from = set(self.get_id_list(from_database, from_release))
         ids_to = set(self.get_id_list(to_database, to_release))
-        if to_database == "ensembl_gene":
-            ids_to_s = {self.graph.nodes[i]["ID"] for i in ids_to}
+        ids_to_s = {self.graph.nodes[i]["ID"] for i in ids_to} if to_database == "ensembl_gene" else set()
 
-        lost_item = list()
-        one_to_one_ids = dict()
-        query_not_in_the_graph = list()
-        history_voyage_failed = list()
-        lost_item_but_the_same_id_exists = list()
-        found_ids_not_accurate = dict()
-        one_to_multiple_ids = dict()
+        lost_item: list = list()
+        one_to_one_ids: dict = dict()
+        query_not_in_the_graph: list = list()
+        history_voyage_failed: list = list()
+        lost_item_but_the_same_id_exists: list = list()
+        found_ids_not_accurate: dict = dict()
+        one_to_multiple_ids: dict = dict()
 
-        converted_item_dict = dict()
-        converted_item_dict_reversed = dict()
+        converted_item_dict: dict = dict()
+        converted_item_dict_reversed: dict = dict()
 
+        time.time()
         for ind, i in enumerate(ids_from):
             if verbose:
-                progress_bar(ind, len(ids_from) - 1)
+                progress_bar(
+                    ind,
+                    len(ids_from) - 1,
+                    suffix=f"{ind+1}/{len(ids_from)}"
+                    f"\t{i}"
+                    f"\t["
+                    f"{len(one_to_one_ids)},"
+                    f"{len(one_to_multiple_ids)},"
+                    f"{len(lost_item)},"
+                    f"{len(found_ids_not_accurate)},"
+                    f"{len(query_not_in_the_graph)+len(history_voyage_failed)}"
+                    f"]",
+                )
 
             try:
                 converted_item = self.convert(
                     i,
                     from_release,
                     to_release,
-                    final_database="ensembl_gene",
+                    final_database=to_database,
                     go_external=go_external,
                     prioritize_to_one_filter=prioritize_to_one_filter,
                 )
@@ -196,8 +285,7 @@ class TrackTests(Track, ABC):
                 continue
 
             if converted_item is None:
-                i_id = self.graph.nodes[i]["ID"]
-                if to_database == "ensembl_gene" and i_id in ids_to_s:
+                if to_database == "ensembl_gene" and self.graph.nodes[i]["ID"] in ids_to_s:
                     lost_item_but_the_same_id_exists.append(i)
                 lost_item.append(i)
             else:
@@ -221,9 +309,9 @@ class TrackTests(Track, ABC):
                             found_ids_not_accurate[i] = list()
                         found_ids_not_accurate[i].append(c)
 
-        clash_multi_multi = 0
-        clash_multi_one = 0
-        clash_one_one = 0
+        clash_multi_multi: int = 0
+        clash_multi_one: int = 0
+        clash_one_one: int = 0
 
         for cidr in converted_item_dict_reversed:
             cidr_val = converted_item_dict_reversed[cidr]
@@ -242,24 +330,44 @@ class TrackTests(Track, ABC):
         # multilerin ne kadarı unique ne kadarı clash içinde
         # ne kadar ID in the destination not mapped to origin
 
-        # Todo: converted_item'ı et ve ne kadar intersect etmiş, ne kadar 1:n ne kadar n:1 n:n var onları keşfet
-
-        results = {
-            "Origin IDs": ids_from,
-            "Destination IDs": ids_to,
-            "Converted IDs": converted_item_dict,
-            "Lost Item": lost_item,
-            "Lost Item but the same ID Exists": lost_item_but_the_same_id_exists,
-            "One-to-One": one_to_one_ids,
-            "One-to-Multiple": one_to_multiple_ids,
-            "Query not in the Graph Error": query_not_in_the_graph,
-            "Conversion Failed due to Program Error": history_voyage_failed,
-            "Found IDs are not accurate": found_ids_not_accurate,
-            "Converted ID Clashes": converted_item_dict_reversed,
-            "Clashing ID Type": (clash_one_one, clash_multi_multi, clash_multi_one),
+        func_args = {
+            "ARG_from_release": from_release,
+            "ARG_to_release": to_release,
+            "ARG_from_database": from_database,
+            "ARG_to_database": to_database,
+            "ARG_go_external": go_external,
+            "ARG_prioritize_to_one_filter": prioritize_to_one_filter,
+            "ARG_verbose": verbose,
+            "ARG_return_metrics": return_metrics,
         }
 
-        return results
+        if not return_metrics:
+            return {
+                "Origin IDs": ids_from,
+                "Destination IDs": ids_to,
+                "Converted IDs": converted_item_dict,
+                "Lost Item": lost_item,
+                "Lost Item but the same ID Exists": lost_item_but_the_same_id_exists,
+                "One-to-One": one_to_one_ids,
+                "One-to-Multiple": one_to_multiple_ids,
+                "Query not in the Graph Error": query_not_in_the_graph,
+                "Conversion Failed due to Program Error": history_voyage_failed,
+                "Inaccurate ID Conversion": found_ids_not_accurate,
+                "Converted ID Clashes": converted_item_dict_reversed,
+                "Clashing ID Type": (clash_one_one, clash_multi_multi, clash_multi_one),
+            } | func_args
+        else:
+            return {
+                "Origin ID Count": len(ids_from),
+                "Destination ID Count": len(ids_from),
+                "Lost Item Count": len(lost_item),
+                "Lost Item but the same ID Count": len(lost_item_but_the_same_id_exists),
+                "One-to-One Count": len(one_to_one_ids),
+                "One-to-Multiple Count": len(one_to_multiple_ids),
+                "Program Error": len(query_not_in_the_graph) + len(history_voyage_failed),
+                "Inaccurate ID Conversion Count": len(found_ids_not_accurate),
+                "Clashing ID Type": (clash_one_one, clash_multi_multi, clash_multi_one),
+            } | func_args
 
     # def test(self):
     # self.get_base_id_range() is equal to release in the adjacent nodes

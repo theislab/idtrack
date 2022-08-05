@@ -122,7 +122,7 @@ class Graph:
 
         # Establish connection between different databases
         graph_nodes_before_external = set(g.nodes)
-        misplaced_external_entry = 0
+        misplaced_external_entry = list()
         for f in form_list:
             db_manager = dbman_s[f].change_release(max(self.db_manager.available_releases))
             st = Dataset(db_manager, narrow_search=narrow_external)
@@ -140,7 +140,7 @@ class Graph:
                         raise ValueError
 
                     if e2 in graph_nodes_before_external:
-                        misplaced_external_entry += 1
+                        misplaced_external_entry.append(e2)
                         # Todo: Have a look and decide whether they are a feature or a bug.
                         #   Decide whether it can be useful for our purposes or not.
                     else:
@@ -154,13 +154,14 @@ class Graph:
 
                         add_edge(e2, e1, er)  # External -> gene/transcript/translation
 
-        if misplaced_external_entry > 0:
-            self.log.warning(f"Misplaced external entry: {misplaced_external_entry}.")
+        if len(misplaced_external_entry) > 0:
+            self.log.warning(f"Misplaced external entry: {len(misplaced_external_entry)}.")
 
         new_form = "-".join(form_list)
         g.graph["name"] = (f"{self.db_manager.organism}_{self.db_manager.ensembl_release}_{new_form}",)
-        g.graph.graph["type"] = new_form
-        g.graph.graph["narrow_external"] = narrow_external
+        g.graph["type"] = new_form
+        g.graph["narrow_external"] = narrow_external
+        g.graph["misplaced_external_entry"] = set(misplaced_external_entry)
 
         return g
 
@@ -564,7 +565,7 @@ class Graph:
         # problematic. For example, 'ENSG00000289022' gene is defined in release_105, but it does not seem to
         # exist in the release gene id lists (neither 104, 105, 106 and also online sources).
         # Delete the edge if there are other edges from the previous node.
-        self.log.info("Problematic nodes due of Ensembl annotations are being removed.")
+        self.log.info("Problematic nodes in Ensembl ID history are being removed.")
         ids_amc = set()
         problematic_nodes = list()
         for amc_rel in db_manager.available_releases:
@@ -578,7 +579,7 @@ class Graph:
             if node not in ids_amc and split_id(node, "Version") not in DB.alternative_versions:
                 problematic_nodes.append(node)
         if len(problematic_nodes) > 0:
-            self.log.warning(f"Nodes are deleted due to Ensembl annotation error: {len(problematic_nodes)}.")
+            self.log.warning(f"Nodes are deleted due to Ensembl ID history mistake: {len(problematic_nodes)}.")
             for node in problematic_nodes:
                 g.remove_node(node)
 
@@ -607,7 +608,7 @@ class Graph:
         nx.set_node_attributes(g, {n: n in latest_release_ids for n in g.nodes}, "is_latest")
         nx.set_node_attributes(g, {n: split_id(n, "ID") for n in g.nodes}, "ID")
         nx.set_node_attributes(g, {n: split_id(n, "Version") for n in g.nodes}, "Version")
-        self.log.info("Graph is successfully created.")
+        self.log.info(f"Graph is successfully created: {db_manager.form}")
         return g
 
     @staticmethod
