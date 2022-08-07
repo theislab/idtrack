@@ -364,19 +364,19 @@ class TrackTests(Track, ABC):
 
         t2 = time.time()
         func_args = {
-            "ARG_from_release": from_release,
-            "ARG_to_release": to_release,
-            "ARG_from_database": from_database,
-            "ARG_to_database": to_database,
-            "ARG_go_external": go_external,
-            "ARG_prioritize_to_one_filter": prioritize_to_one_filter,
-            "ARG_verbose": verbose,
-            "ARG_return_metrics": return_metrics,
+            "from_release": from_release,
+            "to_release": to_release,
+            "from_database": from_database,
+            "to_database": to_database,
+            "go_external": go_external,
+            "prioritize_to_one_filter": prioritize_to_one_filter,
+            "verbose": verbose,
+            "return_metrics": return_metrics,
             "Time": t2 - t1,
         }
 
         if not return_metrics:
-            res = {
+            return {
                 "Origin IDs": ids_from,
                 "Destination IDs": ids_to,
                 "Converted IDs": converted_item_dict,
@@ -389,9 +389,10 @@ class TrackTests(Track, ABC):
                 "Inaccurate ID Conversion": found_ids_not_accurate,
                 "Converted ID Clashes": converted_item_dict_reversed,
                 "Clashing ID Type": (clash_one_one, clash_multi_multi, clash_multi_one),
+                "args": func_args,
             }
         else:
-            res = {
+            return {
                 "Origin ID Count": len(ids_from),
                 "Destination ID Count": len(ids_from),
                 "Lost Item Count": len(lost_item),
@@ -401,10 +402,8 @@ class TrackTests(Track, ABC):
                 "Program Error": len(query_not_in_the_graph) + len(history_voyage_failed),
                 "Inaccurate ID Conversion Count": len(found_ids_not_accurate),
                 "Clashing ID Type": (clash_one_one, clash_multi_multi, clash_multi_one),
+                "args": func_args,
             }
-        res.update(func_args)
-
-        return res
 
     # def test(self):
     # self.get_base_id_range() is equal to release in the adjacent nodes

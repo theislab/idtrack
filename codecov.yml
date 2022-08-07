@@ -6,10 +6,10 @@ coverage:
                 target: 0%
                 # target: auto
                 threshold: 100%
-                if_ci_failed: success #success, failure, error, ignore
+                # if_ci_failed: success #success, failure, error, ignore
         patch:
             default:
                 target: 0%
-                #target: auto
+                # target: auto
                 threshold: 100%
-                if_ci_failed: success #success, failure, error, ignore
+                # if_ci_failed: success #success, failure, error, ignore
