@@ -376,7 +376,7 @@ class TrackTests(Track, ABC):
         }
 
         if not return_metrics:
-            return {
+            res = {
                 "Origin IDs": ids_from,
                 "Destination IDs": ids_to,
                 "Converted IDs": converted_item_dict,
@@ -389,9 +389,9 @@ class TrackTests(Track, ABC):
                 "Inaccurate ID Conversion": found_ids_not_accurate,
                 "Converted ID Clashes": converted_item_dict_reversed,
                 "Clashing ID Type": (clash_one_one, clash_multi_multi, clash_multi_one),
-            } | func_args
+            }
         else:
-            return {
+            res = {
                 "Origin ID Count": len(ids_from),
                 "Destination ID Count": len(ids_from),
                 "Lost Item Count": len(lost_item),
@@ -401,7 +401,10 @@ class TrackTests(Track, ABC):
                 "Program Error": len(query_not_in_the_graph) + len(history_voyage_failed),
                 "Inaccurate ID Conversion Count": len(found_ids_not_accurate),
                 "Clashing ID Type": (clash_one_one, clash_multi_multi, clash_multi_one),
-            } | func_args
+            }
+        res.update(func_args)
+
+        return res
 
     # def test(self):
     # self.get_base_id_range() is equal to release in the adjacent nodes
