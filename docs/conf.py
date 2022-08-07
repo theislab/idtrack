@@ -29,6 +29,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx_click",
     "sphinx_rtd_dark_mode",
+    "nbsphinx",
 ]
 
 default_dark_mode = True
@@ -168,3 +169,5 @@ texinfo_documents = [
 html_css_files = [
     "custom_cookietemple.css",
 ]
+
+autoclass_content = "both"

@@ -1,10 +1,8 @@
 .. include:: ../README.rst
-===========================
-Welcome to idtrack's documentation!
-==========================================================
+==========================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
    readme

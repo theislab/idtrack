@@ -22,15 +22,22 @@ from ._verbose import progress_bar
 
 
 class Track:
-    """Creates ID history graph."""
+    """Pathfinding algorithm in prepared bio-ID graph.
+
+    Uses :py:class:`_graph.Graph` in order to calculate the matching ID in queried Ensembl release and queried
+    database. It calculates the corresponding IDs from a given ID, by first converting into Ensembl gene ID, then time
+    travelling via connected nodes until requested Ensembl release, finally converting into the requested database.
+    The class uses two important recursive path finding functions: the one is for time travelling and the other is
+    finding the synonymous nodes.
+    """
 
     # ENSG00000263464
     def __init__(self, db_manager: DatabaseManager, **kwargs):
-        """Todo.
+        """Class initialization.
 
         Args:
-            db_manager: Todo.
-            kwargs: Todo.
+            db_manager: See parameter in :py:attr:`_graph.Graph.__init__.db_manager`.
+            kwargs: Keyword arguments to be used in :py:attr:`_graph.Graph.get_graph.get_graph`.
         """
         self.log = logging.getLogger("track")
         self.db_manager = db_manager
@@ -41,21 +48,26 @@ class Track:
         self.reverse_graph = self.graph.reverse(copy=False)
         self.version_info = self.graph.graph["version_info"]
 
-    def _recursive_synonymous(
+    def recursive_synonymous(
         self,
-        _the_id,
-        synonymous_ones,
-        synonymous_ones_db,
-        filter_node_type: list,
+        _the_id: str,
+        synonymous_ones: list,
+        synonymous_ones_db: list,
+        filter_node_type: set,
         the_path: list = None,
         the_path_db: list = None,
         depth_max: int = 0,
         from_release: int = None,
     ):
-        """Todo.
+        """Helper method to be used in :py:meth:`_graph.Track.synonymous_nodes`.
+
+        It recursively looks at the graphs and returns a synonymous IDs under two main constrains: the depth
+        and the final node type. The depth is simply defined as the total max number of certain database jump to
+        be included in the final path. The recursive search does not walk across two nodes that has the same node type
+        to prevent this method to travel through time.
 
         Args:
-            _the_id: Todo.
+            _the_id: The name of the node such as Ensembl ID or external ID.
             synonymous_ones: Todo.
             synonymous_ones_db: Todo.
             the_path: Todo.
@@ -66,72 +78,74 @@ class Track:
 
         Raises:
             ValueError: Todo.
-            KeyError: Todo.
         """
         input_node_type = self.graph.nodes[_the_id]["node_type"]
         _the_path = [_the_id] if the_path is None else the_path
         _the_path_db = [input_node_type] if the_path_db is None else the_path_db
 
         counted_elements = Counter(_the_path_db)
+        early_termination = [counted_elements[i] for i in filter_node_type if i in counted_elements]
         if depth_max > max(counted_elements.values()):  # The depth is all node_type.
 
             if len(_the_path) > 0 and (
                 self.graph.nodes[_the_path[-1]]["node_type"] in filter_node_type
                 or (
                     self.graph.nodes[_the_path[-1]]["node_type"] == "external"
-                    and filter_node_type in self.graph.nodes[_the_path[-1]]["release_dict"]
+                    and any([i in self.graph.nodes[_the_path[-1]]["release_dict"] for i in filter_node_type])
                 )
             ):
                 synonymous_ones.append(_the_path)
                 synonymous_ones_db.append(_the_path_db)
 
-            for _direction, graph in (("forward", self.graph), ("reverse", self.reverse_graph)):
+            elif len(early_termination) == 0 or depth_max > max(early_termination) + 1:
+                # no need to add one as it will violate depth_max
 
-                _neighbours = list(graph.neighbors(_the_id))
-                for _next_neighbour in _neighbours:
+                for _direction, graph in (("forward", self.graph), ("reverse", self.reverse_graph)):
 
-                    gnt = graph.nodes[_next_neighbour]["node_type"]
+                    for _next_neighbour in graph.neighbors(_the_id):
 
-                    if len(_the_path) >= 2:
-                        # prevent bouncing getween transcript and gene id.versions
-                        l1, l2 = _the_path[-2:]  # [..., l1, l2, gnt]
-                        if (
-                            self.graph.nodes[l1]["node_type"] == gnt
-                            and gnt != "external"
-                            and gnt != "base_ensembl_gene"  # transcript, gene or translation
-                            and self.graph.nodes[l1]["ID"] == self.graph.nodes[_next_neighbour]["ID"]
-                        ):
-                            if self.graph.nodes[l1]["node_type"] != "base_ensembl_gene":
-                                # if all the above satisfies, then make sure the below statement.
-                                continue
+                        gnt = graph.nodes[_next_neighbour]["node_type"]
 
-                    if gnt == "external" or gnt != input_node_type:  # prevent history travel
+                        if gnt == "external" and _next_neighbour == "ZZZ3":
+                            print(_next_neighbour)
 
-                        if len(graph[_the_id][_next_neighbour]) > 1:
-                            raise ValueError
+                        if len(_the_path) >= 2:
+                            # prevent bouncing between transcript and gene id.versions
+                            l1, l2 = _the_path[-2:]  # [..., l1, l2, gnt]
+                            if (
+                                self.graph.nodes[l1]["node_type"] == gnt
+                                and gnt != "external"
+                                and gnt != "base_ensembl_gene"  # transcript, gene or translation
+                                and self.graph.nodes[l1]["ID"] == self.graph.nodes[_next_neighbour]["ID"]
+                            ):
+                                if self.graph.nodes[l1]["node_type"] != "base_ensembl_gene":
+                                    # if all the above satisfies, then make sure the below statement.
+                                    continue
 
-                        if _next_neighbour not in _the_path:
+                        if gnt == "external" or gnt != input_node_type:  # prevent history travel
 
-                            if from_release is not None:
-                                the_edge = graph[_the_id][_next_neighbour]
-                                for mei in the_edge:
-                                    try:
-                                        if from_release not in the_edge[mei]["releases"]:
-                                            continue
-                                    except KeyError as exc:  # releases not in the edge
-                                        raise KeyError(graph[_the_id]) from exc
+                            if len(graph[_the_id][_next_neighbour]) > 1:
+                                raise ValueError
 
-                            self._recursive_synonymous(
-                                _next_neighbour,
-                                synonymous_ones,
-                                synonymous_ones_db,
-                                filter_node_type,
-                                the_path=_the_path + [_next_neighbour],
-                                the_path_db=_the_path_db + [gnt],
-                                depth_max=depth_max,
-                            )
+                            if _next_neighbour not in _the_path:
 
-    def synonymous_nodes(self, the_id: str, depth_max: int, filter_node_type: list, from_release: int = None):
+                                if from_release is not None:
+                                    the_edge = graph[_the_id][_next_neighbour][0]  # 0 is verified above
+                                    if from_release not in the_edge["releases"]:
+                                        continue
+
+                                self.recursive_synonymous(
+                                    _next_neighbour,
+                                    synonymous_ones,
+                                    synonymous_ones_db,
+                                    filter_node_type,
+                                    the_path=_the_path + [_next_neighbour],
+                                    the_path_db=_the_path_db + [gnt],
+                                    depth_max=depth_max,
+                                    from_release=from_release,
+                                )
+
+    def synonymous_nodes(self, the_id: str, depth_max: int, filter_node_type: set, from_release: int = None):
         """Todo.
 
         Args:
@@ -148,10 +162,10 @@ class Track:
         """
         synonymous_ones: list = []
         synonymous_ones_db: list = []
-        if filter_node_type == "external":
-            raise ValueError("Define which external database.")
+        if "external" in filter_node_type:
+            raise ValueError(f"Define which external database: '{filter_node_type}'.")
 
-        self._recursive_synonymous(
+        self.recursive_synonymous(
             the_id,
             synonymous_ones,
             synonymous_ones_db,
@@ -487,7 +501,7 @@ class Track:
         # given from release
 
     def choose_relevant_synonym(
-        self, the_id: str, depth_max: int, to_release: int, filter_node_type: list, from_release: int = None
+        self, the_id: str, depth_max: int, to_release: int, filter_node_type: set, from_release: int = None
     ):
         """Todo.
 
@@ -725,7 +739,7 @@ class Track:
                 from_id,
                 depth_max=external_settings["synonymous_max_depth"],
                 to_release=to_release,
-                filter_node_type=external_settings["backbone_node_type"],
+                filter_node_type={external_settings["backbone_node_type"]},
                 # do not time travel here, go with the same release
                 from_release=from_release,
             )
@@ -735,7 +749,7 @@ class Track:
                     from_id,
                     depth_max=external_settings["synonymous_max_depth"],
                     to_release=to_release,
-                    filter_node_type=external_settings["backbone_node_type"],
+                    filter_node_type={external_settings["backbone_node_type"]},
                     # if there is way to find with the same release, go just find it in other releases.
                     from_release=None,
                 )
@@ -769,7 +783,7 @@ class Track:
                         _from_id,
                         depth_max=external_settings["synonymous_max_depth"],
                         to_release=to_release,
-                        filter_node_type=external_settings["backbone_node_type"],
+                        filter_node_type={external_settings["backbone_node_type"]},
                     )
 
                     for s1, s2, s3, s4, s5 in s:
@@ -923,21 +937,32 @@ class Track:
 
         return [len(set(the_ext)), len(set(the_tran)), len(set(the_prot))]
 
-    def find_external(self, gene_id, target_db):
+    def find_external(self, gene_id, target_db, from_release):
         """Todo.
 
         Args:
             gene_id: Todo.
             target_db: Todo.
+            from_release: Todo.
 
         Returns:
             Todo.
         """
-        return [
+        a = {
             i[-1]
-            for i, j in self.synonymous_nodes(gene_id, 2, ["external"])
-            if target_db in self.graph.nodes[i[-1]]["release_dict"].keys()
-        ]
+            for i, j in self.synonymous_nodes(
+                the_id=gene_id, depth_max=2, filter_node_type={target_db}, from_release=from_release
+            )
+        }
+        if len(a) > 0 or from_release is None:
+            return a
+        else:
+            return {
+                i[-1]
+                for i, j in self.synonymous_nodes(
+                    the_id=gene_id, depth_max=2, filter_node_type={target_db}, from_release=None
+                )
+            }
 
     def find_ensembl_gene(self, external_id):
         """Todo.
@@ -948,7 +973,7 @@ class Track:
         Returns:
             Todo.
         """
-        return [i[0][-1] for i in self.synonymous_nodes(external_id, 2, ["ensembl_gene"])]
+        return {i[0][-1] for i in self.synonymous_nodes(external_id, 2, {"ensembl_gene"})}
 
     def get_external_database_nodes(self, database_name):
         """Todo.
@@ -1197,14 +1222,16 @@ class Track:
                 return converted
             elif final_database in self.available_external_databases:
                 converted = {
-                    (i, j): converted[i] for i in converted.keys() for j in self.find_external(i, final_database)
+                    (i, j): converted[i]
+                    for i in converted.keys()
+                    for j in self.find_external(i, final_database, from_release=to_release)
                 }
                 return None if len(converted) == 0 else converted
             elif final_database == "base_ensembl_gene":
                 converted = {
                     (i, j): converted[i]
                     for i in converted.keys()
-                    for j in [a[-1] for a, _ in self.synonymous_nodes(i, 2, ["base_ensembl_gene"])]
+                    for j in [a[-1] for a, _ in self.synonymous_nodes(i, 2, {"base_ensembl_gene"})]
                 }
                 return converted
             else:

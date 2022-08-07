@@ -10,6 +10,7 @@ import time
 from abc import ABC
 
 import networkx as nx
+import numpy as np
 
 from ._track import Track
 from ._verbose import progress_bar
@@ -77,14 +78,35 @@ class TrackTests(Track, ABC):
                     switch = False
         return switch
 
-    def is_base_is_range_correct(self):
-        """Todo."""
-        raise NotImplementedError
+    def is_base_is_range_correct(self, verbose: bool = True):
+        """Todo.
 
-        # get_base_id_range form function
-        # get db.manger entries
-        # get range directly from graph
-        # compare results
+        Args:
+            verbose: Todo.
+
+        Returns:
+            Todo.
+        """
+        base_ids = set()
+        for i in self.graph.nodes:
+            if self.graph.nodes[i]["node_type"] == "base_ensembl_gene":
+                base_ids.add(i)
+
+        switch = True
+        for ind, bi in enumerate(base_ids):
+            if verbose:
+                progress_bar(ind, len(base_ids) - 1)
+
+            # get_base_id_range form function
+            bi_fun = self.get_base_id_range(bi)
+            # get range directly from graph
+            bi_dir = self.list_to_ranges(sorted(l2 for l1, l2 in self.memorized_node_database_release_pairs[bi]))
+            bi_fun = [[i, j if not np.isinf(j) else max(self.graph.graph["confident_for_release"])] for i, j in bi_fun]
+
+            if bi_dir != bi_fun:
+                switch = False
+
+        return switch
 
     def is_id_functions_consistent_external(self, verbose: bool = True):
         """Todo.
@@ -160,12 +182,13 @@ class TrackTests(Track, ABC):
 
         return result
 
-    def history_travel_testing_random(self, reverse: bool, verbose: bool = True):
+    def history_travel_testing_random(self, reverse: bool, verbose: bool = True, return_metrics: bool = True):
         """Todo.
 
         Args:
             reverse: Todo.
             verbose: Todo.
+            return_metrics: Todo.
 
         Returns:
             Todo.
@@ -176,14 +199,21 @@ class TrackTests(Track, ABC):
         else:
             fr2 = random.choice([i for i in self.graph.graph["confident_for_release"] if i < fr1])
 
-        dbs = ["ensembl_gene", "HGNC Symbol", "Uniprot/SWISSPROT"]
+        dbs = ["ensembl_gene", "HGNC Symbol", "Uniprot/SWISSPROT", "base_ensembl_gene"]
         db1 = random.choice(dbs)
         db2 = random.choice(dbs)
 
         if verbose:
             print(f"From={fr1}, To={fr2}, From={db1}, To={db2}")
         res = self.history_travel_testing(
-            fr1, fr2, db1, db2, go_external=True, prioritize_to_one_filter=False, verbose=verbose, return_metrics=True
+            fr1,
+            fr2,
+            db1,
+            db2,
+            go_external=True,
+            prioritize_to_one_filter=False,
+            verbose=verbose,
+            return_metrics=return_metrics,
         )
         return res
 
@@ -234,7 +264,7 @@ class TrackTests(Track, ABC):
         Raises:
             ValueError: Todo.
         """
-        ids_from = set(self.get_id_list(from_database, from_release))
+        ids_from = sorted(set(self.get_id_list(from_database, from_release)))
         ids_to = set(self.get_id_list(to_database, to_release))
         ids_to_s = {self.graph.nodes[i]["ID"] for i in ids_to} if to_database == "ensembl_gene" else set()
 
@@ -249,21 +279,23 @@ class TrackTests(Track, ABC):
         converted_item_dict: dict = dict()
         converted_item_dict_reversed: dict = dict()
 
-        time.time()
+        t1 = time.time()
         for ind, i in enumerate(ids_from):
+            t2 = time.time()
             if verbose:
                 progress_bar(
                     ind,
                     len(ids_from) - 1,
                     suffix=f"{ind+1}/{len(ids_from)}"
-                    f"\t{i}"
-                    f"\t["
+                    f" {i}"
+                    f" ["
                     f"{len(one_to_one_ids)},"
                     f"{len(one_to_multiple_ids)},"
                     f"{len(lost_item)},"
                     f"{len(found_ids_not_accurate)},"
-                    f"{len(query_not_in_the_graph)+len(history_voyage_failed)}"
-                    f"]",
+                    f"{len(query_not_in_the_graph) + len(history_voyage_failed)}"
+                    f"] "
+                    f"time: {round(t2 - t1, 1)} sec",
                 )
 
             try:
@@ -285,7 +317,7 @@ class TrackTests(Track, ABC):
                 continue
 
             if converted_item is None:
-                if to_database == "ensembl_gene" and self.graph.nodes[i]["ID"] in ids_to_s:
+                if to_database == from_database == "ensembl_gene" and self.graph.nodes[i]["ID"] in ids_to_s:
                     lost_item_but_the_same_id_exists.append(i)
                 lost_item.append(i)
             else:
@@ -304,7 +336,7 @@ class TrackTests(Track, ABC):
                         converted_item_dict_reversed[c] = [i]
 
                 for c in converted_item.keys():
-                    if c not in ids_to:
+                    if (c if to_database == "ensembl_gene" else c[1]) not in ids_to:
                         if i not in found_ids_not_accurate:
                             found_ids_not_accurate[i] = list()
                         found_ids_not_accurate[i].append(c)
@@ -330,6 +362,7 @@ class TrackTests(Track, ABC):
         # multilerin ne kadarı unique ne kadarı clash içinde
         # ne kadar ID in the destination not mapped to origin
 
+        t2 = time.time()
         func_args = {
             "ARG_from_release": from_release,
             "ARG_to_release": to_release,
@@ -339,6 +372,7 @@ class TrackTests(Track, ABC):
             "ARG_prioritize_to_one_filter": prioritize_to_one_filter,
             "ARG_verbose": verbose,
             "ARG_return_metrics": return_metrics,
+            "Time": t2 - t1,
         }
 
         if not return_metrics:

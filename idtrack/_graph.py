@@ -19,58 +19,99 @@ from ._db import DB
 
 
 class Graph:
-    """Creates ID history graph."""
+    """Creates ID history graph.
 
-    # ENSG00000263464
+    It includes Ensembl gene ID history. Ensembl ID history is obtained from Ensembl
+    resources, which shows the connection between different Ensembl base IDs or different versions of the same Ensembl
+    base ID. Ensembl transcripts (with base IDs and versions) are connected to gene, and Ensembl proteins are
+    connected to transcripts. Additionally, a selected set of external databases are connected to the related Ensembl
+    IDs: for example UniProt IDs are associated with proteins, while RefSeq transcript IDs are associated with
+    transcripts. The ``Graph`` class also saves the resulting graph into the defined temporary directory for later
+    calculations.
+    """
+
+    # Note: Example chaotic ID history: ENSG00000263464
     def __init__(self, db_manager: DatabaseManager):
-        """Todo.
+        """Class initialization.
 
         Args:
-            db_manager: Todo.
+            db_manager: Needed to download all necessary tables and data frames.
+                It contains the temporary directory to save the resultant graph.
 
         Raises:
-            ValueError: Todo.
+            ValueError: ``Graph`` has to be created with the latest release possible defined in ``db_manager``. If not,
+                the exception is raised.
         """
         # Instance attributes
         self.log = logging.getLogger("graph")
 
         # Make sure the graph is constructed from the latest release available.
         if db_manager.ensembl_release != max(db_manager.available_releases):
-            raise ValueError
+            raise ValueError("'Graph' has to be created with the latest release possible defined in 'db_manager'.")
         self.db_manager = db_manager
 
     def construct_graph(self, narrow: bool, form_list: list = None, narrow_external: bool = True) -> nx.MultiDiGraph:
-        """Todo.
+        """Main method to construct the graph.
+
+        It creates the graph with Ensembl gene, transcript and protein information. It also adds
+        ``DB.nts_base_ensembl[f]`` nodes into the graph, which has only base Ensembl gene ID. External database entries
+        described in ``DatabaseManager`` will be part of the graph. Normally, user is not expected to use this method,
+        as the method is utilized in ``get_graph`` method.
 
         Args:
-            narrow: Todo.
-            form_list: Todo.
-            narrow_external: Todo.
+            narrow: Determine whether a some more information should be added between Ensembl gene IDs. For example,
+                which genome assembly is used, or when was the connection is established. For usual uses, no need to
+                set it ``True``.
+            form_list: Determine which forms (transcript, translation, gene) should be included. If ``None``, then
+                include all possible forms defined in ``DatabaseManager``.
+                It has to be list composed of following strings: 'gene', 'transcript', 'translation'.
+            narrow_external: If set ``False``, all possible external databases defined in Ensembl *MySQL* server will be
+                included into the graph. The graph will be immensely larger, and the ID history travel calculation will
+                be very slow. Additionally, the success of ID conversion under such a setting it has not been
+                tested yet.
 
         Returns:
-            Todo.
+            Resultant multi edge directed graph.
 
         Raises:
-            ValueError: Todo.
+            ValueError: Unexpected error.
         """
 
-        def add_edge(n1, n2, ens_rel):
+        def add_edge(n1: str, n2: str, ens_rel: int, edge_attribute_name: str = "releases"):
+            """A simple function to create edges between provided nodes. Edits the graph that is under the construction.
+
+            Args:
+                n1: The first node of the edge. The edge is taken from this node.
+                n2: The second node of the edge. The edge is taken to this node.
+                ens_rel: The Ensembl release associated with such a connection.
+                edge_attribute_name: The string to use in the edge attribute dictionary.
+
+            Raises:
+                ValueError: If there are more than one edge between the source and the target node.
+            """
             if not g.has_edge(n1, n2):
-                n_edge_att = {"releases": {ens_rel}}
+                n_edge_att = {edge_attribute_name: {ens_rel}}
                 g.add_edge(n1, n2, **n_edge_att)
             else:
                 if len(g.get_edge_data(n1, n2)) != 1:
                     raise ValueError
-                g[n1][n2][0]["releases"].add(ens_rel)
+                g[n1][n2][0][edge_attribute_name].add(ens_rel)
 
         # The order is important for form_list in compose_all, due to some clashing ensembl IDs.
         form_list = self.db_manager.available_form_of_interests if not form_list else form_list
         dbman_s = {f: self.db_manager.change_form(f) for f in form_list}
-        graph_s = {f: Graph._remove_non_gene_trees(self.construct_graph_form(narrow, dbman_s[f])) for f in form_list}
-        # Fun fact: There are Ensembl protein IDs that starts with 'ENST', and sometimes there are clash of IDs.
-        # Example clash: "ENST00000515292.1". It does not clash in time, they are defined in different ensembl releases.
-        # Remove_non_gene_tree before compose_all.
+        graph_s = {
+            f: Graph.remove_non_gene_trees(  # Remove_non_gene_tree before compose_all.
+                # The time travel will be between gene IDs, so no need to have such edges.
+                self.construct_graph_form(narrow, dbman_s[f])
+            )
+            for f in form_list
+        }
 
+        # Fun fact: There are exceptional Ensembl protein IDs that starts with 'ENST', and sometimes there are
+        # clash of IDs (the same ID is defined in Ensembl proteins and Ensembl transcripts). For example,
+        # "ENST00000515292.1". It does not clash in time, they are defined in different ensembl releases.
+        # Report all possible conflicts.
         for m, n in itertools.combinations(form_list, 2):
             if m in graph_s and n in graph_s:
                 gm = set(graph_s[m].nodes)
@@ -80,6 +121,7 @@ class Graph:
                     self.log.warning(f"Intersecting Ensembl nodes in two different forms: '{m}'-'{n}'.")
                     self.log.warning(f"Nodes in '{m}' will be replaced by '{n}': '{', '.join(intersection)}'.")
 
+        # Compose all graphs into one. If there is a
         g = nx.compose_all([graph_s[f] for f in form_list])
 
         # Establish connection between different forms
@@ -97,16 +139,21 @@ class Graph:
                     if e1 and e2:
                         if e1 not in g.nodes or e2 not in g.nodes:
                             raise ValueError
+
+                        # Edges are from transcript to gene, from translation to transcript
                         add_edge(e1, e2, ensembl_release)
 
         # Add versionless versions as well
         if g.graph["version_info"] != "without_version":
             self.log.info("Versionless Ensembl IDs are being connected.")
-            for f in ["gene"]:  # transcript and translation does not have base
+
+            for f in ["gene"]:  # transcript and translation does not have base.
                 for er in self.db_manager.available_releases:
-                    db_manager = self.db_manager.change_form(f).change_release(er)  # Does not matter which form.
+
+                    db_manager = dbman_s[f].change_release(er)
                     ids_db = db_manager.get_db("ids", save_after_calculation=False)
                     ids = db_manager.id_ver_from_df(ids_db)
+
                     for n in ids:
 
                         if n not in g.nodes:
@@ -114,25 +161,30 @@ class Graph:
 
                         m = g.nodes[n]["ID"]
                         if m not in g.nodes:
-                            node_attributes = {"node_type": f"base_ensembl_{f}"}
+                            node_attributes = {DB.node_type_str: DB.nts_base_ensembl[f]}
                             g.add_node(m, **node_attributes)
 
-                        add_edge(m, n, er)  # Versionless Base -> EnsID.EnsVer
+                        # Edges are from versionless base ID to ID (with version).
+                        add_edge(m, n, er)
+
                 self.log.info(f"Edges between versionless ID to version ID has been added for '{f}'.")
+        else:
+            self.log.info("The graph will be constructed with 'versionless' IDs. It has not been extensively tested.")
 
         # Establish connection between different databases
         graph_nodes_before_external = set(g.nodes)
         misplaced_external_entry = list()
+        release_dict_str: str = "release_dict"
         for f in form_list:
             db_manager = dbman_s[f].change_release(max(self.db_manager.available_releases))
             st = Dataset(db_manager, narrow_search=narrow_external)
             rc = st.initialize_external_conversion()
+
             self.log.info(f"Edges between external IDs to Ensembl IDs is being added for '{f}'.")
             for _ind, entry in rc.iterrows():
-                e1 = entry["graph_id"]
-                e2 = entry["id_db"]
-                er = entry["release"]
-                edb = entry["name_db"]
+
+                e1, e2 = entry["graph_id"], entry["id_db"]
+                er, edb = entry["release"], entry["name_db"]
 
                 if e1 and e2 and er and edb:
 
@@ -141,18 +193,20 @@ class Graph:
 
                     if e2 in graph_nodes_before_external:
                         misplaced_external_entry.append(e2)
-                        # Todo: Have a look and decide whether they are a feature or a bug.
-                        #   Decide whether it can be useful for our purposes or not.
+                        # Some external database entries contains an Ensembl ID as an external ID. If such an item is a
+                        # part of the graph before externals, store them in the graph attributes at the end.
                     else:
+                        # Create a node with external ID, store relevant database and ensembl release information.
                         if e2 not in g.nodes:
-                            node_attributes_2 = {"release_dict": {edb: {er}}, "node_type": "external"}
+                            node_attributes_2 = {release_dict_str: {edb: {er}}, DB.node_type_str: DB.nts_external}
                             g.add_node(e2, **node_attributes_2)
-                        elif edb not in g.nodes[e2]["release_dict"]:
-                            g.nodes[e2]["release_dict"][edb] = {er}
-                        elif er not in g.nodes[e2]["release_dict"][edb]:
-                            g.nodes[e2]["release_dict"][edb].add(er)
+                        elif edb not in g.nodes[e2][release_dict_str]:
+                            g.nodes[e2][release_dict_str][edb] = {er}
+                        elif er not in g.nodes[e2][release_dict_str][edb]:
+                            g.nodes[e2][release_dict_str][edb].add(er)
 
-                        add_edge(e2, e1, er)  # External -> gene/transcript/translation
+                        # Edges are from external ID to Ensembl ID.
+                        add_edge(e2, e1, er)
 
         if len(misplaced_external_entry) > 0:
             self.log.warning(f"Misplaced external entry: {len(misplaced_external_entry)}.")
@@ -166,17 +220,18 @@ class Graph:
         return g
 
     def construct_graph_form(self, narrow: bool, db_manager: DatabaseManager) -> nx.MultiDiGraph:
-        """Todo.
+        """Creates a graph with connected nodes based on historical relationships between each Ensembl IDs.
 
         Args:
-            narrow: Todo.
-            db_manager: Todo.
+            narrow: See parameter in :py:attr:`_graph.Graph.construct_graph.narrow`
+            db_manager: The method reads ID history dataframe, and Ensembl IDs lists at each Ensembl release,
+                provided by ``DatabaseManager``.
 
         Returns:
-            Todo.
+            Resultant multi edge directed graph.
 
         Raises:
-            ValueError: Todo.
+            ValueError: Unexpected error.
         """
 
         def ms_creator():
@@ -271,6 +326,8 @@ class Graph:
                 )  # there are max 1 as checked previously
             else:
                 raise ValueError
+
+        self.log.info(f"Graph is being created: {db_manager.form}")
 
         # Initialize important variables
         ms = ms_creator()
@@ -604,17 +661,31 @@ class Graph:
 
         self.log.info("Node attributes are being added.")
         # Add some node features as node attributes.
-        nx.set_node_attributes(g, {n: f"ensembl_{db_manager.form}" for n in g.nodes}, "node_type")
+        nx.set_node_attributes(g, {n: DB.nts_ensembl[db_manager.form] for n in g.nodes}, DB.node_type_str)
         nx.set_node_attributes(g, {n: n in latest_release_ids for n in g.nodes}, "is_latest")
         nx.set_node_attributes(g, {n: split_id(n, "ID") for n in g.nodes}, "ID")
         nx.set_node_attributes(g, {n: split_id(n, "Version") for n in g.nodes}, "Version")
-        self.log.info(f"Graph is successfully created: {db_manager.form}")
+
         return g
 
     @staticmethod
-    def _remove_non_gene_trees(graph: nx.MultiDiGraph) -> nx.MultiDiGraph:
+    def remove_non_gene_trees(graph: nx.MultiDiGraph, forms_remove: list = None) -> nx.MultiDiGraph:
+        """Removes the edges between the nodes with the same `node type` and removes abstract nodes.
 
-        forms_remove = ["ensembl_transcript", "ensembl_translation"]
+        The nodes between two the same ``DB.node_type_str`` will be removed. Also, the nodes with versions
+        ``DB.no_new_node_id`` and ``DB.no_old_node_id`` will be also removed.
+
+        Args:
+            graph: The output of :py:attr:`_graph.Graph.construct_graph` or
+                :py:attr:`_graph.Graph.construct_graph_form`.
+            forms_remove: Determine which `node type` are of interest.
+
+        Returns:
+            Resultant multi edge directed graph.
+        """
+        forms_remove = (
+            [DB.nts_ensembl[i] for i in ["transcript", "translation"]] if forms_remove is None else forms_remove
+        )
 
         node_to_remove = []
         edge_to_remove = []
@@ -622,7 +693,7 @@ class Graph:
         for n in graph.nodes:
 
             the_node = graph.nodes[n]
-            nt = the_node["node_type"]
+            nt = the_node[DB.node_type_str]
 
             if nt in forms_remove:
 
@@ -630,7 +701,7 @@ class Graph:
                     node_to_remove.append(n)  # we only remove Void or retired
                 else:
                     for m in graph.neighbors(n):
-                        mt = graph.nodes[m]["node_type"]
+                        mt = graph.nodes[m][DB.node_type_str]
                         if nt == mt:
                             kmn = [k for k in graph[n][m]]
                             for k in kmn:
@@ -650,16 +721,18 @@ class Graph:
         save_after_calculation: bool = True,
         overwrite_even_if_exist: bool = False,
     ) -> nx.MultiDiGraph:
-        """Todo.
+        """Simplifies the graph construction process.
 
         Args:
-            narrow: Todo.
-            create_even_if_exist: Todo.
-            save_after_calculation: Todo.
-            overwrite_even_if_exist: Todo.
+            narrow: See parameter in :py:attr:`_graph.Graph.construct_graph.narrow`
+            create_even_if_exist: Determine whether create the graph even if it exists. If there is no graph in the
+                provided temporary directory, the graph will be created regardless.
+            save_after_calculation: Determine whether resultant graph will be saved or not.
+            overwrite_even_if_exist: If the graph will be saved, determine whether the program should overwrite.
+                If ``False``, it does not re-saves the calculated (or loaded) graph.
 
         Returns:
-            Todo.
+            Resultant multi edge directed graph, which can be used in all future calculations.
         """
         # Get the file name and narrow parameter.
         file_path = self.create_file_name(narrow)
@@ -670,7 +743,7 @@ class Graph:
             g = self.construct_graph(narrow)
         else:  # Otherwise, just read the file that is already in the directory.
             self.log.info("The graph is being read.")
-            g = self.read_exported(file_path)
+            g = Graph.read_exported(file_path)
 
         # If prompt, save the dataframe in requested format.
         if save_after_calculation:
@@ -678,17 +751,18 @@ class Graph:
 
         return g
 
-    def read_exported(self, file_path: str) -> nx.MultiDiGraph:
-        """Todo.
+    @staticmethod
+    def read_exported(file_path: str) -> nx.MultiDiGraph:
+        """Read the `pickle` file in the provided file path, which contains the graph.
 
         Args:
-            file_path: Todo.
+            file_path: Absolute path of the file of interest.
 
         Returns:
-            Todo.
+            Resultant multi edge directed graph.
 
         Raises:
-            FileNotFoundError: Todo.
+            FileNotFoundError: When there is no file in the provided directory.
         """
         if not os.access(file_path, os.R_OK):
             raise FileNotFoundError
@@ -696,13 +770,15 @@ class Graph:
         return nx.read_gpickle(file_path)
 
     def create_file_name(self, narrow: bool) -> str:
-        """Todo.
+        """File name creator which includes some information regarding the construction process.
+
+        Facilitates to recognize the graph based on file name.
 
         Args:
-            narrow: Todo.
+            narrow: See parameter in :py:attr:`_graph.Graph.construct_graph.narrow`
 
         Returns:
-            Todo.
+            Absolute file path in the temporary directory provided by ``DatabaseManager``.
         """
         narrow_ext = "_narrow" if narrow else ""
         min_ext = f"_min{self.db_manager.ignore_before}" if not np.isinf(self.db_manager.ignore_before) else ""
@@ -711,12 +787,12 @@ class Graph:
         return os.path.join(self.db_manager.local_repository, f"graph_{self.db_manager.organism}_{ext}.pickle")
 
     def export_disk(self, g: nx.MultiDiGraph, file_path: str, overwrite: bool):
-        """Todo.
+        """Write the `pickle` file in the provided file path, which contains the graph.
 
         Args:
-            g: Todo.
-            file_path: Todo.
-            overwrite: Todo.
+            g: Multi edge directed graph object to stor in the disk.
+            file_path: Absolute target path, provided by :py:meth:`_graph.Graph.create_file_name`
+            overwrite: See parameter in :py:attr:`_graph.Graph.get_graph.overwrite_even_if_exist`
         """
         if not os.access(file_path, os.R_OK) or overwrite:
             self.log.info(f"The graph is being exported as '{file_path}'.")

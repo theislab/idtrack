@@ -29,5 +29,9 @@ class DB:
     no_old_node_id = "Void"
     no_new_node_id = "Retired"
     alternative_versions = {no_new_node_id, no_old_node_id}
+    node_type_str = "node_type"
+    nts_external = "external"
+    nts_ensembl = {i: f"ensembl_{i}" for i in ["gene", "transcript", "translation"]}
+    nts_base_ensembl = {i: f"base_ensembl_{i}" for i in ["gene", "transcript", "translation"]}
 
     external_search_settings = {"jump_limit": 2, "synonymous_max_depth": 3, "backbone_node_type": "ensembl_gene"}
