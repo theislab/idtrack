@@ -22,7 +22,10 @@ class DB:
     mysql_host = "ensembldb.ensembl.org"
     myqsl_user = "anonymous"
     mysql_togo = ""
-    mysql_port = 3306
+    mysql_port = {
+        38: 3306,  # From Ensembl 48 onwards only
+        37: 3337,  # Databases for archive GRCh37 - release 79 onwards
+    }
     mysql_port_min_version = 48  # 47 and below is 'mysql_port_before_rel'.
 
     # Protected Non-int Version Strings

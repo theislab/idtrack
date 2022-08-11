@@ -106,9 +106,6 @@ class Track:
 
                         gnt = graph.nodes[_next_neighbour]["node_type"]
 
-                        if gnt == "external" and _next_neighbour == "ZZZ3":
-                            print(_next_neighbour)
-
                         if len(_the_path) >= 2:
                             # prevent bouncing between transcript and gene id.versions
                             l1, l2 = _the_path[-2:]  # [..., l1, l2, gnt]

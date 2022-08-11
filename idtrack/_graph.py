@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 
 from ._database_manager import DatabaseManager
-from ._dataset import Dataset
 from ._db import DB
 
 
@@ -97,6 +96,9 @@ class Graph:
                     raise ValueError
                 g[n1][n2][0][edge_attribute_name].add(ens_rel)
 
+        # Initialize the external database downloads:
+        # TODO.
+
         # The order is important for form_list in compose_all, due to some clashing ensembl IDs.
         form_list = self.db_manager.available_form_of_interests if not form_list else form_list
         dbman_s = {f: self.db_manager.change_form(f) for f in form_list}
@@ -118,8 +120,10 @@ class Graph:
                 gn = set(graph_s[n].nodes)
                 intersection = gm & gn
                 if len(intersection):
-                    self.log.warning(f"Intersecting Ensembl nodes in two different forms: '{m}'-'{n}'.")
-                    self.log.warning(f"Nodes in '{m}' will be replaced by '{n}': '{', '.join(intersection)}'.")
+                    self.log.warning(
+                        f"Intersecting Ensembl nodes in two different forms: '{m}'-'{n}'.\n"
+                        f"Nodes in '{m}' will be replaced by '{n}': '{', '.join(intersection)}'."
+                    )
 
         # Compose all graphs into one. If there is a
         g = nx.compose_all([graph_s[f] for f in form_list])
@@ -176,37 +180,39 @@ class Graph:
         misplaced_external_entry = list()
         release_dict_str: str = "release_dict"
         for f in form_list:
-            db_manager = dbman_s[f].change_release(max(self.db_manager.available_releases))
-            st = Dataset(db_manager, narrow_search=narrow_external)
-            rc = st.initialize_external_conversion()
 
             self.log.info(f"Edges between external IDs to Ensembl IDs is being added for '{f}'.")
-            for _ind, entry in rc.iterrows():
+            for ens_rel in self.db_manager.available_releases:
 
-                e1, e2 = entry["graph_id"], entry["id_db"]
-                er, edb = entry["release"], entry["name_db"]
+                db_manager = dbman_s[f].change_release(ens_rel)
+                rc = db_manager.create_external_all()
 
-                if e1 and e2 and er and edb:
+                for _ind, entry in rc.iterrows():
 
-                    if e1 not in graph_nodes_before_external:
-                        raise ValueError
+                    e1, e2 = entry["graph_id"], entry["id_db"]
+                    er, edb = entry["release"], entry["name_db"]
 
-                    if e2 in graph_nodes_before_external:
-                        misplaced_external_entry.append(e2)
-                        # Some external database entries contains an Ensembl ID as an external ID. If such an item is a
-                        # part of the graph before externals, store them in the graph attributes at the end.
-                    else:
-                        # Create a node with external ID, store relevant database and ensembl release information.
-                        if e2 not in g.nodes:
-                            node_attributes_2 = {release_dict_str: {edb: {er}}, DB.node_type_str: DB.nts_external}
-                            g.add_node(e2, **node_attributes_2)
-                        elif edb not in g.nodes[e2][release_dict_str]:
-                            g.nodes[e2][release_dict_str][edb] = {er}
-                        elif er not in g.nodes[e2][release_dict_str][edb]:
-                            g.nodes[e2][release_dict_str][edb].add(er)
+                    if e1 and e2 and er and edb:
 
-                        # Edges are from external ID to Ensembl ID.
-                        add_edge(e2, e1, er)
+                        if e1 not in graph_nodes_before_external:
+                            raise ValueError
+
+                        if e2 in graph_nodes_before_external:
+                            misplaced_external_entry.append(e2)
+                            # Some external database entries contains an Ensembl ID as an external ID. If such an item
+                            # is a part of the graph before externals, store them in the graph attributes at the end.
+                        else:
+                            # Create a node with external ID, store relevant database and ensembl release information.
+                            if e2 not in g.nodes:
+                                node_attributes_2 = {release_dict_str: {edb: {er}}, DB.node_type_str: DB.nts_external}
+                                g.add_node(e2, **node_attributes_2)
+                            elif edb not in g.nodes[e2][release_dict_str]:
+                                g.nodes[e2][release_dict_str][edb] = {er}
+                            elif er not in g.nodes[e2][release_dict_str][edb]:
+                                g.nodes[e2][release_dict_str][edb].add(er)
+
+                            # Edges are from external ID to Ensembl ID.
+                            add_edge(e2, e1, er)
 
         if len(misplaced_external_entry) > 0:
             self.log.warning(f"Misplaced external entry: {len(misplaced_external_entry)}.")

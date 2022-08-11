@@ -6,12 +6,14 @@
 import logging
 import os
 import re
+from collections import Counter
 from functools import cached_property
 from itertools import repeat
 
 import numpy as np
 import pandas as pd
 import pymysql.cursors
+import yaml
 
 from ._db import DB
 
@@ -29,6 +31,7 @@ class DatabaseManager:
         ignore_after: int = None,
         compress: bool = True,
         store_raw_always: bool = True,
+        ensembl_mysql_server: int = 38,
     ):
         """Todo.
 
@@ -41,16 +44,18 @@ class DatabaseManager:
             ignore_after: Todo.
             compress: Todo.
             store_raw_always: Todo.
+            ensembl_mysql_server: Todo.
 
         Raises:
             ValueError: Todo.
         """
         # MYSQL Settings
+        self.ensembl_mysql_server = ensembl_mysql_server
         self.mysql_settings = {
             "host": DB.mysql_host,
             "user": DB.myqsl_user,
             "password": DB.mysql_togo,
-            "port": DB.mysql_port,
+            "port": DB.mysql_port[self.ensembl_mysql_server],
         }
 
         # Instance attributes
@@ -67,7 +72,7 @@ class DatabaseManager:
         # Protected attributes
         self.available_form_of_interests = ["gene", "transcript", "translation"]  # Warning: the order is important.
         self._available_version_info = ["add_version", "without_version", "with_version"]
-        self._comp_hdf5 = {"complevel": 9, "complib": "blosc:zlib"} if self.compress else dict()
+        self._comp_hdf5 = {"complevel": 5, "complib": "blosc:zlib"} if self.compress else dict()
         self._column_sep = "_COL_"
         self._identifiers = [f"{self.form}_stable_id", f"{self.form}_version"]
 
@@ -82,8 +87,10 @@ class DatabaseManager:
                 and os.access(self.local_repository, os.W_OK)
                 and os.access(self.local_repository, os.R_OK)
             )
+            and not (self.ensembl_release < 79 and self.ensembl_mysql_server == 37)
         ):
             raise ValueError
+        # ensembl_release < 79 and assembl37 ise bok suyu icsin
 
     @cached_property
     def available_releases(self):
@@ -155,14 +162,15 @@ class DatabaseManager:
             Todo.
         """
         return DatabaseManager(
-            self.organism,
-            self.ensembl_release,
-            form,
-            self.local_repository,
-            self.ignore_before,
-            self.ignore_after,
-            self.compress,
-            self.store_raw_always,
+            organism=self.organism,
+            ensembl_release=self.ensembl_release,
+            form=form,
+            local_repository=self.local_repository,
+            ignore_before=self.ignore_before,
+            ignore_after=self.ignore_after,
+            compress=self.compress,
+            store_raw_always=self.store_raw_always,
+            ensembl_mysql_server=self.ensembl_mysql_server,
         )
 
     def change_release(self, ensembl_release):
@@ -175,14 +183,36 @@ class DatabaseManager:
             Todo.
         """
         return DatabaseManager(
-            self.organism,
-            ensembl_release,
-            self.form,
-            self.local_repository,
-            self.ignore_before,
-            self.ignore_after,
-            self.compress,
-            self.store_raw_always,
+            organism=self.organism,
+            ensembl_release=ensembl_release,
+            form=self.form,
+            local_repository=self.local_repository,
+            ignore_before=self.ignore_before,
+            ignore_after=self.ignore_after,
+            compress=self.compress,
+            store_raw_always=self.store_raw_always,
+            ensembl_mysql_server=self.ensembl_mysql_server,
+        )
+
+    def change_server(self, ensembl_mysql_server):
+        """Todo.
+
+        Args:
+            ensembl_mysql_server: Todo.
+
+        Returns:
+            Todo.
+        """
+        return DatabaseManager(
+            organism=self.organism,
+            ensembl_release=self.ensembl_release,
+            form=self.form,
+            local_repository=self.local_repository,
+            ignore_before=self.ignore_before,
+            ignore_after=self.ignore_after,
+            compress=self.compress,
+            store_raw_always=self.store_raw_always,
+            ensembl_mysql_server=ensembl_mysql_server,
         )
 
     def check_exist_as_diff_release(self, df_type, df_indicator):
@@ -719,7 +749,7 @@ class DatabaseManager:
         df.reset_index(inplace=True, drop=True)
         return df
 
-    def create_external_db(self, filter_relevant):
+    def create_external_db(self, filter_mode):
         """Todo.
 
         Not exactly this but similar to the:
@@ -745,13 +775,16 @@ class DatabaseManager:
         https://m.ensembl.org/info/docs/api/core/core_schema.html
 
         Args:
-            filter_relevant: Todo.
+            filter_mode: Todo.
 
         Returns:
             Todo.
+
+        Raises:
+            ValueError: Todo.
         """
         # Get the necessary tables from the server
-        m = {"save_after_calculation": False}
+        m = {"save_after_calculation": self.store_raw_always}
         a = self.get_db(f"idsraw_{self.form}", save_after_calculation=self.store_raw_always)
         ox = self.get_table(
             "object_xref", usecols=["ensembl_id", "ensembl_object_type", "xref_id", "object_xref_id"], **m
@@ -796,6 +829,7 @@ class DatabaseManager:
         db_id = "id_db"
         db_name = "name_db"
         id_graph = "graph_id"
+        count_col = "count"
 
         def comb_renamer(col_list):
             return {col_list[0]: db_id, col_list[1]: db_name}
@@ -830,138 +864,24 @@ class DatabaseManager:
         # these columns as rows. Because, for some of them, comb_X_columns are actually the same.
         res.drop_duplicates(inplace=True, ignore_index=True)
 
-        # In order to prevent the search space to be too big and to prevent unnecessary data to be kept in the disk
-        # and in the memory.
-
-        if filter_relevant:
-            # The database info is written on 16.07.2022 with Ensembl release 107.
-            # Below information need to be updated periodically.
-
-            # from idtrack.functions import *
-            # organism = "human"
-            # id_form = "gene"
-            # local_dir = "/Users/kemalinecik/Downloads/temp_bioidtracker"  # or any other local directory
-            # vdf = VerifyOrganism(organism)
-            # fm = vdf.get_formal_name()
-            # lr = vdf.get_latest_release()
-            # dm = DatabaseManager(fm, lr, id_form, local_dir, 100)
-            # st = Dataset(dm.change_form('gene'), narrow_search=False)
-            # rc = st.initialize_external_conversion()
-            # rc['name_db'] = rc['name_db'].astype(str)  # not always, should be already fixed
-            # b = sorted(np.unique(rc['name_db']))
-            # a = {i: rc[rc['name_db'] == i] for i in b}
-
-            if self.form == "gene":
-                res = res[
-                    res[db_name].isin(
-                        [
-                            # 'ArrayExpress',
-                            "Clone-based (Ensembl) gene",
-                            # 'Clone_based_ensembl_gene'
-                            # 'DBASS3',
-                            # 'DBASS5',
-                            # "DataBase of Aberrant 3' Splice Sites",
-                            # "DataBase of Aberrant 5' Splice Sites",
-                            # 'ENS_LRG_gene',
-                            # 'Ens_Hs_gene',
-                            # 'Ensembl Human Gene',   'belki'
-                            # 'EntrezGene',
-                            # 'Expression Atlas',
-                            # 'HGNC',
-                            "HGNC Symbol",
-                            # 'LRG',
-                            # 'LRG display in Ensembl gene',
-                            # 'Locus Reference Genomic',
-                            # 'MIM gene',
-                            # 'MIM morbid',
-                            # 'MIM_GENE',
-                            # 'MIM_MORBID',
-                            "NCBI gene (formerly Entrezgene)",
-                            # 'RFAM',
-                            # 'Reactome gene',
-                            # 'Reactome_gene',
-                            "UniProtKB Gene Name",
-                            # 'Uniprot_gn',
-                            # 'WikiGene',
-                            # 'miRBase'
-                        ]
-                    )
-                ]
-            elif self.form == "transcript":
-                res = res[
-                    res[db_name].isin(
-                        [
-                            "CCDS",
-                            # 'Clone-based (Ensembl) transcript', (gene covers it)
-                            # 'Clone_based_ensembl_transcript',
-                            # 'ENS_LRG_transcript',
-                            # 'Ens_Hs_transcript',
-                            # 'Ensembl Human Transcript',
-                            # 'EntrezGene transcript name',
-                            # 'EntrezGene_trans_name',
-                            # 'GO',
-                            # 'HGNC_trans_name',
-                            # 'LRG display in Ensembl transcript',
-                            # 'RFAM transcript name',
-                            # 'RFAM_trans_name',
-                            # 'RNAcentral',
-                            # 'Reactome transcript',
-                            # 'Reactome_transcript',
-                            # 'RefSeq mRNA',
-                            # 'RefSeq mRNA predicted',
-                            # 'RefSeq ncRNA',
-                            # 'RefSeq ncRNA predicted',
-                            "RefSeq_mRNA",
-                            "RefSeq_mRNA_predicted",
-                            "RefSeq_ncRNA",
-                            "RefSeq_ncRNA_predicted",
-                            # 'Transcript name',
-                            # 'UCSC',
-                            # 'UCSC Stable ID',
-                            # 'miRBase transcript name',
-                            # 'miRBase_trans_name'
-                        ]
-                    )
-                ]
-            elif self.form == "translation":
-                res = res[
-                    res[db_name].isin(
-                        [
-                            # 'BioGRID',
-                            # 'BioGRID Interaction data, The General Repository for Interaction Datasets',
-                            # 'ChEMBL',
-                            # 'EMBL',
-                            # 'Ens_Hs_translation',
-                            # 'Ensembl Human Translation',
-                            # 'European Nucleotide Archive',
-                            # 'GeneDB',
-                            # 'HPA',
-                            # 'Human Protein Atlas',
-                            # 'INSDC protein ID',
-                            # 'KEGG Pathway and Enzyme',
-                            # 'KEGG_Enzyme',
-                            # 'MEROPS',
-                            # 'MEROPS - the Peptidase Database',
-                            # 'PDB',
-                            # 'Reactome',
-                            # 'RefSeq peptide',
-                            # 'RefSeq peptide predicted',
-                            "RefSeq_peptide",
-                            "RefSeq_peptide_predicted",
-                            # 'UniParc',
-                            # 'UniProtKB isoform',
-                            # 'UniProtKB/Swiss-Prot',
-                            # 'UniProtKB/TrEMBL',
-                            "Uniprot/SPTREMBL",
-                            "Uniprot/SWISSPROT",
-                            # 'Uniprot_isoform',
-                            # 'protein_id'
-                        ]
-                    )
-                ]
+        if filter_mode in ["relevant", "relevant-database"]:
+            # In order to prevent the search space to be too big and to prevent unnecessary data to be kept in the disk
+            # and in the memory.
+            isin_list = ExternalDatabases(self).give_list_for_case(give_type="db")
+            available_databases = set(np.unique(res[db_name]))
+            if not all([il in available_databases for il in isin_list]):
+                raise ValueError("Inconsistency between external yaml file and current state of DatabaseManager.")
+            res = res[res[db_name].isin(isin_list)]
 
         res.reset_index(inplace=True, drop=True)
-        return res
+
+        if filter_mode in ["all", "relevant"]:
+            return res
+        elif filter_mode in ["database", "relevant-database"]:
+            databases = pd.DataFrame(Counter(res[db_name]).most_common(), columns=[db_name, count_col])
+            return databases
+        else:
+            raise ValueError
 
     def get_db(
         self, df_indicator, create_even_if_exist=False, save_after_calculation=True, overwrite_even_if_exist=False
@@ -1013,10 +933,10 @@ class DatabaseManager:
         ):
 
             if main_ind == "external" and param1_ind is None:
-                df = self.create_external_db(filter_relevant=False)
+                df = self.create_external_db(filter_mode="all")
 
-            elif main_ind == "external" and param1_ind == "relevant":
-                df = self.create_external_db(filter_relevant=True)
+            elif main_ind == "external" and param1_ind in ["relevant", "database", "relevant-database"]:
+                df = self.create_external_db(filter_mode=param1_ind)
 
             elif main_ind == "idsraw":
                 if param1_ind not in self.available_form_of_interests:
@@ -1028,6 +948,9 @@ class DatabaseManager:
 
             elif main_ind == "ids" and param1_ind is None:
                 df = self.get_release_id()
+
+            elif main_ind == "externalcontent" and param1_ind is None:
+                df = self.create_database_content()
 
             elif main_ind == "relationcurrent" and param1_ind is None:
                 df = self.create_relation_current()
@@ -1120,7 +1043,9 @@ class DatabaseManager:
         else:
             hierarchy = file_name_mysql(*args, **kwargs)
 
-        return hierarchy, os.path.join(self.local_repository, f"{self.organism}.h5")
+        return hierarchy, os.path.join(
+            self.local_repository, f"{self.organism}_assembly-{self.ensembl_mysql_server}.h5"
+        )
 
     def export_disk(self, df, hierarchy, file_path, overwrite: bool):
         """Todo.
@@ -1349,3 +1274,204 @@ class DatabaseManager:
             ver.append([i, with_version])
         df = pd.DataFrame(ver, columns=["ensembl_release", "version_info"])
         return df
+
+    def create_database_content(self):
+        """Todo.
+
+        Returns:
+            Todo.
+        """
+        df = pd.DataFrame()
+        for k in DB.mysql_port.keys():
+            for j in self.available_form_of_interests:
+                for i in self.available_releases:
+                    self.log.info(f"Organism: {self.organism}, Assembly: {k}, Form: {j}, Ensembl Release: {i}")
+                    df_temp = self.change_server(k).change_release(i).change_form(j).get_db("external_database")
+                    df_temp["assembly"] = k
+                    df_temp["release"] = i
+                    df_temp["form"] = j
+                    df = pd.concat([df, df_temp], axis=0)
+        df["organism"] = self.organism
+        df.reset_index(inplace=True, drop=True)
+        return df
+
+    def create_external_all(self):
+        """Todo.
+
+        Returns:
+            Todo.
+        """
+        ex = ExternalDatabases(self)
+        ass = ex.give_list_for_case(give_type="assembly")
+        df = pd.DataFrame()
+
+        for i in ass:
+            dm = self.change_server(i)
+            df_temp = dm.get_db("external_relevant")
+            df_temp["assembly"] = i
+            df = pd.concat([df, df_temp])
+
+        return df
+
+
+class ExternalDatabases:
+    """Todo."""
+
+    def __init__(self, db_manager: DatabaseManager):
+        """Todo.
+
+        Args:
+            db_manager: Todo.
+        """
+        self.db_manager = db_manager
+        self.log = logging.getLogger("external")
+
+    def create_template_yaml(self):
+        """Todo.
+
+        Raises:
+            ValueError: Todo.
+        """
+
+        def list_to_str(iterable):
+            return ",".join(map(str, iterable))
+
+        df = self.db_manager.get_db("externalcontent")
+
+        r = dict()
+        database_id = {item: i for i, item in enumerate(sorted(np.unique(df["name_db"])))}
+        for a1 in sorted(np.unique(df["organism"])):
+            df_a1 = df[df["organism"] == a1]
+            for a2 in sorted(np.unique(df_a1["form"])):
+                df_a2 = df_a1[df_a1["form"] == a2]
+                for a3 in sorted(np.unique(df_a2["name_db"])):
+                    df_a3 = df_a2[df_a2["name_db"] == a3]
+                    for a4 in sorted(np.unique(df_a3["assembly"])):
+                        df_a4 = df_a3[df_a3["assembly"] == a4]
+                        a4_str = str(a4)
+
+                        if a1 not in r:
+                            r[a1] = dict()
+                        if a2 not in r[a1]:
+                            r[a1][a2] = dict()
+                        if a3 not in r[a1][a2]:
+                            r[a1][a2][a3] = {
+                                "Database Index": database_id[a3],
+                                "Potential Synonymous": "",
+                            }
+                            r[a1][a2][a3]["Assembly"] = dict()
+                        if a4_str not in r[a1][a2][a3]["Assembly"]:
+                            r[a1][a2][a3]["Assembly"][a4_str] = {
+                                "Ensembl release": list_to_str(sorted(np.unique(df_a4["release"]))),
+                                "Include": False,
+                            }
+                        else:
+                            raise ValueError
+
+        with open(self.file_name_yaml, "w") as yaml_file:
+            yaml.dump(r, yaml_file)
+
+        self.log.info(
+            f"File created on {self.file_name_yaml}\n"
+            f"Please edit the file based on requested external databases "
+            f"and add '_modified' to the file name. See package documentation for further detail."
+        )
+
+    @cached_property
+    def file_name_yaml(self):
+        """Todo.
+
+        Returns:
+            Todo.
+        """
+        return os.path.join(self.db_manager.local_repository, f"{self.db_manager.organism}_externals_template.yml")
+
+    @cached_property
+    def file_name_modified_yaml(self):
+        """Todo.
+
+        Returns:
+            Todo.
+        """
+        return os.path.join(self.db_manager.local_repository, f"{self.db_manager.organism}_externals_modified.yml")
+
+    def load_modified_yaml(self) -> dict:
+        """Todo.
+
+        Returns:
+            Todo.
+
+        Raises:
+            FileNotFoundError: Todo.
+        """
+        if not os.access(self.file_name_modified_yaml, os.R_OK):
+            raise FileNotFoundError(
+                f"The file name should be '{self.file_name_modified_yaml}'. "
+                f"Either download from the GitHub repository, or create a template with "
+                f"`create_template_yaml` method and edit accordingly. "
+                f"See `create_template_yaml` explanation for details of editing procedure."
+            )
+
+        with open(self.file_name_modified_yaml) as yaml_file:
+            return yaml.safe_load(yaml_file)
+
+    def give_list_for_case(self, give_type: str) -> list:
+        """Todo.
+
+        Args:
+            give_type: Todo.
+
+        Returns:
+            Todo.
+
+        Raises:
+            ValueError: Todo.
+        """
+        the_dict_loaded = self.load_modified_yaml()
+        the_dict = the_dict_loaded[self.db_manager.organism][self.db_manager.form]
+
+        result = set()
+        for db_name in the_dict:
+            for asm in the_dict[db_name]["Assembly"]:
+                if int(asm) == self.db_manager.ensembl_mysql_server:
+                    item = the_dict[db_name]["Assembly"][asm]
+                    res_ens = map(int, item["Ensembl release"].split(","))
+                    if self.db_manager.ensembl_release in res_ens and item["Include"]:
+                        if give_type == "db":
+                            result.add(db_name)
+                        elif give_type == "assembly":
+                            result.add(int(asm))
+                        else:
+                            raise ValueError
+
+        return list(result)
+
+    def look_all_external_content(
+        self, assembly: int, form: str, shrink_dataframes: float = None, narrowed_externals: bool = False
+    ) -> dict:
+        """Todo.
+
+        Args:
+            assembly: Todo.
+            form: Todo.
+            shrink_dataframes: Todo.
+            narrowed_externals: Todo.
+
+        Returns:
+            Todo.
+        """
+        dm = self.db_manager.change_form(form).change_server(assembly)
+        rel_to_df = sorted(dm.available_releases, reverse=True)
+
+        self.log.info(f"Comparison data frame is being constructed for releases: {rel_to_df}.")
+        ex_all = pd.DataFrame()
+        for rel in sorted(rel_to_df, reverse=True):
+            db_man_rel = dm.change_release(rel)
+            ex_rel = db_man_rel.get_db("external_relevant" if narrowed_externals else "external")
+            if shrink_dataframes is not None:
+                ex_rel = ex_rel.sample(frac=shrink_dataframes)
+            ex_all = pd.concat([ex_all, ex_rel], axis=0)
+        ex_all.reset_index(inplace=True, drop=True)
+
+        b = sorted(np.unique(ex_all["name_db"]))
+        return {i: ex_all[ex_all["name_db"] == i] for i in b}

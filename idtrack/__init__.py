@@ -5,7 +5,7 @@ __email__ = "k.inecik@gmail.com"
 __version__ = "0.0.1"
 
 
-from ._database_manager import DatabaseManager  # noqa
+from ._database_manager import DatabaseManager, ExternalDatabases  # noqa
 from ._dataset import Dataset  # noqa
 from ._db import DB  # noqa
 from ._functions import (  # noqa
