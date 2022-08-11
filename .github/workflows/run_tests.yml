@@ -118,6 +118,8 @@ jobs:
 
             - name: Upload documentation
               if: matrix.session == 'docs-build'
+              run: |
+                  sudo apt-get install -y pandoc
               uses: actions/upload-artifact@v3
               with:
                   name: docs
