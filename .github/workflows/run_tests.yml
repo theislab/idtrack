@@ -107,19 +107,19 @@ jobs:
                       ${{ steps.pre-commit-cache.outputs.result }}-
 
             - name: Run Nox (ubuntu)
-              if: matrix.os == 'ubuntu_latest'
+              if: matrix.os == ${{ ubuntu_latest }}
               run: |
                   sudo apt-get install -y pandoc
                   nox --force-color --python=${{ matrix.python-version }}
 
             - name: Run Nox (windows)
-              if: matrix.os == 'windows-latest'
+              if: matrix.os == ${{ windows-latest }}
               run: |
                   choco install --verbose pandoc
                   nox --force-color --python=${{ matrix.python-version }}
 
             - name: Run Nox (macos)
-              if: matrix.os == 'macos-latest'
+              if: matrix.os == ${{ macos-latest }}
               run: |
                   brew install pandoc
                   nox --force-color --python=${{ matrix.python-version }}
