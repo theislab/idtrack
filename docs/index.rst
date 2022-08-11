@@ -12,6 +12,7 @@
    contributing
    authors
    code_of_conduct
+   notebooks/Untitled
 
 Indices and tables
 ==================

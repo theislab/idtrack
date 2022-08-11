@@ -1001,11 +1001,9 @@ class DatabaseManager:
 
         if not DatabaseManager.check_h5_key(file_path, hierarchy):
             raise KeyError
-        return pd.read_hdf(
-            file_path,
-            key=hierarchy,
-            mode="r",
-        )
+
+        df = pd.read_hdf(file_path, key=hierarchy, mode="r")
+        return df
 
     def file_name(self, df_type, *args, ensembl_release: int = None, **kwargs):
         """Todo.
