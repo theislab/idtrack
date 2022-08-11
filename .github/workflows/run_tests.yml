@@ -106,15 +106,22 @@ jobs:
                   restore-keys: |
                       ${{ steps.pre-commit-cache.outputs.result }}-
 
-            - name: Run Nox
-              if: matrix.session != 'docs-build'
-              run: nox --force-color --python=${{ matrix.python-version }}
-
-            # Here, 'docs-build' is always run on ubuntu-latest so no problem for apt-get
-            - name: Run Nox for docs-build
-              if: matrix.session != 'docs-build'
+            - name: Run Nox (ubuntu)
+              if: matrix.os == ubuntu_latest
               run: |
                   sudo apt-get install -y pandoc
+                  nox --force-color --python=${{ matrix.python-version }}
+
+            - name: Run Nox (windows)
+              if: matrix.os == windows-latest
+              run: |
+                  choco install --verbose pandoc
+                  nox --force-color --python=${{ matrix.python-version }}
+
+            - name: Run Nox (macos)
+              if: matrix.os == windows-latest
+              run: |
+                  brew install pandoc
                   nox --force-color --python=${{ matrix.python-version }}
 
             - name: Upload coverage data
