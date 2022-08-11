@@ -55,7 +55,7 @@ class DatabaseManager:
             "host": DB.mysql_host,
             "user": DB.myqsl_user,
             "password": DB.mysql_togo,
-            "port": DB.mysql_port[self.ensembl_mysql_server],
+            "port": DB.mysql_port_and_assembly_priority[self.ensembl_mysql_server][0],
         }
 
         # Instance attributes
@@ -1280,7 +1280,7 @@ class DatabaseManager:
             Todo.
         """
         df = pd.DataFrame()
-        for k in DB.mysql_port.keys():
+        for k in DB.mysql_port_and_assembly_priority.keys():
             for j in self.available_form_of_interests:
                 for i in self.available_releases:
                     self.log.info(f"Organism: {self.organism}, Assembly: {k}, Form: {j}, Ensembl Release: {i}")
@@ -1302,14 +1302,25 @@ class DatabaseManager:
         ex = ExternalDatabases(self)
         ass = ex.give_list_for_case(give_type="assembly")
         df = pd.DataFrame()
+        assembly_priority = [DB.mysql_port_and_assembly_priority[i] for i in ass]
 
-        for i in ass:
+        for i in [x for _, x in sorted(zip(assembly_priority, ass))]:  # sort according to priority
             dm = self.change_server(i)
             df_temp = dm.get_db("external_relevant")
             df_temp["assembly"] = i
             df = pd.concat([df, df_temp])
 
+        df.reset_index(drop=True, inplace=True)
+        compare_columns = [i for i in df.columns if i != "assembly"]
+        df.drop_duplicates(keep="first", inplace=True, ignore_index=True, subset=compare_columns)
+
+        # drop duplicates: note after transition to new assembly. ensembl does not assign new versions etc to the older
+        # keep the most priority one.
+
         return df
+
+    # get assemblies, create df
+    #
 
 
 class ExternalDatabases:
@@ -1429,18 +1440,22 @@ class ExternalDatabases:
         the_dict = the_dict_loaded[self.db_manager.organism][self.db_manager.form]
 
         result = set()
+        # db = give databasess of that release, of that assembly.
+        # ass = give assemblies of that release, with at least one database.
+
         for db_name in the_dict:
             for asm in the_dict[db_name]["Assembly"]:
-                if int(asm) == self.db_manager.ensembl_mysql_server:
-                    item = the_dict[db_name]["Assembly"][asm]
-                    res_ens = map(int, item["Ensembl release"].split(","))
-                    if self.db_manager.ensembl_release in res_ens and item["Include"]:
-                        if give_type == "db":
-                            result.add(db_name)
-                        elif give_type == "assembly":
-                            result.add(int(asm))
-                        else:
-                            raise ValueError
+                item = the_dict[db_name]["Assembly"][asm]
+                res_ens = map(int, item["Ensembl release"].split(","))
+                if self.db_manager.ensembl_release in res_ens and item["Include"]:
+                    if give_type == "db" and int(asm) == self.db_manager.ensembl_mysql_server:
+                        result.add(db_name)
+                    elif give_type == "db":
+                        pass
+                    elif give_type == "assembly":
+                        result.add(int(asm))
+                    else:
+                        raise ValueError
 
         return list(result)
 
