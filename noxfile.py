@@ -192,10 +192,10 @@ def docs_build(session: Session) -> None:
     """Build the documentation."""
     args = session.posargs or ["docs", "docs/_build"]
     session.install(".")
-    session.run("sudo apt-get install -y pandoc")
     session.install(
         "sphinx", "sphinx-click", "sphinx-rtd-theme", "sphinx-rtd-dark-mode", "nbsphinx", "pandoc", "IPython"
     )
+
     build_dir = Path("docs", "_build")
     if build_dir.exists():
         shutil.rmtree(build_dir)
@@ -208,7 +208,6 @@ def docs(session: Session) -> None:
     """Build and serve the documentation with live reloading on file changes."""
     args = session.posargs or ["--open-browser", "docs", "docs/_build"]
     session.install(".")
-    session.run("sudo apt-get install -y pandoc")
     session.install(
         "sphinx",
         "sphinx-autobuild",

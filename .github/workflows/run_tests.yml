@@ -107,7 +107,15 @@ jobs:
                       ${{ steps.pre-commit-cache.outputs.result }}-
 
             - name: Run Nox
+              if: matrix.session != 'docs-build'
               run: nox --force-color --python=${{ matrix.python-version }}
+
+            # Here, 'docs-build' is always run on ubuntu-latest so no problem for apt-get
+            - name: Run Nox for docs-build
+              if: matrix.session != 'docs-build'
+              run: |
+                  sudo apt-get install -y pandoc
+                  nox --force-color --python=${{ matrix.python-version }}
 
             - name: Upload coverage data
               if: always() && matrix.session == 'tests'

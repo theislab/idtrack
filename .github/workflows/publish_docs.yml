@@ -4,6 +4,7 @@ on: [push]
 
 jobs:
     build:
+        # Here, 'docs-build' is always run on ubuntu-latest so no problem for apt-get
         runs-on: ubuntu-latest
 
         steps:
