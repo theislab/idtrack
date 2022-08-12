@@ -2,7 +2,7 @@
 
 __author__ = "Kemal Inecik"
 __email__ = "k.inecik@gmail.com"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 
 from ._database_manager import DatabaseManager, ExternalDatabases  # noqa
