@@ -170,4 +170,5 @@ html_css_files = [
     "custom_cookietemple.css",
 ]
 
-autoclass_content = "both"
+autoclass_content = "both"  # add init into the file class description
+add_module_names = False  # Prevent sphinx from displaying the full path to the class

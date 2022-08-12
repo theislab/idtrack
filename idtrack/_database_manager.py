@@ -72,9 +72,10 @@ class DatabaseManager:
         # Protected attributes
         self.available_form_of_interests = ["gene", "transcript", "translation"]  # Warning: the order is important.
         self._available_version_info = ["add_version", "without_version", "with_version"]
-        self._comp_hdf5 = {"complevel": 5, "complib": "blosc:zlib"} if self.compress else dict()
+        self._comp_hdf5 = {"complevel": 9, "complib": "blosc:zlib"} if self.compress else dict()
         self._column_sep = "_COL_"
         self._identifiers = [f"{self.form}_stable_id", f"{self.form}_version"]
+        # min_possible_ensembl = max([j[2] for i, j in DB.mysql_port_and_assembly_priority.items()])
 
         # Check if it seems ok.
         if not (
@@ -1414,8 +1415,9 @@ class ExternalDatabases:
             FileNotFoundError: Todo.
         """
         if not os.access(self.file_name_modified_yaml, os.R_OK):
+            td, tf = os.path.split(self.file_name_modified_yaml)
             raise FileNotFoundError(
-                f"The file name should be '{self.file_name_modified_yaml}'. "
+                f"External database config '{tf}' is not found in provided temp directory: '{td}'. "
                 f"Either download from the GitHub repository, or create a template with "
                 f"`create_template_yaml` method and edit accordingly. "
                 f"See `create_template_yaml` explanation for details of editing procedure."
@@ -1428,7 +1430,13 @@ class ExternalDatabases:
         """Todo.
 
         Args:
-            give_type: Todo.
+            give_type:
+                - ``'db'``: the method gives associated external database names of class' ``DatabaseManager``
+                  instance which has a certain the Ensembl release and the Ensembl assembly.
+
+                - ``'assembly'``: the method gives possible Ensembl assemblies of class' ``DatabaseManager``
+                  instance that has a certain the Ensembl release and has at least one external database
+                  defined in ``yaml`` config file.
 
         Returns:
             Todo.
@@ -1440,9 +1448,6 @@ class ExternalDatabases:
         the_dict = the_dict_loaded[self.db_manager.organism][self.db_manager.form]
 
         result = set()
-        # db = give databasess of that release, of that assembly.
-        # ass = give assemblies of that release, with at least one database.
-
         for db_name in the_dict:
             for asm in the_dict[db_name]["Assembly"]:
                 item = the_dict[db_name]["Assembly"][asm]

@@ -76,25 +76,25 @@ class Graph:
             ValueError: Unexpected error.
         """
 
-        def add_edge(n1: str, n2: str, ens_rel: int, edge_attribute_name: str = "releases"):
+        def add_edge(n1: str, n2: str, er12: int, edge_attribute_name: str = "releases"):
             """A simple function to create edges between provided nodes. Edits the graph that is under the construction.
 
             Args:
                 n1: The first node of the edge. The edge is taken from this node.
                 n2: The second node of the edge. The edge is taken to this node.
-                ens_rel: The Ensembl release associated with such a connection.
+                er12: The Ensembl release associated with such a connection.
                 edge_attribute_name: The string to use in the edge attribute dictionary.
 
             Raises:
                 ValueError: If there are more than one edge between the source and the target node.
             """
             if not g.has_edge(n1, n2):
-                n_edge_att = {edge_attribute_name: {ens_rel}}
+                n_edge_att = {edge_attribute_name: {er12}}
                 g.add_edge(n1, n2, **n_edge_att)
             else:
                 if len(g.get_edge_data(n1, n2)) != 1:
                     raise ValueError
-                g[n1][n2][0][edge_attribute_name].add(ens_rel)
+                g[n1][n2][0][edge_attribute_name].add(er12)
 
         # Initialize the external database downloads:
         # TODO.
@@ -121,8 +121,8 @@ class Graph:
                 intersection = gm & gn
                 if len(intersection):
                     self.log.warning(
-                        f"Intersecting Ensembl nodes in two different forms: '{m}'-'{n}'.\n"
-                        f"Nodes in '{m}' will be replaced by '{n}': '{', '.join(intersection)}'."
+                        f"Intersecting Ensembl nodes: Nodes in '{m}' will "
+                        f"be replaced by '{n}': '{', '.join(intersection)}'."
                     )
 
         # Compose all graphs into one. If there is a
@@ -177,25 +177,82 @@ class Graph:
 
         # Establish connection between different databases
         graph_nodes_before_external = set(g.nodes)
+        graph_nodes_added_assembly: dict = {
+            i: set() for i in DB.mysql_port_and_assembly_priority.keys() if i != self.db_manager.ensembl_mysql_server
+        }
         misplaced_external_entry = list()
+        establish_form_connection = list()
+        min_ens_release = dict()
         release_dict_str: str = "release_dict"
         for f in form_list:
 
             self.log.info(f"Edges between external IDs to Ensembl IDs is being added for '{f}'.")
-            for ens_rel in self.db_manager.available_releases:
+            nodes_from_previous_release = 0
+            for ens_rel in sorted(self.db_manager.available_releases):
+                # the order is important in adding new nodes into the core graph
 
                 db_manager = dbman_s[f].change_release(ens_rel)
                 rc = db_manager.create_external_all()
 
                 for _ind, entry in rc.iterrows():
+                    # Note that the `rc` dataframe have higher priority assembly at the top.
 
                     e1, e2 = entry["graph_id"], entry["id_db"]
                     er, edb = entry["release"], entry["name_db"]
+                    sly = int(entry["assembly"])
+
+                    if sly not in DB.mysql_port_and_assembly_priority:
+                        raise ValueError
 
                     if e1 and e2 and er and edb:
 
                         if e1 not in graph_nodes_before_external:
-                            raise ValueError
+                            # Here, Only add the node once and retire. For Homo sapiens these nodes are added at
+                            # previous assemblies, but retired before the last assembly and the Ensembl MySQL server,
+                            # minimum release (For 37, it is 79). They are nevertheless important to add, as maybe an
+                            # external ID bridge them to the active ones.
+                            # For example, 'ENSG00000148828.5', 'ENSG00000167765.3'
+
+                            if sly == self.db_manager.ensembl_mysql_server:
+                                raise ValueError(
+                                    "The main assembly created for the graph should contain all the "
+                                    "nodes in the external table."
+                                )
+
+                            elif any(
+                                [e1 in graph_nodes_added_assembly[i] for i in graph_nodes_added_assembly if i != sly]
+                            ):
+                                # Hypothetical statement for now, as there are only two assembly in Ensembl.
+                                raise ValueError("Node should have been already added by a higher priority assembly.")
+
+                            elif e1 not in graph_nodes_added_assembly[sly]:
+
+                                if sly not in min_ens_release:
+                                    min_ens_release[sly] = ens_rel
+                                elif ens_rel != min_ens_release[sly]:
+                                    # The duplicate entries were already removed by `create_external_all` method.
+                                    # IDs retired before `min(db_manager.available_releases)` will be missing only.
+                                    # In the first possible release, all should have been already added.
+
+                                    # Here, the if-elif statement is written in case of third assembly in the future.
+                                    raise ValueError(
+                                        "The new nodes here should have been added in "
+                                        "the first Ensembl release possible."
+                                    )
+                                graph_nodes_added_assembly[sly].add(e1)
+
+                                node_attributes_3 = {
+                                    DB.node_type_str: DB.nts_assembly[sly][f],  # "Assembly": sly
+                                    "ID": Graph.split_id(e1, "ID"),
+                                    "Version": Graph.split_id(e1, "Version"),
+                                }
+                                g.add_node(e1, **node_attributes_3)
+
+                                nodes_from_previous_release += 1
+                                establish_form_connection.append([e1, f, sly])
+                            else:
+                                # Do nothing. The hope is a second external database is bridging to a known Ensembl ID.
+                                pass
 
                         if e2 in graph_nodes_before_external:
                             misplaced_external_entry.append(e2)
@@ -211,11 +268,62 @@ class Graph:
                             elif er not in g.nodes[e2][release_dict_str][edb]:
                                 g.nodes[e2][release_dict_str][edb].add(er)
 
+                            if e1 not in g.nodes:
+                                raise ValueError(f"Node '{e1}' should have been added.")
                             # Edges are from external ID to Ensembl ID.
                             add_edge(e2, e1, er)
 
+            if nodes_from_previous_release > 0:
+                self.log.warning(f"New nodes added as assembly nodes: {nodes_from_previous_release}")
+
         if len(misplaced_external_entry) > 0:
             self.log.warning(f"Misplaced external entry: {len(misplaced_external_entry)}.")
+
+        if len(establish_form_connection) > 0:
+
+            added_edge = 0
+            self.log.info("Different forms of assembly Ensembl nodes are being connecting.")
+            new_nodes = pd.DataFrame(establish_form_connection, columns=["node", "form", "assembly"])
+            new_nodes.drop_duplicates(keep="first", inplace=True, ignore_index=True)
+            avail_assemblies = np.unique(new_nodes["assembly"])
+
+            for aa in avail_assemblies:
+                nn_aa = new_nodes[new_nodes["assembly"] == aa]
+                dm_aa = self.db_manager.change_release(min_ens_release[aa]).change_server(aa)
+                df_aa = dm_aa.get_db("relationcurrent")
+
+                # Attach nodes that has found in the graph and there are form relationships.
+                bool_filter = pd.DataFrame()
+                for f in self.db_manager.available_form_of_interests:
+                    fids = np.unique(nn_aa[nn_aa["form"] == f]["node"])
+                    bool_filter = pd.concat([bool_filter, df_aa[f].isin(fids)], axis=1)
+                bool_filter = np.sum(bool_filter, axis=1) > 1
+                df_aa = df_aa[bool_filter]
+
+                for _, item in df_aa.iterrows():
+
+                    for f in self.db_manager.available_form_of_interests:
+                        anid = item[f]
+
+                        if anid and anid not in g.nodes:
+                            node_attributes_4 = {
+                                DB.node_type_str: DB.nts_assembly[aa][f],  # "Assembly": sly
+                                "ID": Graph.split_id(anid, "ID"),
+                                "Version": Graph.split_id(anid, "Version"),
+                            }
+                            g.add_node(anid, **node_attributes_4)
+
+                    for e1_str, e2_str in (("transcript", "gene"), ("translation", "transcript")):
+
+                        new1, new2 = item[e1_str], item[e2_str]
+                        if new1 and new2 and g.has_edge(new1, new2):
+                            raise ValueError
+                        elif new1 and new2:
+                            add_edge(new1, new2, min_ens_release[aa])
+                            added_edge += 1
+
+            if added_edge > 0:
+                self.log.warning(f"New edges are added between assembly Ensembl nodes: {added_edge}")
 
         new_form = "-".join(form_list)
         g.graph["name"] = (f"{self.db_manager.organism}_{self.db_manager.ensembl_release}_{new_form}",)
@@ -322,16 +430,6 @@ class Graph:
             # Create edge attributes using the
             edge_a = edge_attribute_maker(rel_1, rel_2, the_weight)  # old==new
             g.add_edge(node_1, node_2, **edge_a)
-
-        def split_id(id_to_split: str, which_part: str):
-            if which_part == "ID":
-                return id_to_split.split(DB.id_ver_delimiter)[0]
-            elif which_part == "Version":
-                return (
-                    id_to_split.split(DB.id_ver_delimiter)[1] if id_to_split.count(DB.id_ver_delimiter) == 1 else np.nan
-                )  # there are max 1 as checked previously
-            else:
-                raise ValueError
 
         self.log.info(f"Graph is being created: {db_manager.form}")
 
@@ -639,7 +737,7 @@ class Graph:
             ids_amc_df = amc_dm.get_db("ids", save_after_calculation=False)
             ids_amc.update(set(amc_dm.id_ver_from_df(ids_amc_df)))
         for node in g.nodes:
-            if node not in ids_amc and split_id(node, "Version") not in DB.alternative_versions:
+            if node not in ids_amc and Graph.split_id(node, "Version") not in DB.alternative_versions:
                 problematic_nodes.append(node)
         if len(problematic_nodes) > 0:
             self.log.warning(f"Nodes are deleted due to Ensembl ID history mistake: {len(problematic_nodes)}.")
@@ -669,10 +767,36 @@ class Graph:
         # Add some node features as node attributes.
         nx.set_node_attributes(g, {n: DB.nts_ensembl[db_manager.form] for n in g.nodes}, DB.node_type_str)
         nx.set_node_attributes(g, {n: n in latest_release_ids for n in g.nodes}, "is_latest")
-        nx.set_node_attributes(g, {n: split_id(n, "ID") for n in g.nodes}, "ID")
-        nx.set_node_attributes(g, {n: split_id(n, "Version") for n in g.nodes}, "Version")
+        nx.set_node_attributes(g, {n: Graph.split_id(n, "ID") for n in g.nodes}, "ID")
+        nx.set_node_attributes(g, {n: Graph.split_id(n, "Version") for n in g.nodes}, "Version")
 
         return g
+
+    @staticmethod
+    def split_id(id_to_split: str, which_part: str):
+        """Todo.
+
+        Args:
+            id_to_split: Todo.
+            which_part: Todo.
+
+        Returns:
+            Todo.
+
+        Raises:
+            ValueError: Todo.
+        """
+        if id_to_split.count(DB.id_ver_delimiter) != 1:
+            raise ValueError(f"Ensembl node has more than one delimiter. {id_to_split}")
+
+        if which_part == "ID":
+            return id_to_split.split(DB.id_ver_delimiter)[0]
+        elif which_part == "Version":
+            return (
+                id_to_split.split(DB.id_ver_delimiter)[1] if id_to_split.count(DB.id_ver_delimiter) == 1 else np.nan
+            )  # there are max 1 as checked previously
+        else:
+            raise ValueError
 
     @staticmethod
     def remove_non_gene_trees(graph: nx.MultiDiGraph, forms_remove: list = None) -> nx.MultiDiGraph:

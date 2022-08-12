@@ -48,7 +48,7 @@ class Track:
         self.reverse_graph = self.graph.reverse(copy=False)
         self.version_info = self.graph.graph["version_info"]
 
-    def recursive_synonymous(
+    def _recursive_synonymous(
         self,
         _the_id: str,
         synonymous_ones: list,
@@ -131,7 +131,7 @@ class Track:
                                     if from_release not in the_edge["releases"]:
                                         continue
 
-                                self.recursive_synonymous(
+                                self._recursive_synonymous(
                                     _next_neighbour,
                                     synonymous_ones,
                                     synonymous_ones_db,
@@ -162,7 +162,7 @@ class Track:
         if "external" in filter_node_type:
             raise ValueError(f"Define which external database: '{filter_node_type}'.")
 
-        self.recursive_synonymous(
+        self._recursive_synonymous(
             the_id,
             synonymous_ones,
             synonymous_ones_db,
@@ -709,6 +709,20 @@ class Track:
         external_jump: float = None,
         edge_hist: list = None,
     ):
+        """Todo.
+
+        Args:
+            from_id: Todo.
+            from_release: Todo.
+            to_release: Todo.
+            all_paths: Todo.
+            reverse: Todo.
+            external_settings: Todo.
+            beamed_up: Todo.
+            external_jump: Todo.
+            edge_hist: Todo.
+        """
+
         def _external_path_maker(a_from_id, a_ens_rel, a_syn_pth, a_syn_dbp):
             a_edge_hist_alt = list()
             a_from_id_ext_path = copy.copy(a_from_id)

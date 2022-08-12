@@ -32,6 +32,14 @@ Request features on the `Issue Tracker`_.
 How to set up your development environment
 ------------------------------------------
 
+You should the ``Pandoc`` installation already to include tutorial Jupter notebooks into the documentation:
+
+.. code-block:: console
+
+    $ brew install pandoc  # MacOS
+    $ sudo apt-get install -y pandoc  # Ubuntu
+    $ choco install pandoc  # Windows
+
 You need Python 3.8+ and the following tools:
 
 - Poetry_
@@ -58,10 +66,12 @@ or the command-line interface:
    $ poetry run python
    $ poetry run idtrack
 
+Please, also have a look at Installation_ to learn any other required packages needed such as ``HDF5``.
+
 .. _Poetry: https://python-poetry.org/
 .. _Nox: https://nox.thea.codes/
 .. _nox-poetry: https://nox-poetry.readthedocs.io/
-
+.. _Installation: installation.rst
 
 How to test the project
 -----------------------
