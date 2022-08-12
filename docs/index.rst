@@ -1,9 +1,7 @@
 Documentation
 =============
 
-.. include:: badges.rst
-
-.. include:: short_intro.rst
+.. include:: readme.rst
 
 .. toctree::
    :maxdepth: 3

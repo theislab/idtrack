@@ -1,6 +1,0 @@
-
-Key Features
-------------
-
-* TODO
-* TODO
