@@ -1,11 +1,15 @@
-.. include:: ../README.rst
-==========================
+Documentation
+=============
+
+.. include:: badges.rst
+
+.. include:: short_intro.rst
 
 .. toctree::
    :maxdepth: 3
    :caption: Contents:
+   :hidden:
 
-   readme
    installation
    usage
    reference

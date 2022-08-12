@@ -273,7 +273,10 @@ class DatabaseManager:
         Raises:
             ValueError: Todo.
         """
-        self.log.info(f"Available databases for {self.organism} is being fetched.")
+        self.log.info(
+            f"Available MySQL databases for {self.organism} in {self.ensembl_mysql_server} "
+            f"assembly and {self.ensembl_release} release is being fetched."
+        )
 
         with pymysql.connect(**self.mysql_settings) as connection:
             with connection.cursor() as cur:
