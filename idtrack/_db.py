@@ -41,7 +41,11 @@ class DB:
     }
     nts_ensembl = {i: f"ensembl_{i}" for i in ["gene", "transcript", "translation"]}
     nts_base_ensembl = {i: f"base_ensembl_{i}" for i in ["gene", "transcript", "translation"]}
-
+    nts_non_external_ensembl = set(
+        list(nts_ensembl.values())
+        + list(nts_base_ensembl.values())
+        + [j for _, i in nts_assembly.items() for _, j in i.items()]
+    )
     # Edge/Note Attributes:
     # Todo:
 

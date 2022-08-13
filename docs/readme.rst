@@ -1,4 +1,4 @@
-|PyPI| |Python Version| |License| |Read the Docs| |Build| |Tests| |Codecov| |pre-commit| |Black|
+|PyPI| |PyPIDownloads| |Python Version| |License| |Read the Docs| |Build| |Tests| |Codecov| |pre-commit| |Black|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/idtrack.svg
    :target: https://pypi.org/project/idtrack/
@@ -27,6 +27,9 @@
 .. |Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
    :target: https://github.com/psf/black
    :alt: Black
+.. |PyPIDownloads| image:: https://pepy.tech/badge/idtrack
+   :target: https://pepy.tech/project/idtrack
+   :alt: downloads
 
 Key Features
 ------------

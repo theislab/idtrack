@@ -9,7 +9,7 @@ import logging
 import warnings
 from collections import Counter
 from functools import cached_property
-from typing import Callable, Optional, Union
+from typing import Callable, Iterable, Optional, Union
 
 import networkx as nx
 import numpy as np
@@ -917,8 +917,20 @@ class Track:
 
         return tuple(all_paths)
 
-    def calculate_node_scores(self, gene_id):
-        """Todo.
+    @cached_property
+    def _calculate_node_scores_helper(self):
+        ensembl_form_to_include = ["transcript", "translation"]
+        ensembl_include = dict()
+        filter_set = self.available_external_databases
+        for i in ensembl_form_to_include:
+            ensembl_include_form: set = set([DB.nts_ensembl[i]] + [DB.nts_assembly[j][i] for j in DB.nts_assembly])
+            ensembl_include[i] = ensembl_include_form
+            filter_set = filter_set | ensembl_include_form
+
+        return filter_set, ensembl_include
+
+    def calculate_node_scores(self, gene_id) -> list:
+        """A metric to choose from multiple targets.
 
         Args:
             gene_id: Todo.
@@ -929,24 +941,22 @@ class Track:
         Raises:
             ValueError: Todo.
         """
-        # a metric to choose from multiple targets
-        _temp = [
-            i[-1]
-            for i, j in self.synonymous_nodes(gene_id, 2, ["external", "ensembl_transcript", "ensembl_translation"])
-        ]
+        filter_set, ensembl_include = self._calculate_node_scores_helper
+        _temp = [i[-1] for i, _ in self.synonymous_nodes(gene_id, 2, filter_node_type=filter_set)]
         the_tran, the_prot, the_ext = [], [], []
         for i in _temp:
-            nt = self.graph.nodes[i]["node_type"]
-            if nt == "external":
+            nt = self.graph.nodes[i][DB.node_type_str]
+            if nt in DB.nts_external:
                 the_ext.append(i)
-            elif nt == "ensembl_transcript":
+            elif nt in ensembl_include["transcript"]:
                 the_tran.append(i)
-            elif nt == "ensembl_translation":
+            elif nt in ensembl_include["translation"]:
                 the_prot.append(i)
             else:
                 raise ValueError
 
-        return [len(set(the_ext)), len(set(the_tran)), len(set(the_prot))]
+        # Importance order is as following
+        return [len(set(the_ext)), len(set(the_prot)), len(set(the_tran))]
 
     def find_external(self, gene_id, target_db, from_release):
         """Todo.
@@ -1066,7 +1076,14 @@ class Track:
         return bins
 
     def calculate_score_and_select(
-        self, all_possible_paths, reduction, remove_na, from_releases, to_release, score_of_the_queried_item
+        self,
+        all_possible_paths,
+        reduction,
+        remove_na,
+        from_releases,
+        to_release,
+        score_of_the_queried_item,
+        return_path: bool = False,
     ) -> dict:
         """Todo.
 
@@ -1077,6 +1094,7 @@ class Track:
             from_releases: Todo.
             to_release: Todo.
             score_of_the_queried_item: Todo.
+            return_path: Todo.
 
         Returns:
             Todo.
@@ -1125,20 +1143,15 @@ class Track:
             final_destination = the_path[-1][1]
             if final_destination not in scores:
                 scores[final_destination] = list()
-            scores[final_destination].append(
-                [
-                    external_jump,
-                    external_step,
-                    edge_scores,
-                    len(the_path) - external_step,
-                    # the_path
-                ]
-            )
+            to_add = [external_jump, external_step, edge_scores, len(the_path) - external_step]
+            if return_path:
+                to_add.append(the_path)
+            scores[final_destination].append(to_add)
 
         max_score = {
             i: sorted(
                 scores[i],  # min external_jump, external_step of max edge_scores
-                key=lambda k: (k[0], k[1], -k[2], k[3]),
+                key=lambda k: (k[0], k[1], -k[2], k[3]),  # k[4] is the path, do not include that.
                 reverse=False,
             )[
                 0
@@ -1159,6 +1172,7 @@ class Track:
         score_of_the_queried_item: float = np.nan,
         go_external: bool = True,
         prioritize_to_one_filter: bool = False,
+        return_path: bool = False,
     ):
         """Todo.
 
@@ -1172,6 +1186,7 @@ class Track:
             score_of_the_queried_item: Todo.
             go_external: Todo.
             prioritize_to_one_filter: Todo.
+            return_path: Todo.
 
         Returns:
             Todo.
@@ -1290,13 +1305,13 @@ class Track:
 
         if the_id in self.graph.nodes:
             # external ise database ismi digerleriyse node_type
-            nt = self.graph.nodes[the_id]["node_type"]
-            if nt == "external":
+            nt = self.graph.nodes[the_id][DB.node_type_str]
+            if nt == DB.nts_external:
                 rd = self.graph.nodes[the_id]["release_dict"]
                 return {(r, p) for r in rd for p in rd[r]}
-            elif nt == "ensembl_gene":
+            elif nt == DB.nts_ensembl["gene"]:
                 return {(nt, k) for i, j in self.get_active_ranges_of_id(the_id) for k in non_inf_range(i, j)}
-            elif nt in ["ensembl_transcript", "ensembl_translation", "base_ensembl_gene"]:
+            elif nt in DB.nts_non_external_ensembl:  # ensembl_gene is used up above
                 _available = {
                     r
                     for ne in self.graph.neighbors(the_id)
@@ -1309,6 +1324,82 @@ class Track:
         else:
             raise KeyError
 
+    def unfound_node_solutions(self, the_id: str) -> tuple:
+        """Todo.
+
+        Args:
+            the_id: Todo.
+
+        Returns:
+            Todo.
+        """
+        if the_id in self.graph.nodes:
+            return the_id, False
+
+        new_id = the_id.split(".")[0]
+        if the_id.count(".") == 1 and new_id in self.graph.nodes:
+            return new_id, True
+
+        char_indices = [ind for ind, i in enumerate(the_id) if i in ["-", "_"]]
+        possible_alternatives = list()
+        if len(char_indices) > 0:
+            for comb in range(len(char_indices) + 1):
+                for replace_indices in itertools.combinations(char_indices, comb):
+                    replace_indices_other = [i for i in char_indices if i not in replace_indices]
+                    new_id_l = list(the_id)
+                    for ri in replace_indices:
+                        new_id_l[ri] = "_"
+                    for rio in replace_indices_other:
+                        new_id_l[rio] = "-"
+                    possible_alternatives.append("".join(new_id_l))
+
+        for pa in possible_alternatives:
+            if pa in self.graph.nodes:
+                return pa, True
+            else:
+                paid = pa.split(".")[0]
+                if the_id.count(".") == 1 and paid in self.graph.nodes:
+                    return paid, True
+
+        return None, False
+
+    def unfound_correct(self, gene_list: Iterable) -> tuple:
+        """Todo.
+
+        Args:
+            gene_list: Todo.
+
+        Raises:
+            ValueError: Todo.
+
+        Returns:
+            Todo.
+        """
+        lost_ids = list()
+        converted_ids = list()
+        result = list()
+
+        for gl in gene_list:
+            new_gl, is_converted = self.unfound_node_solutions(gl)
+
+            if new_gl is None:
+                lost_ids.append(gl)
+            elif new_gl and is_converted:
+                converted_ids.append(gl)
+                result.append(new_gl)
+            elif new_gl:
+                result.append(gl)
+            else:
+                raise ValueError
+
+        if len(converted_ids) > 0:
+            self.log.warning(f"Number of converted IDs with small modifications: {len(converted_ids)}")
+
+        if len(lost_ids) > 0:
+            self.log.warning(f"Number of IDs not found in the graph: {len(lost_ids)}")
+
+        return result, converted_ids, lost_ids
+
     def identify_source(self, dataset_ids: list):
         """Todo.
 
@@ -1320,9 +1411,14 @@ class Track:
         """
         possible_pairs = list()
         for di in dataset_ids:
+            # assembly = self.get_external_assembly()
             possible_pairs.extend(self.memorized_node_database_release_pairs[di])
 
         return list(Counter(possible_pairs).most_common())
+
+    def get_external_assembly(self):
+        """Todo."""
+        raise NotImplementedError
 
     @cached_property
     def memorized_node_database_release_pairs(self):  # Uses so much uncess

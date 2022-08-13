@@ -8,5 +8,5 @@ Usage
 
 .. toctree::
 
-    notebooks/initialization
-    notebooks/Untitled
+    _notebooks/initialization
+    _notebooks/Untitled

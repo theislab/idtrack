@@ -1,5 +1,5 @@
-Documentation
-=============
+**Documentation**
+=================
 
 .. include:: readme.rst
 
@@ -16,7 +16,7 @@ Documentation
    code_of_conduct
 
 Indices and tables
-==================
+------------------
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
