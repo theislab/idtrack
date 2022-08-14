@@ -1,5 +1,5 @@
-**Documentation**
-=================
+**idtrack**
+===========
 
 .. include:: readme.rst
 

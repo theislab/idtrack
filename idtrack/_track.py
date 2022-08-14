@@ -360,12 +360,13 @@ class Track:
         return r
 
     @staticmethod
-    def get_from_release_and_reverse_vars(lor, p):
+    def get_from_release_and_reverse_vars(lor: list, p: int, mode: str):
         """Todo.
 
         Args:
             lor: Todo.
             p: Todo.
+            mode: Todo.
 
         Returns:
             Todo.
@@ -379,15 +380,25 @@ class Track:
 
             if l1 > l2:
                 raise ValueError
-            elif p == l1:
-                result.append((l1, False))  # target'e yakin uc
-            elif p < l1:
-                result.append((l1, True))  # target'e yakin uc
-            elif l2 <= p:
-                result.append((l2, False))  # target'e yakin uc
-            elif l1 < p < l2:
+
+            elif mode == "closest" and p == l1:
+                result.append((l1, False))
+            elif mode == "closest" and p < l1:
+                result.append((l1, True))
+            elif mode == "closest" and l2 <= p:
+                result.append((l2, False))
+            elif mode == "closest" and l1 < p < l2:
                 result.append((l1, True))
                 result.append((l2, False))
+
+            elif mode == "distant" and p <= l1:
+                result.append((l2, True))
+            elif mode == "distant" and l2 <= p:
+                result.append((l1, False))
+            elif mode == "distant" and l1 < p < l2:
+                result.append((l2, True))
+                result.append((l1, False))
+
             else:
                 raise ValueError
 
@@ -433,7 +444,7 @@ class Track:
 
             for syn_id in synonym_ids:
                 n = self.get_active_ranges_of_id(syn_id)
-                m = Track.get_from_release_and_reverse_vars(n, to_release)
+                m = Track.get_from_release_and_reverse_vars(n, to_release, mode="closest")
                 # Find the ranges of syn_id and find the reve
                 for m1, m2 in m:
                     min_distance_of_range = abs(m1 - to_release)
@@ -446,13 +457,13 @@ class Track:
             for syn_id in synonym_ids:
 
                 n = self.get_two_nodes_coinciding_releases(from_id, syn_id)
-                m = Track.get_from_release_and_reverse_vars(n, to_release)
+                m = Track.get_from_release_and_reverse_vars(n, to_release, mode="closest")
 
                 for m1, m2 in m:
                     min_distance_of_range = abs(m1 - to_release)
                     distance_to_target.append(min_distance_of_range)
                     candidate_ranges.append([syn_id, m1, m2])
-            # multiple id ve/veya multiple range output verebilir
+            # This can output multiple ID and/or multiple range.
 
             # If the queried ID and synonyms has no overlapping ranges:
             # find the synonym_ID with the closest distance to from_id
@@ -477,7 +488,7 @@ class Track:
                     for ntr in new_to_release:
                         n = self.get_active_ranges_of_id(syn_id)
                         # Find correct from_release, the closest range edge to the from_id
-                        m = Track.get_from_release_and_reverse_vars(n, ntr)
+                        m = Track.get_from_release_and_reverse_vars(n, ntr, mode="closest")
                         for m1, _ in m:
                             # Find correct reverse_info
                             m2 = to_release <= m1
@@ -680,7 +691,7 @@ class Track:
             n = self.get_active_ranges_of_id(from_id)
         else:
             n = self.get_active_ranges_of_id_others(from_id)
-        m = Track.get_from_release_and_reverse_vars(n, to_release)
+        m = Track.get_from_release_and_reverse_vars(n, to_release, mode="distant")
 
         forward_from_ids = [i for i, j in m if not j]
         reverse_from_ids = [i for i, j in m if j]
@@ -689,11 +700,11 @@ class Track:
         lrfi = len(reverse_from_ids)
 
         if lrfi and lffi:
-            return "both", (max(forward_from_ids), min(reverse_from_ids))
+            return "both", (min(forward_from_ids), max(reverse_from_ids))
         elif lrfi:
-            return "reverse", min(reverse_from_ids)
+            return "reverse", max(reverse_from_ids)
         elif lffi:
-            return "forward", max(forward_from_ids)
+            return "forward", min(forward_from_ids)
         else:
             raise ValueError
 
@@ -742,8 +753,8 @@ class Track:
         if (
             len(_edge_hist) == 0
             and len(next_edges) == 0
-            and self.graph.nodes[from_id]["node_type"]  # the step input is actually external
-            != DB.external_search_settings["backbone_node_type"]
+            and self.graph.nodes[from_id]["node_type"] != DB.external_search_settings["backbone_node_type"]
+            # the step input is actually external
         ):
             # get syn only for given release
             s = self.choose_relevant_synonym(
@@ -1112,6 +1123,7 @@ class Track:
             in_external = False
 
             for the_edge in the_path:
+
                 if len(the_edge) == 3:
                     reverse = from_release > to_release
                     if not (the_edge[0] is None and the_edge[2] is None):
@@ -1120,6 +1132,7 @@ class Track:
                         w = score_of_the_queried_item
                     edge_scores.append(w)
                     in_external = False
+
                 else:  # External path is followed.
                     external_step += 1
                     if not in_external:
@@ -1131,19 +1144,24 @@ class Track:
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
+
+                # 0 weight means weight is not defined (np.nan in the graph)
+                if any([not isinstance(s, (int, float)) or np.isinf(s) for s in edge_scores]):
+                    raise ValueError(f"Unexpected edge score: {the_path, edge_scores}")
+
                 if remove_na == "omit":
-                    edge_scores = reduction([s for s in edge_scores if s != 0])
+                    edge_scores_r = reduction([s for s in edge_scores if not pd.isna(0)])
                 elif remove_na == "to_1":
-                    edge_scores = reduction([s if s != 0 else 1 for s in edge_scores])
+                    edge_scores_r = reduction([s if not pd.isna(0) else 1 for s in edge_scores])
                 elif remove_na == "to_0":
-                    edge_scores = reduction(edge_scores)
+                    edge_scores_r = reduction([s if not pd.isna(0) else 0 for s in edge_scores])
                 else:
                     raise ValueError(f"Undefined parameter for 'remove_na': {remove_na}")
 
             final_destination = the_path[-1][1]
             if final_destination not in scores:
                 scores[final_destination] = list()
-            to_add = [external_jump, external_step, edge_scores, len(the_path) - external_step]
+            to_add = [external_jump, external_step, edge_scores_r, len(the_path) - external_step]
             if return_path:
                 to_add.append(the_path)
             scores[final_destination].append(to_add)
@@ -1161,6 +1179,13 @@ class Track:
 
         return max_score
 
+    # def convert_dataset(self, id_list, return_scores, *args, **kwargs):
+
+    #     for the_id in id_list:
+    #         res = self.convert(the_id, *args, **kwargs)
+    #         if return_scores:
+    #             pass
+
     def convert(
         self,
         from_id: str,
@@ -1173,6 +1198,7 @@ class Track:
         go_external: bool = True,
         prioritize_to_one_filter: bool = False,
         return_path: bool = False,
+        deprioritize_lrg_genes: bool = True,
     ):
         """Todo.
 
@@ -1187,6 +1213,7 @@ class Track:
             go_external: Todo.
             prioritize_to_one_filter: Todo.
             return_path: Todo.
+            deprioritize_lrg_genes: Todo.
 
         Returns:
             Todo.
@@ -1196,12 +1223,32 @@ class Track:
         """
 
         def prioritize_one_in_1_to_n(ids: dict):
+
             key_lst = list(ids.keys())
+
+            get_scores_list = [0, 1, 2]  # Do not get path, and ensembl_step. Get external these scores.
+            get_path_index = 4
+
+            # remove ensembl path scores based on edge weights as they are used already.
+            prev_path_scores = {ik: [ids[ik][mana] for mana in get_scores_list] for ik in key_lst}
+            if return_path:
+                prev_path_path = {ik: ids[ik][get_path_index] for ik in key_lst}  # Get the path
+
+            dot_product = [-1, -1, 1]
+
             scores = [
-                [1 if pd.isna(ids[i][2]) or ids[i][2] > 0.8 else 0] + self.calculate_node_scores(i) for i in key_lst
+                [x * dot_product[ind] for ind, x in enumerate(prev_path_scores[i])]
+                # minimum of first two elements, maximum of third element.
+                + self.calculate_node_scores(i)  # maximum of all elements
+                for i in key_lst
             ]
-            best_score = sorted(scores, reverse=True)[0]
-            return {k: ids[k] + best_score for ind, k in enumerate(key_lst) if scores[ind] == best_score}
+            best_score = sorted(scores, reverse=True)[0]  # get all ones with the best score
+
+            return {
+                k: best_score if not return_path else best_score + [prev_path_path[k]]
+                for ind, k in enumerate(key_lst)
+                if scores[ind] == best_score
+            }
 
         if not callable(reduction):
             raise ValueError
@@ -1239,11 +1286,22 @@ class Track:
             return None
         else:
             converted = self.calculate_score_and_select(
-                poss_paths, reduction, remove_na, ff, to_release, score_of_the_queried_item
+                poss_paths, reduction, remove_na, ff, to_release, score_of_the_queried_item, return_path
             )
+
+            # They are actually not genes as we understand, they are genomic regions.
+            if deprioritize_lrg_genes:
+                # Not robust coding here, correct it asap.
+                new_converted = {i: converted[i] for i in converted if not i.lower().startswith("lrg")}
+                if len(new_converted) > 0:
+                    converted = new_converted
+
+            # min(external_jump), min(external_step), max(edge_scores), min(ensembl_step), path: Optional
             converted = (
                 prioritize_one_in_1_to_n(converted) if prioritize_to_one_filter and len(converted) > 0 else converted
             )
+            # min(external_jump), min(external_step), min(ensembl_step),
+            # max(external_count), max(protein_count), max(transcript_count), path: Optional
             if final_database is None or final_database == "ensembl_gene":
                 return converted
             elif final_database in self.available_external_databases:
