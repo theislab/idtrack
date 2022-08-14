@@ -719,6 +719,7 @@ class Track:
         beamed_up: bool = False,
         external_jump: float = None,
         edge_hist: list = None,
+        multiple_ensembl_transition: bool = False,
     ):
         """Todo.
 
@@ -732,6 +733,7 @@ class Track:
             beamed_up: Todo.
             external_jump: Todo.
             edge_hist: Todo.
+            multiple_ensembl_transition: Todo
         """
 
         def _external_path_maker(a_from_id, a_ens_rel, a_syn_pth, a_syn_dbp):
@@ -757,16 +759,19 @@ class Track:
             # the step input is actually external
         ):
             # get syn only for given release
-            s = self.choose_relevant_synonym(
-                from_id,
-                depth_max=external_settings["synonymous_max_depth"],
-                to_release=to_release,
-                filter_node_type={external_settings["backbone_node_type"]},
-                # do not time travel here, go with the same release
-                from_release=from_release,
-            )
+            if not multiple_ensembl_transition:
+                s = self.choose_relevant_synonym(
+                    from_id,
+                    depth_max=external_settings["synonymous_max_depth"],
+                    to_release=to_release,
+                    filter_node_type={external_settings["backbone_node_type"]},
+                    # do not time travel here, go with the same release
+                    from_release=from_release,
+                )
 
-            if len(s) == 0:
+            # If from release is infered by the program (not provided by the user), then run pathfinder from all
+            # possible ones. This will increase the computational demand but yield more robust results.
+            if len(s) == 0 or multiple_ensembl_transition:
                 s = self.choose_relevant_synonym(
                     from_id,
                     depth_max=external_settings["synonymous_max_depth"],
@@ -891,6 +896,7 @@ class Track:
         go_external: bool = True,
         increase_depth_until: int = 1,
         increase_jump_until: int = 0,
+        from_release_infered: bool = False,
     ) -> tuple:
         """Todo.
 
@@ -902,6 +908,7 @@ class Track:
             go_external: Todo.
             increase_depth_until: Todo.
             increase_jump_until: Todo.
+            from_release_infered: Todo.
 
         Returns:
             Todo.
@@ -913,12 +920,67 @@ class Track:
         # Todo: check if from_id exist in from_release
         #   if from_id in self.graph.nodes:
 
+        # Try first with no external jump route
         all_paths: set = set()
-        self._recursive_path_search(from_id, from_release, to_release, all_paths, reverse, es, external_jump=np.inf)
+        self._recursive_path_search(
+            from_id,
+            from_release,
+            to_release,
+            all_paths,
+            reverse,
+            es,
+            external_jump=np.inf,
+            multiple_ensembl_transition=False,
+        )
+
+        if len(all_paths) < 1 and not from_release_infered:
+            # If none found, make relaxed search in terms of ensembl transition.
+            all_paths = set()
+            self._recursive_path_search(
+                from_id,
+                from_release,
+                to_release,
+                all_paths,
+                reverse,
+                es,
+                external_jump=np.inf,
+                multiple_ensembl_transition=True,
+            )
 
         while go_external and len(all_paths) < 1:
+            # Activate external jump and increase the depth of search at each step
             all_paths = set()
-            self._recursive_path_search(from_id, from_release, to_release, all_paths, reverse, es, external_jump=None)
+            self._recursive_path_search(
+                from_id,
+                from_release,
+                to_release,
+                all_paths,
+                reverse,
+                es,
+                external_jump=None,
+                multiple_ensembl_transition=False,
+            )
+            if es["synonymous_max_depth"] < idu:
+                es["synonymous_max_depth"] = es["synonymous_max_depth"] + 1
+            elif es["jump_limit"] < iju:
+                es["jump_limit"] = es["jump_limit"] + 1
+            else:
+                break
+
+        es = copy.copy(DB.external_search_settings)
+        while go_external and len(all_paths) < 1 and not from_release_infered:
+            # The same as above except this time with relaxed transition.
+            all_paths = set()
+            self._recursive_path_search(
+                from_id,
+                from_release,
+                to_release,
+                all_paths,
+                reverse,
+                es,
+                external_jump=None,
+                multiple_ensembl_transition=True,
+            )
             if es["synonymous_max_depth"] < idu:
                 es["synonymous_max_depth"] = es["synonymous_max_depth"] + 1
             elif es["jump_limit"] < iju:
@@ -1255,18 +1317,29 @@ class Track:
         to_release = to_release if to_release is not None else self.graph.graph["ensembl_release"]
 
         if from_release is None:
-            # self.log.warning(f"Auto direction finding is not recommended: {from_id}.")
             should_reversed, fr = self.should_graph_reversed(from_id, to_release)
+            fri = True
         else:
             should_reversed = "forward" if from_release <= to_release else "reverse"
             fr = copy.copy(from_release)
+            fri = False
 
         if should_reversed == "both":
             possible_paths_forward = self.get_possible_paths(
-                from_id, fr[0], to_release, go_external=go_external, reverse=False
+                from_id,
+                fr[0],
+                to_release,
+                go_external=go_external,
+                reverse=False,
+                from_release_infered=fri,
             )
             possible_paths_reverse = self.get_possible_paths(
-                from_id, fr[1], to_release, go_external=go_external, reverse=True
+                from_id,
+                fr[1],
+                to_release,
+                go_external=go_external,
+                reverse=True,
+                from_release_infered=fri,
             )
             poss_paths = tuple(list(itertools.chain(possible_paths_forward, possible_paths_reverse)))
             ff = itertools.chain(
@@ -1274,10 +1347,14 @@ class Track:
                 itertools.repeat(fr[1], len(possible_paths_reverse)),
             )
         elif should_reversed == "forward":
-            poss_paths = self.get_possible_paths(from_id, fr, to_release, go_external=go_external, reverse=False)
+            poss_paths = self.get_possible_paths(
+                from_id, fr, to_release, go_external=go_external, reverse=False, from_release_infered=fri
+            )
             ff = itertools.chain(itertools.repeat(fr, len(poss_paths)))
         elif should_reversed == "reverse":
-            poss_paths = self.get_possible_paths(from_id, fr, to_release, go_external=go_external, reverse=True)
+            poss_paths = self.get_possible_paths(
+                from_id, fr, to_release, go_external=go_external, reverse=True, from_release_infered=fri
+            )
             ff = itertools.chain(itertools.repeat(fr, len(poss_paths)))
         else:
             raise ValueError
