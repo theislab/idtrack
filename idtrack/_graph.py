@@ -7,6 +7,7 @@ import copy
 import itertools
 import logging
 import os
+import string
 from typing import Optional
 
 import networkx as nx
@@ -325,11 +326,115 @@ class Graph:
             if added_edge > 0:
                 self.log.warning(f"New edges are added between assembly Ensembl nodes: {added_edge}")
 
+        # Merge the nodes that are the same when they are convert into lowercase/uppercase.
+        self.log.info("Synonymous external nodes are being merged into one.")
+        g = self._merge_nodes_with_the_same_in_lower_case(g)
+
         new_form = "-".join(form_list)
         g.graph["name"] = (f"{self.db_manager.organism}_{self.db_manager.ensembl_release}_{new_form}",)
         g.graph["type"] = new_form
         g.graph["narrow_external"] = narrow_external
         g.graph["misplaced_external_entry"] = set(misplaced_external_entry)
+
+        return g
+
+    def _merge_nodes_with_the_same_in_lower_case(self, g: nx.MultiDiGraph):
+
+        # Get the problematic nodes
+        merge_dict = dict()
+        for intm in g.nodes:
+            jntm = intm.lower()
+            if jntm not in merge_dict:
+                merge_dict[jntm] = [intm]
+            else:
+                merge_dict[jntm].append(intm)
+        merge_dict = {i: j for i, j in merge_dict.items() if len(j) > 1}
+        # Merge them separately
+
+        reverse_g = g.reverse(copy=False)
+
+        for _lower_name, merge_list in merge_dict.items():
+
+            if any([g.nodes[m][DB.node_type_str] != DB.nts_external for m in merge_list]):
+                raise NotImplementedError
+
+            all_out_edges = list()
+            for m in merge_list:
+                for n in g.neighbors(m):
+                    if len(g[m][n]) != 1:
+                        raise ValueError
+                    else:
+                        all_out_edges.append((m, n, 0))
+
+            # Merge the edge attributes, if the target is the same
+            distiled_out = dict()
+            for edge_key in all_out_edges:
+                target_node = edge_key[1]
+                edge_data = g.edges[edge_key]
+
+                if target_node not in distiled_out:
+                    distiled_out[target_node] = edge_data
+                else:
+                    saved_edge_data = distiled_out[target_node]
+                    for i in saved_edge_data:
+                        if i != "releases":
+                            raise NotImplementedError
+                        saved_edge_data_i = saved_edge_data[i]
+                        edge_data_i = edge_data[i]
+                        if type(saved_edge_data_i) == type(edge_data_i) == set:
+                            distiled_out[target_node][i] = saved_edge_data_i | edge_data_i
+                        else:
+                            raise ValueError
+
+            for m in merge_list:  # all_in_edges = list()
+                for n in reverse_g.neighbors(m):
+                    if len(reverse_g[n][m]) != 1:
+                        raise ValueError
+                    else:
+                        raise NotImplementedError
+                        # all_in_edges.append((n, m, 0))  # edge key for forward graph (not reverse)
+
+            merged_node_attributes = g.nodes[merge_list[0]]
+            for m in merge_list[1:]:
+                node_att = g.nodes[m]
+                for na in node_att:
+                    if na not in merged_node_attributes:
+                        raise ValueError
+                    elif na == DB.node_type_str and merged_node_attributes[na] == node_att[na]:
+                        pass
+                    elif na == "release_dict":
+                        for na_db in node_att[na]:
+                            release_set = node_att[na][na_db]
+                            if type(release_set) != set:
+                                raise ValueError
+                            if na_db not in merged_node_attributes[na]:
+                                merged_node_attributes[na][na_db] = release_set
+                            elif type(merged_node_attributes[na][na_db]) != set:
+                                raise ValueError
+                            else:
+                                merged_node_attributes[na][na_db] = merged_node_attributes[na][na_db] | release_set
+                    else:
+                        raise NotImplementedError
+
+            # Find new correct name, the one with most edges or most upper case elements is winner,
+            correct_name_scorer = sorted(
+                (
+                    len(list(g.neighbors(m))),
+                    len(list(reverse_g.neighbors(m))),
+                    sum(1 for i in m if i in string.ascii_uppercase),
+                    m,
+                )
+                for m in merge_list
+            )
+            correct_name = correct_name_scorer[0][-1]  # the best one, '-1' is as the last element is ID
+
+            # remove nodes and all associated edges
+            for m in merge_list:
+                g.remove_node(m)
+
+            g.add_node(correct_name, **merged_node_attributes)
+            for target in distiled_out:
+                g.add_edge(correct_name, target, 0, **distiled_out[target])
 
         return g
 

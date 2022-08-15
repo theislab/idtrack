@@ -6,10 +6,11 @@
 import copy
 import itertools
 import logging
+import re
 import warnings
 from collections import Counter
 from functools import cached_property
-from typing import Callable, Iterable, Optional, Union
+from typing import Callable, Optional, Union
 
 import networkx as nx
 import numpy as np
@@ -933,7 +934,7 @@ class Track:
             multiple_ensembl_transition=False,
         )
 
-        if len(all_paths) < 1 and not from_release_infered:
+        if len(all_paths) < 1 and from_release_infered:
             # If none found, make relaxed search in terms of ensembl transition.
             all_paths = set()
             self._recursive_path_search(
@@ -968,7 +969,7 @@ class Track:
                 break
 
         es = copy.copy(DB.external_search_settings)
-        while go_external and len(all_paths) < 1 and not from_release_infered:
+        while go_external and len(all_paths) < 1 and from_release_infered:
             # The same as above except this time with relaxed transition.
             all_paths = set()
             self._recursive_path_search(
@@ -1459,6 +1460,25 @@ class Track:
         else:
             raise KeyError
 
+    @cached_property
+    def lower_chars_graph(self):
+        """Todo.
+
+        Raises:
+            ValueError: Todo.
+
+        Returns:
+            Todo.
+        """
+        result = dict()
+        for i in self.graph.nodes:
+            j = i.lower()
+            if j not in result:
+                result[j] = i
+            else:
+                raise ValueError
+        return result
+
     def unfound_node_solutions(self, the_id: str) -> tuple:
         """Todo.
 
@@ -1468,12 +1488,32 @@ class Track:
         Returns:
             Todo.
         """
+
+        def compare_lowers(id_to_find):
+            lower_id_find = id_to_find.lower()
+            if lower_id_find in self.lower_chars_graph:
+                return self.lower_chars_graph[lower_id_find], True
+            else:
+                return None, False
+
         if the_id in self.graph.nodes:
             return the_id, False
 
-        new_id = the_id.split(".")[0]
-        if the_id.count(".") == 1 and new_id in self.graph.nodes:
-            return new_id, True
+        lower_id, is_lower_found = compare_lowers(the_id)
+        if is_lower_found:
+            return lower_id, True
+
+        regex_pattern = re.compile(r"^(.+)(_|-|\.)[0-9]+$")
+        regex_found = regex_pattern.match(the_id)
+        if regex_found:
+            new_id = regex_found.groups()[0]
+
+            if new_id in self.graph.nodes:
+                return new_id, True
+
+            lower_id, is_lower_found = compare_lowers(new_id)
+            if is_lower_found:
+                return lower_id, True
 
         char_indices = [ind for ind, i in enumerate(the_id) if i in ["-", "_"]]
         possible_alternatives = list()
@@ -1489,20 +1529,34 @@ class Track:
                     possible_alternatives.append("".join(new_id_l))
 
         for pa in possible_alternatives:
+
             if pa in self.graph.nodes:
                 return pa, True
-            else:
-                paid = pa.split(".")[0]
-                if the_id.count(".") == 1 and paid in self.graph.nodes:
-                    return paid, True
+
+            lower_id, is_lower_found = compare_lowers(pa)
+            if is_lower_found:
+                return lower_id, True
+
+            regex_pattern = re.compile(r"^(.+)(_|-|\.)[0-9]+$")
+            regex_found = regex_pattern.match(pa)
+            if regex_found:
+                new_id = regex_found.groups()[0]
+
+                if new_id in self.graph.nodes:
+                    return new_id, True
+
+                lower_id, is_lower_found = compare_lowers(new_id)
+                if is_lower_found:
+                    return lower_id, True
 
         return None, False
 
-    def unfound_correct(self, gene_list: Iterable) -> tuple:
+    def unfound_correct(self, gene_list: Union[list, set, tuple], verbose: bool = False) -> tuple:
         """Todo.
 
         Args:
             gene_list: Todo.
+            verbose: Todo.
 
         Raises:
             ValueError: Todo.
@@ -1514,7 +1568,9 @@ class Track:
         converted_ids = list()
         result = list()
 
-        for gl in gene_list:
+        for ind, gl in enumerate(gene_list):
+            if verbose and (ind % 100 == 0 or ind > len(gene_list) - 5):
+                progress_bar(ind, len(gene_list) - 1)
             new_gl, is_converted = self.unfound_node_solutions(gl)
 
             if new_gl is None:
