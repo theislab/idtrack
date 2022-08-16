@@ -692,7 +692,7 @@ class Track:
             n = self.get_active_ranges_of_id(from_id)
         else:
             n = self.get_active_ranges_of_id_others(from_id)
-        m = Track.get_from_release_and_reverse_vars(n, to_release, mode="distant")
+        m = Track.get_from_release_and_reverse_vars(n, to_release, mode="closest")
 
         forward_from_ids = [i for i, j in m if not j]
         reverse_from_ids = [i for i, j in m if j]
