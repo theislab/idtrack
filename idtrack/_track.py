@@ -1597,6 +1597,7 @@ class Track:
             # As the last resort, try to look at among synonyms.
             if new_gl is None:
                 new_gl, is_converted = self.unfound_node_solutions(f"{DB.synonym_id_nodes_prefix}{gl}")
+                is_converted = True if new_gl is not None else False
 
             if new_gl is None:
                 lost_ids.append(gl)
