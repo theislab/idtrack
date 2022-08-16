@@ -802,6 +802,7 @@ class DatabaseManager:
         es = es.merge(x, how="inner", on="xref_id", validate="many_to_one")
         es.drop(columns=["display_label"], inplace=True)
         es.rename(columns={"synonym": "display_label"}, inplace=True)
+        es["display_label"] = DB.synonym_id_nodes_prefix + es["display_label"]
         x = pd.concat([x, es], ignore_index=True)
 
         # Merge the tables as requested
@@ -867,6 +868,14 @@ class DatabaseManager:
         # Drop duplicates if exists. Note that it is not trivial, there are many duplicated lines after adding
         # these columns as rows. Because, for some of them, comb_X_columns are actually the same.
         res.drop_duplicates(inplace=True, ignore_index=True)
+
+        # Change the synonym IDs' database name
+        to_add = np.array(
+            [DB.synonym_id_nodes_prefix if i else "" for i in res[db_id].str.startswith(DB.synonym_id_nodes_prefix)]
+        )
+        res[db_name] = to_add + res[db_name]
+        # Unless you specifically look at synonyms, they will not mean the same thing as the counterparts.
+        # They will be used as the bridging point in the pathfinder algorithm only.
 
         if filter_mode in ["relevant", "relevant-database"]:
             # In order to prevent the search space to be too big and to prevent unnecessary data to be kept in the disk

@@ -28,6 +28,7 @@ class DB:
     }
 
     # Protected Non-int Version Strings
+    synonym_id_nodes_prefix = "synonym_id::"
     no_old_node_id = "Void"
     no_new_node_id = "Retired"
     alternative_versions = {no_new_node_id, no_old_node_id}

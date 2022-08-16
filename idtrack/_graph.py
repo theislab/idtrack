@@ -327,7 +327,6 @@ class Graph:
                 self.log.warning(f"New edges are added between assembly Ensembl nodes: {added_edge}")
 
         # Merge the nodes that are the same when they are convert into lowercase/uppercase.
-        self.log.info("Synonymous external nodes are being merged into one.")
         g = self._merge_nodes_with_the_same_in_lower_case(g)
 
         new_form = "-".join(form_list)
@@ -340,6 +339,8 @@ class Graph:
 
     def _merge_nodes_with_the_same_in_lower_case(self, g: nx.MultiDiGraph):
 
+        self.log.info("Synonymous external nodes are being merged into one.")
+        before_node_count = len(g.nodes)
         # Get the problematic nodes
         merge_dict = dict()
         for intm in g.nodes:
@@ -435,6 +436,10 @@ class Graph:
             g.add_node(correct_name, **merged_node_attributes)
             for target in distiled_out:
                 g.add_edge(correct_name, target, 0, **distiled_out[target])
+
+        removed_node_count = before_node_count - len(g.nodes)
+        if removed_node_count > 0:
+            self.log.info(f"Number of removed nodes in the process of merging synonymous nodes: {removed_node_count}")
 
         return g
 

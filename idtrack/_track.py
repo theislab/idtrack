@@ -772,7 +772,7 @@ class Track:
 
             # If from release is infered by the program (not provided by the user), then run pathfinder from all
             # possible ones. This will increase the computational demand but yield more robust results.
-            if len(s) == 0 or multiple_ensembl_transition:
+            if multiple_ensembl_transition or len(s) == 0:
                 s = self.choose_relevant_synonym(
                     from_id,
                     depth_max=external_settings["synonymous_max_depth"],
@@ -1249,6 +1249,48 @@ class Track:
     #         if return_scores:
     #             pass
 
+    def scorer_for_1_to_n(self, ids: dict, return_path: bool, return_best: bool):
+        """Todo.
+
+        Args:
+            ids: Todo.
+            return_path: Todo.
+            return_best: Todo.
+
+        Returns:
+            Todo.
+        """
+        key_lst = list(ids.keys())
+
+        get_scores_list = [0, 1, 2]  # Do not get path, and ensembl_step. Get external these scores.
+        get_path_index = 4
+
+        # remove ensembl path scores based on edge weights as they are used already.
+        prev_path_scores = {ik: [ids[ik][mana] for mana in get_scores_list] for ik in key_lst}
+        if return_path:
+            prev_path_path = {ik: ids[ik][get_path_index] for ik in key_lst}  # Get the path
+
+        dot_product = [-1, -1, 1]
+
+        scores = [
+            [x * dot_product[ind] for ind, x in enumerate(prev_path_scores[i])]
+            # minimum of first two elements, maximum of third element.
+            + self.calculate_node_scores(i)  # maximum of all elements
+            for i in key_lst
+        ]
+
+        if return_best:
+            best_score = sorted(scores, reverse=True)[0]  # get all ones with the best score
+            updated_ids = {
+                k: best_score if not return_path else best_score + [prev_path_path[k]]
+                for ind, k in enumerate(key_lst)
+                if scores[ind] == best_score
+            }
+            return updated_ids
+
+        else:
+            return {i: scores[ind] for ind, i in enumerate(key_lst)}
+
     def convert(
         self,
         from_id: str,
@@ -1284,35 +1326,6 @@ class Track:
         Raises:
             ValueError: Todo.
         """
-
-        def prioritize_one_in_1_to_n(ids: dict):
-
-            key_lst = list(ids.keys())
-
-            get_scores_list = [0, 1, 2]  # Do not get path, and ensembl_step. Get external these scores.
-            get_path_index = 4
-
-            # remove ensembl path scores based on edge weights as they are used already.
-            prev_path_scores = {ik: [ids[ik][mana] for mana in get_scores_list] for ik in key_lst}
-            if return_path:
-                prev_path_path = {ik: ids[ik][get_path_index] for ik in key_lst}  # Get the path
-
-            dot_product = [-1, -1, 1]
-
-            scores = [
-                [x * dot_product[ind] for ind, x in enumerate(prev_path_scores[i])]
-                # minimum of first two elements, maximum of third element.
-                + self.calculate_node_scores(i)  # maximum of all elements
-                for i in key_lst
-            ]
-            best_score = sorted(scores, reverse=True)[0]  # get all ones with the best score
-
-            return {
-                k: best_score if not return_path else best_score + [prev_path_path[k]]
-                for ind, k in enumerate(key_lst)
-                if scores[ind] == best_score
-            }
-
         if not callable(reduction):
             raise ValueError
         to_release = to_release if to_release is not None else self.graph.graph["ensembl_release"]
@@ -1324,6 +1337,12 @@ class Track:
             should_reversed = "forward" if from_release <= to_release else "reverse"
             fr = copy.copy(from_release)
             fri = False
+
+        # fri stands for from_release_infered. When from release is inferred rather than provided by the user,
+        # get_possible_paths method first strictly looks at ensembl genes defined the inferred release in
+        # external/transcript etc to ensembl gene transition. For ensembl gene query ID, it does not matter.
+        # Starting travel history from the first possible ensembl gene ID sometimes yield lost IDs. When lost, the
+        # program looks at all possible ensembl gene ID transition possible.
 
         if should_reversed == "both":
             possible_paths_forward = self.get_possible_paths(
@@ -1376,7 +1395,9 @@ class Track:
 
             # min(external_jump), min(external_step), max(edge_scores), min(ensembl_step), path: Optional
             converted = (
-                prioritize_one_in_1_to_n(converted) if prioritize_to_one_filter and len(converted) > 0 else converted
+                self.scorer_for_1_to_n(converted, return_path=return_path, return_best=True)
+                if prioritize_to_one_filter and len(converted) > 0
+                else converted
             )
             # min(external_jump), min(external_step), min(ensembl_step),
             # max(external_count), max(protein_count), max(transcript_count), path: Optional
@@ -1572,6 +1593,10 @@ class Track:
             if verbose and (ind % 100 == 0 or ind > len(gene_list) - 5):
                 progress_bar(ind, len(gene_list) - 1)
             new_gl, is_converted = self.unfound_node_solutions(gl)
+
+            # As the last resort, try to look at among synonyms.
+            if new_gl is None:
+                new_gl, is_converted = self.unfound_node_solutions(f"{DB.synonym_id_nodes_prefix}{gl}")
 
             if new_gl is None:
                 lost_ids.append(gl)
