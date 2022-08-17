@@ -1,5 +1,6 @@
-idtrack [under development]
-===========================
+.. image:: https://raw.githubusercontent.com/theislab/idtrack/development/docs/_logo/logo.png
+    :width: 350
+    :alt: Logo
 
 |PyPI| |PyPIDownloads| |Python Version| |License| |Read the Docs| |Build| |Tests| |Codecov| |pre-commit| |Black|
 
@@ -10,7 +11,7 @@ idtrack [under development]
    :target: https://pypi.org/project/idtrack
    :alt: Python Version
 .. |License| image:: https://img.shields.io/github/license/theislab/idtrack
-   :target: https://opensource.org/licenses/BSD
+   :target: https://opensource.org/licenses/BSD-3-Clause
    :alt: License
 .. |Read the Docs| image:: https://img.shields.io/readthedocs/idtrack/latest.svg?label=Read%20the%20Docs
    :target: https://idtrack.readthedocs.io/
@@ -33,12 +34,6 @@ idtrack [under development]
 .. |PyPIDownloads| image:: https://pepy.tech/badge/idtrack
    :target: https://pepy.tech/project/idtrack
    :alt: downloads
-
-.. |Downloads| image:: [![Downloads](https://pepy.tech/badge/idtrack)]()
-
-.. image:: https://raw.githubusercontent.com/theislab/idtrack/development/docs/_logo/logo.png
-    :width: 400
-    :alt: Logo
 
 Key Features
 ------------
