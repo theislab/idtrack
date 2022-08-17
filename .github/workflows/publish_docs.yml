@@ -4,11 +4,16 @@ on: [push]
 
 jobs:
     build:
+        # Here, 'docs-build' is always run on ubuntu-latest so no problem for apt-get
         runs-on: ubuntu-latest
 
         steps:
             - uses: actions/checkout@v2
               name: Check out source-code repository
+
+            - name: Setup Pandoc
+              run: |
+                  sudo apt-get install -y pandoc
 
             - name: Setup Python
               uses: actions/setup-python@v1

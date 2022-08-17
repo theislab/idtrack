@@ -2,10 +2,10 @@
 
 __author__ = "Kemal Inecik"
 __email__ = "k.inecik@gmail.com"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 
-from ._database_manager import DatabaseManager  # noqa
+from ._database_manager import DatabaseManager, ExternalDatabases  # noqa
 from ._dataset import Dataset  # noqa
 from ._db import DB  # noqa
 from ._functions import (  # noqa
@@ -17,5 +17,5 @@ from ._functions import (  # noqa
     test_external_conversion,
     test_form_conversion,
 )
-from ._graph_history import GraphHistory  # noqa
+from ._track import Track  # noqa
 from ._verify_organism import VerifyOrganism  # noqa

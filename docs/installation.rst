@@ -19,6 +19,12 @@ This is the preferred method to install idtrack, as it will always install the m
 If you don't have `pip`_ installed, this `Python installation guide`_ can guide
 you through the process.
 
+If you use an Apple Silicon processor, you have to be sure that you have the ``HDF5`` installation already:
+
+.. code-block:: console
+
+    $ conda install hdf5
+
 .. _pip: https://pip.pypa.io
 .. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
 
