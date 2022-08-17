@@ -1,5 +1,5 @@
-idtrack
-=======
+idtrack [under development]
+===========================
 
 |PyPI| |PyPIDownloads| |Python Version| |License| |Read the Docs| |Build| |Tests| |Codecov| |pre-commit| |Black|
 
@@ -39,7 +39,6 @@ idtrack
 .. image:: https://raw.githubusercontent.com/theislab/idtrack/development/docs/_logo/logo.png
     :width: 400
     :alt: Logo
-
 
 Key Features
 ------------
