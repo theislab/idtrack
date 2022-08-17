@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reference &mdash; idtrack 0.0.1 documentation</title>
+  <title>Reference &mdash; idtrack 0.0.2 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="_static/custom_cookietemple.css" type="text/css" />
@@ -19,13 +19,14 @@
         <script src="_static/underscore.js"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
         <script src="_static/dark_mode_js/default_dark.js"></script>
         <script src="_static/dark_mode_js/theme_switcher.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Contributor Guide" href="contributing.html" />
-    <link rel="prev" title="Usage" href="usage.html" /> 
+    <link rel="prev" title="results_preliminary_for_hlca" href="_notebooks/results_preliminary_for_hlca.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -33,11 +34,9 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="index.html" class="icon icon-home"> idtrack
+            <a href="index.html">
+            <img src="_static/logo.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                0.0.1
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -48,10 +47,20 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="readme.html">idtrack</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Reference</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#databasemanager">DatabaseManager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#externaldatabases">ExternalDatabases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#track">Track</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#graph">Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tracktests">TrackTests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#verifyorganism">VerifyOrganism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dataset">Dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#db">DB</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#functions">Functions</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="authors.html">Credits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
@@ -81,15 +90,79 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="reference">
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<section id="reference">
 <h1>Reference<a class="headerlink" href="#reference" title="Permalink to this heading"></a></h1>
+<div class="contents local topic" id="contents">
+<ul class="simple">
+<li><p><a class="reference internal" href="#databasemanager" id="id1">DatabaseManager</a></p></li>
+<li><p><a class="reference internal" href="#externaldatabases" id="id2">ExternalDatabases</a></p></li>
+<li><p><a class="reference internal" href="#track" id="id3">Track</a></p></li>
+<li><p><a class="reference internal" href="#graph" id="id4">Graph</a></p></li>
+<li><p><a class="reference internal" href="#tracktests" id="id5">TrackTests</a></p></li>
+<li><p><a class="reference internal" href="#verifyorganism" id="id6">VerifyOrganism</a></p></li>
+<li><p><a class="reference internal" href="#dataset" id="id7">Dataset</a></p></li>
+<li><p><a class="reference internal" href="#db" id="id8">DB</a></p></li>
+<li><p><a class="reference internal" href="#functions" id="id9">Functions</a></p></li>
+</ul>
+</div>
+<section id="databasemanager">
+<h2>DatabaseManager<a class="headerlink" href="#databasemanager" title="Permalink to this heading"></a></h2>
+</section>
+<section id="externaldatabases">
+<h2>ExternalDatabases<a class="headerlink" href="#externaldatabases" title="Permalink to this heading"></a></h2>
+</section>
+<section id="track">
+<h2>Track<a class="headerlink" href="#track" title="Permalink to this heading"></a></h2>
+</section>
+<section id="graph">
+<h2>Graph<a class="headerlink" href="#graph" title="Permalink to this heading"></a></h2>
+</section>
+<section id="tracktests">
+<h2>TrackTests<a class="headerlink" href="#tracktests" title="Permalink to this heading"></a></h2>
+</section>
+<section id="verifyorganism">
+<h2>VerifyOrganism<a class="headerlink" href="#verifyorganism" title="Permalink to this heading"></a></h2>
+</section>
+<section id="dataset">
+<h2>Dataset<a class="headerlink" href="#dataset" title="Permalink to this heading"></a></h2>
+</section>
+<section id="db">
+<h2>DB<a class="headerlink" href="#db" title="Permalink to this heading"></a></h2>
+</section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this heading"></a></h2>
+</section>
 </section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="usage.html" class="btn btn-neutral float-left" title="Usage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="_notebooks/results_preliminary_for_hlca.html" class="btn btn-neutral float-left" title="results_preliminary_for_hlca" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="contributing.html" class="btn btn-neutral float-right" title="Contributor Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

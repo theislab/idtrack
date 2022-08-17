@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>results_preliminary_for_hlca &mdash; idtrack 0.0.2 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom_cookietemple.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/dark_mode_css/general.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/dark_mode_css/dark.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+        <script src="../_static/dark_mode_js/default_dark.js"></script>
+        <script src="../_static/dark_mode_js/theme_switcher.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Reference" href="../reference.html" />
+    <link rel="prev" title="Tutorial" href="Untitled.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html">
+            <img src="../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../usage.html">Usage</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="initialization.html">Initialization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Untitled.html">Tutorial</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">results_preliminary_for_hlca</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Conversion-and-save">Conversion and save</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#how-many-target-hit">how many target hit</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#HGNC-vs-Ensembl-gene-as-targets">HGNC vs Ensembl gene as targets</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../usage.html">Usage</a> &raquo;</li>
+      <li>results_preliminary_for_hlca</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_notebooks/results_preliminary_for_hlca.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt *,
+div.nbinput.container div.input_area pre,
+div.nboutput.container div.output_area pre,
+div.nbinput.container div.input_area .highlight,
+div.nboutput.container div.output_area .highlight {
+    border: none;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+div.nbinput.container > div[class*=highlight],
+div.nboutput.container > div[class*=highlight] {
+    margin: 0;
+}
+
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt * {
+    background: none;
+}
+
+div.nboutput.container div.output_area .highlight,
+div.nboutput.container div.output_area pre {
+    background: unset;
+}
+
+div.nboutput.container div.output_area div.highlight {
+    color: unset;  /* override Pygments text color */
+}
+
+/* avoid gaps between output lines */
+div.nboutput.container div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput.container,
+div.nboutput.container {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput.container,
+    div.nboutput.container {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput.container {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast.container {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput.container div.prompt pre {
+    color: #307FC1;
+}
+
+/* output prompt */
+div.nboutput.container div.prompt pre {
+    color: #BF5B3D;
+}
+
+/* all prompts */
+div.nbinput.container div.prompt,
+div.nboutput.container div.prompt {
+    width: 4.5ex;
+    padding-top: 5px;
+    position: relative;
+    user-select: none;
+}
+
+div.nbinput.container div.prompt > div,
+div.nboutput.container div.prompt > div {
+    position: absolute;
+    right: 0;
+    margin-right: 0.3ex;
+}
+
+@media (max-width: 540px) {
+    div.nbinput.container div.prompt,
+    div.nboutput.container div.prompt {
+        width: unset;
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput.container div.prompt.empty {
+        padding: 0;
+    }
+
+    div.nbinput.container div.prompt > div,
+    div.nboutput.container div.prompt > div {
+        position: unset;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput.container div.prompt pre,
+div.nboutput.container div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput.container div.input_area,
+div.nboutput.container div.output_area {
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput.container div.input_area,
+    div.nboutput.container div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput.container div.input_area {
+    border: 1px solid #e0e0e0;
+    border-radius: 2px;
+    /*background: #f5f5f5;*/
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput.container div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.imgmath center alignment in output cells */
+div.nboutput.container div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput.container div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+
+div.nbinput.container div.input_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight].math,
+div.nboutput.container div.output_area.rendered_html,
+div.nboutput.container div.output_area > div.output_javascript,
+div.nboutput.container div.output_area:not(.rendered_html) > img{
+    padding: 5px;
+    margin: 0;
+}
+
+/* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
+div.nbinput.container div.input_area > div[class^='highlight'],
+div.nboutput.container div.output_area > div[class^='highlight']{
+    overflow-y: hidden;
+}
+
+/* hide copybtn icon on prompts (needed for 'sphinx_copybutton') */
+.prompt .copybtn {
+    display: none;
+}
+
+/* Some additional styling taken form the Jupyter notebook CSS */
+.jp-RenderedHTMLCommon table,
+div.rendered_html table {
+  border: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: black;
+  font-size: 12px;
+  table-layout: fixed;
+}
+.jp-RenderedHTMLCommon thead,
+div.rendered_html thead {
+  border-bottom: 1px solid black;
+  vertical-align: bottom;
+}
+.jp-RenderedHTMLCommon tr,
+.jp-RenderedHTMLCommon th,
+.jp-RenderedHTMLCommon td,
+div.rendered_html tr,
+div.rendered_html th,
+div.rendered_html td {
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.5em 0.5em;
+  line-height: normal;
+  white-space: normal;
+  max-width: none;
+  border: none;
+}
+.jp-RenderedHTMLCommon th,
+div.rendered_html th {
+  font-weight: bold;
+}
+.jp-RenderedHTMLCommon tbody tr:nth-child(odd),
+div.rendered_html tbody tr:nth-child(odd) {
+  background: #f5f5f5;
+}
+.jp-RenderedHTMLCommon tbody tr:hover,
+div.rendered_html tbody tr:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<section id="results_preliminary_for_hlca">
+<h1>results_preliminary_for_hlca<a class="headerlink" href="#results_preliminary_for_hlca" title="Permalink to this heading"></a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">scanpy</span> <span class="k">as</span> <span class="nn">sc</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;../..&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">idtrack</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">idtrack._track_tests</span> <span class="kn">import</span> <span class="o">*</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">logger_config</span><span class="p">()</span>
+<span class="n">local_dir</span> <span class="o">=</span> <span class="s2">&quot;/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp&quot;</span>  <span class="c1"># or any other local directory</span>
+<span class="n">dm</span> <span class="o">=</span> <span class="n">DatabaseManager</span><span class="p">(</span><span class="s2">&quot;homo_sapiens&quot;</span><span class="p">,</span> <span class="mi">107</span><span class="p">,</span> <span class="s2">&quot;gene&quot;</span><span class="p">,</span> <span class="n">local_dir</span><span class="p">,</span> <span class="mi">79</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tt</span><span class="p">:</span> <span class="n">TrackTests</span> <span class="o">=</span> <span class="n">TrackTests</span><span class="p">(</span><span class="n">dm</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-08-16 23:41:21 INFO:graph: The graph is being read.
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">base_path</span> <span class="o">=</span> <span class="s2">&quot;/lustre/groups/ml01/workspace/hlca_lisa.sikkema_malte.luecken/HLCA_reproducibility/data&quot;</span>
+<span class="n">dset0_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base_path</span><span class="p">,</span> <span class="s2">&quot;HLCA_extended/extension_datasets/ready/full&quot;</span><span class="p">)</span>
+<span class="n">dset1_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base_path</span><span class="p">,</span> <span class="s2">&quot;HLCA_extended/extension_datasets/raw&quot;</span><span class="p">)</span>
+
+<span class="n">adata_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Kaminski_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/adams.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Meyer_2021&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/meyer_2021.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;MeyerNikolic_unpubl&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/meyer_nikolic_unpubl.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Barbry_unpubl&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/barbry.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Regev_2021&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/delorey_cryo.h5ad&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/delorey_fresh.h5ad&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/delorey_nuclei.h5ad&quot;</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;Thienpont_2018&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset1_dir</span><span class="si">}</span><span class="s2">/Lambrechts/lambrechts.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Budinger_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/bharat.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Banovich_Kropski_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/haberman.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Sheppard_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/tsukui.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Wunderink_2021&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/grant_cryo.h5ad&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/grant_fresh.h5ad&quot;</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;Lambrechts_2021&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/wouters.h5ad&quot;</span> <span class="c1">#, f&quot;{dset0_dir}/wouters_labs.h5ad&quot;</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;Zhang_2021&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset1_dir</span><span class="si">}</span><span class="s2">/Liao/covid_for_publish.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Duong_lungMAP_unpubl&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/duong.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Janssen_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/mould.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Sun_2020&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/wang_sub_batch1.h5ad&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/wang_sub_batch2.h5ad&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/wang_sub_batch3.h5ad&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/wang_sub_batch4.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Gomperts_2021&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/carraro_ucla.h5ad&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/carraro_cff.h5ad&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/carraro_csmc.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Eils_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/lukassen.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Schiller_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/mayr.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Misharin_Budinger_2018&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/reyfman_disease.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Shalek_2018&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/ordovasmontanes.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Schiller_2021&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/schiller_discovair.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Peer_Massague_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/laughney.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Lafyatis_2019&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/valenzi.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Tata_unpubl&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/tata_unpubl.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Xu_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/guo.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Sims_2019&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/szabo.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Schultze_unpubl&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/schultze_unpubl.h5ad&quot;</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<section id="Conversion-and-save">
+<h2>Conversion and save<a class="headerlink" href="#Conversion-and-save" title="Permalink to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">results</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="n">ddadaata</span> <span class="ow">in</span> <span class="n">adata_dict</span><span class="p">:</span>
+
+    <span class="n">adata</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">adata_dict</span><span class="p">[</span><span class="n">ddadaata</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">gene_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+
+    <span class="n">entered_gene_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">return_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="n">ddadaata</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">gl</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">gene_list</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">ind</span> <span class="o">%</span> <span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">ind</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span><span class="o">-</span><span class="mi">5</span><span class="p">:</span>
+            <span class="n">progress_bar</span><span class="p">(</span><span class="n">ind</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">new_gl</span><span class="p">,</span> <span class="n">is_converted</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">unfound_node_solutions</span><span class="p">(</span><span class="n">gl</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">new_gl</span><span class="p">,</span> <span class="n">is_converted</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">unfound_node_solutions</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">synonym_id_nodes_prefix</span><span class="si">}{</span><span class="n">gl</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">is_converted</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+        <span class="k">elif</span> <span class="n">new_gl</span> <span class="ow">and</span> <span class="n">is_converted</span><span class="p">:</span>
+            <span class="n">conv</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">new_gl</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;ensembl_gene&#39;</span><span class="p">,</span> <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">conv</span><span class="p">)</span> <span class="k">if</span> <span class="n">conv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[])</span>
+            <span class="n">entered_gene_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_gl</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">new_gl</span><span class="p">:</span>
+            <span class="n">conv</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">gl</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;ensembl_gene&#39;</span><span class="p">,</span> <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">conv</span><span class="p">)</span> <span class="k">if</span> <span class="n">conv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[])</span>
+            <span class="n">entered_gene_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gl</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">identify_source</span><span class="p">(</span><span class="n">entered_gene_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">Counter</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">return_list</span><span class="p">])</span><span class="o">.</span><span class="n">most_common</span><span class="p">())[:</span><span class="mi">10</span><span class="p">])</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">return_list</span><span class="p">)</span>
+    <span class="n">results</span><span class="p">[</span><span class="n">ddadaata</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">j</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">gene_list</span><span class="p">,</span> <span class="n">return_list</span><span class="p">)}</span>
+    <span class="nb">print</span><span class="p">()</span>
+
+<span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">local_dir</span><span class="p">,</span> <span class="s2">&quot;results_preliminary_for_hlca.pk&quot;</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saved: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Kaminski_2020
+Progress: |████████████████████| 100.0%
+((&#39;HGNC Symbol&#39;, 94), 30503)
+[(1, 45536), (0, 411)]
+
+Meyer_2021
+Progress: |████████████████████| 100.0%
+((&#39;HGNC Symbol&#39;, 93), 20407)
+[(1, 20898), (0, 24)]
+
+MeyerNikolic_unpubl
+Progress: |████████████████████| 100.0%
+((&#39;HGNC Symbol&#39;, 93), 23406)
+[(1, 33404), (0, 174), (2, 4)]
+
+Barbry_unpubl
+Progress: |████████████████████| 100.0%
+((&#39;HGNC Symbol&#39;, 98), 14650)
+[(1, 16829), (0, 29), (2, 1)]
+
+Regev_2021
+Progress: |████████████████████| 100.0%
+((&#39;HGNC Symbol&#39;, 93), 21864)
+[(1, 30809), (0, 173), (2, 1)]
+
+Thienpont_2018
+Progress: |████████████████████| 100.0%
+((&#39;Vega gene&#39;, 88), 26131)
+[(1, 27630), (0, 327), (2, 1)]
+
+Budinger_2020
+Progress: |████████████████████| 100.0%
+((&#39;HGNC Symbol&#39;, 93), 20189)
+[(1, 26219), (0, 96), (2, 1)]
+
+Banovich_Kropski_2020
+Progress: |████████████████████| 100.0%
+((&#39;Vega gene&#39;, 84), 31238)
+[(1, 33191), (0, 497), (2, 4), (3, 2)]
+
+Sheppard_2020
+Progress: |████████████████████| 100.0%
+((&#39;Vega gene&#39;, 88), 25403)
+[(1, 26826), (0, 320), (2, 1)]
+
+Wunderink_2021
+Progress: |████████████████████| 100.0%
+((&#39;HGNC Symbol&#39;, 93), 17918)
+[(1, 21742), (0, 76), (2, 1)]
+
+Lambrechts_2021
+Progress: |████████████████████| 100.0%
+((&#39;HGNC Symbol&#39;, 93), 23388)
+[(1, 33386), (0, 148), (2, 4)]
+
+Zhang_2021
+Progress: |████████████████████| 100.0%
+((&#39;HGNC Symbol&#39;, 93), 18311)
+[(1, 18460), (0, 14)]
+
+Duong_lungMAP_unpubl
+Progress: |████████████████████| 100.0%
+((&#39;HGNC Symbol&#39;, 93), 20182)
+[(1, 27578), (0, 99), (2, 1)]
+
+Janssen_2020
+Progress: |████████████████████| 100.0%
+((&#39;HGNC Symbol&#39;, 93), 23388)
+[(1, 33386), (0, 148), (2, 4)]
+
+Sun_2020
+Progress: |████████████████████| 100.0%
+((&#39;HGNC Symbol&#39;, 93), 19762)
+[(1, 26479), (0, 98), (2, 1)]
+
+Gomperts_2021
+Progress: |████████████████████| 100.0%
+((&#39;Vega gene&#39;, 84), 22785)
+[(1, 30778), (0, 449), (2, 2)]
+
+Eils_2020
+Progress: |████████████████████| 100.0%
+((&#39;Vega gene&#39;, 80), 30184)
+[(1, 31840), (0, 895), (3, 2), (2, 1)]
+
+Schiller_2020
+Progress: |████████████████████| 100.0%
+((&#39;Vega gene&#39;, 83), 23134)
+[(1, 31462), (0, 641), (2, 1)]
+
+Misharin_Budinger_2018
+Progress: |████████████████████| 100.0%
+((&#39;Vega gene&#39;, 88), 25415)
+[(1, 26855), (0, 325), (3, 1)]
+
+Shalek_2018
+Progress: |████████████████████| 100.0%
+((&#39;Vega gene&#39;, 79), 22538)
+[(1, 24738), (0, 589), (2, 1)]
+
+Schiller_2021
+Progress: |████████████████████| 100.0%
+((&#39;HGNC Symbol&#39;, 99), 17254)
+[(1, 17519), (0, 14)]
+
+Peer_Massague_2020
+Progress: |████████████████████| 100.0%
+((&#39;Vega gene&#39;, 88), 18570)
+[(1, 19119), (0, 103)]
+
+Lafyatis_2019
+Progress: |████████████████████| 100.0%
+((&#39;HGNC Symbol&#39;, 93), 21561)
+[(1, 22132), (0, 29), (2, 3)]
+
+Tata_unpubl
+Progress: |████████████████████| 100.0%
+((&#39;HGNC Symbol&#39;, 96), 23028)
+[(1, 31862), (0, 49), (2, 4)]
+
+Xu_2020
+Progress: |████████████████████| 100.0%
+((&#39;Vega gene&#39;, 80), 30184)
+[(1, 31840), (0, 895), (3, 2), (2, 1)]
+
+Sims_2019
+Progress: |████████████████████| 100.0%
+((&#39;Vega gene&#39;, 83), 42864)
+[(1, 58980), (0, 1737), (2, 6), (3, 2)]
+
+Schultze_unpubl
+Progress: |████████████████████| 100.0%
+((&#39;HGNC Symbol&#39;, 91), 19501)
+[(1, 24440), (0, 91), (2, 1)]
+
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">NameError</span>                                 Traceback (most recent call last)
+Input <span class="ansi-green-fg">In [6]</span>, in <span class="ansi-cyan-fg">&lt;cell line: 40&gt;</span><span class="ansi-blue-fg">()</span>
+<span class="ansi-green-intense-fg ansi-bold">     39</span> file_path <span style="color: rgb(98,98,98)">=</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>join(local_dir, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">results_preliminary_for_hlca.pk</span><span style="color: rgb(175,0,0)">&#34;</span>)
+<span class="ansi-green-intense-fg ansi-bold">     40</span> <span class="ansi-bold" style="color: rgb(0,135,0)">with</span> <span style="color: rgb(0,135,0)">open</span>(file_path, <span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">wb</span><span style="color: rgb(175,0,0)">&#39;</span>) <span class="ansi-bold" style="color: rgb(0,135,0)">as</span> handle:
+<span class="ansi-green-fg">---&gt; 41</span>     pickle<span style="color: rgb(98,98,98)">.</span>dump(<span class="ansi-yellow-bg">result</span>, handle)
+<span class="ansi-green-intense-fg ansi-bold">     42</span>     <span style="color: rgb(0,135,0)">print</span>(<span style="color: rgb(175,0,0)">f</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Saved: </span><span class="ansi-bold" style="color: rgb(175,95,135)">{</span>file_path<span class="ansi-bold" style="color: rgb(175,95,135)">}</span><span style="color: rgb(175,0,0)">&#34;</span>)
+
+<span class="ansi-red-fg">NameError</span>: name &#39;result&#39; is not defined
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">local_dir</span><span class="p">,</span> <span class="s2">&quot;results_preliminary_for_hlca.pk&quot;</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saved: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Saved: /lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/results_preliminary_for_hlca.pk
+</pre></div></div>
+</div>
+</section>
+<section id="how-many-target-hit">
+<h2>how many target hit<a class="headerlink" href="#how-many-target-hit" title="Permalink to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">all_targets</span> <span class="o">=</span> <span class="p">{</span><span class="n">j</span> <span class="k">for</span> <span class="n">database</span> <span class="ow">in</span> <span class="n">results</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">][</span><span class="n">i</span><span class="p">]}</span>
+<span class="nb">len</span><span class="p">(</span><span class="n">all_targets</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+57606
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">database</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+    <span class="n">all_targets</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">(</span><span class="n">j</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">][</span><span class="n">i</span><span class="p">])</span>
+    <span class="n">n_to_1_events</span> <span class="o">=</span> <span class="p">[</span><span class="n">j</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="n">all_targets</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">one_to_events</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">][</span><span class="n">i</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">one_to_0_events</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">][</span><span class="n">i</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">database</span><span class="si">}</span><span class="se">\n</span><span class="s2">Source_Count:</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">])</span><span class="si">}</span><span class="se">\n</span><span class="s2">Target_Count:</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">all_targets</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;n-to-1_events:</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">n_to_1_events</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">1-to-n_events:</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">one_to_events</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">1-to-0_events:</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">one_to_0_events</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Kaminski_2020
+Source_Count:45947
+Target_Count:45378
+n-to-1_events:305
+1-to-n_events:0
+1-to-0_events:411
+
+Meyer_2021
+Source_Count:20922
+Target_Count:20801
+n-to-1_events:189
+1-to-n_events:0
+1-to-0_events:24
+
+MeyerNikolic_unpubl
+Source_Count:33582
+Target_Count:32815
+n-to-1_events:1145
+1-to-n_events:4
+1-to-0_events:174
+
+Barbry_unpubl
+Source_Count:16859
+Target_Count:16768
+n-to-1_events:126
+1-to-n_events:1
+1-to-0_events:29
+
+Regev_2021
+Source_Count:30983
+Target_Count:30388
+n-to-1_events:826
+1-to-n_events:1
+1-to-0_events:173
+
+Thienpont_2018
+Source_Count:27958
+Target_Count:27428
+n-to-1_events:393
+1-to-n_events:1
+1-to-0_events:327
+
+Budinger_2020
+Source_Count:26316
+Target_Count:25943
+n-to-1_events:545
+1-to-n_events:1
+1-to-0_events:96
+
+Banovich_Kropski_2020
+Source_Count:33694
+Target_Count:32824
+n-to-1_events:731
+1-to-n_events:6
+1-to-0_events:497
+
+Sheppard_2020
+Source_Count:27147
+Target_Count:26617
+n-to-1_events:409
+1-to-n_events:1
+1-to-0_events:320
+
+Wunderink_2021
+Source_Count:21819
+Target_Count:21551
+n-to-1_events:377
+1-to-n_events:1
+1-to-0_events:76
+
+Lambrechts_2021
+Source_Count:33538
+Target_Count:32815
+n-to-1_events:1127
+1-to-n_events:4
+1-to-0_events:148
+
+Zhang_2021
+Source_Count:18474
+Target_Count:18405
+n-to-1_events:107
+1-to-n_events:0
+1-to-0_events:14
+
+Duong_lungMAP_unpubl
+Source_Count:27678
+Target_Count:27262
+n-to-1_events:623
+1-to-n_events:1
+1-to-0_events:99
+
+Janssen_2020
+Source_Count:33538
+Target_Count:32815
+n-to-1_events:1127
+1-to-n_events:4
+1-to-0_events:148
+
+Sun_2020
+Source_Count:26578
+Target_Count:26213
+n-to-1_events:524
+1-to-n_events:1
+1-to-0_events:98
+
+Gomperts_2021
+Source_Count:31229
+Target_Count:26036
+n-to-1_events:9187
+1-to-n_events:2
+1-to-0_events:449
+
+Eils_2020
+Source_Count:32738
+Target_Count:31246
+n-to-1_events:1157
+1-to-n_events:3
+1-to-0_events:895
+
+Schiller_2020
+Source_Count:32104
+Target_Count:28188
+n-to-1_events:6474
+1-to-n_events:1
+1-to-0_events:641
+
+Misharin_Budinger_2018
+Source_Count:27181
+Target_Count:26642
+n-to-1_events:417
+1-to-n_events:1
+1-to-0_events:325
+
+Shalek_2018
+Source_Count:25328
+Target_Count:24488
+n-to-1_events:492
+1-to-n_events:1
+1-to-0_events:589
+
+Schiller_2021
+Source_Count:17533
+Target_Count:17444
+n-to-1_events:148
+1-to-n_events:0
+1-to-0_events:14
+
+Peer_Massague_2020
+Source_Count:19222
+Target_Count:19031
+n-to-1_events:170
+1-to-n_events:0
+1-to-0_events:103
+
+Lafyatis_2019
+Source_Count:22164
+Target_Count:21993
+n-to-1_events:280
+1-to-n_events:3
+1-to-0_events:29
+
+Tata_unpubl
+Source_Count:31915
+Target_Count:31527
+n-to-1_events:667
+1-to-n_events:4
+1-to-0_events:49
+
+Xu_2020
+Source_Count:32738
+Target_Count:31246
+n-to-1_events:1157
+1-to-n_events:3
+1-to-0_events:895
+
+Sims_2019
+Source_Count:60725
+Target_Count:55303
+n-to-1_events:5680
+1-to-n_events:8
+1-to-0_events:1737
+
+Schultze_unpubl
+Source_Count:24532
+Target_Count:24251
+n-to-1_events:369
+1-to-n_events:1
+1-to-0_events:91
+
+</pre></div></div>
+</div>
+</section>
+<section id="HGNC-vs-Ensembl-gene-as-targets">
+<h2>HGNC vs Ensembl gene as targets<a class="headerlink" href="#HGNC-vs-Ensembl-gene-as-targets" title="Permalink to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ddadaata</span> <span class="o">=</span> <span class="s2">&quot;Kaminski_2020&quot;</span>
+<span class="n">adata</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">adata_dict</span><span class="p">[</span><span class="n">ddadaata</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+
+<span class="n">gene_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+<span class="n">entered_gene_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+<span class="n">return_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ddadaata</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">))</span>
+
+<span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">gl</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">gene_list</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="n">ind</span> <span class="o">%</span> <span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">ind</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span><span class="o">-</span><span class="mi">5</span><span class="p">:</span>
+        <span class="n">progress_bar</span><span class="p">(</span><span class="n">ind</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">new_gl</span><span class="p">,</span> <span class="n">is_converted</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">unfound_node_solutions</span><span class="p">(</span><span class="n">gl</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">new_gl</span><span class="p">,</span> <span class="n">is_converted</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">unfound_node_solutions</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">synonym_id_nodes_prefix</span><span class="si">}{</span><span class="n">gl</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">is_converted</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">False</span>
+
+    <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+    <span class="k">elif</span> <span class="n">new_gl</span> <span class="ow">and</span> <span class="n">is_converted</span><span class="p">:</span>
+        <span class="n">conv</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">new_gl</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;ensembl_gene&#39;</span><span class="p">,</span> <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">conv</span><span class="p">)</span> <span class="k">if</span> <span class="n">conv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[])</span>
+        <span class="n">entered_gene_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_gl</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">new_gl</span><span class="p">:</span>
+        <span class="n">conv</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">gl</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;ensembl_gene&#39;</span><span class="p">,</span> <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">conv</span><span class="p">)</span> <span class="k">if</span> <span class="n">conv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[])</span>
+        <span class="n">entered_gene_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gl</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">identify_source</span><span class="p">(</span><span class="n">entered_gene_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">Counter</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">return_list</span><span class="p">])</span><span class="o">.</span><span class="n">most_common</span><span class="p">())[:</span><span class="mi">10</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">()</span>
+
+<span class="n">gene_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+<span class="n">entered_gene_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+<span class="n">return_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ddadaata</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">))</span>
+
+<span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">gl</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">gene_list</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">ind</span> <span class="o">%</span> <span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">ind</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span><span class="o">-</span><span class="mi">5</span><span class="p">:</span>
+        <span class="n">progress_bar</span><span class="p">(</span><span class="n">ind</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">new_gl</span><span class="p">,</span> <span class="n">is_converted</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">unfound_node_solutions</span><span class="p">(</span><span class="n">gl</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">new_gl</span><span class="p">,</span> <span class="n">is_converted</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">unfound_node_solutions</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">synonym_id_nodes_prefix</span><span class="si">}{</span><span class="n">gl</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">is_converted</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">False</span>
+
+    <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+    <span class="k">elif</span> <span class="n">new_gl</span> <span class="ow">and</span> <span class="n">is_converted</span><span class="p">:</span>
+        <span class="n">conv</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">new_gl</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">,</span> <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">conv</span><span class="p">)</span> <span class="k">if</span> <span class="n">conv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[])</span>
+        <span class="n">entered_gene_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_gl</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">new_gl</span><span class="p">:</span>
+        <span class="n">conv</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">gl</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">,</span> <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">conv</span><span class="p">)</span> <span class="k">if</span> <span class="n">conv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[])</span>
+        <span class="n">entered_gene_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gl</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">identify_source</span><span class="p">(</span><span class="n">entered_gene_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">Counter</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">return_list</span><span class="p">])</span><span class="o">.</span><span class="n">most_common</span><span class="p">())[:</span><span class="mi">10</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">gene_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">return_list</span><span class="p">)</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">][:</span><span class="mi">10</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="Untitled.html" class="btn btn-neutral float-left" title="Tutorial" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../reference.html" class="btn btn-neutral float-right" title="Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
