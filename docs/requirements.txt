@@ -7,3 +7,14 @@ click>=8.0.1
 nbsphinx>=0.8.9
 pandoc>=2.2
 IPython>=8.4.0
+
+# Below are from pyproject.toml. Needed for auto-doc
+rich>=10.3.0
+PyYAML>=5.4.1
+h5py>=3.7.0
+tables>=3.7.0
+pandas>=1.4.3
+numpy>=1.23.1
+networkx>=2.8.5
+requests>=2.28.1
+PyMySQL>=1.0.2
