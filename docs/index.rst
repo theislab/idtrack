@@ -1,13 +1,13 @@
-.. include:: ../README.rst
-===========================
-Welcome to idtrack's documentation!
-==========================================================
+**idtrack [under development]**
+===============================
+
+.. include:: readme.rst
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
+   :hidden:
 
-   readme
    installation
    usage
    reference
@@ -16,7 +16,7 @@ Welcome to idtrack's documentation!
    code_of_conduct
 
 Indices and tables
-==================
+------------------
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`

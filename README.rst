@@ -1,7 +1,7 @@
-idtrack
+idtrack [under development]
 ===========================
 
-|PyPI| |Python Version| |License| |Read the Docs| |Build| |Tests| |Codecov| |pre-commit| |Black|
+|PyPI| |PyPIDownloads| |Python Version| |License| |Read the Docs| |Build| |Tests| |Codecov| |pre-commit| |Black|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/idtrack.svg
    :target: https://pypi.org/project/idtrack/
@@ -30,38 +30,27 @@ idtrack
 .. |Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
    :target: https://github.com/psf/black
    :alt: Black
+.. |PyPIDownloads| image:: https://pepy.tech/badge/idtrack
+   :target: https://pepy.tech/project/idtrack
+   :alt: downloads
 
+.. |Downloads| image:: [![Downloads](https://pepy.tech/badge/idtrack)]()
 
-Features
---------
+.. image:: https://raw.githubusercontent.com/theislab/idtrack/development/docs/_logo/logo.png
+    :width: 400
+    :alt: Logo
 
-* TODO
-
-
-Installation
+Key Features
 ------------
 
-You can install *idtrack* via pip_ from PyPI_:
-
-.. code:: console
-
-   $ pip install idtrack
-
+* TODO
+* TODO
 
 Usage
 -----
 
-Please see the `Command-line Reference <Usage_>`_ for details.
+Please see the `Documentation <Documentation_>`_ for details.
 
-
-Credits
--------
-
-This package was created with cookietemple_ using Cookiecutter_ based on Hypermodern_Python_Cookiecutter_.
-
-.. _cookietemple: https://cookietemple.com
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
 .. _PyPI: https://pypi.org/
-.. _Hypermodern_Python_Cookiecutter: https://github.com/cjolowicz/cookiecutter-hypermodern-python
 .. _pip: https://pip.pypa.io/
-.. _Usage: https://idtrack.readthedocs.io/en/latest/usage.html
+.. _Documentation: https://idtrack.readthedocs.io/en/latest/index.html

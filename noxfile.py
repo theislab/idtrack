@@ -136,7 +136,9 @@ def mypy(session: Session) -> None:
     """Type-check using mypy."""
     args = session.posargs or ["idtrack", "tests", "docs/conf.py"]
     session.install(".")
-    session.install("mypy", "pytest", "types-pkg-resources", "types-requests", "types-attrs", "types-PyMySQL")
+    session.install(
+        "mypy", "pytest", "types-pkg-resources", "types-requests", "types-attrs", "types-PyMySQL", "types-PyYAML"
+    )
     session.run("mypy", *args)
 
 
@@ -190,7 +192,9 @@ def docs_build(session: Session) -> None:
     """Build the documentation."""
     args = session.posargs or ["docs", "docs/_build"]
     session.install(".")
-    session.install("sphinx", "sphinx-click", "sphinx-rtd-theme", "sphinx-rtd-dark-mode")
+    session.install(
+        "sphinx", "sphinx-click", "sphinx-rtd-theme", "sphinx-rtd-dark-mode", "nbsphinx", "pandoc", "IPython"
+    )
 
     build_dir = Path("docs", "_build")
     if build_dir.exists():
@@ -204,7 +208,16 @@ def docs(session: Session) -> None:
     """Build and serve the documentation with live reloading on file changes."""
     args = session.posargs or ["--open-browser", "docs", "docs/_build"]
     session.install(".")
-    session.install("sphinx", "sphinx-autobuild", "sphinx-click", "sphinx-rtd-theme", "sphinx-rtd-dark-mode")
+    session.install(
+        "sphinx",
+        "sphinx-autobuild",
+        "sphinx-click",
+        "sphinx-rtd-theme",
+        "sphinx-rtd-dark-mode",
+        "nbsphinx",
+        "pandoc",
+        "IPython",
+    )
 
     build_dir = Path("docs", "_build")
     if build_dir.exists():
