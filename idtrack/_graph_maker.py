@@ -16,9 +16,10 @@ import pandas as pd
 
 from ._database_manager import DatabaseManager
 from ._db import DB
+from ._the_graph import TheGraph
 
 
-class Graph:
+class GraphMaker:
     """Creates ID history graph.
 
     It includes Ensembl gene ID history. Ensembl ID history is obtained from Ensembl
@@ -43,14 +44,34 @@ class Graph:
                 the exception is raised.
         """
         # Instance attributes
-        self.log = logging.getLogger("graph")
+        self.log = logging.getLogger("graph_maker")
 
         # Make sure the graph is constructed from the latest release available.
         if db_manager.ensembl_release != max(db_manager.available_releases):
             raise ValueError("'Graph' has to be created with the latest release possible defined in 'db_manager'.")
         self.db_manager = db_manager
 
-    def construct_graph(self, narrow: bool, form_list: list = None, narrow_external: bool = True) -> nx.MultiDiGraph:
+    def initialize_downloads(self):
+        """Initialize the external database downloads.
+
+        Raises:
+            NotImplementedError: Not implemented yet.
+        """
+        raise NotImplementedError
+
+    def update_graph_with_the_new_release(self):
+        """When new release arrive, just add new nodes.
+
+        Raises:
+            NotImplementedError: Not implemented yet.
+        """
+        raise NotImplementedError
+
+    def construct_graph(self,
+                        narrow: bool = False,
+                        form_list: list = None,
+                        narrow_external: bool = True,
+                        ) -> TheGraph:
         """Main method to construct the graph.
 
         It creates the graph with Ensembl gene, transcript and protein information. It also adds
@@ -77,34 +98,42 @@ class Graph:
             ValueError: Unexpected error.
         """
 
-        def add_edge(n1: str, n2: str, er12: int, edge_attribute_name: str = "releases"):
+        def add_edge(n1: str, n2: str, db12: str, a12: int, er12: int):
             """A simple function to create edges between provided nodes. Edits the graph that is under the construction.
 
             Args:
                 n1: The first node of the edge. The edge is taken from this node.
                 n2: The second node of the edge. The edge is taken to this node.
-                er12: The Ensembl release associated with such a connection.
-                edge_attribute_name: The string to use in the edge attribute dictionary.
+                db12: Database for such a connection
+                a12: Ensembl release for such a connection.
+                er12: Assembly for such a connection.
 
             Raises:
                 ValueError: If there are more than one edge between the source and the target node.
             """
+            if not n1 in g.nodes or not n2 in g.nodes:
+                raise ValueError(n1, n2, db12, a12, er12)
+            
             if not g.has_edge(n1, n2):
-                n_edge_att = {edge_attribute_name: {er12}}
+                n_edge_att = {DB.connection_dict: {db12: {a12: {er12}}}}
                 g.add_edge(n1, n2, **n_edge_att)
             else:
                 if len(g.get_edge_data(n1, n2)) != 1:
-                    raise ValueError
-                g[n1][n2][0][edge_attribute_name].add(er12)
-
-        # Initialize the external database downloads:
-        # TODO.
+                    raise ValueError  # test it to use '0' below
+                elif db12 not in g[n1][n2][0][DB.connection_dict]:
+                    g[n1][n2][0][DB.connection_dict][db12] = {a12: {er12}}
+                elif a12 not in g[n1][n2][0][DB.connection_dict][db12]:
+                    g[n1][n2][0][DB.connection_dict][db12][a12] = {er12}
+                elif er12 not in g[n1][n2][0][DB.connection_dict][db12][a12]:
+                    g[n1][n2][0][DB.connection_dict][db12][a12].add(er12)
+                else:
+                    raise ValueError(n1, n2, db12, a12, er12, g[n1][n2][0][DB.connection_dict])
 
         # The order is important for form_list in compose_all, due to some clashing ensembl IDs.
         form_list = self.db_manager.available_form_of_interests if not form_list else form_list
         dbman_s = {f: self.db_manager.change_form(f) for f in form_list}
         graph_s = {
-            f: Graph.remove_non_gene_trees(  # Remove_non_gene_tree before compose_all.
+            f: GraphMaker.remove_non_gene_trees(  # Remove_non_gene_tree before compose_all.
                 # The time travel will be between gene IDs, so no need to have such edges.
                 self.construct_graph_form(narrow, dbman_s[f])
             )
@@ -113,7 +142,7 @@ class Graph:
 
         # Fun fact: There are exceptional Ensembl protein IDs that starts with 'ENST', and sometimes there are
         # clash of IDs (the same ID is defined in Ensembl proteins and Ensembl transcripts). For example,
-        # "ENST00000515292.1". It does not clash in time, they are defined in different ensembl releases.
+        # "ENST00000515292.1". It does not clash in time, that is, they are defined in different ensembl releases.
         # Report all possible conflicts.
         for m, n in itertools.combinations(form_list, 2):
             if m in graph_s and n in graph_s:
@@ -128,6 +157,8 @@ class Graph:
 
         # Compose all graphs into one. If there is a
         g = nx.compose_all([graph_s[f] for f in form_list])
+        # To make the form_list cached in the object.
+        g.attach_included_forms(form_list)
 
         # Establish connection between different forms
         self.log.info("Establishing connection between different forms.")
@@ -146,66 +177,40 @@ class Graph:
                             raise ValueError
 
                         # Edges are from transcript to gene, from translation to transcript
-                        add_edge(e1, e2, ensembl_release)
-
-        # Add versionless versions as well
-        if g.graph["version_info"] != "without_version":
-            self.log.info("Versionless Ensembl IDs are being connected.")
-
-            for f in ["gene"]:  # transcript and translation does not have base.
-                for er in self.db_manager.available_releases:
-
-                    db_manager = dbman_s[f].change_release(er)
-                    ids_db = db_manager.get_db("ids", save_after_calculation=False)
-                    ids = db_manager.id_ver_from_df(ids_db)
-
-                    for n in ids:
-
-                        if n not in g.nodes:
-                            raise ValueError
-
-                        m = g.nodes[n]["ID"]
-                        if m not in g.nodes:
-                            node_attributes = {DB.node_type_str: DB.nts_base_ensembl[f]}
-                            g.add_node(m, **node_attributes)
-
-                        # Edges are from versionless base ID to ID (with version).
-                        add_edge(m, n, er)
-
-                self.log.info(f"Edges between versionless ID to version ID has been added for '{f}'.")
-        else:
-            self.log.info("The graph will be constructed with 'versionless' IDs. It has not been extensively tested.")
+                        sly = self.db_manager.genome_assembly
+                        add_edge(e1, e2, DB.nts_ensembl[e1_str], sly, ensembl_release)
 
         # Establish connection between different databases
         graph_nodes_before_external = set(g.nodes)
         graph_nodes_added_assembly: dict = {
-            i: set() for i in DB.mysql_port_and_assembly_priority.keys() if i != self.db_manager.ensembl_mysql_server
+            i: set() for i in DB.assembly_mysqlport_priority.keys() if i != self.db_manager.genome_assembly
         }
         misplaced_external_entry = list()
         establish_form_connection = list()
         min_ens_release = dict()
-        release_dict_str: str = "release_dict"
+        added_assemblies = set()
         for f in form_list:
 
             self.log.info(f"Edges between external IDs to Ensembl IDs is being added for '{f}'.")
             nodes_from_previous_release = 0
             for ens_rel in sorted(self.db_manager.available_releases):
-                # the order is important in adding new nodes into the core graph
+                # the order is important in adding new nodes into the core graph.
+                # it is important to capture correct ens_release in min_ens_release dictionary
 
                 db_manager = dbman_s[f].change_release(ens_rel)
-                rc = db_manager.create_external_all()
+                rc = db_manager.create_external_all(return_mode="all")
 
                 for _ind, entry in rc.iterrows():
-                    # Note that the `rc` dataframe have higher priority assembly at the top.
+                    # Note that the `rc` dataframe have higher priority assembly entries at the top.
 
                     e1, e2 = entry["graph_id"], entry["id_db"]
                     er, edb = entry["release"], entry["name_db"]
                     sly = int(entry["assembly"])
 
-                    if sly not in DB.mysql_port_and_assembly_priority:
+                    if sly not in DB.assembly_mysqlport_priority:
                         raise ValueError
 
-                    if e1 and e2 and er and edb:
+                    if e1 and e2 and er and edb and sly:
 
                         if e1 not in graph_nodes_before_external:
                             # Here, Only add the node once and retire. For Homo sapiens these nodes are added at
@@ -214,7 +219,7 @@ class Graph:
                             # external ID bridge them to the active ones.
                             # For example, 'ENSG00000148828.5', 'ENSG00000167765.3'
 
-                            if sly == self.db_manager.ensembl_mysql_server:
+                            if sly == self.db_manager.genome_assembly:
                                 raise ValueError(
                                     "The main assembly created for the graph should contain all the "
                                     "nodes in the external table."
@@ -224,6 +229,7 @@ class Graph:
                                 [e1 in graph_nodes_added_assembly[i] for i in graph_nodes_added_assembly if i != sly]
                             ):
                                 # Hypothetical statement for now, as there are only two assembly in Ensembl.
+                                # 'create_external_all' method should have resolve the issue.
                                 raise ValueError("Node should have been already added by a higher priority assembly.")
 
                             elif e1 not in graph_nodes_added_assembly[sly]:
@@ -243,14 +249,15 @@ class Graph:
                                 graph_nodes_added_assembly[sly].add(e1)
 
                                 node_attributes_3 = {
-                                    DB.node_type_str: DB.nts_assembly[sly][f],  # "Assembly": sly
-                                    "ID": Graph.split_id(e1, "ID"),
-                                    "Version": Graph.split_id(e1, "Version"),
+                                    DB.node_type_str: DB.nts_assembly[sly][f],
+                                    "ID": GraphMaker.split_id(e1, "ID"),
+                                    "Version": GraphMaker.split_id(e1, "Version"),
                                 }
                                 g.add_node(e1, **node_attributes_3)
 
                                 nodes_from_previous_release += 1
                                 establish_form_connection.append([e1, f, sly])
+                                added_assemblies.add(sly)
                             else:
                                 # Do nothing. The hope is a second external database is bridging to a known Ensembl ID.
                                 pass
@@ -262,17 +269,14 @@ class Graph:
                         else:
                             # Create a node with external ID, store relevant database and ensembl release information.
                             if e2 not in g.nodes:
-                                node_attributes_2 = {release_dict_str: {edb: {er}}, DB.node_type_str: DB.nts_external}
+                                node_attributes_2 = {DB.node_type_str: DB.nts_external}
                                 g.add_node(e2, **node_attributes_2)
-                            elif edb not in g.nodes[e2][release_dict_str]:
-                                g.nodes[e2][release_dict_str][edb] = {er}
-                            elif er not in g.nodes[e2][release_dict_str][edb]:
-                                g.nodes[e2][release_dict_str][edb].add(er)
 
                             if e1 not in g.nodes:
                                 raise ValueError(f"Node '{e1}' should have been added.")
                             # Edges are from external ID to Ensembl ID.
-                            add_edge(e2, e1, er)
+                            add_edge(e2, e1, edb, sly, er)
+                            added_assemblies.add(sly)
 
             if nodes_from_previous_release > 0:
                 self.log.warning(f"New nodes added as assembly nodes: {nodes_from_previous_release}")
@@ -283,51 +287,87 @@ class Graph:
         if len(establish_form_connection) > 0:
 
             added_edge = 0
-            self.log.info("Different forms of assembly Ensembl nodes are being connecting.")
+            self.log.info("Different forms of assembly-Ensembl-nodes are being connecting.")
             new_nodes = pd.DataFrame(establish_form_connection, columns=["node", "form", "assembly"])
             new_nodes.drop_duplicates(keep="first", inplace=True, ignore_index=True)
             avail_assemblies = np.unique(new_nodes["assembly"])
 
             for aa in avail_assemblies:
                 nn_aa = new_nodes[new_nodes["assembly"] == aa]
-                dm_aa = self.db_manager.change_release(min_ens_release[aa]).change_server(aa)
-                df_aa = dm_aa.get_db("relationcurrent")
+                dm_aa = self.db_manager.change_assembly(aa)
+                for the_er in sorted(dm_aa.available_releases, reverse=True):
+                    dm_aa_er = dm_aa.change_release(the_er)
+                    df_aa = dm_aa_er.get_db("relationcurrent")
 
-                # Attach nodes that has found in the graph and there are form relationships.
-                bool_filter = pd.DataFrame()
-                for f in self.db_manager.available_form_of_interests:
-                    fids = np.unique(nn_aa[nn_aa["form"] == f]["node"])
-                    bool_filter = pd.concat([bool_filter, df_aa[f].isin(fids)], axis=1)
-                bool_filter = np.sum(bool_filter, axis=1) > 1
-                df_aa = df_aa[bool_filter]
+                    # Attach nodes that has found in the graph and there are form relationships.
+                    bool_filter = pd.DataFrame()
+                    for f in form_list:
+                        fids = np.unique(nn_aa["node"][nn_aa["form"] == f])
+                        bool_filter = pd.concat([bool_filter, df_aa[f].isin(fids)], axis=1)
+                    bool_filter = np.sum(bool_filter, axis=1) > 0
+                    df_aa = df_aa[bool_filter]
 
-                for _, item in df_aa.iterrows():
+                    for _, item in df_aa.iterrows():
 
-                    for f in self.db_manager.available_form_of_interests:
-                        anid = item[f]
+                        for f in form_list:
+                            anid = item[f]
 
-                        if anid and anid not in g.nodes:
-                            node_attributes_4 = {
-                                DB.node_type_str: DB.nts_assembly[aa][f],  # "Assembly": sly
-                                "ID": Graph.split_id(anid, "ID"),
-                                "Version": Graph.split_id(anid, "Version"),
-                            }
-                            g.add_node(anid, **node_attributes_4)
+                            if anid and anid not in g.nodes:
+                                node_attributes_4 = {
+                                    DB.node_type_str: DB.nts_assembly[aa][f], 
+                                    "ID": GraphMaker.split_id(anid, "ID"),
+                                    "Version": GraphMaker.split_id(anid, "Version"),
+                                }
+                                g.add_node(anid, **node_attributes_4)
 
-                    for e1_str, e2_str in (("transcript", "gene"), ("translation", "transcript")):
-
-                        new1, new2 = item[e1_str], item[e2_str]
-                        if new1 and new2 and g.has_edge(new1, new2):
-                            raise ValueError
-                        elif new1 and new2:
-                            add_edge(new1, new2, min_ens_release[aa])
-                            added_edge += 1
+                        for e1_str, e2_str in (("transcript", "gene"), ("translation", "transcript")):
+                            
+                            new1, new2 = item[e1_str], item[e2_str]                            
+                            if new1 and new2:
+                                if not g.has_edge(new1, new2):
+                                    added_edge += 1    
+                                add_edge(new1, new2, DB.nts_assembly[aa][e1_str], aa, the_er)
 
             if added_edge > 0:
                 self.log.warning(f"New edges are added between assembly Ensembl nodes: {added_edge}")
 
-        # Merge the nodes that are the same when they are convert into lowercase/uppercase.
-        g = self._merge_nodes_with_the_same_in_lower_case(g)
+        # Add versionless versions as well
+        if g.graph["version_info"] != "without_version":
+            self.log.info("Versionless Ensembl IDs are being connected.")
+
+            added_assemblies.add(self.db_manager.genome_assembly)
+            avail_assemblies = sorted(added_assemblies)
+
+            for aa in avail_assemblies:
+                for f in ["gene"]:
+                    # transcript and translation does not have base.
+                    # It causes the tracking algorithm unnecessarily process too many possibilities.
+                    for er in self.db_manager.available_releases:
+
+                        db_manager = self.db_manager.change_form(f).change_assembly(aa).change_release(er)
+
+                        ids_db = db_manager.get_db("ids")
+                        ids = db_manager.id_ver_from_df(ids_db)
+
+                        for n in ids:
+
+                            if n not in g.nodes and aa == self.db_manager.genome_assembly:
+                                raise ValueError(aa, er, n)
+                            elif n not in g.nodes:
+                                pass
+                            else:
+                                m = g.nodes[n]["ID"]
+                                if m not in g.nodes:
+                                    node_attributes = {DB.node_type_str: DB.nts_base_ensembl[f]}
+                                    g.add_node(m, **node_attributes)
+
+                                # Edges are from versionless base ID to ID (with version).
+                                add_edge(m, n, DB.nts_base_ensembl[f], aa, er)
+
+                self.log.info(f"Edges between versionless ID to version ID has been added for '{f}', assembly {aa}.")
+        else:
+            self.log.info(
+                "The graph will be constructed with 'versionless' IDs. It has not been extensively tested.")
 
         new_form = "-".join(form_list)
         g.graph["name"] = (f"{self.db_manager.organism}_{self.db_manager.ensembl_release}_{new_form}",)
@@ -335,9 +375,23 @@ class Graph:
         g.graph["narrow_external"] = narrow_external
         g.graph["misplaced_external_entry"] = set(misplaced_external_entry)
 
+        # Merge the nodes that are the same when they are convert into lowercase/uppercase.
+        g = self._merge_nodes_with_the_same_in_lower_case(g)
+
+        # Run cached_property functions to save them into the disk.
+        _ = g.combined_edges
+        _ = g.combined_edges_assembly_specific_genes
+        _ = g.combined_edges_genes
+        _ = g.lower_chars_graph
+        _ = g.get_active_ranges_of_id
+        _ = g.available_external_databases
+        _ = g.external_database_connection_form
+        _ = g.available_genome_assemblies
+        _ = g.available_external_databases_assembly
+        
         return g
 
-    def _merge_nodes_with_the_same_in_lower_case(self, g: nx.MultiDiGraph):
+    def _merge_nodes_with_the_same_in_lower_case(self, g: TheGraph):
 
         self.log.info("Synonymous external nodes are being merged into one.")
         before_node_count = len(g.nodes)
@@ -357,13 +411,13 @@ class Graph:
         for _lower_name, merge_list in merge_dict.items():
 
             if any([g.nodes[m][DB.node_type_str] != DB.nts_external for m in merge_list]):
-                raise NotImplementedError
+                raise NotImplementedError("The method is only for 'external' nodes.")
 
             all_out_edges = list()
             for m in merge_list:
                 for n in g.neighbors(m):
                     if len(g[m][n]) != 1:
-                        raise ValueError
+                        raise ValueError  # Make sure it is allowed to use '0' below.
                     else:
                         all_out_edges.append((m, n, 0))
 
@@ -376,26 +430,34 @@ class Graph:
                 if target_node not in distiled_out:
                     distiled_out[target_node] = edge_data
                 else:
-                    saved_edge_data = distiled_out[target_node]
-                    for i in saved_edge_data:
-                        if i != "releases":
-                            raise NotImplementedError
-                        saved_edge_data_i = saved_edge_data[i]
-                        edge_data_i = edge_data[i]
-                        if type(saved_edge_data_i) == type(edge_data_i) == set:
-                            distiled_out[target_node][i] = saved_edge_data_i | edge_data_i
+                    for i in distiled_out[target_node]:  # Go over attributes to update
+
+                        if i != DB.connection_dict:
+                            raise NotImplementedError(f"The method is only for certain edge attributes'{i}'.")
+
                         else:
-                            raise ValueError
+                            for edi_db in edge_data[i]:  # {edi_db: {edi_ass: set()}}
+                                if edi_db not in distiled_out[target_node][i]:
+                                    distiled_out[target_node][i][edi_db] = edge_data[i][edi_db]
+                                else:
+                                    for edi_ass in edge_data[i][edi_db]:
+                                        if edi_ass not in distiled_out[target_node][i][edi_db]:
+                                            distiled_out[target_node][i][edi_db][edi_ass] = \
+                                                edge_data[i][edi_db][edi_ass]
+                                        else:  # Then, merge the releases
+                                            distiled_out[target_node][i][edi_db][edi_ass] = \
+                                                distiled_out[target_node][i][edi_db][edi_ass] | \
+                                                edge_data[i][edi_db][edi_ass]
 
             for m in merge_list:  # all_in_edges = list()
                 for n in reverse_g.neighbors(m):
                     if len(reverse_g[n][m]) != 1:
-                        raise ValueError
+                        raise ValueError  # Make sure it is allowed to use '0' below.
                     else:
-                        raise NotImplementedError
+                        raise NotImplementedError("External nodes should always have edges going out, not going in.")
                         # all_in_edges.append((n, m, 0))  # edge key for forward graph (not reverse)
 
-            merged_node_attributes = g.nodes[merge_list[0]]
+            merged_node_attributes = g.nodes[merge_list[0]].copy()
             for m in merge_list[1:]:
                 node_att = g.nodes[m]
                 for na in node_att:
@@ -403,17 +465,6 @@ class Graph:
                         raise ValueError
                     elif na == DB.node_type_str and merged_node_attributes[na] == node_att[na]:
                         pass
-                    elif na == "release_dict":
-                        for na_db in node_att[na]:
-                            release_set = node_att[na][na_db]
-                            if type(release_set) != set:
-                                raise ValueError
-                            if na_db not in merged_node_attributes[na]:
-                                merged_node_attributes[na][na_db] = release_set
-                            elif type(merged_node_attributes[na][na_db]) != set:
-                                raise ValueError
-                            else:
-                                merged_node_attributes[na][na_db] = merged_node_attributes[na][na_db] | release_set
                     else:
                         raise NotImplementedError
 
@@ -443,7 +494,7 @@ class Graph:
 
         return g
 
-    def construct_graph_form(self, narrow: bool, db_manager: DatabaseManager) -> nx.MultiDiGraph:
+    def construct_graph_form(self, narrow: bool, db_manager: DatabaseManager) -> TheGraph:
         """Creates a graph with connected nodes based on historical relationships between each Ensembl IDs.
 
         Args:
@@ -608,10 +659,11 @@ class Graph:
         # Second dataframe will be directly used to add nodes.
         df = df[graph_down_bool]
 
-        g = nx.MultiDiGraph(  # because of multiple self loops of some nodes
+        g = TheGraph(  # because of multiple self loops of some nodes
             name=f"{db_manager.organism}_{db_manager.ensembl_release}_{db_manager.form}",
             type=db_manager.form,
             ensembl_release=db_manager.ensembl_release,
+            genome_assembly=db_manager.genome_assembly,
             organism=db_manager.organism,
             confident_for_release=self.db_manager.available_releases,
             version_info=version_info,
@@ -847,7 +899,7 @@ class Graph:
             ids_amc_df = amc_dm.get_db("ids", save_after_calculation=False)
             ids_amc.update(set(amc_dm.id_ver_from_df(ids_amc_df)))
         for node in g.nodes:
-            if node not in ids_amc and Graph.split_id(node, "Version") not in DB.alternative_versions:
+            if node not in ids_amc and GraphMaker.split_id(node, "Version") not in DB.alternative_versions:
                 problematic_nodes.append(node)
         if len(problematic_nodes) > 0:
             self.log.warning(f"Nodes are deleted due to Ensembl ID history mistake: {len(problematic_nodes)}.")
@@ -877,8 +929,8 @@ class Graph:
         # Add some node features as node attributes.
         nx.set_node_attributes(g, {n: DB.nts_ensembl[db_manager.form] for n in g.nodes}, DB.node_type_str)
         nx.set_node_attributes(g, {n: n in latest_release_ids for n in g.nodes}, "is_latest")
-        nx.set_node_attributes(g, {n: Graph.split_id(n, "ID") for n in g.nodes}, "ID")
-        nx.set_node_attributes(g, {n: Graph.split_id(n, "Version") for n in g.nodes}, "Version")
+        nx.set_node_attributes(g, {n: GraphMaker.split_id(n, "ID") for n in g.nodes}, "ID")
+        nx.set_node_attributes(g, {n: GraphMaker.split_id(n, "Version") for n in g.nodes}, "Version")
 
         return g
 
@@ -909,8 +961,8 @@ class Graph:
             raise ValueError
 
     @staticmethod
-    def remove_non_gene_trees(graph: nx.MultiDiGraph, forms_remove: list = None) -> nx.MultiDiGraph:
-        """Removes the edges between the nodes with the same `node type` and removes abstract nodes.
+    def remove_non_gene_trees(graph: TheGraph, forms_remove: list = None) -> TheGraph:
+        """Removes the edges between the nodes with the same `node type` and removes abstract nodes (Void and Retired).
 
         The nodes between two the same ``DB.node_type_str`` will be removed. Also, the nodes with versions
         ``DB.no_new_node_id`` and ``DB.no_old_node_id`` will be also removed.
@@ -960,7 +1012,7 @@ class Graph:
         create_even_if_exist: bool = False,
         save_after_calculation: bool = True,
         overwrite_even_if_exist: bool = False,
-    ) -> nx.MultiDiGraph:
+    ) -> TheGraph:
         """Simplifies the graph construction process.
 
         Args:
@@ -983,7 +1035,7 @@ class Graph:
             g = self.construct_graph(narrow)
         else:  # Otherwise, just read the file that is already in the directory.
             self.log.info("The graph is being read.")
-            g = Graph.read_exported(file_path)
+            g = GraphMaker.read_exported(file_path)
 
         # If prompt, save the dataframe in requested format.
         if save_after_calculation:
@@ -992,7 +1044,7 @@ class Graph:
         return g
 
     @staticmethod
-    def read_exported(file_path: str) -> nx.MultiDiGraph:
+    def read_exported(file_path: str) -> TheGraph:
         """Read the `pickle` file in the provided file path, which contains the graph.
 
         Args:
@@ -1026,7 +1078,7 @@ class Graph:
         ext = f"ens{self.db_manager.ensembl_release}{min_ext}{max_ext}{narrow_ext}"
         return os.path.join(self.db_manager.local_repository, f"graph_{self.db_manager.organism}_{ext}.pickle")
 
-    def export_disk(self, g: nx.MultiDiGraph, file_path: str, overwrite: bool):
+    def export_disk(self, g: TheGraph, file_path: str, overwrite: bool):
         """Write the `pickle` file in the provided file path, which contains the graph.
 
         Args:

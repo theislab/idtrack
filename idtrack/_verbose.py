@@ -6,7 +6,6 @@
 import logging
 import sys
 
-
 def logger_config():
     """Todo."""
     logging.basicConfig(
@@ -15,7 +14,8 @@ def logger_config():
 
 
 def progress_bar(
-    iteration: int, total: int, prefix: str = "Progress:", suffix: str = "", decimals: int = 2, bar_length: int = 20
+    iteration: int, total: int, frequency: float = 1.0, prefix: str = "Progress:", suffix: str = "",
+    decimals: int = 2, bar_length: int = 20
 ):
     """This function should be called inside of loop, gives the loop's progress.
 
@@ -27,11 +27,12 @@ def progress_bar(
         decimals: Number of decimals in percent complete.
         bar_length: Character length of bar.
     """
-    filled_length = int(round(bar_length * iteration / float(total)))
-    percents = round(100.00 * (iteration / float(total)), decimals)
-    bar = "█" * filled_length + "-" * (bar_length - filled_length)
-    sys.stdout.write("\r{} |{}| {}{} {}".format(prefix, bar, percents, "%", suffix)),
-    sys.stdout.flush()
-    if iteration == total:
-        sys.stdout.write("\n")
+    if int(round(total * frequency)) % iteration == 0 or iteration == total:
+        filled_length = int(round(bar_length * iteration / float(total)))
+        percents = round(100.00 * (iteration / float(total)), decimals)
+        bar = "█" * filled_length + "-" * (bar_length - filled_length)
+        sys.stdout.write("\r{} |{}| {}{} {}".format(prefix, bar, percents, "%", suffix)),
         sys.stdout.flush()
+        if iteration == total:
+            sys.stdout.write("\n")
+            sys.stdout.flush()

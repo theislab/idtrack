@@ -4,6 +4,7 @@
 # k.inecik@gmail.com
 
 import logging
+import copy
 import os
 import re
 from collections import Counter
@@ -13,9 +14,9 @@ from itertools import repeat
 import numpy as np
 import pandas as pd
 import pymysql.cursors
-import yaml
 
 from ._db import DB
+from ._external_databases import ExternalDatabases
 
 
 class DatabaseManager:
@@ -31,7 +32,7 @@ class DatabaseManager:
         ignore_after: int = None,
         compress: bool = True,
         store_raw_always: bool = True,
-        ensembl_mysql_server: int = 38,
+        genome_assembly: int = None,
     ):
         """Todo.
 
@@ -44,18 +45,22 @@ class DatabaseManager:
             ignore_after: Todo.
             compress: Todo.
             store_raw_always: Todo.
-            ensembl_mysql_server: Todo.
+            genome_assembly: Todo.
 
         Raises:
             ValueError: Todo.
         """
         # MYSQL Settings
-        self.ensembl_mysql_server = ensembl_mysql_server
+        if genome_assembly is None:
+            genome_assembly = sorted(
+                (DB.assembly_mysqlport_priority[i]['Priority'],i) for i in DB.assembly_mysqlport_priority)[0][1]
+        
+        self.genome_assembly = genome_assembly
         self.mysql_settings = {
             "host": DB.mysql_host,
             "user": DB.myqsl_user,
             "password": DB.mysql_togo,
-            "port": DB.mysql_port_and_assembly_priority[self.ensembl_mysql_server][0],
+            "port": DB.assembly_mysqlport_priority[self.genome_assembly]["Port"],
         }
 
         # Instance attributes
@@ -66,32 +71,43 @@ class DatabaseManager:
         self.form = form
         self.compress = compress
         self.store_raw_always = store_raw_always
-        self.ignore_before = ignore_before if ignore_before else -np.inf
+        default_min_er = max([DB.assembly_mysqlport_priority[i]["MinRelease"] for i in DB.assembly_mysqlport_priority])
+        self.ignore_before = ignore_before if ignore_before else default_min_er
         self.ignore_after = ignore_after if ignore_after else np.inf
 
         # Protected attributes
-        self.available_form_of_interests = ["gene", "transcript", "translation"]  # Warning: the order is important.
+        self.available_form_of_interests = copy.deepcopy(DB.forms_in_order)  # Warning: the order is important.
         self._available_version_info = ["add_version", "without_version", "with_version"]
         self._comp_hdf5 = {"complevel": 9, "complib": "blosc:zlib"} if self.compress else dict()
         self._column_sep = "_COL_"
         self._identifiers = [f"{self.form}_stable_id", f"{self.form}_version"]
-        # min_possible_ensembl = max([j[2] for i, j in DB.mysql_port_and_assembly_priority.items()])
 
         # Check if it seems ok.
-        if not (
-            float(ensembl_release) == int(ensembl_release)
-            and self.ignore_after >= self.ensembl_release >= self.ignore_before
-            and self.ensembl_release in self.available_releases
-            and self.form in self.available_form_of_interests
-            and (
+        checkers = (
+            float(ensembl_release) == int(ensembl_release),
+            self.ignore_after >= self.ensembl_release >= self.ignore_before,
+            self.ensembl_release in self.available_releases,
+            self.genome_assembly in DB.assembly_mysqlport_priority,
+            self.form in self.available_form_of_interests,
+            (
                 os.path.isdir(self.local_repository)
                 and os.access(self.local_repository, os.W_OK)
                 and os.access(self.local_repository, os.R_OK)
-            )
-            and not (self.ensembl_release < 79 and self.ensembl_mysql_server == 37)
-        ):
-            raise ValueError
-        # ensembl_release < 79 and assembl37 ise bok suyu icsin
+            ),
+            not (self.ensembl_release < DB.assembly_mysqlport_priority[self.genome_assembly]["MinRelease"])
+        )
+        if not all(checkers):
+            raise ValueError(f"\'DatabaseManager\' could not pass the \'checkers\': {checkers}")
+
+    @cached_property
+    def external_inst(self):
+        return ExternalDatabases(
+            organism=self.organism,
+            ensembl_release=self.ensembl_release,
+            form=self.form,
+            local_repository=self.local_repository,
+            genome_assembly=self.genome_assembly
+        )
 
     @cached_property
     def available_releases(self):
@@ -107,7 +123,7 @@ class DatabaseManager:
         releases = [float(pattern.search(i).groups()[0]) for i in dbs if pattern.match(i)]
 
         # Get rid of floating ensembl releases if exists: In very early releases, there are floating releases
-        # like "18.2". This package does not support those.
+        # like "18.2". This Python package does not support those.
         floating_ensembl = list()
         releases_final = list()
         for r in releases:
@@ -171,7 +187,7 @@ class DatabaseManager:
             ignore_after=self.ignore_after,
             compress=self.compress,
             store_raw_always=self.store_raw_always,
-            ensembl_mysql_server=self.ensembl_mysql_server,
+            genome_assembly=self.genome_assembly,
         )
 
     def change_release(self, ensembl_release):
@@ -192,10 +208,10 @@ class DatabaseManager:
             ignore_after=self.ignore_after,
             compress=self.compress,
             store_raw_always=self.store_raw_always,
-            ensembl_mysql_server=self.ensembl_mysql_server,
+            genome_assembly=self.genome_assembly,
         )
 
-    def change_server(self, ensembl_mysql_server):
+    def change_assembly(self, genome_assembly):
         """Todo.
 
         Args:
@@ -213,7 +229,7 @@ class DatabaseManager:
             ignore_after=self.ignore_after,
             compress=self.compress,
             store_raw_always=self.store_raw_always,
-            ensembl_mysql_server=ensembl_mysql_server,
+            genome_assembly=genome_assembly,
         )
 
     def check_exist_as_diff_release(self, df_type, df_indicator):
@@ -238,7 +254,7 @@ class DatabaseManager:
 
         with pd.HDFStore(file_path, mode="r") as f:
             keys = f.keys()
-        downloaded_rels = [int(pattern.search(i).groups()[0]) for i in keys if pattern.search(i)]
+        downloaded_rels = list(set([int(pattern.search(i).groups()[0]) for i in keys if pattern.search(i)]))
 
         for dr in downloaded_rels:
             if dr >= self.ensembl_release:
@@ -260,7 +276,7 @@ class DatabaseManager:
                 with pd.HDFStore(fi, mode="a") as f:
                     self.log.info(
                         f"Following file is being removed: '{os.path.basename(fi)}' with key '{hi}'. "
-                        f"This could cause hdf5 file to not reclaim the newly emptied disk space."
+                        f"This could cause hdf5 file to not reclaim the emptied disk space."
                     )
                     f.remove(hi)
 
@@ -274,7 +290,7 @@ class DatabaseManager:
             ValueError: Todo.
         """
         self.log.info(
-            f"Available MySQL databases for {self.organism} in {self.ensembl_mysql_server} "
+            f"Available MySQL databases for {self.organism} in {self.genome_assembly} "
             f"assembly and {self.ensembl_release} release is being fetched."
         )
 
@@ -880,7 +896,7 @@ class DatabaseManager:
         if filter_mode in ["relevant", "relevant-database"]:
             # In order to prevent the search space to be too big and to prevent unnecessary data to be kept in the disk
             # and in the memory.
-            isin_list = ExternalDatabases(self).give_list_for_case(give_type="db")
+            isin_list = self.external_inst.give_list_for_case(give_type="db")
             available_databases = set(np.unique(res[db_name]))
             if not all([il in available_databases for il in isin_list]):
                 raise ValueError("Inconsistency between external yaml file and current state of DatabaseManager.")
@@ -1055,7 +1071,7 @@ class DatabaseManager:
             hierarchy = file_name_mysql(*args, **kwargs)
 
         return hierarchy, os.path.join(
-            self.local_repository, f"{self.organism}_assembly-{self.ensembl_mysql_server}.h5"
+            self.local_repository, f"{self.organism}_assembly-{self.genome_assembly}.h5"
         )
 
     def export_disk(self, df, hierarchy, file_path, overwrite: bool):
@@ -1084,7 +1100,7 @@ class DatabaseManager:
             # Then save the dataframe under the root, compressed.
             self.log.info(
                 f"Exporting to the following file '{base_file_path}' with key '{hierarchy}', "
-                f"{'compressed' if self.compress else 'uncompressed'}."
+                f"{'' if self.compress else 'uncompressed'}."
             )
             df.to_hdf(file_path, key=hierarchy, mode="a", **self._comp_hdf5)
 
@@ -1293,11 +1309,12 @@ class DatabaseManager:
             Todo.
         """
         df = pd.DataFrame()
-        for k in DB.mysql_port_and_assembly_priority.keys():
+        for k in DB.assembly_mysqlport_priority.keys():
             for j in self.available_form_of_interests:
                 for i in self.available_releases:
-                    self.log.info(f"Organism: {self.organism}, Assembly: {k}, Form: {j}, Ensembl Release: {i}")
-                    df_temp = self.change_server(k).change_release(i).change_form(j).get_db("external_database")
+                    self.log.info(f"Database content is being created for "
+                                  f"\'{self.organism}\', assembly \'{k}\', form \'{j}\', ensembl release \'{i}\'")
+                    df_temp = self.change_assembly(k).change_release(i).change_form(j).get_db("external_database")
                     df_temp["assembly"] = k
                     df_temp["release"] = i
                     df_temp["form"] = j
@@ -1306,202 +1323,40 @@ class DatabaseManager:
         df.reset_index(inplace=True, drop=True)
         return df
 
-    def create_external_all(self):
+    def create_external_all(self, return_mode):
         """Todo.
 
         Returns:
             Todo.
         """
-        ex = ExternalDatabases(self)
-        ass = ex.give_list_for_case(give_type="assembly")
+        ass = self.external_inst.give_list_for_case(give_type="assembly")
         df = pd.DataFrame()
-        assembly_priority = [DB.mysql_port_and_assembly_priority[i] for i in ass]
+        assembly_priority = [DB.assembly_mysqlport_priority[i]["Priority"] for i in ass]
 
         for i in [x for _, x in sorted(zip(assembly_priority, ass))]:  # sort according to priority
-            dm = self.change_server(i)
+            dm = self.change_assembly(i)
             df_temp = dm.get_db("external_relevant")
             df_temp["assembly"] = i
             df = pd.concat([df, df_temp])
-
         df.reset_index(drop=True, inplace=True)
-        compare_columns = [i for i in df.columns if i != "assembly"]
-        df.drop_duplicates(keep="first", inplace=True, ignore_index=True, subset=compare_columns)
+        compare_columns = [i for i in df.columns
+                           if i != "assembly" and not i.endswith("_identity")]  # 'ensembl_identity', 'xref_identity'
+        compare_columns_2 = compare_columns + ["assembly"]
 
-        # drop duplicates: note after transition to new assembly. ensembl does not assign new versions etc to the older
-        # keep the most priority one.
+        if return_mode == "all":
+            df.drop_duplicates(keep="first", inplace=True, ignore_index=True, subset=compare_columns_2)
+            return df
 
-        return df
+        elif return_mode == "unique":
+            df.drop_duplicates(keep="first", inplace=True, ignore_index=True, subset=compare_columns)
+            # drop duplicates: after transition to new assembly. ensembl does not assign new versions etc to the older
+            # keep the most priority one.
+            return df
 
-    # get assemblies, create df
-    #
+        elif return_mode == "duplicated":
+            df = df[df.duplicated(subset=compare_columns, keep=False)]
+            dfg = df.groupby(by=compare_columns)
+            return dfg
 
-
-class ExternalDatabases:
-    """Todo."""
-
-    def __init__(self, db_manager: DatabaseManager):
-        """Todo.
-
-        Args:
-            db_manager: Todo.
-        """
-        self.db_manager = db_manager
-        self.log = logging.getLogger("external")
-
-    def create_template_yaml(self):
-        """Todo.
-
-        Raises:
-            ValueError: Todo.
-        """
-
-        def list_to_str(iterable):
-            return ",".join(map(str, iterable))
-
-        df = self.db_manager.get_db("externalcontent")
-
-        r = dict()
-        database_id = {item: i for i, item in enumerate(sorted(np.unique(df["name_db"])))}
-        for a1 in sorted(np.unique(df["organism"])):
-            df_a1 = df[df["organism"] == a1]
-            for a2 in sorted(np.unique(df_a1["form"])):
-                df_a2 = df_a1[df_a1["form"] == a2]
-                for a3 in sorted(np.unique(df_a2["name_db"])):
-                    df_a3 = df_a2[df_a2["name_db"] == a3]
-                    for a4 in sorted(np.unique(df_a3["assembly"])):
-                        df_a4 = df_a3[df_a3["assembly"] == a4]
-                        a4_str = str(a4)
-
-                        if a1 not in r:
-                            r[a1] = dict()
-                        if a2 not in r[a1]:
-                            r[a1][a2] = dict()
-                        if a3 not in r[a1][a2]:
-                            r[a1][a2][a3] = {
-                                "Database Index": database_id[a3],
-                                "Potential Synonymous": "",
-                            }
-                            r[a1][a2][a3]["Assembly"] = dict()
-                        if a4_str not in r[a1][a2][a3]["Assembly"]:
-                            r[a1][a2][a3]["Assembly"][a4_str] = {
-                                "Ensembl release": list_to_str(sorted(np.unique(df_a4["release"]))),
-                                "Include": False,
-                            }
-                        else:
-                            raise ValueError
-
-        with open(self.file_name_yaml, "w") as yaml_file:
-            yaml.dump(r, yaml_file)
-
-        self.log.info(
-            f"File created on {self.file_name_yaml}\n"
-            f"Please edit the file based on requested external databases "
-            f"and add '_modified' to the file name. See package documentation for further detail."
-        )
-
-    @cached_property
-    def file_name_yaml(self):
-        """Todo.
-
-        Returns:
-            Todo.
-        """
-        return os.path.join(self.db_manager.local_repository, f"{self.db_manager.organism}_externals_template.yml")
-
-    @cached_property
-    def file_name_modified_yaml(self):
-        """Todo.
-
-        Returns:
-            Todo.
-        """
-        return os.path.join(self.db_manager.local_repository, f"{self.db_manager.organism}_externals_modified.yml")
-
-    def load_modified_yaml(self) -> dict:
-        """Todo.
-
-        Returns:
-            Todo.
-
-        Raises:
-            FileNotFoundError: Todo.
-        """
-        if not os.access(self.file_name_modified_yaml, os.R_OK):
-            td, tf = os.path.split(self.file_name_modified_yaml)
-            raise FileNotFoundError(
-                f"External database config '{tf}' is not found in provided temp directory: '{td}'. "
-                f"Either download from the GitHub repository, or create a template with "
-                f"`create_template_yaml` method and edit accordingly. "
-                f"See `create_template_yaml` explanation for details of editing procedure."
-            )
-
-        with open(self.file_name_modified_yaml) as yaml_file:
-            return yaml.safe_load(yaml_file)
-
-    def give_list_for_case(self, give_type: str) -> list:
-        """Todo.
-
-        Args:
-            give_type:
-                - ``'db'``: the method gives associated external database names of class' ``DatabaseManager``
-                  instance which has a certain the Ensembl release and the Ensembl assembly.
-
-                - ``'assembly'``: the method gives possible Ensembl assemblies of class' ``DatabaseManager``
-                  instance that has a certain the Ensembl release and has at least one external database
-                  defined in ``yaml`` config file.
-
-        Returns:
-            Todo.
-
-        Raises:
-            ValueError: Todo.
-        """
-        the_dict_loaded = self.load_modified_yaml()
-        the_dict = the_dict_loaded[self.db_manager.organism][self.db_manager.form]
-
-        result = set()
-        for db_name in the_dict:
-            for asm in the_dict[db_name]["Assembly"]:
-                item = the_dict[db_name]["Assembly"][asm]
-                res_ens = map(int, item["Ensembl release"].split(","))
-                if self.db_manager.ensembl_release in res_ens and item["Include"]:
-                    if give_type == "db" and int(asm) == self.db_manager.ensembl_mysql_server:
-                        result.add(db_name)
-                    elif give_type == "db":
-                        pass
-                    elif give_type == "assembly":
-                        result.add(int(asm))
-                    else:
-                        raise ValueError
-
-        return list(result)
-
-    def look_all_external_content(
-        self, assembly: int, form: str, shrink_dataframes: float = None, narrowed_externals: bool = False
-    ) -> dict:
-        """Todo.
-
-        Args:
-            assembly: Todo.
-            form: Todo.
-            shrink_dataframes: Todo.
-            narrowed_externals: Todo.
-
-        Returns:
-            Todo.
-        """
-        dm = self.db_manager.change_form(form).change_server(assembly)
-        rel_to_df = sorted(dm.available_releases, reverse=True)
-
-        self.log.info(f"Comparison data frame is being constructed for releases: {rel_to_df}.")
-        ex_all = pd.DataFrame()
-        for rel in sorted(rel_to_df, reverse=True):
-            db_man_rel = dm.change_release(rel)
-            ex_rel = db_man_rel.get_db("external_relevant" if narrowed_externals else "external")
-            if shrink_dataframes is not None:
-                ex_rel = ex_rel.sample(frac=shrink_dataframes)
-            ex_all = pd.concat([ex_all, ex_rel], axis=0)
-        ex_all.reset_index(inplace=True, drop=True)
-
-        b = sorted(np.unique(ex_all["name_db"]))
-        return {i: ex_all[ex_all["name_db"] == i] for i in b}
+        else:
+            raise ValueError

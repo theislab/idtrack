@@ -22,10 +22,15 @@ class DB:
     mysql_host = "ensembldb.ensembl.org"
     myqsl_user = "anonymous"
     mysql_togo = ""
-    mysql_port_and_assembly_priority = {  # assembly -> [mysql_port, assembly priority]
-        38: [3306, 1, 48],  # From Ensembl 48 onwards only
-        37: [3337, 2, 79],  # Databases for archive GRCh37 - release 79 onwards
-    }
+    assembly_mysqlport_priority = {  # assembly -> [mysql_port, assembly priority]
+        38: {"Port": 3306, "Priority": 1, "MinRelease": 48},  # From Ensembl 48 onwards only
+        37: {"Port": 3337, "Priority": 2, "MinRelease": 79},  # Databases for archive GRCh37 - release 79 onwards
+    }  
+    # # Priority should follow 1, 2, 3
+    assembly_priority = list()
+    for ap1 in assembly_mysqlport_priority:
+        assembly_priority.append(assembly_mysqlport_priority[ap1]["Priority"])
+    assembly_priority = sorted(assembly_priority, reverse=True)
 
     # Protected Non-int Version Strings
     synonym_id_nodes_prefix = "synonym_id::"
@@ -36,18 +41,28 @@ class DB:
     # Node Types
     node_type_str = "node_type"
     nts_external = "external"
+    forms_in_order = ["gene", "transcript", "translation"]
     nts_assembly = {
         j: {i: f"assembly_{j}_ensembl_{i}" for i in ["gene", "transcript", "translation"]}
-        for j in mysql_port_and_assembly_priority
-    }
-    nts_ensembl = {i: f"ensembl_{i}" for i in ["gene", "transcript", "translation"]}
+        for j in assembly_mysqlport_priority
+    }  # assembly_37_ensembl_gene
+    nts_ensembl = {i: f"ensembl_{i}" for i in ["gene", "transcript", "translation"]}  # ensembl_gene
     nts_base_ensembl = {i: f"base_ensembl_{i}" for i in ["gene", "transcript", "translation"]}
-    nts_non_external_ensembl = set(
-        list(nts_ensembl.values())
-        + list(nts_base_ensembl.values())
-        + [j for _, i in nts_assembly.items() for _, j in i.items()]
-    )
+    # Only gene assembly genes
+    nts_assembly_gene = set()
+    for ntas1 in nts_assembly:
+        nts_assembly_gene.add(nts_assembly[ntas1]["gene"])
+    nts_assembly_flatten = set()
+    for ntas1 in nts_assembly:
+        for ntas2 in nts_assembly[ntas1]:
+            nts_assembly_flatten.add(nts_assembly[ntas1][ntas2])
+    backbone_form = "gene"
+    
     # Edge/Note Attributes:
-    # Todo:
+    connection_dict: str = "connection"
+    conn_dict_str_ensembl_base = "ensembl_base"  # as a database in connection_dict
 
-    external_search_settings = {"jump_limit": 2, "synonymous_max_depth": 3, "backbone_node_type": "ensembl_gene"}
+    # PathFinder Settings
+    external_search_settings = {"jump_limit": 2,
+                                "synonymous_max_depth": 3,
+                                "nts_backbone": nts_ensembl[backbone_form]}
