@@ -64,7 +64,7 @@ class DatabaseManager:
         }
 
         # Instance attributes
-        self.log = logging.getLogger("dbmanager")
+        self.log = logging.getLogger("database_manager")
         self.local_repository = local_repository
         self.ensembl_release = int(ensembl_release)
         self.organism = organism

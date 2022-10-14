@@ -135,7 +135,7 @@ class Track:
                                 if from_release is not None:
                                     te = graph[_the_id][_next_neighbour][0][DB.connection_dict]
                                     # te follows the following structure. {database12: {assembly12: {ens_rel12}}}
-                                    # TODO: create cache dict for
+                                    # TODO: create cache dict for below set on edges: 'active_releases'
                                     if from_release not in {k for i in te for j in te[i] for k in te[i][j]}:
                                         # Do not care which assembly or which database.
                                         continue
@@ -1283,8 +1283,8 @@ class Track:
         result = list()
 
         for ind, gl in enumerate(gene_list):
-            if verbose and (ind % 100 == 0 or ind > len(gene_list) - 5):
-                progress_bar(ind, len(gene_list) - 1)
+            progress_bar(ind, len(gene_list) - 1, frequency=0.01, verbose=verbose)
+            
             new_gl, is_converted = self.graph.node_name_alternatives(gl)
 
             # As the last resort, try to look at among synonyms.

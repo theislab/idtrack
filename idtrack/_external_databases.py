@@ -36,7 +36,7 @@ class ExternalDatabases:
         self.form = form
         self.ensembl_release = ensembl_release
         self.genome_assembly = genome_assembly
-        self.log = logging.getLogger("external")
+        self.log = logging.getLogger("external_databases")
 
     def create_template_yaml(self, df: pd.DataFrame):
         """Todo.

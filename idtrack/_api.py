@@ -22,7 +22,7 @@ class API():
     
     def __init__(self, local_repository: str) -> None:
         # Instance attributes
-        self.log = logging.getLogger("graph_maker")
+        self.log = logging.getLogger("api")
         self.logger_configured = False
         self.local_repository = local_repository
         self.track = None

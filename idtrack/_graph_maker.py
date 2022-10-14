@@ -342,8 +342,8 @@ class GraphMaker:
                 for f in ["gene"]:
                     # transcript and translation does not have base.
                     # It causes the tracking algorithm unnecessarily process too many possibilities.
-                    for er in self.db_manager.available_releases:
-
+                    for er in self.db_manager.change_assembly(aa).available_releases:
+                            
                         db_manager = self.db_manager.change_form(f).change_assembly(aa).change_release(er)
 
                         ids_db = db_manager.get_db("ids")
@@ -371,12 +371,14 @@ class GraphMaker:
 
         new_form = "-".join(form_list)
         g.graph["name"] = (f"{self.db_manager.organism}_{self.db_manager.ensembl_release}_{new_form}",)
-        g.graph["type"] = new_form
+        g.graph["type"] = new_form  # Need to update this, as 'construct_graph_form' puts the form here previously.
         g.graph["narrow_external"] = narrow_external
         g.graph["misplaced_external_entry"] = set(misplaced_external_entry)
 
         # Merge the nodes that are the same when they are convert into lowercase/uppercase.
         g = self._merge_nodes_with_the_same_in_lower_case(g)
+
+        # TODO: available_releases dict for those edges which have 'connection' as a key.
 
         # Run cached_property functions to save them into the disk.
         _ = g.combined_edges

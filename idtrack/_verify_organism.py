@@ -20,7 +20,7 @@ class VerifyOrganism:
         Args:
             organism_query: Todo.
         """
-        self.log = logging.getLogger("verify")
+        self.log = logging.getLogger("verify_organism")
         self._connection_timeout = 10
         self._reading_timeout = 10
         self.organism_query = organism_query.lower()

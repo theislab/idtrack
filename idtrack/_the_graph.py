@@ -35,7 +35,7 @@ class TheGraph(nx.MultiDiGraph):
     def rev(self):
         return self.reverse(copy=False)
 
-    def test_node_consistency(self, verbose=False):
+    def is_node_consistency_robust(self, verbose=False):
         for i in self.nodes:
             for j in self.neighbors(i):
                 if self.nodes[i][DB.node_type_str] == self.nodes[j][DB.node_type_str] \
@@ -369,6 +369,9 @@ class TheGraph(nx.MultiDiGraph):
             b = list(a)
             res.append([b[0][1], b[-1][1]])
         return res
+
+    def available_releases_given_database_assembly(self, db, asy):
+        return {j3 for i in self.node_trios for j1, j2, j3 in self.node_trios[i] if j1==db and j2==asy}
 
     @cached_property
     def node_trios(self):  # Uses so much unnecessary memory
