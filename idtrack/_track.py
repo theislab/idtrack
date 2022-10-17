@@ -10,7 +10,7 @@ import logging
 import warnings
 from collections import Counter
 from functools import cached_property
-from typing import Any, Callable, Iterable, Optional, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 import networkx as nx
 import numpy as np
@@ -1066,7 +1066,7 @@ class Track:
         if not len(dict_of_dict) > 0:
             raise ValueError
 
-        minimum_scores: dict[tuple, list] = dict()
+        minimum_scores: Dict[tuple, list] = dict()
 
         for dct in dict_of_dict:
             for target in dict_of_dict[dct]["final_conversion"]["final_elements"]:
@@ -1285,8 +1285,8 @@ class Track:
         syn_ids = [i[-1][1] for i in syn_ids_path]
 
         if len(syn_ids) == 0:
-            sl1: list[Any] = [np.nan]
-            sl2: list[Any] = [np.nan]
+            sl1: List[Any] = [np.nan]
+            sl2: List[Any] = [np.nan]
         else:
             conversion_metrics = [_final_conversion_helper(converted, cnvt, i) for i in syn_ids_path]
             sl1, sl2 = list(map(list, zip(*conversion_metrics)))

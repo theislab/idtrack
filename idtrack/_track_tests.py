@@ -234,7 +234,7 @@ class TrackTests(Track, ABC):
         ids_to = set(self.graph.get_id_list(to_database, self.graph.graph["genome_assembly"], to_release))
         ids_to_s = {self.graph.nodes[i]["ID"] for i in ids_to} if to_database == "ensembl_gene" else set()
 
-        parameters: dict[str, Union[bool, str, int]] = {
+        parameters: Dict[str, Union[bool, str, int]] = {
             "from_release": from_release,
             "from_assembly": from_assembly,
             "from_database": from_database,
@@ -414,7 +414,7 @@ class TrackTests(Track, ABC):
 
             df = dm.get_db("external_relevant")
             df = df[df["name_db"] == database]
-            base_dict: dict[str, set] = dict()
+            base_dict: Dict[str, set] = dict()
             for _, item in df.iterrows():
                 if item["graph_id"] not in base_dict:
                     base_dict[item["graph_id"]] = set()
