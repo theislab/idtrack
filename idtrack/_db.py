@@ -11,6 +11,10 @@ class DB:
     id_ver_delimiter = "."
     first_version: int = 1  # just and arbitrary assumption
 
+    # FTP and REST API Timeouts
+    connection_timeout = 10
+    reading_timeout = 10
+
     # FTP server from which the above databases will be downloaded.
     ensembl_ftp_base = "ftp.ensembl.org"
 
@@ -25,7 +29,7 @@ class DB:
     assembly_mysqlport_priority = {  # assembly -> [mysql_port, assembly priority]
         38: {"Port": 3306, "Priority": 1, "MinRelease": 48},  # From Ensembl 48 onwards only
         37: {"Port": 3337, "Priority": 2, "MinRelease": 79},  # Databases for archive GRCh37 - release 79 onwards
-    }  
+    }
     # # Priority should follow 1, 2, 3
     assembly_priority = list()
     for ap1 in assembly_mysqlport_priority:
@@ -57,12 +61,10 @@ class DB:
         for ntas2 in nts_assembly[ntas1]:
             nts_assembly_flatten.add(nts_assembly[ntas1][ntas2])
     backbone_form = "gene"
-    
+
     # Edge/Note Attributes:
     connection_dict: str = "connection"
     conn_dict_str_ensembl_base = "ensembl_base"  # as a database in connection_dict
 
     # PathFinder Settings
-    external_search_settings = {"jump_limit": 2,
-                                "synonymous_max_depth": 3,
-                                "nts_backbone": nts_ensembl[backbone_form]}
+    external_search_settings = {"jump_limit": 2, "synonymous_max_depth": 3, "nts_backbone": nts_ensembl[backbone_form]}

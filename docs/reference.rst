@@ -6,6 +6,13 @@ Reference
     :depth: 1
     :backlinks: none
 
+API
+***
+
+.. autoclass:: idtrack._api.API
+    :members:
+    :private-members:
+    :show-inheritance: True
 
 DatabaseManager
 ***************
@@ -18,7 +25,7 @@ DatabaseManager
 ExternalDatabases
 *****************
 
-.. autoclass:: idtrack._database_manager.ExternalDatabases
+.. autoclass:: idtrack._external_databases.ExternalDatabases
     :members:
     :private-members:
     :show-inheritance: True
@@ -31,10 +38,18 @@ Track
     :private-members:
     :show-inheritance:
 
-Graph
-*****
+TheGraph
+********
 
-.. autoclass:: idtrack._graph.Graph
+.. autoclass:: idtrack._the_graph.TheGraph
+    :members:
+    :private-members:
+    :show-inheritance:
+
+GraphMaker
+**********
+
+.. autoclass:: idtrack._graph_maker.GraphMaker
     :members:
     :private-members:
     :show-inheritance:
@@ -55,14 +70,6 @@ VerifyOrganism
     :private-members:
     :show-inheritance:
 
-Dataset
-*******
-
-.. autoclass:: idtrack._dataset.Dataset
-    :members:
-    :private-members:
-    :show-inheritance:
-
 DB
 **
 
@@ -71,13 +78,8 @@ DB
     :private-members:
     :show-inheritance:
 
-Functions
-*********
-
-.. automodule:: idtrack._functions
-    :members:
-    :private-members:
-    :show-inheritance:
+Verbose
+*******
 
 .. automodule:: idtrack._verbose
     :members:

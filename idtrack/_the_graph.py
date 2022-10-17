@@ -3,25 +3,26 @@
 # Kemal Inecik
 # k.inecik@gmail.com
 
-import logging
+import copy
 import itertools
+import logging
 import re
-import numpy as np
 from collections import Counter
-
-import networkx as nx
 from functools import cached_property
 from typing import Union
+
+import networkx as nx
+import numpy as np
 
 from ._db import DB
 
 
 class TheGraph(nx.MultiDiGraph):
+    """Todo."""
 
     def __init__(self, *args, **kwargs):
         """Todo."""
-        # SubClass initialization
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)  # SubClass initialization
 
         # Other variables
         self.regex_pattern = re.compile(r"^(.+)(_|-|\.)[0-9]+$")
@@ -29,62 +30,124 @@ class TheGraph(nx.MultiDiGraph):
         self.available_forms = None
 
     def attach_included_forms(self, available_forms):
+        """Todo.
+
+        Args:
+            available_forms: Todo.
+        """
         self.available_forms = available_forms
 
     @cached_property
     def rev(self):
+        """Todo.
+
+        Returns:
+            Todo.
+        """
         return self.reverse(copy=False)
 
     def is_node_consistency_robust(self, verbose=False):
+        """Todo.
+
+        Args:
+            verbose: Todo.
+
+        Returns:
+            Todo.
+        """
         for i in self.nodes:
             for j in self.neighbors(i):
-                if self.nodes[i][DB.node_type_str] == self.nodes[j][DB.node_type_str] \
-                        and self.nodes[i][DB.node_type_str] != DB.nts_ensembl["gene"]:
+                if (
+                    self.nodes[i][DB.node_type_str] == self.nodes[j][DB.node_type_str]
+                    and self.nodes[i][DB.node_type_str] != DB.nts_ensembl["gene"]
+                ):
                     if verbose:
-                        self.log.warning(f"Neighbor nodes (not backbone) has similar node type: \'{i}\', \'{j}\'")
+                        self.log.warning(f"Neighbor nodes (not backbone) has similar node type: '{i}', '{j}'")
                     return False
 
                 elif len(self[i][j]) != 1:
                     if verbose:
-                        self.log.warning(f"Multiple edges between \'{i}\' and \'{j}\'")
+                        self.log.warning(f"Multiple edges between '{i}' and '{j}'")
                     return False
         return True
 
     @cached_property
     def combined_edges(self):
+        """Todo.
+
+        Returns:
+            Todo.
+        """
         self.log.info(f"Cached properties being calculated: {'combined_edges'}")
         # does not have assembly_specific_genes and ensembl_gene
         result = dict()
         result = TheGraph._combined_edges(self.nodes, self, result)
         return result
-    
+
     @cached_property
     def combined_edges_genes(self):
-        self.log.info(f"Cached properties being calculated: {'_combined_edges_genes'}")
+        """Todo.
+
+        Returns:
+            Todo.
+        """
+        self.log.info(f"Cached properties being calculated: {'combined_edges_genes'}")
         non_captured_genes = [nd for nd in self.nodes if self.nodes[nd][DB.node_type_str] == DB.nts_ensembl["gene"]]
-        assert all([n not in self.combined_edges and n not in self.combined_edges_assembly_specific_genes 
-                    for n in non_captured_genes]) 
+        assert all(
+            [
+                n not in self.combined_edges and n not in self.combined_edges_assembly_specific_genes
+                for n in non_captured_genes
+            ]
+        )
         result = dict()
         result = TheGraph._combined_edges(non_captured_genes, self.rev, result)
-        return result
-    
+        return {i: TheGraph._combined_edges_genes_helper(result[i]) for i in result}
+
     @cached_property
     def combined_edges_assembly_specific_genes(self):
-        self.log.info(f"Cached properties being calculated: {'_combined_edges_assembly_specific_genes'}")
-        non_captured_genes = [nd for nd in self.nodes 
-                              if nd not in self.combined_edges
-                                  and self.nodes[nd][DB.node_type_str] != DB.nts_ensembl["gene"]
-                                  ]
+        """Todo.
+
+        Raises:
+            ValueError: Todo.
+
+        Returns:
+            Todo.
+        """
+        self.log.info(f"Cached properties being calculated: {'combined_edges_assembly_specific_genes'}")
+        non_captured_genes = [
+            nd
+            for nd in self.nodes
+            if nd not in self.combined_edges and self.nodes[nd][DB.node_type_str] != DB.nts_ensembl["gene"]
+        ]
         if not all([self.nodes[ncg][DB.node_type_str] in DB.nts_assembly_gene for ncg in non_captured_genes]):
-            raise ValueError       
+            raise ValueError
         result = dict()
         result = TheGraph._combined_edges(non_captured_genes, self.rev, result)
-        return result
+        return {i: TheGraph._combined_edges_genes_helper(result[i]) for i in result}
 
     @staticmethod
-    def _combined_edges(node_list: Union[nx.classes.reportviews.NodeView, list, set], 
-                        the_graph: nx.MultiDiGraph, 
-                        result: dict):
+    def _combined_edges_genes_helper(the_result):
+        """Todo.
+
+        Args:
+            the_result: Todo.
+
+        Returns:
+            Todo.
+        """
+        output = dict()
+        for i in the_result:
+            for j in the_result[i]:
+                if j not in output:
+                    output[j] = set()
+                output[j].update(the_result[i][j])
+        output = {DB.nts_assembly[i][DB.backbone_form]: copy.deepcopy(output) for i in output}
+        return output
+
+    @staticmethod
+    def _combined_edges(
+        node_list: Union[nx.classes.reportviews.NodeView, list, set], the_graph: nx.MultiDiGraph, result: dict
+    ):
         for i in node_list:
             for j in the_graph.neighbors(i):
 
@@ -139,6 +202,14 @@ class TheGraph(nx.MultiDiGraph):
         """
 
         def compare_lowers(id_to_find):
+            """Todo.
+
+            Args:
+                id_to_find: Todo.
+
+            Returns:
+                Todo.
+            """
             lower_id_find = id_to_find.lower()
             if lower_id_find in self.lower_chars_graph:
                 return self.lower_chars_graph[lower_id_find], True
@@ -146,7 +217,14 @@ class TheGraph(nx.MultiDiGraph):
                 return None, False
 
         def check_variation(id_str):
+            """Todo.
 
+            Args:
+                id_str: Todo.
+
+            Returns:
+                Todo.
+            """
             lower_id, is_lower_found = compare_lowers(id_str)
             if is_lower_found:
                 return lower_id, True
@@ -184,6 +262,14 @@ class TheGraph(nx.MultiDiGraph):
 
     @staticmethod
     def _possible_alternatives(the_id):
+        """Todo.
+
+        Args:
+            the_id: Todo.
+
+        Returns:
+            Todo.
+        """
         char_indices = [ind for ind, i in enumerate(the_id) if i in ["-", "_"]]
         possible_alternatives = list()
         if len(char_indices) > 0:
@@ -200,10 +286,23 @@ class TheGraph(nx.MultiDiGraph):
 
     @cached_property
     def get_active_ranges_of_id(self):
+        """Todo.
+
+        Returns:
+            Todo.
+        """
         self.log.info(f"Cached properties being calculated: {'get_active_ranges_of_id'}")
         return {n: self._get_active_ranges_of_id(n) for n in self.nodes}
 
     def _get_active_ranges_of_id(self, input_id):
+        """Todo.
+
+        Args:
+            input_id: Todo.
+
+        Returns:
+            Todo.
+        """
 
         def _get_active_ranges_of_id_nonbackbone(the_id):  # HELLO #
             """Todo.
@@ -214,13 +313,12 @@ class TheGraph(nx.MultiDiGraph):
             Returns:
                 Todo.
             """
-            
             the_node_type = self.nodes[the_id][DB.node_type_str]
             if the_node_type in DB.nts_assembly_gene:
                 rd = self.combined_edges_assembly_specific_genes[the_id]
             else:
                 rd = self.combined_edges[the_id]
-            rels =  sorted({s for p in rd for r in rd[p] for s in rd[p][r]})
+            rels = sorted({s for p in rd for r in rd[p] for s in rd[p][r]})
             return TheGraph.list_to_ranges(rels)
 
         def _get_active_ranges_of_id_backbone(the_id):
@@ -273,9 +371,9 @@ class TheGraph(nx.MultiDiGraph):
                     else:
                         narrowed.append(ens_rel)
                         active_state = False
-            narrowed = [narrowed[i: i + 2] for i in range(0, len(narrowed), 2)]
+            narrowed = [narrowed[i : i + 2] for i in range(0, len(narrowed), 2)]
             # outputs always increasing, inclusive ranges, for get_intersecting_ranges
-            
+
             return narrowed
 
         if self.nodes[input_id][DB.node_type_str] == DB.external_search_settings["nts_backbone"]:
@@ -284,7 +382,17 @@ class TheGraph(nx.MultiDiGraph):
             return _get_active_ranges_of_id_nonbackbone(input_id)
 
     def get_active_ranges_of_id_ensembl_all_inclusive(self, the_id):
-        
+        """Todo.
+
+        Args:
+            the_id: Todo.
+
+        Raises:
+            ValueError: Todo.
+
+        Returns:
+            Todo.
+        """
         ndt = self.nodes[the_id][DB.node_type_str]
         if ndt == DB.external_search_settings["nts_backbone"]:
             narrowed = self.get_active_ranges_of_id[the_id]
@@ -299,11 +407,10 @@ class TheGraph(nx.MultiDiGraph):
             # Sanity check with externals/other forms etc.
             if not all([TheGraph.is_point_in_range(narrowed, i) for i in comb_reduced[self.graph["genome_assembly"]]]):
                 raise ValueError
-            
-            other_assemblies = [j for i in comb_reduced for j in comb_reduced[i] 
-                                if i != self.graph["genome_assembly"]]
+
+            other_assemblies = [j for i in comb_reduced for j in comb_reduced[i] if i != self.graph["genome_assembly"]]
             other_assemblies = TheGraph.list_to_ranges(other_assemblies)
-            
+
             return TheGraph.compact_ranges(narrowed + other_assemblies)
         elif ndt in DB.nts_assembly_gene:
             return self.get_active_ranges_of_id[the_id]
@@ -319,19 +426,20 @@ class TheGraph(nx.MultiDiGraph):
 
         Returns:
             Todo.
+
+        Raises:
+            ValueError: Todo.
         """
         if self.nodes[from_id][DB.node_type_str] != DB.external_search_settings["nts_backbone"]:
             raise ValueError
-        
+
         return list(
             {
                 an_edge["old_release"]
                 if (not np.isinf(an_edge["new_release"]) and not reverse)
                 else an_edge["new_release"]
                 for node_after in nx.neighbors(self if not reverse else self.rev, from_id)
-                for mei, an_edge in (self if not reverse else self.rev)
-                .get_edge_data(from_id, node_after)
-                .items()
+                for mei, an_edge in (self if not reverse else self.rev).get_edge_data(from_id, node_after).items()
                 if (
                     self.nodes[node_after][DB.node_type_str] == self.nodes[from_id][DB.node_type_str]
                     and (
@@ -371,7 +479,16 @@ class TheGraph(nx.MultiDiGraph):
         return res
 
     def available_releases_given_database_assembly(self, db, asy):
-        return {j3 for i in self.node_trios for j1, j2, j3 in self.node_trios[i] if j1==db and j2==asy}
+        """Todo.
+
+        Args:
+            db: Todo.
+            asy: Todo.
+
+        Returns:
+            Todo.
+        """
+        return {j3 for i in self.node_trios for j1, j2, j3 in self.node_trios[i] if j1 == db and j2 == asy}
 
     @cached_property
     def node_trios(self):  # Uses so much unnecessary memory
@@ -387,9 +504,6 @@ class TheGraph(nx.MultiDiGraph):
 
         Returns:
             Todo.
-
-        Raises:
-            ValueError: Todo.
         """
 
         def non_inf_range(l1: int, l2: Union[float, int]):
@@ -402,11 +516,14 @@ class TheGraph(nx.MultiDiGraph):
         # external ise database ismi digerleriyse node_type
         the_node_type = self.nodes[the_id][DB.node_type_str]
         if the_node_type == DB.nts_ensembl["gene"]:
-            return {(the_node_type, self.graph["genome_assembly"], k)
-                    for i, j in self.get_active_ranges_of_id[the_id] for k in non_inf_range(i, j)}
+            return {
+                (the_node_type, self.graph["genome_assembly"], k)
+                for i, j in self.get_active_ranges_of_id[the_id]
+                for k in non_inf_range(i, j)
+            }
         elif the_node_type in DB.nts_assembly_gene:
             rd = self.combined_edges_assembly_specific_genes[the_id]
-            return {(p, r, s) for p in rd for r in rd[p] for s in rd[p][r]} 
+            return {(p, r, s) for p in rd for r in rd[p] for s in rd[p][r]}
         else:
             rd = self.combined_edges[the_id]
             return {(p, r, s) for p in rd for r in rd[p] for s in rd[p][r]}
@@ -501,12 +618,9 @@ class TheGraph(nx.MultiDiGraph):
         """
         self.log.info(f"Cached properties being calculated: {'available_external_databases'}")
         return {
-            j
-            for i in self.nodes
-            if self.nodes[i][DB.node_type_str] == DB.nts_external
-            for j in self.combined_edges[i]
+            j for i in self.nodes if self.nodes[i][DB.node_type_str] == DB.nts_external for j in self.combined_edges[i]
         }
-        
+
     @cached_property
     def available_external_databases_assembly(self):
         """Todo.
@@ -555,11 +669,16 @@ class TheGraph(nx.MultiDiGraph):
 
     @cached_property
     def available_genome_assemblies(self):
+        """Todo.
+
+        Returns:
+            Todo.
+        """
         self.log.info(f"Cached properties being calculated: {'available_genome_assemblies'}")
         output = set()
         for td in (self.combined_edges, self.combined_edges_genes, self.combined_edges_assembly_specific_genes):
             output.update({k for i in td for j in td[i] for k in td[i][j]})
-        
+
         return output
 
     def get_id_list(self, database: str, assembly: int, release: int) -> list:
@@ -600,6 +719,5 @@ class TheGraph(nx.MultiDiGraph):
         return {
             i
             for i in self.nodes
-            if self.nodes[i][DB.node_type_str] == DB.nts_external
-            and database_name in self.combined_edges[i]
+            if self.nodes[i][DB.node_type_str] == DB.nts_external and database_name in self.combined_edges[i]
         }

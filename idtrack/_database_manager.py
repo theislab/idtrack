@@ -3,8 +3,8 @@
 # Kemal Inecik
 # k.inecik@gmail.com
 
-import logging
 import copy
+import logging
 import os
 import re
 from collections import Counter
@@ -53,8 +53,9 @@ class DatabaseManager:
         # MYSQL Settings
         if genome_assembly is None:
             genome_assembly = sorted(
-                (DB.assembly_mysqlport_priority[i]['Priority'],i) for i in DB.assembly_mysqlport_priority)[0][1]
-        
+                (DB.assembly_mysqlport_priority[i]["Priority"], i) for i in DB.assembly_mysqlport_priority
+            )[0][1]
+
         self.genome_assembly = genome_assembly
         self.mysql_settings = {
             "host": DB.mysql_host,
@@ -71,7 +72,7 @@ class DatabaseManager:
         self.form = form
         self.compress = compress
         self.store_raw_always = store_raw_always
-        default_min_er = max([DB.assembly_mysqlport_priority[i]["MinRelease"] for i in DB.assembly_mysqlport_priority])
+        default_min_er = max(DB.assembly_mysqlport_priority[i]["MinRelease"] for i in DB.assembly_mysqlport_priority)
         self.ignore_before = ignore_before if ignore_before else default_min_er
         self.ignore_after = ignore_after if ignore_after else np.inf
 
@@ -94,19 +95,24 @@ class DatabaseManager:
                 and os.access(self.local_repository, os.W_OK)
                 and os.access(self.local_repository, os.R_OK)
             ),
-            not (self.ensembl_release < DB.assembly_mysqlport_priority[self.genome_assembly]["MinRelease"])
+            not (self.ensembl_release < DB.assembly_mysqlport_priority[self.genome_assembly]["MinRelease"]),
         )
         if not all(checkers):
-            raise ValueError(f"\'DatabaseManager\' could not pass the \'checkers\': {checkers}")
+            raise ValueError(f"'DatabaseManager' could not pass the 'checkers': {checkers}")
 
     @cached_property
     def external_inst(self):
+        """Todo.
+
+        Returns:
+            Todo.
+        """
         return ExternalDatabases(
             organism=self.organism,
             ensembl_release=self.ensembl_release,
             form=self.form,
             local_repository=self.local_repository,
-            genome_assembly=self.genome_assembly
+            genome_assembly=self.genome_assembly,
         )
 
     @cached_property
@@ -215,7 +221,7 @@ class DatabaseManager:
         """Todo.
 
         Args:
-            ensembl_mysql_server: Todo.
+            genome_assembly: Todo.
 
         Returns:
             Todo.
@@ -254,7 +260,7 @@ class DatabaseManager:
 
         with pd.HDFStore(file_path, mode="r") as f:
             keys = f.keys()
-        downloaded_rels = list(set([int(pattern.search(i).groups()[0]) for i in keys if pattern.search(i)]))
+        downloaded_rels = list({int(pattern.search(i).groups()[0]) for i in keys if pattern.search(i)})
 
         for dr in downloaded_rels:
             if dr >= self.ensembl_release:
@@ -1070,9 +1076,7 @@ class DatabaseManager:
         else:
             hierarchy = file_name_mysql(*args, **kwargs)
 
-        return hierarchy, os.path.join(
-            self.local_repository, f"{self.organism}_assembly-{self.genome_assembly}.h5"
-        )
+        return hierarchy, os.path.join(self.local_repository, f"{self.organism}_assembly-{self.genome_assembly}.h5")
 
     def export_disk(self, df, hierarchy, file_path, overwrite: bool):
         """Todo.
@@ -1099,8 +1103,8 @@ class DatabaseManager:
                         f.remove(hierarchy)
             # Then save the dataframe under the root, compressed.
             self.log.info(
-                f"Exporting to the following file '{base_file_path}' with key '{hierarchy}', "
-                f"{'' if self.compress else 'uncompressed'}."
+                f"Exporting to the following file '{base_file_path}' with key '{hierarchy}'"
+                f"{'' if self.compress else ', uncompressed'}."
             )
             df.to_hdf(file_path, key=hierarchy, mode="a", **self._comp_hdf5)
 
@@ -1312,8 +1316,10 @@ class DatabaseManager:
         for k in DB.assembly_mysqlport_priority.keys():
             for j in self.available_form_of_interests:
                 for i in self.available_releases:
-                    self.log.info(f"Database content is being created for "
-                                  f"\'{self.organism}\', assembly \'{k}\', form \'{j}\', ensembl release \'{i}\'")
+                    self.log.info(
+                        f"Database content is being created for "
+                        f"'{self.organism}', assembly '{k}', form '{j}', ensembl release '{i}'"
+                    )
                     df_temp = self.change_assembly(k).change_release(i).change_form(j).get_db("external_database")
                     df_temp["assembly"] = k
                     df_temp["release"] = i
@@ -1323,11 +1329,17 @@ class DatabaseManager:
         df.reset_index(inplace=True, drop=True)
         return df
 
-    def create_external_all(self, return_mode):
+    def create_external_all(self, return_mode: str):
         """Todo.
+
+        Args:
+            return_mode: Todo.
 
         Returns:
             Todo.
+
+        Raises:
+            ValueError: Todo.
         """
         ass = self.external_inst.give_list_for_case(give_type="assembly")
         df = pd.DataFrame()
@@ -1339,8 +1351,9 @@ class DatabaseManager:
             df_temp["assembly"] = i
             df = pd.concat([df, df_temp])
         df.reset_index(drop=True, inplace=True)
-        compare_columns = [i for i in df.columns
-                           if i != "assembly" and not i.endswith("_identity")]  # 'ensembl_identity', 'xref_identity'
+        compare_columns = [
+            i for i in df.columns if i != "assembly" and not i.endswith("_identity")
+        ]  # 'ensembl_identity', 'xref_identity'
         compare_columns_2 = compare_columns + ["assembly"]
 
         if return_mode == "all":

@@ -67,11 +67,13 @@ class GraphMaker:
         """
         raise NotImplementedError
 
-    def construct_graph(self,
-                        narrow: bool = False,
-                        form_list: list = None,
-                        narrow_external: bool = True,
-                        ) -> TheGraph:
+    # flake8: noqa: C901
+    def construct_graph(
+        self,
+        narrow: bool = False,
+        form_list: list = None,
+        narrow_external: bool = True,
+    ) -> TheGraph:
         """Main method to construct the graph.
 
         It creates the graph with Ensembl gene, transcript and protein information. It also adds
@@ -111,9 +113,9 @@ class GraphMaker:
             Raises:
                 ValueError: If there are more than one edge between the source and the target node.
             """
-            if not n1 in g.nodes or not n2 in g.nodes:
+            if n1 not in g.nodes or n2 not in g.nodes:
                 raise ValueError(n1, n2, db12, a12, er12)
-            
+
             if not g.has_edge(n1, n2):
                 n_edge_att = {DB.connection_dict: {db12: {a12: {er12}}}}
                 g.add_edge(n1, n2, **n_edge_att)
@@ -314,18 +316,18 @@ class GraphMaker:
 
                             if anid and anid not in g.nodes:
                                 node_attributes_4 = {
-                                    DB.node_type_str: DB.nts_assembly[aa][f], 
+                                    DB.node_type_str: DB.nts_assembly[aa][f],
                                     "ID": GraphMaker.split_id(anid, "ID"),
                                     "Version": GraphMaker.split_id(anid, "Version"),
                                 }
                                 g.add_node(anid, **node_attributes_4)
 
                         for e1_str, e2_str in (("transcript", "gene"), ("translation", "transcript")):
-                            
-                            new1, new2 = item[e1_str], item[e2_str]                            
+
+                            new1, new2 = item[e1_str], item[e2_str]
                             if new1 and new2:
                                 if not g.has_edge(new1, new2):
-                                    added_edge += 1    
+                                    added_edge += 1
                                 add_edge(new1, new2, DB.nts_assembly[aa][e1_str], aa, the_er)
 
             if added_edge > 0:
@@ -343,7 +345,7 @@ class GraphMaker:
                     # transcript and translation does not have base.
                     # It causes the tracking algorithm unnecessarily process too many possibilities.
                     for er in self.db_manager.change_assembly(aa).available_releases:
-                            
+
                         db_manager = self.db_manager.change_form(f).change_assembly(aa).change_release(er)
 
                         ids_db = db_manager.get_db("ids")
@@ -366,8 +368,7 @@ class GraphMaker:
 
                 self.log.info(f"Edges between versionless ID to version ID has been added for '{f}', assembly {aa}.")
         else:
-            self.log.info(
-                "The graph will be constructed with 'versionless' IDs. It has not been extensively tested.")
+            self.log.info("The graph will be constructed with 'versionless' IDs. It has not been extensively tested.")
 
         new_form = "-".join(form_list)
         g.graph["name"] = (f"{self.db_manager.organism}_{self.db_manager.ensembl_release}_{new_form}",)
@@ -378,7 +379,11 @@ class GraphMaker:
         # Merge the nodes that are the same when they are convert into lowercase/uppercase.
         g = self._merge_nodes_with_the_same_in_lower_case(g)
 
-        # TODO: available_releases dict for those edges which have 'connection' as a key.
+        for e1, e2, e3 in g.edges:
+            edge_data = g.get_edge_data(e1, e2, e3)
+            if DB.connection_dict in edge_data:
+                available_releases = {k for i in edge_data for j in edge_data[i] for k in edge_data[i][j]}
+                g[e1][e2][e3]["available_releases"] = available_releases
 
         # Run cached_property functions to save them into the disk.
         _ = g.combined_edges
@@ -390,7 +395,8 @@ class GraphMaker:
         _ = g.external_database_connection_form
         _ = g.available_genome_assemblies
         _ = g.available_external_databases_assembly
-        
+        _ = g.node_trios
+
         return g
 
     def _merge_nodes_with_the_same_in_lower_case(self, g: TheGraph):
@@ -444,12 +450,14 @@ class GraphMaker:
                                 else:
                                     for edi_ass in edge_data[i][edi_db]:
                                         if edi_ass not in distiled_out[target_node][i][edi_db]:
-                                            distiled_out[target_node][i][edi_db][edi_ass] = \
-                                                edge_data[i][edi_db][edi_ass]
+                                            distiled_out[target_node][i][edi_db][edi_ass] = edge_data[i][edi_db][
+                                                edi_ass
+                                            ]
                                         else:  # Then, merge the releases
-                                            distiled_out[target_node][i][edi_db][edi_ass] = \
-                                                distiled_out[target_node][i][edi_db][edi_ass] | \
-                                                edge_data[i][edi_db][edi_ass]
+                                            distiled_out[target_node][i][edi_db][edi_ass] = (
+                                                distiled_out[target_node][i][edi_db][edi_ass]
+                                                | edge_data[i][edi_db][edi_ass]
+                                            )
 
             for m in merge_list:  # all_in_edges = list()
                 for n in reverse_g.neighbors(m):

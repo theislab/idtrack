@@ -10,7 +10,7 @@ import logging
 import warnings
 from collections import Counter
 from functools import cached_property
-from typing import Callable, Iterable, Optional, Union
+from typing import Any, Callable, Iterable, Optional, Union
 
 import networkx as nx
 import numpy as np
@@ -19,8 +19,8 @@ import pandas as pd
 from ._database_manager import DatabaseManager
 from ._db import DB
 from ._graph_maker import GraphMaker
-from ._verbose import progress_bar
 from ._the_graph import TheGraph
+from ._verbose import progress_bar
 
 
 class Track:
@@ -128,15 +128,14 @@ class Track:
 
                             if len(graph[_the_id][_next_neighbour]) != 1:
                                 # To verify the use of '0' below.
-                                raise ValueError(f"Multiple edges between \'{_the_id}\' and \'{_next_neighbour}\'")
+                                raise ValueError(f"Multiple edges between '{_the_id}' and '{_next_neighbour}'")
 
                             if _next_neighbour not in _the_path:
 
                                 if from_release is not None:
-                                    te = graph[_the_id][_next_neighbour][0][DB.connection_dict]
+                                    te = graph[_the_id][_next_neighbour][0]["available_releases"]
                                     # te follows the following structure. {database12: {assembly12: {ens_rel12}}}
-                                    # TODO: create cache dict for below set on edges: 'active_releases'
-                                    if from_release not in {k for i in te for j in te[i] for k in te[i][j]}:
+                                    if from_release not in te:
                                         # Do not care which assembly or which database.
                                         continue
 
@@ -150,7 +149,7 @@ class Track:
                                     depth_max=depth_max,
                                     from_release=from_release,
                                 )
-    
+
     def synonymous_nodes(self, the_id: str, depth_max: int, filter_node_type: set, from_release: int = None):
         """Todo.
 
@@ -258,6 +257,7 @@ class Track:
             from_id: Todo.
             synonym_ids: Todo.
             to_release: Todo.
+            mode: Todo.
 
         Returns:
             Todo.
@@ -675,7 +675,7 @@ class Track:
         go_external: bool = True,
         increase_depth_until: int = 1,
         increase_jump_until: int = 0,
-        from_release_infered: bool = False,
+        from_release_inferred: bool = False,
     ) -> tuple:
         """Todo.
 
@@ -687,7 +687,7 @@ class Track:
             go_external: Todo.
             increase_depth_until: Todo.
             increase_jump_until: Todo.
-            from_release_infered: Todo.
+            from_release_inferred: Todo.
 
         Returns:
             Todo.
@@ -711,7 +711,7 @@ class Track:
             multiple_ensembl_transition=False,
         )
 
-        if len(all_paths) < 1 and from_release_infered:
+        if len(all_paths) < 1 and from_release_inferred:
             # If none found, make relaxed search in terms of ensembl transition.
             all_paths = set()
             self._recursive_path_search(
@@ -746,7 +746,7 @@ class Track:
                 break
 
         es = copy.copy(DB.external_search_settings)
-        while go_external and len(all_paths) < 1 and from_release_infered:
+        while go_external and len(all_paths) < 1 and from_release_inferred:
             # The same as above except this time with relaxed transition.
             all_paths = set()
             self._recursive_path_search(
@@ -780,7 +780,7 @@ class Track:
         return filter_set, ensembl_include
 
     def calculate_node_scores(self, the_id) -> list:
-        """A metric to choose from multiple targets. 
+        """A metric to choose from multiple targets.
 
         Args:
             the_id: Todo.
@@ -796,7 +796,7 @@ class Track:
         form_importance_order = [i for i in form_importance_order if i in form_list]
         if len(form_importance_order) != 2:
             raise ValueError(form_list, form_importance_order)
-        
+
         filter_set, ensembl_include = self._calculate_node_scores_helper
         _temp = [i[-1] for i, _ in self.synonymous_nodes(the_id, 2, filter_node_type=filter_set)]
         imp1, imp2, imp3 = set(), set(), set()
@@ -867,7 +867,7 @@ class Track:
                         external_jump += 1
                     in_external = True
                     from_release = the_edge[3]  # _external_path_maker
-                
+
                 else:
                     raise ValueError
 
@@ -892,19 +892,33 @@ class Track:
             final_destination = the_path[-1][1]
             if final_destination not in scores:
                 scores[final_destination] = list()
-                
-            assembly_jump, step_pri, current_priority = self.minimum_assembly_jumps(the_path)
+
+            if len(the_path) == 1 and (the_path[0][0] is None or the_path[0][2] is None):
+                # Happens when the path is like following: ((None, 'ENSG00000170558.10', None),)
+                # Just check whether this Ensembl ID exist in both assemblies
+                assert the_path[0][1] is not None and the_path[0][0] is None and the_path[0][2] is None
+                assemblies = list(
+                    {
+                        j
+                        for i in self.graph.combined_edges_genes[the_path[0][1]]
+                        for j in self.graph.combined_edges_genes[the_path[0][1]][i]
+                    }
+                )
+                step_pri = sorted(DB.assembly_mysqlport_priority[i]["Priority"] for i in assemblies)
+                assembly_jump, current_priority = 0, max(step_pri)
+            else:
+                assembly_jump, step_pri, current_priority = self.minimum_assembly_jumps(the_path)
             to_add = {
                 # explain each
-                'assembly_jump': assembly_jump,  # a.k.a assembly penalty
-                'external_jump': external_jump, 
-                'external_step': external_step, 
-                'edge_scores_reduced': - edge_scores_r,  # 'minus' is added so that all variables should be minimized.
-                'ensembl_step': len(the_path) - external_step,
-                'final_assembly_priority': (step_pri, current_priority)
+                "assembly_jump": assembly_jump,  # a.k.a assembly penalty
+                "external_jump": external_jump,
+                "external_step": external_step,
+                "edge_scores_reduced": -edge_scores_r,  # 'minus' is added so that all variables should be minimized.
+                "ensembl_step": len(the_path) - external_step,
+                "final_assembly_priority": (step_pri, current_priority),
             }
             if return_path:
-                to_add['the_path'] = the_path
+                to_add["the_path"] = the_path
             scores[final_destination].append(to_add)
 
         # choose the best route to each target, ignore others. Do it for each target separately.
@@ -913,19 +927,41 @@ class Track:
         return max_score  # dict of dict
 
     def edge_key_orientor(self, n1, n2, n3):
-        
+        """Todo.
+
+        Args:
+            n1: Todo.
+            n2: Todo.
+            n3: Todo.
+
+        Returns:
+            Todo.
+        """
         if self.graph.has_edge(n1, n2, n3):
             edge_key = (n1, n2, n3)
         else:
             edge_key = (n2, n1, n3)
             assert self.graph.has_edge(*edge_key), edge_key
-            
+
         return edge_key
 
     def path_step_possible_assembly_jumps(self, n1, n2, n3, n4=None):
-        
+        """Todo.
+
+        Args:
+            n1: Todo.
+            n2: Todo.
+            n3: Todo.
+            n4: Todo.
+
+        Raises:
+            ValueError: Todo.
+
+        Returns:
+            Todo.
+        """
         edge_key = self.edge_key_orientor(n1, n2, n3)
-        
+
         if n4 is None:
             return [self.graph.graph["genome_assembly"]]
         elif isinstance(n4, int):
@@ -936,37 +972,45 @@ class Track:
             return sorted({j for i in edge_data for j in edge_data[i] if len(n4 & edge_data[i][j]) > 0})
         else:
             raise ValueError
-            
+
     def minimum_assembly_jumps(self, the_path, step_pri=None, current_priority=None) -> tuple:
-        
+        """Todo.
+
+        Args:
+            the_path: Todo.
+            step_pri: Todo.
+            current_priority: Todo.
+
+        Returns:
+            Todo.
+        """
         assemblies = [self.path_step_possible_assembly_jumps(*i) for i in the_path]
         # should be sorted for bisect function to work properly in '_minimum_assembly_jumps_helper'
         priorities = [[DB.assembly_mysqlport_priority[j]["Priority"] for j in i] for i in assemblies]
-        
+
         if step_pri is None:
             step_pri = priorities.pop(0)
         if current_priority is None:
-            current_priority = max(step_pri)  # The logic is basically follow the lowest priority if possible. 
-        
-        return Track._minimum_assembly_jumps_helper(step_pri=step_pri, 
-                                                    current_priority=current_priority,
-                                                    priorities=priorities)
-    
+            current_priority = max(step_pri)  # The logic is basically follow the lowest priority if possible.
+
+        return Track._minimum_assembly_jumps_helper(
+            step_pri=step_pri, current_priority=current_priority, priorities=priorities
+        )
+
     @staticmethod
     def _minimum_assembly_jumps_helper(step_pri, current_priority, priorities):
-        
         def next_priority(p):
             p_ind = DB.assembly_priority.index(p)
             # cannot return boundaries due to where the function is called.
-            return DB.assembly_priority[p_ind+1]
-        
+            return DB.assembly_priority[p_ind + 1]
+
         def next_priority_2(p, p_list):
             p_ind = bisect.bisect(p_list, p) - 1
             # bisect cannot return boundaries due to where the function is called.
             return p_list[p_ind]
-        
-        penalty = 0 
-        while len(priorities) > 0:        
+
+        penalty = 0
+        while len(priorities) > 0:
             if max(step_pri) < current_priority:
                 # Increase in priority if all assemblies of this step has higher priority than previous.
                 current_priority = next_priority(current_priority)
@@ -985,79 +1029,75 @@ class Track:
 
     @staticmethod
     def _path_score_sorter_single_target(lst_of_dict: list) -> dict:
-            
-            importance_order = (  # the variables from to_add in 'calculate_score_and_select'.
-                "assembly_jump",
-                "external_jump", 
-                "external_step",  # uniprot bridge and hlca bridge becomes equivalent
-                "edge_scores_reduced",
-                "ensembl_step"
-            )  # they all are needed to be minimized
-            
-            if not len(lst_of_dict) > 0:
-                raise ValueError
-            
-            minimum_scores = [[dct[i] for i in importance_order] + [ind] for ind, dct in enumerate(lst_of_dict)]
-            minimum_scores = sorted(minimum_scores, reverse=False)
-            best_score_index = minimum_scores[0][-1]
-            return lst_of_dict[best_score_index]  # choose the best & shortest
-        
-    def _path_score_sorter_all_targets(self, dict_of_dict: dict[dict]) -> dict[dict]:
-            
-            importance_order = (  
-                # the variables from to_add in 'calculate_score_and_select'.
-                "final_conversion_conf",
-                "assembly_jump",
-                "external_jump", 
-                "external_step",
-                "final_conv_asy_min_prior",
-                "final_asy_min_prior",
-                # "edge_scores_reduced",
-                # "ensembl_step"
-                "ens_node_importance"
-            )  # they all are needed to be minimized
-            
-            # max(external_count), max(protein_count), max(transcript_count)
-            
-            if not len(dict_of_dict) > 0:
-                raise ValueError
-                     
-            minimum_scores = dict()
-            
-            for dct in dict_of_dict:
-                for target in dict_of_dict[dct]["final_conversion"]["final_elements"]:
-                    
-                    _temp = dict_of_dict[dct]["final_conversion"]["final_elements"]
-                    
-                    ordered_score = {i: dict_of_dict[dct][i] for i in importance_order if i in dict_of_dict[dct]}
-                    ordered_score["final_asy_min_prior"] = min(dict_of_dict[dct]["final_assembly_priority"][0])
-                    try:
-                        ordered_score["assembly_jump"] += _temp[target]["additional_assembly_jump"]
-                        fcc = dict_of_dict[dct]["final_conversion"]["final_conversion_confidence"]
-                        ordered_score["final_conversion_conf"] = fcc
-                        ordered_score["final_conv_asy_min_prior"] = _temp[target]["final_assembly_min_priority"]
-                        
-                        ordered_score["ens_node_importance"] = self.calculate_node_scores(dct)
-                    except KeyError:
-                        print(_temp)
-                        print(dict_of_dict[dct])
-                        raise ValueError
-                        
-                    minimum_scores[(dct, target)] = [ordered_score[i] for i in importance_order]
-                
-            best_score_key = min(minimum_scores, key=minimum_scores.get)
-            best_score_value = minimum_scores[best_score_key]
-            best_scoring_targets = [i for i in minimum_scores if best_score_value == minimum_scores[i]]
-            
-            output = dict()
-            for bst, _ in best_scoring_targets:
-                output[bst] = copy.deepcopy(dict_of_dict[bst])
-                output[bst]["final_conversion"]["final_elements"] = dict()
-            for bst, trgt in best_scoring_targets:
-                output[bst]["final_conversion"]["final_elements"][trgt] = \
-                    dict_of_dict[bst]["final_conversion"]["final_elements"][trgt]
-            
-            return output  # choose the best & shortest
+
+        importance_order = (  # the variables from to_add in 'calculate_score_and_select'.
+            "assembly_jump",
+            "external_jump",
+            "external_step",  # uniprot bridge and hlca bridge becomes equivalent
+            "edge_scores_reduced",
+            "ensembl_step",
+        )  # they all are needed to be minimized
+
+        if not len(lst_of_dict) > 0:
+            raise ValueError
+
+        minimum_scores = [[dct[i] for i in importance_order] + [ind] for ind, dct in enumerate(lst_of_dict)]
+        minimum_scores = sorted(minimum_scores, reverse=False)
+        best_score_index = minimum_scores[0][-1]
+        return lst_of_dict[best_score_index]  # choose the best & shortest
+
+    def _path_score_sorter_all_targets(self, dict_of_dict: dict) -> dict:
+
+        importance_order = (
+            # the variables from to_add in 'calculate_score_and_select'.
+            "final_conversion_conf",
+            "assembly_jump",
+            "external_jump",
+            "external_step",
+            "final_conv_asy_min_prior",
+            "final_asy_min_prior",
+            # "edge_scores_reduced",
+            # "ensembl_step"
+            "ens_node_importance",
+        )  # they all are needed to be minimized
+
+        # max(external_count), max(protein_count), max(transcript_count)
+
+        if not len(dict_of_dict) > 0:
+            raise ValueError
+
+        minimum_scores: dict[tuple, list] = dict()
+
+        for dct in dict_of_dict:
+            for target in dict_of_dict[dct]["final_conversion"]["final_elements"]:
+
+                _temp = dict_of_dict[dct]["final_conversion"]["final_elements"]
+
+                ordered_score = {i: dict_of_dict[dct][i] for i in importance_order if i in dict_of_dict[dct]}
+                ordered_score["final_asy_min_prior"] = min(dict_of_dict[dct]["final_assembly_priority"][0])
+                ordered_score["assembly_jump"] += _temp[target]["additional_assembly_jump"]
+                fcc = dict_of_dict[dct]["final_conversion"]["final_conversion_confidence"]
+                ordered_score["final_conversion_conf"] = fcc
+                ordered_score["final_conv_asy_min_prior"] = _temp[target]["final_assembly_min_priority"]
+
+                ordered_score["ens_node_importance"] = self.calculate_node_scores(dct)
+                minimum_scores[(dct, target)] = [ordered_score[i] for i in importance_order]
+
+        the_min_key: Callable = minimum_scores.get
+        best_score_key = min(minimum_scores, key=the_min_key)
+        best_score_value = minimum_scores[best_score_key]
+        best_scoring_targets = [i for i in minimum_scores if best_score_value == minimum_scores[i]]
+
+        output = dict()
+        for bst, _ in best_scoring_targets:
+            output[bst] = copy.deepcopy(dict_of_dict[bst])
+            output[bst]["final_conversion"]["final_elements"] = dict()
+        for bst, trgt in best_scoring_targets:
+            output[bst]["final_conversion"]["final_elements"][trgt] = dict_of_dict[bst]["final_conversion"][
+                "final_elements"
+            ][trgt]
+
+        return output  # choose the best & shortest
 
     def convert(
         self,
@@ -1119,7 +1159,7 @@ class Track:
                 to_release,
                 go_external=go_external,
                 reverse=False,
-                from_release_infered=fri,
+                from_release_inferred=fri,
             )
             possible_paths_reverse = self.get_possible_paths(
                 from_id,
@@ -1127,7 +1167,7 @@ class Track:
                 to_release,
                 go_external=go_external,
                 reverse=True,
-                from_release_infered=fri,
+                from_release_inferred=fri,
             )
             poss_paths = tuple(list(itertools.chain(possible_paths_forward, possible_paths_reverse)))
             ff = itertools.chain(
@@ -1136,12 +1176,12 @@ class Track:
             )
         elif should_reversed == "forward":
             poss_paths = self.get_possible_paths(
-                from_id, fr, to_release, go_external=go_external, reverse=False, from_release_infered=fri
+                from_id, fr, to_release, go_external=go_external, reverse=False, from_release_inferred=fri
             )
             ff = itertools.chain(itertools.repeat(fr, len(poss_paths)))
         elif should_reversed == "reverse":
             poss_paths = self.get_possible_paths(
-                from_id, fr, to_release, go_external=go_external, reverse=True, from_release_infered=fri
+                from_id, fr, to_release, go_external=go_external, reverse=True, from_release_inferred=fri
             )
             ff = itertools.chain(itertools.repeat(fr, len(poss_paths)))
         else:
@@ -1167,15 +1207,18 @@ class Track:
                     converted[cnvt]["final_conversion"] = Track._final_conversion_dict_prepare(
                         confidence=0, sysns=[cnvt], add_ass_jump_list=[0], min_priority_list=[_min_prio_backbone]
                     )
-                elif final_database in self.graph.available_external_databases or \
-                        final_database == DB.nts_base_ensembl["gene"]:
+                elif (
+                    final_database in self.graph.available_external_databases
+                    or final_database == DB.nts_base_ensembl["gene"]
+                ):
                     converted = self._final_conversion(converted, cnvt, final_database, to_release)
                 else:
                     raise ValueError
             # if there is no conversable entry, remove the conversion
-            converted = {i: converted[i] for i in converted 
-                         if len(converted[i]["final_conversion"]["final_elements"]) > 0}
-            
+            converted = {
+                i: converted[i] for i in converted if len(converted[i]["final_conversion"]["final_elements"]) > 0
+            }
+
             if len(converted) == 0:
                 return None
             elif not prioritize_to_one_filter:
@@ -1185,69 +1228,73 @@ class Track:
 
     @staticmethod
     def _final_conversion_dict_prepare(confidence: int, sysns: list, min_priority_list: list, add_ass_jump_list: list):
-        try:
-            result = { 
-                "final_conversion_confidence": confidence, 
-                "final_elements": {s: {"final_assembly_min_priority": min_priority_list[ind],
-                                        "additional_assembly_jump": add_ass_jump_list[ind]}
-                                    for ind, s in enumerate(sysns)}
-            }
-        except TypeError:
-            print(sysns, min_priority_list, add_ass_jump_list)
-            raise ValueError
+        result = {
+            "final_conversion_confidence": confidence,
+            "final_elements": {
+                s: {
+                    "final_assembly_min_priority": min_priority_list[ind],
+                    "additional_assembly_jump": add_ass_jump_list[ind],
+                }
+                for ind, s in enumerate(sysns)
+            },
+        }
         return result
 
     def _final_conversion(self, converted: dict, cnvt: str, final_database: str, ensembl_release: int):
-        
         def _final_conversion_path(gene_id, target_db, from_release):
-            
             def _final_conversion_path_helper(res_syn_mth, er=None):
-                add_to_step = [0] if er is None else [0, er] 
+                add_to_step = [0] if er is None else [0, er]
                 return [[list(i) + add_to_step for i in zip(m1, m1[1:])] for m1, _ in res_syn_mth]
-            
+
             def _final_conversion_path_helper_2(one_path):
                 result = list()
                 for k in one_path:
                     edge_key = self.edge_key_orientor(*k)
-                    edge_data = self.graph.get_edge_data(*edge_key)[DB.connection_dict]
-                    ens_rels = {k for i in edge_data for j in edge_data[i] for k in edge_data[i][j]}
-                    result.append(ens_rels)
+                    ens_rels_avail = self.graph.get_edge_data(*edge_key)["available_releases"]
+                    result.append(ens_rels_avail)
                 return result
-            
-            a = _final_conversion_path_helper(self.synonymous_nodes(
+
+            a = _final_conversion_path_helper(
+                self.synonymous_nodes(
                     the_id=gene_id, depth_max=2, filter_node_type={target_db}, from_release=from_release
-                ), er=from_release)
+                ),
+                er=from_release,
+            )
             if len(a) > 0 or from_release is None:
                 confidence = 0
                 return a, confidence  # syns, confidence (lower better)
             else:
-                the_paths_no_ens_rel = _final_conversion_path_helper(self.synonymous_nodes(
-                    the_id=gene_id, depth_max=2, filter_node_type={target_db}, from_release=None
-                ))
-                
+                the_paths_no_ens_rel = _final_conversion_path_helper(
+                    self.synonymous_nodes(the_id=gene_id, depth_max=2, filter_node_type={target_db}, from_release=None)
+                )
+
                 for ind1, pt in enumerate(the_paths_no_ens_rel):
                     ens_rels = _final_conversion_path_helper_2(pt)
                     the_paths_no_ens_rel[ind1] = [i + [ens_rels[ind2]] for ind2, i in enumerate(pt)]
                 confidence = 1
                 return a, confidence
-            
+
         def _final_conversion_helper(conv_dict, conv_dict_key, a_path):
-            
+
             # the path will continue with final conversion so assembly penalty should be calculated again.
             _s1, _s2 = conv_dict[conv_dict_key]["final_assembly_priority"]
             penalty, step_pri, _ = self.minimum_assembly_jumps(a_path, _s1, _s2)
             return [penalty, min(step_pri)]
-        
+
         syn_ids_path, conf = _final_conversion_path(cnvt, final_database, from_release=ensembl_release)
         syn_ids = [i[-1][1] for i in syn_ids_path]
-        
-        conversion_metrics = [_final_conversion_helper(converted, cnvt, i) for i in syn_ids_path]
-        sl1, sl2 = list(map(list, zip(*conversion_metrics)))
-        
+
+        if len(syn_ids) == 0:
+            sl1: list[Any] = [np.nan]
+            sl2: list[Any] = [np.nan]
+        else:
+            conversion_metrics = [_final_conversion_helper(converted, cnvt, i) for i in syn_ids_path]
+            sl1, sl2 = list(map(list, zip(*conversion_metrics)))
+
         converted[cnvt]["final_conversion"] = Track._final_conversion_dict_prepare(
             confidence=conf, sysns=syn_ids, add_ass_jump_list=sl1, min_priority_list=sl2
         )
-        
+
         return converted
 
     def get_tree_with_id(self, the_id):
@@ -1284,7 +1331,7 @@ class Track:
 
         for ind, gl in enumerate(gene_list):
             progress_bar(ind, len(gene_list) - 1, frequency=0.01, verbose=verbose)
-            
+
             new_gl, is_converted = self.graph.node_name_alternatives(gl)
 
             # As the last resort, try to look at among synonyms.
@@ -1319,12 +1366,23 @@ class Track:
         Returns:
             Todo.
         """
-        possible_pairs = list()
+        possible_trios = list()
         for di in dataset_ids:
             # assembly = self.get_external_assembly()
-            possible_pairs.extend(self.graph.node_trios[di])
+            possible_trios.extend(self.graph.node_trios[di])
 
-        return list(Counter(possible_pairs).most_common())
+        return list(Counter(possible_trios).most_common())
+
+    def identify_source_ensembl_release(self, dataset_ids: list):
+        """Todo.
+
+        Args:
+            dataset_ids: Todo.
+
+        Raises:
+            NotImplementedError: Todo.
+        """
+        raise NotImplementedError
 
     def convert_optimized_multiple(self):
         """Accept multiple ID list and return the most optimal set of IDs, minimizing the clashes.

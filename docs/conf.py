@@ -32,7 +32,9 @@ extensions = [
     "nbsphinx",
 ]
 
-default_dark_mode = True
+# If this option is true (the default option), users will start in dark mode when first visiting the site.
+# If this option is false, users will start in light mode when they first visit the site.
+default_dark_mode = False  #
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -84,7 +86,7 @@ todo_include_todos = False
 html_theme = "sphinx_rtd_theme"
 html_logo = "_logo/logo.png"
 html_theme_options = {
-    "logo_only": True,
+    "logo_only": False,
     "display_version": False,
 }
 

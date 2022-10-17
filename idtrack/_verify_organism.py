@@ -25,16 +25,8 @@ class VerifyOrganism:
         self._reading_timeout = 10
         self.organism_query = organism_query.lower()
         self.name_synonyms_dataframe, self.ensembl_release_dataframe = self.fetch_organism_and_latest_release(
-            self._connection_timeout, self._reading_timeout
+            DB.connection_timeout, DB.reading_timeout
         )
-
-    def get_formal_name(self):
-        """Todo.
-
-        Returns:
-            Todo.
-        """
-        return self._get_formal_name()
 
     def get_latest_release(self):
         """Todo.
@@ -46,7 +38,7 @@ class VerifyOrganism:
         # returns int not float!
         return int(self.ensembl_release_dataframe.loc[formal_name]["ensembl_release"])
 
-    def _get_formal_name(self):
+    def get_formal_name(self):
         """Todo.
 
         Returns:

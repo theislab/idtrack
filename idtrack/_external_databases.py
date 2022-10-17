@@ -15,13 +15,14 @@ import yaml
 class ExternalDatabases:
     """Todo."""
 
-    def __init__(self,
-                 organism: str,
-                 ensembl_release: int,
-                 form: str,
-                 local_repository: str,
-                 genome_assembly: int,
-                 ):
+    def __init__(
+        self,
+        organism: str,
+        ensembl_release: int,
+        form: str,
+        local_repository: str,
+        genome_assembly: int,
+    ):
         """Todo.
 
         Args:
@@ -51,7 +52,7 @@ class ExternalDatabases:
         def list_to_str(iterable):
             return ",".join(map(str, iterable))
 
-        r = dict()
+        r: dict[str, dict] = dict()
         database_id = {item: i for i, item in enumerate(sorted(np.unique(df["name_db"])))}
         for a1 in sorted(np.unique(df["organism"])):
             df_a1 = df[df["organism"] == a1]
