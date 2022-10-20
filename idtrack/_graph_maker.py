@@ -382,20 +382,21 @@ class GraphMaker:
         for e1, e2, e3 in g.edges:
             edge_data = g.get_edge_data(e1, e2, e3)
             if DB.connection_dict in edge_data:
-                available_releases = {k for i in edge_data for j in edge_data[i] for k in edge_data[i][j]}
+                thed = edge_data[DB.connection_dict]
+                available_releases = {k for i in thed for j in thed[i] for k in thed[i][j]}
                 g[e1][e2][e3]["available_releases"] = available_releases
 
         # Run cached_property functions to save them into the disk.
-        _ = g.combined_edges
-        _ = g.combined_edges_assembly_specific_genes
-        _ = g.combined_edges_genes
-        _ = g.lower_chars_graph
-        _ = g.get_active_ranges_of_id
-        _ = g.available_external_databases
-        _ = g.external_database_connection_form
-        _ = g.available_genome_assemblies
-        _ = g.available_external_databases_assembly
-        _ = g.node_trios
+        # _ = g.combined_edges
+        # _ = g.combined_edges_assembly_specific_genes
+        # _ = g.combined_edges_genes
+        # _ = g.lower_chars_graph
+        # _ = g.get_active_ranges_of_id
+        # _ = g.available_external_databases
+        # _ = g.external_database_connection_form
+        # _ = g.available_genome_assemblies
+        # _ = g.available_external_databases_assembly
+        # _ = g.node_trios
 
         return g
 
@@ -849,7 +850,7 @@ class GraphMaker:
             # Prepare variables for the next iteration.
             re_d_prev = re_d.copy()
             re_d_prev.update(extend_backwards_candidates)
-            re_prev_rel = copy.copy(rel_re)
+            re_prev_rel = copy.deepcopy(rel_re)
 
         if reassignment_retirement > 0:
             self.log.warning(f"Retired ID come alive again: {reassignment_retirement}.")
@@ -892,7 +893,7 @@ class GraphMaker:
             # Prepare variables for the next iteration.
             fo_d_prev = fo_d.copy()
             fo_d_prev.update(extend_forwards_candidates)
-            fo_prev_rel = copy.copy(rel_fo)
+            fo_prev_rel = copy.deepcopy(rel_fo)
 
         # In some cases, the table from `dm_manager.get('idhistory_narrow')` has some edges, that is completely
         # problematic. For example, 'ENSG00000289022' gene is defined in release_105, but it does not seem to

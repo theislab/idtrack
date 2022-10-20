@@ -48,6 +48,7 @@ class Track:
         # Calculate/Load the graph
         self.graph = graph_creator.get_graph(**kwargs)
         self.version_info = self.graph.graph["version_info"]
+        self._external_entrance_placeholder = -1
 
     def _recursive_synonymous(
         self,
@@ -59,6 +60,7 @@ class Track:
         the_path_db: list = None,
         depth_max: int = 0,
         from_release: int = None,
+        ensembl_backbone_shallow_search: bool = False,
     ):
         """Helper method to be used in :py:meth:`_graph.Track.synonymous_nodes`.
 
@@ -76,81 +78,111 @@ class Track:
             depth_max: Todo.
             filter_node_type: Todo.
             from_release: Todo.
-
-        Raises:
-            ValueError: Todo.
+            ensembl_backbone_shallow_search: Todo
         """
+
+        def decide_terminate_externals():
+            if last_node_nts == DB.nts_external:
+
+                if len(_the_path) > 1:
+                    edge_key = self.edge_key_orientor(*_the_path[-2:], 0)
+                    the_data = self.graph.get_edge_data(*edge_key)[DB.connection_dict]  # edge_data
+                else:
+                    the_data = self.graph.combined_edges[_the_path[-1]]  # node_data
+
+                for _ed1 in the_data:  # database
+                    if _ed1 in filter_node_type:
+                        for _ed2 in the_data[_ed1]:  # assembly
+                            if from_release is None or from_release in the_data[_ed1][_ed2]:
+                                return True
+
+            return False
+
+        def decide_terminate_others():
+            if last_node_nts != DB.nts_external:
+
+                if last_node_nts in filter_node_type and (
+                    from_release is None
+                    or TheGraph.is_point_in_range(self.graph.get_active_ranges_of_id[_the_path[-1]], from_release)
+                ):
+                    return True
+
+            return False
+
         input_node_type = self.graph.nodes[_the_id][DB.node_type_str]
         _the_path = [_the_id] if the_path is None else the_path
         _the_path_db = [input_node_type] if the_path_db is None else the_path_db
+        last_node_nts = self.graph.nodes[_the_path[-1]][DB.node_type_str]
 
-        counted_elements = Counter(_the_path_db)
-        early_termination = [counted_elements[i] for i in filter_node_type if i in counted_elements]
-        if depth_max > max(counted_elements.values()):  # The depth is all node_type.
+        if decide_terminate_others() or decide_terminate_externals():
+            synonymous_ones.append(_the_path)
+            synonymous_ones_db.append(_the_path_db)
 
-            if len(_the_path) > 0 and (
-                self.graph.nodes[_the_path[-1]][DB.node_type_str] in filter_node_type
-                or (
-                    self.graph.nodes[_the_path[-1]][DB.node_type_str] == DB.nts_external
-                    and any([i in self.graph.combined_edges[_the_path[-1]] for i in filter_node_type])
-                )
-            ):
-                synonymous_ones.append(_the_path)
-                synonymous_ones_db.append(_the_path_db)
+        if depth_max > max(Counter(_the_path_db).values()):  # The depth is all node_type.
 
-            elif len(early_termination) == 0 or depth_max > max(early_termination) + 1:
-                # no need to add one as it will violate depth_max
+            for graph in (self.graph, self.graph.rev) if not ensembl_backbone_shallow_search else (self.graph.rev,):
 
-                for _direction, graph in (("forward", self.graph), ("reverse", self.graph.rev)):
+                for _next_neighbour in graph.neighbors(_the_id):
 
-                    for _next_neighbour in graph.neighbors(_the_id):
+                    if _next_neighbour in _the_path:
+                        # prevent bouncing.
+                        continue
 
-                        gnt = graph.nodes[_next_neighbour][DB.node_type_str]
+                    gnt = self.graph.nodes[_next_neighbour][DB.node_type_str]
 
-                        if len(_the_path) >= 2:
-                            # prevent bouncing between transcript and gene id.versions
-                            l1, l2 = _the_path[-2:]  # [..., l1, l2, gnt]
-                            if (
-                                # if the addition of new element is a bouncing event (like A-B-A)
-                                self.graph.nodes[l1][DB.node_type_str] == gnt
-                                # Allow bouncing if it bridges two 'external' nodes.
-                                and gnt != DB.nts_external
-                                # Allow bouncing if it bridges two 'ensembl base' nodes.
-                                and gnt != DB.nts_base_ensembl["gene"]  # transcript or translation base depracated.
-                                # Check if 1st and 3rd element are the same 'ID' (could have different 'Versions'.)
-                                and self.graph.nodes[l1]["ID"] == self.graph.nodes[_next_neighbour]["ID"]
-                            ):
-                                continue
+                    if gnt == input_node_type:
+                        # prevent history travel. Note that only backbone node type (ensembl_gene) actually
+                        # has connection to the same node type. 'combined_edges' in TheGraph class checks that.
+                        continue
 
-                        if gnt == DB.nts_external or gnt != input_node_type:
-                            # prevent history travel. Note that only backbone node type (ensembl_gene) actually
-                            # has connection to the same node type. 'combined_edges' in TheGraph class checks that.
+                    if len(_the_path) >= 2:
+                        # prevent bouncing between transcript and gene id.versions
+                        l1 = _the_path[-2]  # [..., l1, l2]. When new one added: [..., l1, l2, _next_neighbour]
 
-                            if len(graph[_the_id][_next_neighbour]) != 1:
-                                # To verify the use of '0' below.
-                                raise ValueError(f"Multiple edges between '{_the_id}' and '{_next_neighbour}'")
+                        gnt_l1_ = self.graph.nodes[l1][DB.node_type_str]
+                        gnt_l1 = DB.nts_assembly_reverse.get(gnt_l1_, gnt_l1_)
+                        gnt_new = DB.nts_assembly_reverse.get(gnt, gnt)
 
-                            if _next_neighbour not in _the_path:
+                        if (
+                            # if the addition of new element is a bouncing event (like A-B-A)
+                            gnt_l1 == gnt_new
+                            # Allow bouncing if it bridges two 'external' nodes.
+                            and gnt_new != DB.nts_external
+                            # Allow bouncing if it bridges two 'ensembl base' nodes.
+                            and gnt_new != DB.nts_base_ensembl["gene"]  # transcript or translation base depracated.
+                            # Check if 1st and 3rd element are the same 'ID' (could have different 'Versions'.)
+                            and self.graph.nodes[l1]["ID"] == self.graph.nodes[_next_neighbour]["ID"]
+                        ):
+                            continue
 
-                                if from_release is not None:
-                                    te = graph[_the_id][_next_neighbour][0]["available_releases"]
-                                    # te follows the following structure. {database12: {assembly12: {ens_rel12}}}
-                                    if from_release not in te:
-                                        # Do not care which assembly or which database.
-                                        continue
+                    if from_release is not None:
+                        # assert len(graph[_the_id][_next_neighbour]) == 1
+                        # To use of '0' below, this is verified by TheGraph.is_node_consistency_robust
 
-                                self._recursive_synonymous(
-                                    _next_neighbour,
-                                    synonymous_ones,
-                                    synonymous_ones_db,
-                                    filter_node_type,
-                                    the_path=_the_path + [_next_neighbour],
-                                    the_path_db=_the_path_db + [gnt],
-                                    depth_max=depth_max,
-                                    from_release=from_release,
-                                )
+                        if from_release not in graph[_the_id][_next_neighbour][0]["available_releases"]:
+                            # Do not care which assembly or which database.
+                            continue
 
-    def synonymous_nodes(self, the_id: str, depth_max: int, filter_node_type: set, from_release: int = None):
+                    self._recursive_synonymous(
+                        _next_neighbour,
+                        synonymous_ones,
+                        synonymous_ones_db,
+                        filter_node_type,
+                        the_path=_the_path + [_next_neighbour],
+                        the_path_db=_the_path_db + [gnt],
+                        depth_max=depth_max,
+                        from_release=from_release,
+                        ensembl_backbone_shallow_search=ensembl_backbone_shallow_search,
+                    )
+
+    def synonymous_nodes(
+        self,
+        the_id: str,
+        depth_max: int,
+        filter_node_type: set,
+        from_release: int = None,
+        ensembl_backbone_shallow_search: bool = False,
+    ):
         """Todo.
 
         Args:
@@ -158,6 +190,7 @@ class Track:
             depth_max: Todo.
             filter_node_type: Todo.
             from_release: Todo.
+            ensembl_backbone_shallow_search: Todo.
 
         Returns:
             Todo.
@@ -170,6 +203,10 @@ class Track:
         if DB.nts_external in filter_node_type:
             raise ValueError(f"Define which external database: '{filter_node_type}'.")
 
+        if ensembl_backbone_shallow_search:
+            if depth_max != 2:
+                raise ValueError
+
         self._recursive_synonymous(
             the_id,
             synonymous_ones,
@@ -177,6 +214,7 @@ class Track:
             filter_node_type,
             depth_max=depth_max,
             from_release=from_release,
+            ensembl_backbone_shallow_search=ensembl_backbone_shallow_search,
         )
 
         remove_set: set = set()
@@ -221,7 +259,8 @@ class Track:
             ValueError: Todo.
         """
         result = list()
-
+        # Note that there is no need to consider assembly here because always this function is used in the context of
+        # graph backbone nodes (ensembl gene), and the backbone is always the latest (currently 38).
         for l1, l2 in lor:
 
             if l1 > l2:
@@ -229,18 +268,23 @@ class Track:
 
             elif mode == "closest" and p == l1:
                 result.append((l1, False))
+
             elif mode == "closest" and p < l1:
                 result.append((l1, True))
+
             elif mode == "closest" and l2 <= p:
                 result.append((l2, False))
+
             elif mode == "closest" and l1 < p < l2:
                 result.append((l1, True))
                 result.append((l2, False))
 
             elif mode == "distant" and p <= l1:
                 result.append((l2, True))
+
             elif mode == "distant" and l2 <= p:
                 result.append((l1, False))
+
             elif mode == "distant" and l1 < p < l2:
                 result.append((l2, True))
                 result.append((l1, False))
@@ -250,13 +294,16 @@ class Track:
 
         return result
 
-    def _choose_relevant_synonym_helper(self, from_id, synonym_ids, to_release, mode):
+    def _choose_relevant_synonym_helper(
+        self, from_id, synonym_ids, to_release: int, from_release: Optional[int], mode: str
+    ):
         """Todo.
 
         Args:
             from_id: Todo.
             synonym_ids: Todo.
             to_release: Todo.
+            from_release: Todo.
             mode: Todo.
 
         Returns:
@@ -268,6 +315,10 @@ class Track:
         # synonym_ids should be ensembl of the same id (different versions)
         distance_to_target = list()
         candidate_ranges = list()
+
+        if from_release is not None:
+            candidate_ranges.extend([[i, from_release, from_release > to_release] for i in synonym_ids])
+            return candidate_ranges
 
         # If the queried ID is not 'ensembl_gene':
         # find the synonym_ID with the closest distance to to_release
@@ -340,7 +391,7 @@ class Track:
         # given from release
 
     def choose_relevant_synonym(
-        self, the_id: str, depth_max: int, to_release: int, filter_node_type: set, from_release: int = None
+        self, the_id: str, depth_max: int, to_release: int, filter_node_type: set, from_release: Optional[int]
     ):
         """Todo.
 
@@ -375,7 +426,9 @@ class Track:
             si_list, syn_p_list, syn_db_list = map(list, zip(*syn_ids[s]))
             # could give route to same id from multiple routes
 
-            best_ids_best_ranges = self._choose_relevant_synonym_helper(the_id, si_list, to_release, mode="closest")
+            best_ids_best_ranges = self._choose_relevant_synonym_helper(
+                the_id, si_list, to_release, from_release, mode="closest"
+            )
 
             for a1, a2, a3 in best_ids_best_ranges:
                 for_filtering = [i == a1 for i in si_list]
@@ -515,16 +568,23 @@ class Track:
             multiple_ensembl_transition: Todo
         """
 
-        def _external_path_maker(a_from_id, a_ens_rel, a_syn_pth, a_syn_dbp):
+        def _external_path_maker(a_from_id, a_ens_rel, a_syn_pth, free_from_release: bool):
             a_edge_hist_alt = list()
-            a_from_id_ext_path = copy.copy(a_from_id)
+            a_from_id_ext_path = copy.deepcopy(a_from_id)
             for a_path_ind, a_next_node in enumerate(a_syn_pth):
+
                 if a_path_ind == 0:
                     continue
-                multi_edge_id_syn = 0  # as tested in the self._recursive_synonymous
-                a_dict_key = (a_from_id_ext_path, a_next_node, multi_edge_id_syn, a_ens_rel)
-                a_edge_hist_alt.append(a_dict_key)
-                a_from_id_ext_path = copy.copy(a_next_node)
+                # 0 is tested TheGraph.is_node_consistency_robust
+                a_edge_hist_alt.append(
+                    (
+                        a_from_id_ext_path,
+                        a_next_node,
+                        0,
+                        a_ens_rel if not free_from_release else self._external_entrance_placeholder,
+                    )
+                )
+                a_from_id_ext_path = copy.deepcopy(a_next_node)
             return a_edge_hist_alt
 
         _edge_hist = list() if edge_hist is None else edge_hist
@@ -550,6 +610,7 @@ class Track:
 
             # If from release is infered by the program (not provided by the user), then run pathfinder from all
             # possible ones. This will increase the computational demand but yield more robust results.
+            switch_met = False
             if multiple_ensembl_transition or len(s) == 0:
                 s = self.choose_relevant_synonym(
                     from_id,
@@ -559,9 +620,12 @@ class Track:
                     # if there is way to find with the same release, go just find it in other releases.
                     from_release=None,
                 )
+                switch_met = True
 
-            for s1, s2, s3, s4, s5 in s:
-                alt_external_path = _external_path_maker(from_id, s2, s4, s5)
+            for s1, s2, s3, s4, _s5 in s:  # new_from_id, new_from_rel, new_reverse, path, path_db
+                # TODO: remove path_db (s5) from the function and pathfinder.
+
+                alt_external_path = _external_path_maker(from_id, s2, s4, free_from_release=switch_met)
 
                 self._recursive_path_search(
                     # with synonym route, don't go synonym finding in the next iteration
@@ -590,10 +654,13 @@ class Track:
                         depth_max=external_settings["synonymous_max_depth"],
                         to_release=to_release,
                         filter_node_type={external_settings["nts_backbone"]},
+                        from_release=None,
                     )
 
-                    for s1, s2, s3, s4, s5 in s:
-                        alt_external_path = _external_path_maker(_from_id, s2, s4, s5)
+                    for s1, s2, s3, s4, _s5 in s:  # new_from_id, new_from_rel, new_reverse, path, path_db
+                        # TODO: remove path_db (s5) from the function and pathfinder.
+
+                        alt_external_path = _external_path_maker(_from_id, s2, s4, free_from_release=True)
 
                         if all([eha not in _edge_hist for eha in alt_external_path]):  # prevent loops
                             self._recursive_path_search(
@@ -692,7 +759,7 @@ class Track:
         Returns:
             Todo.
         """
-        es: dict = copy.copy(DB.external_search_settings)
+        es: dict = copy.deepcopy(DB.external_search_settings)
         idu = increase_depth_until + es["synonymous_max_depth"]
         iju = increase_jump_until + es["jump_limit"]
 
@@ -710,20 +777,6 @@ class Track:
             external_jump=np.inf,
             multiple_ensembl_transition=False,
         )
-
-        if len(all_paths) < 1 and from_release_inferred:
-            # If none found, make relaxed search in terms of ensembl transition.
-            all_paths = set()
-            self._recursive_path_search(
-                from_id,
-                from_release,
-                to_release,
-                all_paths,
-                reverse,
-                es,
-                external_jump=np.inf,
-                multiple_ensembl_transition=True,
-            )
 
         while go_external and len(all_paths) < 1:
             # Activate external jump and increase the depth of search at each step
@@ -745,7 +798,21 @@ class Track:
             else:
                 break
 
-        es = copy.copy(DB.external_search_settings)
+        es = copy.deepcopy(DB.external_search_settings)
+        if len(all_paths) < 1 and from_release_inferred:
+            # If none found, make relaxed search in terms of ensembl transition.
+            all_paths = set()
+            self._recursive_path_search(
+                from_id,
+                from_release,
+                to_release,
+                all_paths,
+                reverse,
+                es,
+                external_jump=np.inf,
+                multiple_ensembl_transition=True,
+            )
+
         while go_external and len(all_paths) < 1 and from_release_inferred:
             # The same as above except this time with relaxed transition.
             all_paths = set()
@@ -779,11 +846,12 @@ class Track:
             filter_set.update(ensembl_include_form)
         return filter_set, ensembl_include
 
-    def calculate_node_scores(self, the_id) -> list:
+    def calculate_node_scores(self, the_id, ens_release) -> list:
         """A metric to choose from multiple targets.
 
         Args:
             the_id: Todo.
+            ens_release: Todo.
 
         Returns:
             Todo.
@@ -798,7 +866,16 @@ class Track:
             raise ValueError(form_list, form_importance_order)
 
         filter_set, ensembl_include = self._calculate_node_scores_helper
-        _temp = [i[-1] for i, _ in self.synonymous_nodes(the_id, 2, filter_node_type=filter_set)]
+        _temp = [
+            i[-1]
+            for i, _ in self.synonymous_nodes(
+                the_id,
+                depth_max=2,
+                filter_node_type=filter_set,
+                from_release=ens_release,
+                ensembl_backbone_shallow_search=True,
+            )
+        ]
         imp1, imp2, imp3 = set(), set(), set()
         for i in _temp:
             nt = self.graph.nodes[i][DB.node_type_str]
@@ -841,6 +918,11 @@ class Track:
         Raises:
             ValueError: Todo.
         """
+
+        def er_maker_for_initial_conversion(n1, n2, n3, n4):
+            edge_key = self.edge_key_orientor(n1, n2, n3)
+            return self.graph.get_edge_data(*edge_key)["available_releases"]
+
         scores: dict = dict()
 
         for the_path, from_release in zip(all_possible_paths, from_releases):
@@ -863,7 +945,7 @@ class Track:
 
                 elif len(the_edge) == 4:  # External path is followed.
                     external_step += 1
-                    if not in_external:
+                    if not in_external:  # independent of length of the jump, it should be counted as 1.
                         external_jump += 1
                     in_external = True
                     from_release = the_edge[3]  # _external_path_maker
@@ -907,12 +989,24 @@ class Track:
                 step_pri = sorted(DB.assembly_mysqlport_priority[i]["Priority"] for i in assemblies)
                 assembly_jump, current_priority = 0, max(step_pri)
             else:
+                initial_conversion_conf = (
+                    len(the_path[0]) == 4 and the_path[0][-1] == self._external_entrance_placeholder
+                )
+                the_path = tuple(
+                    tuple(list(the_step[:3]) + [er_maker_for_initial_conversion(*the_step)])
+                    if len(the_step) == 4 and the_step[-1] == self._external_entrance_placeholder
+                    # -1 is when you have external to graph conversion and from_release is None.
+                    else the_step
+                    for the_step in the_path
+                )
+
                 assembly_jump, step_pri, current_priority = self.minimum_assembly_jumps(the_path)
             to_add = {
                 # explain each
                 "assembly_jump": assembly_jump,  # a.k.a assembly penalty
                 "external_jump": external_jump,
                 "external_step": external_step,
+                "initial_conversion_conf": int(not initial_conversion_conf),
                 "edge_scores_reduced": -edge_scores_r,  # 'minus' is added so that all variables should be minimized.
                 "ensembl_step": len(the_path) - external_step,
                 "final_assembly_priority": (step_pri, current_priority),
@@ -926,7 +1020,7 @@ class Track:
 
         return max_score  # dict of dict
 
-    def edge_key_orientor(self, n1, n2, n3):
+    def edge_key_orientor(self, n1: str, n2: str, n3: int):
         """Todo.
 
         Args:
@@ -961,7 +1055,6 @@ class Track:
             Todo.
         """
         edge_key = self.edge_key_orientor(n1, n2, n3)
-
         if n4 is None:
             return [self.graph.graph["genome_assembly"]]
         elif isinstance(n4, int):
@@ -999,6 +1092,20 @@ class Track:
 
     @staticmethod
     def _minimum_assembly_jumps_helper(step_pri, current_priority, priorities):
+        """Todo.
+
+        Args:
+            step_pri: Todo.
+            current_priority: Todo.
+            priorities: Todo.
+
+        Raises:
+            ValueError: Todo.
+
+        Returns:
+            Todo.
+        """
+
         def next_priority(p):
             p_ind = DB.assembly_priority.index(p)
             # cannot return boundaries due to where the function is called.
@@ -1029,7 +1136,17 @@ class Track:
 
     @staticmethod
     def _path_score_sorter_single_target(lst_of_dict: list) -> dict:
+        """Todo.
 
+        Args:
+            lst_of_dict: Todo.
+
+        Raises:
+            ValueError: Todo.
+
+        Returns:
+            Todo.
+        """
         importance_order = (  # the variables from to_add in 'calculate_score_and_select'.
             "assembly_jump",
             "external_jump",
@@ -1046,14 +1163,28 @@ class Track:
         best_score_index = minimum_scores[0][-1]
         return lst_of_dict[best_score_index]  # choose the best & shortest
 
-    def _path_score_sorter_all_targets(self, dict_of_dict: dict) -> dict:
+    def _path_score_sorter_all_targets(self, dict_of_dict: dict, from_id: str, to_release: int) -> dict:
+        """Todo.
 
+        Args:
+            dict_of_dict: Todo.
+            from_id: Todo.
+            to_release: Todo.
+
+        Raises:
+            ValueError: Todo.
+
+        Returns:
+            Todo.
+        """
         importance_order = (
             # the variables from to_add in 'calculate_score_and_select'.
             "final_conversion_conf",
+            # "initial_conversion_conf", it should be the same for all possible routes.
             "assembly_jump",
             "external_jump",
             "external_step",
+            # "external_jump_depth",
             "final_conv_asy_min_prior",
             "final_asy_min_prior",
             # "edge_scores_reduced",
@@ -1080,7 +1211,7 @@ class Track:
                 ordered_score["final_conversion_conf"] = fcc
                 ordered_score["final_conv_asy_min_prior"] = _temp[target]["final_assembly_min_priority"]
 
-                ordered_score["ens_node_importance"] = self.calculate_node_scores(dct)
+                ordered_score["ens_node_importance"] = self.calculate_node_scores(dct, to_release)
                 minimum_scores[(dct, target)] = [ordered_score[i] for i in importance_order]
 
         the_min_key: Callable = minimum_scores.get
@@ -1097,7 +1228,20 @@ class Track:
                 "final_elements"
             ][trgt]
 
-        return output  # choose the best & shortest
+        final_targets = {i for bst in output for i in output[bst]["final_conversion"]["final_elements"]}
+        if from_id in final_targets:
+            output_mirror = dict()
+            for o1 in output:
+                for o2 in output[o1]["final_conversion"]["final_elements"]:
+                    if o2 == from_id:
+                        output_mirror[o1] = copy.deepcopy(output[o1])
+                        output_mirror[o1]["final_conversion"]["final_elements"] = dict()
+                        output_mirror[o1]["final_conversion"]["final_elements"][o2] = output[o1]["final_conversion"][
+                            "final_elements"
+                        ][o2]
+            return output_mirror
+        else:
+            return output  # choose the best & shortest
 
     def convert(
         self,
@@ -1143,7 +1287,7 @@ class Track:
             fri = True
         else:
             should_reversed = "forward" if from_release <= to_release else "reverse"
-            fr = copy.copy(from_release)
+            fr = copy.deepcopy(from_release)
             fri = False
 
         # fri stands for from_release_infered. When from release is inferred rather than provided by the user,
@@ -1224,10 +1368,21 @@ class Track:
             elif not prioritize_to_one_filter:
                 return converted
             else:
-                return self._path_score_sorter_all_targets(converted)
+                return self._path_score_sorter_all_targets(converted, from_id, to_release)
 
     @staticmethod
     def _final_conversion_dict_prepare(confidence: int, sysns: list, min_priority_list: list, add_ass_jump_list: list):
+        """Todo.
+
+        Args:
+            confidence: Todo.
+            sysns: Todo.
+            min_priority_list: Todo.
+            add_ass_jump_list: Todo.
+
+        Returns:
+            Todo.
+        """
         result = {
             "final_conversion_confidence": confidence,
             "final_elements": {
@@ -1241,8 +1396,31 @@ class Track:
         return result
 
     def _final_conversion(self, converted: dict, cnvt: str, final_database: str, ensembl_release: int):
-        def _final_conversion_path(gene_id, target_db, from_release):
-            def _final_conversion_path_helper(res_syn_mth, er=None):
+        """Todo.
+
+        Args:
+            converted: Todo.
+            cnvt: Todo.
+            final_database: Todo.
+            ensembl_release: Todo.
+
+        Returns:
+            Todo.
+        """
+
+        def _final_conversion_path(gene_id: str, target_db: str, from_release: int):
+            """Todo.
+
+            Args:
+                gene_id: Todo.
+                target_db: Todo.
+                from_release: Todo.
+
+            Returns:
+                Todo.
+            """
+
+            def _final_conversion_path_helper(res_syn_mth, er: Optional[int]):
                 add_to_step = [0] if er is None else [0, er]
                 return [[list(i) + add_to_step for i in zip(m1, m1[1:])] for m1, _ in res_syn_mth]
 
@@ -1256,26 +1434,47 @@ class Track:
 
             a = _final_conversion_path_helper(
                 self.synonymous_nodes(
-                    the_id=gene_id, depth_max=2, filter_node_type={target_db}, from_release=from_release
+                    the_id=gene_id,
+                    depth_max=2,
+                    filter_node_type={target_db},
+                    from_release=from_release,
+                    ensembl_backbone_shallow_search=True,
                 ),
                 er=from_release,
             )
-            if len(a) > 0 or from_release is None:
+
+            if len(a) > 0:
                 confidence = 0
                 return a, confidence  # syns, confidence (lower better)
             else:
                 the_paths_no_ens_rel = _final_conversion_path_helper(
-                    self.synonymous_nodes(the_id=gene_id, depth_max=2, filter_node_type={target_db}, from_release=None)
+                    self.synonymous_nodes(
+                        the_id=gene_id,
+                        depth_max=2,
+                        filter_node_type={target_db},
+                        from_release=None,
+                        ensembl_backbone_shallow_search=True,
+                    ),
+                    er=None,
                 )
 
                 for ind1, pt in enumerate(the_paths_no_ens_rel):
-                    ens_rels = _final_conversion_path_helper_2(pt)
+                    ens_rels = _final_conversion_path_helper_2(pt)  # add ens_rel sets
                     the_paths_no_ens_rel[ind1] = [i + [ens_rels[ind2]] for ind2, i in enumerate(pt)]
                 confidence = 1
-                return a, confidence
+                return the_paths_no_ens_rel, confidence
 
         def _final_conversion_helper(conv_dict, conv_dict_key, a_path):
+            """Todo.
 
+            Args:
+                conv_dict: Todo.
+                conv_dict_key: Todo.
+                a_path: Todo.
+
+            Returns:
+                Todo.
+            """
             # the path will continue with final conversion so assembly penalty should be calculated again.
             _s1, _s2 = conv_dict[conv_dict_key]["final_assembly_priority"]
             penalty, step_pri, _ = self.minimum_assembly_jumps(a_path, _s1, _s2)
@@ -1357,7 +1556,7 @@ class Track:
 
         return result, converted_ids, lost_ids
 
-    def identify_source(self, dataset_ids: list):  # TODO: move to Dataset object
+    def identify_source(self, dataset_ids: list):
         """Todo.
 
         Args:
@@ -1371,7 +1570,7 @@ class Track:
             # assembly = self.get_external_assembly()
             possible_trios.extend(self.graph.node_trios[di])
 
-        return list(Counter(possible_trios).most_common())
+        return list(Counter(possible_trios).most_common())  # TODO
 
     def identify_source_ensembl_release(self, dataset_ids: list):
         """Todo.
@@ -1390,4 +1589,4 @@ class Track:
         Raises:
             NotImplementedError: Todo.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # TODO

@@ -141,7 +141,10 @@ class TheGraph(nx.MultiDiGraph):
                 if j not in output:
                     output[j] = set()
                 output[j].update(the_result[i][j])
-        output = {DB.nts_assembly[i][DB.backbone_form]: copy.deepcopy(output) for i in output}
+        output = {
+            DB.nts_assembly[i][DB.backbone_form]: {j: copy.deepcopy(output)[j] for j in output if j == i}
+            for i in output
+        }
         return output
 
     @staticmethod
@@ -159,16 +162,22 @@ class TheGraph(nx.MultiDiGraph):
 
                     for db_name in edge_info:
 
-                        if db_name not in result[i]:
-                            result[i][db_name] = dict()
+                        if db_name in DB.nts_ensembl_reverse:
+                            _db_name_form = DB.nts_ensembl_reverse[db_name]
+                            _db_name = DB.nts_assembly[the_graph.graph["genome_assembly"]][_db_name_form]
+                        else:
+                            _db_name = copy.deepcopy(db_name)
+
+                        if _db_name not in result[i]:
+                            result[i][_db_name] = dict()
 
                         for assembly_name in edge_info[db_name]:
 
-                            if assembly_name not in result[i][db_name]:
-                                result[i][db_name][assembly_name] = set()
+                            if assembly_name not in result[i][_db_name]:
+                                result[i][_db_name][assembly_name] = set()
 
                             release_set = edge_info[db_name][assembly_name]
-                            result[i][db_name][assembly_name].update(release_set)
+                            result[i][_db_name][assembly_name].update(release_set)
         return result
 
     @cached_property

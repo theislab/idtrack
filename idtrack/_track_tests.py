@@ -9,6 +9,7 @@ import logging
 import random
 import time
 from abc import ABC
+from math import ceil
 from typing import Any, Dict, Union
 
 import networkx as nx
@@ -110,6 +111,47 @@ class TrackTests(Track, ABC):
 
         return switch
 
+    def is_combined_edges_dicts_overlapping_and_complete(self):
+        """Todo.
+
+        Returns:
+            Todo.
+        """
+        the_dicts = [
+            self.graph.combined_edges,
+            self.graph.combined_edges_genes,
+            self.graph.combined_edges_assembly_specific_genes,
+        ]
+        for d1, d2 in itertools.permutations(iterable=the_dicts, r=2):
+            if len(d1.keys() & d2.keys()) != 0:
+                return False  # There are some overlapping identifiers.
+
+        covered_nodes = set.union(*map(set, the_dicts))
+        uncovered_nodes = self.graph.nodes - covered_nodes
+        for un in uncovered_nodes:
+            node_data = self.graph.nodes[un]
+            if "Version" not in node_data or node_data["Version"] not in DB.alternative_versions:
+                return False  # There are identifiers that is not covered with these dicts.
+
+        return True
+
+    def is_edge_with_same_nts_only_at_backbone_nodes(self):
+        """Todo.
+
+        Returns:
+            Todo.
+        """
+        for n1 in self.graph.nodes:
+            nts1 = self.graph.nodes[n1][DB.node_type_str]
+
+            for n2 in self.graph.neighbors(n1):
+                nts2 = self.graph.nodes[n2][DB.node_type_str]
+
+                if nts1 == nts2 and nts1 != DB.external_search_settings["nts_backbone"]:
+                    return False
+
+        return True
+
     def is_id_functions_consistent_external(self, verbose: bool = True):
         """Todo.
 
@@ -163,7 +205,7 @@ class TrackTests(Track, ABC):
         Raises:
             NotImplementedError: Todo.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # TODO
 
     def how_many_corresponding_path_ensembl(
         self, from_release: int, from_assembly: int, to_release: int, go_external: bool, verbose: bool = True
@@ -209,7 +251,9 @@ class TrackTests(Track, ABC):
         go_external: bool,
         prioritize_to_one_filter: bool,
         convert_using_release: bool,
+        from_fraction: float = 1.0,
         verbose: bool = True,
+        verbose_detailed: bool = False,
     ):
         """Todo.
 
@@ -222,7 +266,9 @@ class TrackTests(Track, ABC):
             go_external: Todo.
             prioritize_to_one_filter: Todo.
             convert_using_release: Todo.
+            from_fraction: Todo.
             verbose: Todo.
+            verbose_detailed: Todo.
 
         Raises:
             ValueError: Todo.
@@ -234,19 +280,28 @@ class TrackTests(Track, ABC):
         ids_to = set(self.graph.get_id_list(to_database, self.graph.graph["genome_assembly"], to_release))
         ids_to_s = {self.graph.nodes[i]["ID"] for i in ids_to} if to_database == "ensembl_gene" else set()
 
-        parameters: Dict[str, Union[bool, str, int]] = {
+        if from_fraction == 1.0:
+            pass
+        elif 0.0 < from_fraction < 1.0:
+            from_faction_count = ceil(len(ids_from) * from_fraction)
+            ids_from = sorted(random.sample(ids_from, from_faction_count))
+        else:
+            raise ValueError
+
+        parameters: Dict[str, Union[bool, str, int, float]] = {
             "from_release": from_release,
             "from_assembly": from_assembly,
             "from_database": from_database,
             "to_release": to_release,
             "to_database": to_database,
             "go_external": go_external,
+            "from_fraction": from_fraction,
             "prioritize_to_one_filter": prioritize_to_one_filter,
         }
 
         metrics: Dict[str, Any] = {
             "parameters": parameters,
-            "id_list": {"ids_from": ids_from, "ids_to": ids_to},
+            "ids": {"from": ids_from, "to": ids_to},
             "lost_item": [],
             "one_to_one_ids": {},
             "query_not_in_the_graph": [],
@@ -262,8 +317,22 @@ class TrackTests(Track, ABC):
 
         t1 = time.time()
         for ind, the_id in enumerate(ids_from):
-            progress_bar(ind, len(ids_from) - 1, verbose=verbose, suffix=the_id)
-            # print(the_id)
+            if not verbose_detailed:
+                progress_bar(ind, len(ids_from) - 1, verbose=verbose)
+            else:
+                progress_bar(
+                    ind,
+                    len(ids_from) - 1,
+                    verbose=verbose,
+                    suffix=f" {the_id}"
+                    f" ["
+                    f"{len(metrics['one_to_one_ids'])},"
+                    f"{len(metrics['one_to_multiple_ids'])},"
+                    f"{len(metrics['lost_item'])},"
+                    f"{len(metrics['found_ids_not_accurate'])},"
+                    f"{len(metrics['query_not_in_the_graph']) + len(metrics['history_voyage_failed'])}"
+                    f"] ",
+                )
             try:
                 if convert_using_release:
                     converted_item = self.convert(
@@ -278,7 +347,7 @@ class TrackTests(Track, ABC):
                     converted_item = self.convert(
                         from_id=the_id,
                         from_release=None,
-                        to_release=None,
+                        to_release=to_release,
                         final_database=to_database,
                         go_external=go_external,
                         prioritize_to_one_filter=prioritize_to_one_filter,
@@ -362,40 +431,52 @@ class TrackTests(Track, ABC):
             the_key1 = self.random_dataset_source_generator(from_assembly, include_ensembl=True)
             if the_key1 is not None:
                 the_key2 = self.random_dataset_source_generator(
-                    to_assembly, include_ensembl=True, release_lower_limit=None if strict_forward else the_key1[2]
+                    to_assembly, include_ensembl=True, release_lower_limit=None if not strict_forward else the_key1[2]
                 )
             if the_key1 is None or the_key2 is None:
-                self.log.warning("Recalculating arguments.")
+                self.log.warning("Recalculating parameters.")
 
         return {
             "from_assembly": from_assembly,
             "from_release": the_key1[2],
             "to_release": the_key2[2],
             "from_database": the_key1[0],
-            "to_database": the_key1[0],
+            "to_database": the_key2[0],
         }
 
     def history_travel_testing_random(
-        self, strict_forward: bool, convert_using_release: bool, prioritize_to_one_filter: bool, verbose: bool = True
+        self,
+        from_fraction: float,
+        strict_forward: bool,
+        convert_using_release: bool,
+        prioritize_to_one_filter: bool,
+        verbose: bool,
+        verbose_detailed: bool,
     ):
         """Todo.
 
         Args:
+            from_fraction: Todo.
             strict_forward: Todo.
             convert_using_release: Todo.
             prioritize_to_one_filter: Todo.
             verbose: Todo.
+            verbose_detailed: Todo.
 
         Returns:
             Todo.
         """
         parameters = self.history_travel_testing_random_arguments_generator(strict_forward=strict_forward)
+        if verbose:
+            print(parameters)
         return self.history_travel_testing(
             **parameters,
             go_external=True,
             prioritize_to_one_filter=prioritize_to_one_filter,
             convert_using_release=convert_using_release,
+            from_fraction=from_fraction,
             verbose=verbose,
+            verbose_detailed=verbose_detailed,
         )
 
     def is_external_conversion_robust(self, convert_using_release: bool, verbose: bool):
@@ -470,7 +551,6 @@ class TrackTests(Track, ABC):
         if len(possible_releases) > 1:
             selected_release = random.choice(list(possible_releases))
             the_key = (selected_database, assembly, selected_release)
-            print(the_key)
             return the_key
         else:
             return None
