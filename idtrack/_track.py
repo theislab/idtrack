@@ -82,13 +82,13 @@ class Track:
         """
 
         def decide_terminate_externals():
-            if last_node_nts == DB.nts_external:
+            if input_node_type == DB.nts_external:  # last node nts in the path
 
                 if len(_the_path) > 1:
                     edge_key = self.edge_key_orientor(*_the_path[-2:], 0)
                     the_data = self.graph.get_edge_data(*edge_key)[DB.connection_dict]  # edge_data
                 else:
-                    the_data = self.graph.combined_edges[_the_path[-1]]  # node_data
+                    the_data = self.graph.combined_edges[_the_id]  # last node is _the_id, node_data
 
                 for _ed1 in the_data:  # database
                     if _ed1 in filter_node_type:
@@ -99,11 +99,11 @@ class Track:
             return False
 
         def decide_terminate_others():
-            if last_node_nts != DB.nts_external:
+            if input_node_type != DB.nts_external:  # last node nts in the path
 
-                if last_node_nts in filter_node_type and (
+                if input_node_type in filter_node_type and (
                     from_release is None
-                    or TheGraph.is_point_in_range(self.graph.get_active_ranges_of_id[_the_path[-1]], from_release)
+                    or TheGraph.is_point_in_range(self.graph.get_active_ranges_of_id[_the_id], from_release)
                 ):
                     return True
 
@@ -112,7 +112,6 @@ class Track:
         input_node_type = self.graph.nodes[_the_id][DB.node_type_str]
         _the_path = [_the_id] if the_path is None else the_path
         _the_path_db = [input_node_type] if the_path_db is None else the_path_db
-        last_node_nts = self.graph.nodes[_the_path[-1]][DB.node_type_str]
 
         if decide_terminate_others() or decide_terminate_externals():
             synonymous_ones.append(_the_path)
@@ -120,7 +119,15 @@ class Track:
 
         if depth_max > max(Counter(_the_path_db).values()):  # The depth is all node_type.
 
-            for graph in (self.graph, self.graph.rev) if not ensembl_backbone_shallow_search else (self.graph.rev,):
+            for graph in (
+                (self.graph, self.graph.rev)
+                # if ensembl_backbone_shallow_search activated, follow only reverse direction. This should typically
+                # start from the ensembl_gene nodes.
+                # Allow bidirectional search for certain nts when ensembl_backbone_shallow_search activated, this is to
+                # make sure assembl_nodes are bridging correctly.
+                if not ensembl_backbone_shallow_search or input_node_type in DB.nts_bidirectional_synonymous_search
+                else (self.graph.rev,)
+            ):
 
                 for _next_neighbour in graph.neighbors(_the_id):
 
@@ -137,21 +144,16 @@ class Track:
 
                     if len(_the_path) >= 2:
                         # prevent bouncing between transcript and gene id.versions
-                        l1 = _the_path[-2]  # [..., l1, l2]. When new one added: [..., l1, l2, _next_neighbour]
-
-                        gnt_l1_ = self.graph.nodes[l1][DB.node_type_str]
-                        gnt_l1 = DB.nts_assembly_reverse.get(gnt_l1_, gnt_l1_)
-                        gnt_new = DB.nts_assembly_reverse.get(gnt, gnt)
-
+                        # [..., l1, l2, gnt]
                         if (
                             # if the addition of new element is a bouncing event (like A-B-A)
-                            gnt_l1 == gnt_new
+                            _the_path_db[-2] == gnt
                             # Allow bouncing if it bridges two 'external' nodes.
-                            and gnt_new != DB.nts_external
+                            and gnt != DB.nts_external
                             # Allow bouncing if it bridges two 'ensembl base' nodes.
-                            and gnt_new != DB.nts_base_ensembl["gene"]  # transcript or translation base depracated.
+                            and gnt != DB.nts_base_ensembl["gene"]  # transcript or translation base depracated.
                             # Check if 1st and 3rd element are the same 'ID' (could have different 'Versions'.)
-                            and self.graph.nodes[l1]["ID"] == self.graph.nodes[_next_neighbour]["ID"]
+                            and self.graph.nodes[_the_path[-2]]["ID"] == self.graph.nodes[_next_neighbour]["ID"]
                         ):
                             continue
 
@@ -190,7 +192,7 @@ class Track:
             depth_max: Todo.
             filter_node_type: Todo.
             from_release: Todo.
-            ensembl_backbone_shallow_search: Todo.
+            ensembl_backbone_shallow_search: Todo. assemly bridge'i bozar cunku direction iki tarafli olmali
 
         Returns:
             Todo.
@@ -540,198 +542,227 @@ class Track:
         else:
             raise ValueError
 
-    def _recursive_path_search(
+    def path_search(
         self,
         from_id: str,
         from_release: int,
         to_release: int,
-        all_paths: set,
         reverse: bool,
         external_settings: dict,
-        beamed_up: bool = False,
         external_jump: float = None,
-        edge_hist: list = None,
         multiple_ensembl_transition: bool = False,
-    ):
+    ) -> set:
         """Todo.
 
         Args:
             from_id: Todo.
             from_release: Todo.
             to_release: Todo.
-            all_paths: Todo.
             reverse: Todo.
             external_settings: Todo.
-            beamed_up: Todo.
             external_jump: Todo.
-            edge_hist: Todo.
-            multiple_ensembl_transition: Todo
+            multiple_ensembl_transition: Todo.
+
+        Returns:
+            _description_
         """
 
-        def _external_path_maker(a_from_id, a_ens_rel, a_syn_pth, free_from_release: bool):
-            a_edge_hist_alt = list()
-            a_from_id_ext_path = copy.deepcopy(a_from_id)
-            for a_path_ind, a_next_node in enumerate(a_syn_pth):
+        def _recursive_function(
+            __from_id: str,
+            __from_release: int,
+            __reverse: bool,
+            __beamed_up: bool,
+            __external_jump: Optional[float],
+            __edge_hist: Optional[list],
+            __edge_hist_non_backbone: Optional[set],
+        ) -> None:
+            def _external_path_maker(a_from_id, a_ens_rel, a_syn_pth, free_from_release: bool):
+                a_edge_hist_alt = list()
+                a_from_id_ext_path = copy.deepcopy(a_from_id)
+                for a_path_ind, a_next_node in enumerate(a_syn_pth):
 
-                if a_path_ind == 0:
-                    continue
-                # 0 is tested TheGraph.is_node_consistency_robust
-                a_edge_hist_alt.append(
-                    (
-                        a_from_id_ext_path,
-                        a_next_node,
-                        0,
-                        a_ens_rel if not free_from_release else self._external_entrance_placeholder,
+                    if a_path_ind == 0:
+                        continue
+                    # 0 is tested TheGraph.is_node_consistency_robust
+                    a_edge_hist_alt.append(
+                        (
+                            a_from_id_ext_path,
+                            a_next_node,
+                            0,
+                            a_ens_rel if not free_from_release else self._external_entrance_placeholder,
+                        )
                     )
-                )
-                a_from_id_ext_path = copy.deepcopy(a_next_node)
-            return a_edge_hist_alt
+                    a_from_id_ext_path = copy.deepcopy(a_next_node)
+                return a_edge_hist_alt
 
-        _edge_hist = list() if edge_hist is None else edge_hist
-        _external_jump = 0 if external_jump is None else external_jump
-        next_edges = self.get_next_edges(from_id, from_release, reverse)
+            def _non_backbone_finder(_syn_path_):
+                return {
+                    i
+                    for i in _syn_path_
+                    if self.graph.nodes[i][DB.node_type_str] != DB.external_search_settings["nts_backbone"]
+                }
 
-        if (
-            len(_edge_hist) == 0
-            and len(next_edges) == 0
-            and self.graph.nodes[from_id][DB.node_type_str] != DB.external_search_settings["nts_backbone"]
-            # the step input is actually external
-        ):
-            # get syn only for given release
-            if not multiple_ensembl_transition:
-                s = self.choose_relevant_synonym(
-                    from_id,
-                    depth_max=external_settings["synonymous_max_depth"],
-                    to_release=to_release,
-                    filter_node_type={external_settings["nts_backbone"]},
-                    # do not time travel here, go with the same release
-                    from_release=from_release,
-                )
+            def _recurring_element(_syn_path_):
+                for _syn_path_i in _syn_path_:
+                    if _syn_path_i in _edge_hist_non_backbone:
+                        return False
 
-            # If from release is infered by the program (not provided by the user), then run pathfinder from all
-            # possible ones. This will increase the computational demand but yield more robust results.
-            switch_met = False
-            if multiple_ensembl_transition or len(s) == 0:
-                s = self.choose_relevant_synonym(
-                    from_id,
-                    depth_max=external_settings["synonymous_max_depth"],
-                    to_release=to_release,
-                    filter_node_type={external_settings["nts_backbone"]},
-                    # if there is way to find with the same release, go just find it in other releases.
-                    from_release=None,
-                )
-                switch_met = True
+                return True
 
-            for s1, s2, s3, s4, _s5 in s:  # new_from_id, new_from_rel, new_reverse, path, path_db
-                # TODO: remove path_db (s5) from the function and pathfinder.
+            _edge_hist = list() if __edge_hist is None else __edge_hist
+            _edge_hist_non_backbone = set() if __edge_hist_non_backbone is None else __edge_hist_non_backbone
+            _external_jump = 0 if __external_jump is None else __external_jump
+            next_edges = self.get_next_edges(__from_id, __from_release, __reverse)
 
-                alt_external_path = _external_path_maker(from_id, s2, s4, free_from_release=switch_met)
-
-                self._recursive_path_search(
-                    # with synonym route, don't go synonym finding in the next iteration
-                    s1,
-                    s2,
-                    to_release,
-                    all_paths,
-                    s3,
-                    external_settings,
-                    beamed_up=True,
-                    external_jump=_external_jump,  # It does not count as it is starting point
-                    edge_hist=_edge_hist + alt_external_path,
-                )  # Add parallel path finding searches
-
-        else:
-            for _edge_id, (_edge_release, _only_self_loop, _from_id, _node_after, _multi_edge_id) in enumerate(
-                next_edges
+            if (
+                len(_edge_hist) == 0
+                and len(next_edges) == 0
+                and self.graph.nodes[__from_id][DB.node_type_str] != DB.external_search_settings["nts_backbone"]
+                # the step input is actually external
             ):
-
-                # Synonymous genes of the gene of interest until the next node in the history travel.
-
-                if not beamed_up and _external_jump < external_settings["jump_limit"]:
-
+                # get syn only for given release
+                if not multiple_ensembl_transition:
                     s = self.choose_relevant_synonym(
-                        _from_id,
+                        __from_id,
                         depth_max=external_settings["synonymous_max_depth"],
                         to_release=to_release,
                         filter_node_type={external_settings["nts_backbone"]},
-                        from_release=None,
+                        # do not time travel here, go with the same release
+                        from_release=__from_release,
                     )
 
-                    for s1, s2, s3, s4, _s5 in s:  # new_from_id, new_from_rel, new_reverse, path, path_db
-                        # TODO: remove path_db (s5) from the function and pathfinder.
+                # If from release is infered by the program (not provided by the user), then run pathfinder from all
+                # possible ones. This will increase the computational demand but yield more robust results.
+                switch_met = False
+                if multiple_ensembl_transition or len(s) == 0:
+                    s = self.choose_relevant_synonym(
+                        __from_id,
+                        depth_max=external_settings["synonymous_max_depth"],
+                        to_release=to_release,
+                        filter_node_type={external_settings["nts_backbone"]},
+                        # if there is way to find with the same release, go just find it in other releases.
+                        from_release=None,
+                    )
+                    switch_met = True
 
-                        alt_external_path = _external_path_maker(_from_id, s2, s4, free_from_release=True)
+                for s1, s2, s3, s4, _s5 in s:  # new_from_id, new_from_rel, new_reverse, path, path_db
+                    # TODO: remove path_db (s5) from the function and pathfinder.
 
-                        if all([eha not in _edge_hist for eha in alt_external_path]):  # prevent loops
-                            self._recursive_path_search(
+                    if _recurring_element(s4):
+                        # with synonym route, can't go synonym finding in the next iteration
+                        _recursive_function(
+                            s1,  # __from_id
+                            s2,  # __from_release
+                            s3,  # __reverse
+                            True,  # __beamed_up
+                            _external_jump,  # __external_jump. It does not count as it is starting point
+                            _edge_hist + _external_path_maker(__from_id, s2, s4, switch_met),  # __edge_hist
+                            _edge_hist_non_backbone | _non_backbone_finder(s4),  # __edge_hist_non_backbone
+                        )
+                        # Add parallel path finding searches
+
+            else:
+                for _edge_release, _only_self_loop, _from_id, _node_after, _multi_edge_id in next_edges:
+
+                    # Synonymous genes of the gene of interest until the next node in the history travel.
+
+                    if not __beamed_up and _external_jump < external_settings["jump_limit"]:
+
+                        s = self.choose_relevant_synonym(
+                            _from_id,
+                            depth_max=external_settings["synonymous_max_depth"],
+                            to_release=to_release,
+                            filter_node_type={external_settings["nts_backbone"]},
+                            from_release=None,
+                        )
+
+                        for s1, s2, s3, s4, _s5 in s:  # new_from_id, new_from_rel, new_reverse, path, path_db
+                            # TODO: remove path_db (s5) from the function and pathfinder.
+
+                            if _recurring_element(s4):
                                 # with synonym route, don't go synonym finding in the next iteration
-                                s1,
-                                s2,
-                                to_release,
-                                all_paths,
-                                s3,
-                                external_settings,
-                                beamed_up=True,
-                                external_jump=_external_jump + 1.0,
-                                edge_hist=_edge_hist + alt_external_path,
-                            )  # Add parallel path finding searches
+                                _recursive_function(
+                                    s1,  # __from_id
+                                    s2,  # __from_release
+                                    s3,  # __reverse
+                                    True,  # __beamed_up
+                                    _external_jump + 1.0,  # __external_jump
+                                    _edge_hist + _external_path_maker(_from_id, s2, s4, True),  # __edge_hist
+                                    _edge_hist_non_backbone | _non_backbone_finder(s4),  # __edge_hist_non_backbone
+                                )
+                                # Add parallel path finding searches
 
-                # History travel
+                    # History travel
 
-                dict_key = (_from_id, _node_after, _multi_edge_id)
+                    dict_key = (_from_id, _node_after, _multi_edge_id)
 
-                if dict_key not in _edge_hist:
-                    # self loops and, o yoldan daha önce geçmiş mi. extinction event'i var mı
-                    _from_id_ver = self.graph.nodes[_from_id]["Version"]
+                    if dict_key not in _edge_hist:
+                        # self loops and, o yoldan daha önce geçmiş mi. extinction event'i var mı
+                        _from_id_ver = self.graph.nodes[_from_id]["Version"]
 
-                    if reverse:
-                        if _edge_release <= to_release:
-                            if _from_id_ver not in DB.alternative_versions:
-                                all_paths.add(tuple(_edge_hist) if len(_edge_hist) > 0 else ((None, from_id, None),))
-                        elif _only_self_loop:
-                            _edge_other = self.graph.rev.get_edge_data(*dict_key)["old_release"]
-                            if _edge_other <= to_release:  # and _edge_other != np.inf
-                                all_paths.add(tuple(_edge_hist + [dict_key]))
+                        if __reverse:
+                            if _edge_release <= to_release:
+                                if _from_id_ver not in DB.alternative_versions:
+                                    all_paths.add(
+                                        tuple(_edge_hist) if len(_edge_hist) > 0 else ((None, __from_id, None),)
+                                    )
+                            elif _only_self_loop:
+                                _edge_other = self.graph.rev.get_edge_data(*dict_key)["old_release"]
+                                if _edge_other <= to_release:  # and _edge_other != np.inf
+                                    all_paths.add(tuple(_edge_hist + [dict_key]))
+                                else:
+                                    _edge_hist.append(dict_key)
                             else:
-                                _edge_hist.append(dict_key)
-                        else:
-                            self._recursive_path_search(
-                                _node_after,
-                                _edge_release,
-                                to_release,
-                                all_paths,
-                                reverse,
-                                external_settings,
-                                beamed_up=False,
-                                external_jump=_external_jump,
-                                edge_hist=_edge_hist + [dict_key],
-                            )
-                    else:  # if not reverse
-                        if _edge_release >= to_release:
-                            if _from_id_ver not in DB.alternative_versions:
-                                all_paths.add(tuple(_edge_hist) if len(_edge_hist) > 0 else ((None, from_id, None),))
-                        elif _only_self_loop:  # latest also goes here
-                            _edge_other = self.graph.get_edge_data(*dict_key)["new_release"]
-                            _is_latest_loop = np.isinf(_edge_other)
-                            if _edge_other >= to_release and not _is_latest_loop:
-                                all_paths.add(tuple(_edge_hist + [dict_key]))
-                            elif _is_latest_loop:
-                                all_paths.add(tuple(_edge_hist) if len(_edge_hist) > 0 else ((None, from_id, None),))
+                                _recursive_function(
+                                    _node_after,  # __from_id
+                                    _edge_release,  # __from_release
+                                    __reverse,  # __reverse
+                                    False,  # __beamed_up
+                                    _external_jump,  # __external_jump
+                                    _edge_hist + [dict_key],  # __edge_hist
+                                    _edge_hist_non_backbone,  # __edge_hist_non_backbone
+                                )
+                        else:  # if not reverse
+                            if _edge_release >= to_release:
+                                if _from_id_ver not in DB.alternative_versions:
+                                    all_paths.add(
+                                        tuple(_edge_hist) if len(_edge_hist) > 0 else ((None, __from_id, None),)
+                                    )
+                            elif _only_self_loop:  # latest also goes here
+                                _edge_other = self.graph.get_edge_data(*dict_key)["new_release"]
+                                _is_latest_loop = np.isinf(_edge_other)
+                                if _edge_other >= to_release and not _is_latest_loop:
+                                    all_paths.add(tuple(_edge_hist + [dict_key]))
+                                elif _is_latest_loop:
+                                    all_paths.add(
+                                        tuple(_edge_hist) if len(_edge_hist) > 0 else ((None, __from_id, None),)
+                                    )
+                                else:
+                                    # Do not parallelize (recursive) at that point. keep loop for all.
+                                    _edge_hist.append(dict_key)
                             else:
-                                # Do not parallelize (recursive) at that point. keep loop for all.
-                                _edge_hist.append(dict_key)
-                        else:
-                            self._recursive_path_search(
-                                _node_after,
-                                _edge_release,
-                                to_release,
-                                all_paths,
-                                reverse,
-                                external_settings,
-                                beamed_up=False,
-                                external_jump=_external_jump,
-                                edge_hist=_edge_hist + [dict_key],
-                            )
+                                _recursive_function(
+                                    _node_after,  # __from_id
+                                    _edge_release,  # __from_release
+                                    __reverse,  # __reverse
+                                    False,  # __beamed_up
+                                    _external_jump,  # __external_jump
+                                    _edge_hist + [dict_key],  # __edge_hist
+                                    _edge_hist_non_backbone,  # __edge_hist_non_backbone
+                                )
+
+        all_paths: set = set()
+        _recursive_function(
+            from_id,  # __from_id
+            from_release,  # __from_release
+            reverse,  # __reverse
+            False,  # __beamed_up
+            external_jump,  # __external_jump
+            None,  # __edge_hist
+            None,  # __edge_hist_non_backbone
+        )
+
+        return all_paths
 
     def get_possible_paths(
         self,
@@ -766,28 +797,40 @@ class Track:
         # Todo: check if from_id exist in [from_release, and/or to_release]. Convert directly
 
         # Try first with no external jump route
-        all_paths: set = set()
-        self._recursive_path_search(
-            from_id,
-            from_release,
-            to_release,
-            all_paths,
-            reverse,
-            es,
+
+        all_paths = self.path_search(
+            from_id=from_id,
+            from_release=from_release,
+            to_release=to_release,
+            reverse=reverse,
+            external_settings=es,
             external_jump=np.inf,
             multiple_ensembl_transition=False,
         )
 
+        if len(all_paths) < 1:
+            # If none found, make relaxed search in terms of ensembl transition.
+
+            all_paths = self.path_search(
+                from_id=from_id,
+                from_release=from_release,
+                to_release=to_release,
+                reverse=reverse,
+                external_settings=es,
+                external_jump=np.inf,
+                multiple_ensembl_transition=True,
+            )
+
+        es = copy.deepcopy(DB.external_search_settings)
         while go_external and len(all_paths) < 1:
             # Activate external jump and increase the depth of search at each step
-            all_paths = set()
-            self._recursive_path_search(
-                from_id,
-                from_release,
-                to_release,
-                all_paths,
-                reverse,
-                es,
+
+            all_paths = self.path_search(
+                from_id=from_id,
+                from_release=from_release,
+                to_release=to_release,
+                reverse=reverse,
+                external_settings=es,
                 external_jump=None,
                 multiple_ensembl_transition=False,
             )
@@ -799,30 +842,15 @@ class Track:
                 break
 
         es = copy.deepcopy(DB.external_search_settings)
-        if len(all_paths) < 1 and from_release_inferred:
-            # If none found, make relaxed search in terms of ensembl transition.
-            all_paths = set()
-            self._recursive_path_search(
-                from_id,
-                from_release,
-                to_release,
-                all_paths,
-                reverse,
-                es,
-                external_jump=np.inf,
-                multiple_ensembl_transition=True,
-            )
-
-        while go_external and len(all_paths) < 1 and from_release_inferred:
+        while go_external and len(all_paths) < 1:
             # The same as above except this time with relaxed transition.
-            all_paths = set()
-            self._recursive_path_search(
-                from_id,
-                from_release,
-                to_release,
-                all_paths,
-                reverse,
-                es,
+
+            all_paths = self.path_search(
+                from_id=from_id,
+                from_release=from_release,
+                to_release=to_release,
+                reverse=reverse,
+                external_settings=es,
                 external_jump=None,
                 multiple_ensembl_transition=True,
             )
@@ -1188,7 +1216,7 @@ class Track:
             "final_conv_asy_min_prior",
             "final_asy_min_prior",
             # "edge_scores_reduced",
-            # "ensembl_step"
+            "ensembl_step",
             "ens_node_importance",
         )  # they all are needed to be minimized
 

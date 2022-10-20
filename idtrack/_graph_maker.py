@@ -379,6 +379,11 @@ class GraphMaker:
         # Merge the nodes that are the same when they are convert into lowercase/uppercase.
         g = self._merge_nodes_with_the_same_in_lower_case(g)
 
+        # Remove hiper-connecting nodes.
+        for hcn in g.nodes:
+            if g.nodes[hcn][DB.node_type_str] == DB.nts_external and g.out_degree[hcn] > DB.hyperconnecting_threshold:
+                g.remove_node(hcn)
+
         for e1, e2, e3 in g.edges:
             edge_data = g.get_edge_data(e1, e2, e3)
             if DB.connection_dict in edge_data:

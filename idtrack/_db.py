@@ -41,6 +41,7 @@ class DB:
     no_old_node_id = "Void"
     no_new_node_id = "Retired"
     alternative_versions = {no_new_node_id, no_old_node_id}
+    hyperconnecting_threshold = 200
 
     # Node Types
     node_type_str = "node_type"
@@ -62,6 +63,7 @@ class DB:
             nts_assembly_reverse[nts_assembly[i][j]] = nts_ensembl[j]
 
     nts_base_ensembl = {i: f"base_ensembl_{i}" for i in forms_in_order}
+    nts_bidirectional_synonymous_search = {nts_external, nts_base_ensembl[backbone_form]}
 
     # Only gene assembly genes
     nts_assembly_gene = set()
