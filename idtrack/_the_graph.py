@@ -72,6 +72,21 @@ class TheGraph(nx.MultiDiGraph):
         return True
 
     @cached_property
+    def hyperconnective_nodes(self):
+        """Todo.
+
+        Returns:
+            Todo.
+        """
+        hcn_dict = dict()
+        for hcn in self.nodes:
+            od = self.out_degree[hcn]
+            if self.nodes[hcn][DB.node_type_str] == DB.nts_external and od > DB.hyperconnecting_threshold:
+                hcn_dict[hcn] = od
+
+        return hcn_dict
+
+    @cached_property
     def combined_edges(self):
         """Todo.
 
@@ -523,6 +538,8 @@ class TheGraph(nx.MultiDiGraph):
             return range(l1, (l2 if not np.isinf(l2) else max(self.graph["confident_for_release"])) + 1)
 
         # external ise database ismi digerleriyse node_type
+
+        # database, assembly, ensembl release
         the_node_type = self.nodes[the_id][DB.node_type_str]
         if the_node_type == DB.nts_ensembl["gene"]:
             return {

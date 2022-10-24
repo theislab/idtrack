@@ -92,6 +92,9 @@ class GraphMaker:
                 included into the graph. The graph will be immensely larger, and the ID history travel calculation will
                 be very slow. Additionally, the success of ID conversion under such a setting it has not been
                 tested yet.
+            remove_hypterconnecting: If set ``True``, the external nodes with out degree higher than a certain
+                threshold will be removed. This is to improve the speed, as these nodes sometimes create a huge
+                bottleneck in the pathfinder algorithm.
 
         Returns:
             Resultant multi edge directed graph.
@@ -378,11 +381,6 @@ class GraphMaker:
 
         # Merge the nodes that are the same when they are convert into lowercase/uppercase.
         g = self._merge_nodes_with_the_same_in_lower_case(g)
-
-        # Remove hiper-connecting nodes.
-        for hcn in g.nodes:
-            if g.nodes[hcn][DB.node_type_str] == DB.nts_external and g.out_degree[hcn] > DB.hyperconnecting_threshold:
-                g.remove_node(hcn)
 
         for e1, e2, e3 in g.edges:
             edge_data = g.get_edge_data(e1, e2, e3)

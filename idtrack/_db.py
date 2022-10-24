@@ -4,6 +4,9 @@
 # k.inecik@gmail.com
 
 
+from typing import Any, Dict
+
+
 class DB:
     """Keeps some variables shared across different classes."""
 
@@ -36,12 +39,12 @@ class DB:
         assembly_priority.append(assembly_mysqlport_priority[ap1]["Priority"])
     assembly_priority = sorted(assembly_priority, reverse=True)
 
-    # Protected Non-int Version Strings
+    # Protected Non-int Version Strings/Thresholds
     synonym_id_nodes_prefix = "synonym_id::"
     no_old_node_id = "Void"
     no_new_node_id = "Retired"
     alternative_versions = {no_new_node_id, no_old_node_id}
-    hyperconnecting_threshold = 200
+    hyperconnecting_threshold = 50
 
     # Node Types
     node_type_str = "node_type"
@@ -75,4 +78,8 @@ class DB:
     conn_dict_str_ensembl_base = "ensembl_base"  # as a database in connection_dict
 
     # PathFinder Settings
-    external_search_settings = {"jump_limit": 2, "synonymous_max_depth": 2, "nts_backbone": nts_ensembl[backbone_form]}
+    external_search_settings: Dict[str, Any] = {
+        "jump_limit": 2,
+        "synonymous_max_depth": 2,
+        "nts_backbone": nts_ensembl[backbone_form],
+    }
