@@ -9,7 +9,7 @@ import logging
 import re
 from collections import Counter
 from functools import cached_property
-from typing import Union
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import networkx as nx
 import numpy as np
@@ -18,144 +18,179 @@ from ._db import DB
 
 
 class TheGraph(nx.MultiDiGraph):
-    """Todo."""
+    """Graph object containing all the information about the relationships between bio-IDs.
+
+    It is a subclass of :py:class:`networkx.MultiDiGraph`, with some additional methods to aid the pathfinder
+    algorithm in :py:class:`_track.Track`. The object is constructed by :py:class:`_graph_maker.GraphMaker`.
+    """
 
     def __init__(self, *args, **kwargs):
-        """Todo."""
+        """Class initialization.
+
+        Args:
+            args: Arguments to be passed to :py:class:`networkx.MultiDiGraph`.
+            kwargs: Keyword arguments to be passed to :py:class:`networkx.MultiDiGraph`.
+        """
         super().__init__(*args, **kwargs)  # SubClass initialization
 
         # Other variables
-        self.regex_pattern = re.compile(r"^(.+)(_|-|\.)[0-9]+$")
         self.log = logging.getLogger("the_graph")
         self.available_forms = None
 
-    def attach_included_forms(self, available_forms):
-        """Todo.
+    def attach_included_forms(self, available_forms: list) -> None:
+        """Set the ``available_forms`` variable for the instance.
+
+        This is a separate function and mainly aimed to be used by :py:class:`_graph_maker.GraphMaker` during the
+        process of constructing the graph. Just after the graphs for the forms of interests (typically `gene`,
+        `transcript`, and `protein`) are merged, this method is called to store which forms are included in the graph.
+        Setting the variable before merging the graphs causes errors and inconsistencies.
 
         Args:
-            available_forms: Todo.
+            available_forms: Determine which forms (transcript, translation, gene) are included.
         """
         self.available_forms = available_forms
 
+    def calculate_caches(self):
+        """Calculate cached variables using only one method."""
+        _ = self.combined_edges
+        _ = self.combined_edges_assembly_specific_genes
+        _ = self.combined_edges_genes
+        _ = self.lower_chars_graph
+        _ = self.get_active_ranges_of_id
+        _ = self.available_external_databases
+        _ = self.external_database_connection_form
+        _ = self.available_genome_assemblies
+        _ = self.available_external_databases_assembly
+        _ = self.node_trios
+        _ = self.hyperconnective_nodes
+
     @cached_property
-    def rev(self):
-        """Todo.
+    def rev(self) -> nx.MultiDiGraph:
+        """The same graph but the edges are in reverse orientation.
 
         Returns:
-            Todo.
+            ``TheGraph`` object without copying another one in the memory.
         """
         return self.reverse(copy=False)
 
-    def is_node_consistency_robust(self, verbose=False):
-        """Todo.
-
-        Args:
-            verbose: Todo.
-
-        Returns:
-            Todo.
-        """
-        for i in self.nodes:
-            for j in self.neighbors(i):
-                if (
-                    self.nodes[i][DB.node_type_str] == self.nodes[j][DB.node_type_str]
-                    and self.nodes[i][DB.node_type_str] != DB.nts_ensembl["gene"]
-                ):
-                    if verbose:
-                        self.log.warning(f"Neighbor nodes (not backbone) has similar node type: '{i}', '{j}'")
-                    return False
-
-                elif len(self[i][j]) != 1:
-                    if verbose:
-                        self.log.warning(f"Multiple edges between '{i}' and '{j}'")
-                    return False
-        return True
-
     @cached_property
-    def hyperconnective_nodes(self):
-        """Todo.
+    def hyperconnective_nodes(self) -> dict:
+        """Cached property for hyper-connective nodes as keys and number of connections as values.
+
+        Hyper-connective nodes are defined as external nodes with more than
+        :py:attr:`_db.DB.hyperconnecting_threshold`. This nodes creates a huge bottleneck in finding the synonyms
+        of a node and hence the pathfinder algorithm. The pathfinder algoritm is hence speed-up by ignoring these nodes
+        in the search process. This is in theory sacrificing the precision of the algorithm a little bit, but
+        in practice these nodes generally does not have not very precise ID matching. Most of the case, the relavant
+        IDs are matched via some other external ID, so the performance of the pathfinder algorithm actually improves
+        if hyper-connective nodes are ignored.
 
         Returns:
-            Todo.
+            Dictionary of hyper-connective nodes as keys and number of connections as values.
         """
-        hcn_dict = dict()
+        hcn_dict = dict()  # Initialize a dictionary
+
         for hcn in self.nodes:
             od = self.out_degree[hcn]
+            # Note that external ids are always has edges going out, so in_degree is not relevant here.
+
             if self.nodes[hcn][DB.node_type_str] == DB.nts_external and od > DB.hyperconnecting_threshold:
                 hcn_dict[hcn] = od
 
         return hcn_dict
 
     @cached_property
-    def combined_edges(self):
-        """Todo.
+    def combined_edges(self) -> dict:
+        """Combines all the edge data for a given node except `Ensembl gene` and `assembly specific Ensembl gene` nodes.
+
+        It iterates all the edges of a given node to construct a dictionary with a specified format.
 
         Returns:
-            Todo.
+            A dictionary with following format
+            ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.
         """
         self.log.info(f"Cached properties being calculated: {'combined_edges'}")
-        # does not have assembly_specific_genes and ensembl_gene
-        result = dict()
-        result = TheGraph._combined_edges(self.nodes, self, result)
+
+        # Note that the `TheGraph._combined_edges` method does not return assembly_specific_genes and ensembl_gene.
+        result = TheGraph._combined_edges(self.nodes, self)
         return result
 
     @cached_property
-    def combined_edges_genes(self):
-        """Todo.
+    def combined_edges_genes(self) -> dict:
+        """Combines all the edge data for a given node for only `Ensembl gene` nodes.
+
+        It iterates all the edges of a given node to construct a dictionary with a specified format.
 
         Returns:
-            Todo.
+            A dictionary with following format
+            ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.
         """
         self.log.info(f"Cached properties being calculated: {'combined_edges_genes'}")
+
+        # Choose only the nodes that has a node type of 'ensembl_gene'
         non_captured_genes = [nd for nd in self.nodes if self.nodes[nd][DB.node_type_str] == DB.nts_ensembl["gene"]]
-        assert all(
-            [
-                n not in self.combined_edges and n not in self.combined_edges_assembly_specific_genes
-                for n in non_captured_genes
-            ]
-        )
-        result = dict()
-        result = TheGraph._combined_edges(non_captured_genes, self.rev, result)
+        # Note that TrackTest.is_combined_edges_dicts_overlapping_and_complete checks whether there is an error
+        # in terms of missing nodes, or repeated nodes in all combined_edges properties.
+
+        result = TheGraph._combined_edges(non_captured_genes, self.rev)
         return {i: TheGraph._combined_edges_genes_helper(result[i]) for i in result}
 
     @cached_property
-    def combined_edges_assembly_specific_genes(self):
-        """Todo.
+    def combined_edges_assembly_specific_genes(self) -> dict:
+        """Combines all the edge data for a given node for only `assembly specific Ensembl gene` nodes.
 
-        Raises:
-            ValueError: Todo.
+        It iterates all the edges of a given node to construct a dictionary with a specified format.
 
         Returns:
-            Todo.
+            A dictionary with following format
+            ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.
         """
         self.log.info(f"Cached properties being calculated: {'combined_edges_assembly_specific_genes'}")
+
+        # Choose only the nodes that has a node type of 'assembly_x_ensembl_gene'.
         non_captured_genes = [
             nd
             for nd in self.nodes
             if nd not in self.combined_edges and self.nodes[nd][DB.node_type_str] != DB.nts_ensembl["gene"]
         ]
-        if not all([self.nodes[ncg][DB.node_type_str] in DB.nts_assembly_gene for ncg in non_captured_genes]):
-            raise ValueError
-        result = dict()
-        result = TheGraph._combined_edges(non_captured_genes, self.rev, result)
+        # Note that TrackTest.is_combined_edges_dicts_overlapping_and_complete checks whether there is an error
+        # in terms of missing nodes, or repeated nodes in all combined_edges properties.
+
+        result = TheGraph._combined_edges(non_captured_genes, self.rev)
         return {i: TheGraph._combined_edges_genes_helper(result[i]) for i in result}
 
     @staticmethod
-    def _combined_edges_genes_helper(the_result):
-        """Todo.
+    def _combined_edges_genes_helper(the_result) -> dict:
+        """Helper method is called for two methods only.
+
+        The method is called by :py:meth:`_the_graph.TheGraph.combined_edges_assembly_specific_genes` and
+        :py:meth:`_the_graph.TheGraph.combined_edges_genes` only. The aim of the method is to merge all the data
+        coming from multiple external databases.
+
+        Note that the main reason of having a separate methods for these two is basically due to the fact that `gene`
+        nodes has no outgoing edges except to another `gene` node. For this reason,
+        :py:meth:`_the_graph.TheGraph._combined_edges` method has been used with reversed graph. In order to have the
+        information for Ensembl genes or Ensembl assembly genes, the information from all edges should be merged and
+        the name for the database has to be edited accordingly.
+
+        Here, `ensembl_gene` is renamed with `assembly_X_ensembl_gene` for more intuitive understanding of the source of
+        the gene, and also to make the naming consistent.
 
         Args:
-            the_result: Todo.
+            the_result: A dictionary as the output of :py:meth:`_the_graph.TheGraph._combined_edges`.
 
         Returns:
-            Todo.
+            A dictionary with following format
+            ``{database_name: {assembly: {ensembl release set}}}``.
         """
-        output = dict()
+        output: dict = dict()  # Initialize a dict
         for i in the_result:
             for j in the_result[i]:
                 if j not in output:
                     output[j] = set()
-                output[j].update(the_result[i][j])
+                output[j].update(the_result[i][j])  # Combine the info from databases
+
+        # Rename the database_name as mentioned in the docstring. Also, separate assemblies accordingly.
         output = {
             DB.nts_assembly[i][DB.backbone_form]: {j: copy.deepcopy(output)[j] for j in output if j == i}
             for i in output
@@ -163,13 +198,28 @@ class TheGraph(nx.MultiDiGraph):
         return output
 
     @staticmethod
-    def _combined_edges(
-        node_list: Union[nx.classes.reportviews.NodeView, list, set], the_graph: nx.MultiDiGraph, result: dict
-    ):
+    def _combined_edges(node_list: Union[nx.classes.reportviews.NodeView, list], the_graph: nx.MultiDiGraph) -> dict:
+        """Combines the database, assembly, ensembl release information from all edges from a given node.
+
+        The method fills the dictionary with nodes provided as a parameter. The edge data coming from the same node
+        types (the edge between the same node type can exist only between backbone nodes as tested in
+        :py:meth:`_track_test.TrackTest.is_edge_with_same_nts_only_at_backbone_nodes`) are excluded.
+
+        Args:
+            node_list: Node names to be calculated.
+            the_graph: The graph to be used for the calculation. It is generally `self` or `self.rev` depending on
+                how it has been wanted to calculate.
+
+        Returns:
+            A dictionary with following format
+            ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.
+        """
+        result: dict = dict()
         for i in node_list:
             for j in the_graph.neighbors(i):
 
                 if the_graph.nodes[i][DB.node_type_str] != the_graph.nodes[j][DB.node_type_str]:
+                    # Exclude the edges connecting the nodes from the same node type (exclude backbone connections).
 
                     if i not in result:
                         result[i] = dict()
@@ -177,8 +227,11 @@ class TheGraph(nx.MultiDiGraph):
 
                     for db_name in edge_info:
 
-                        if db_name in DB.nts_ensembl_reverse:
-                            _db_name_form = DB.nts_ensembl_reverse[db_name]
+                        if db_name in DB.nts_ensembl_reverse:  # if db_name is a ensembl_x
+                            _db_name_form = DB.nts_ensembl_reverse[db_name]  # get the form
+                            # Get the corresponding node type in assembly specific dictionary. This is to make
+                            # sure assemblies are intuitively separated into different db_names and make
+                            # all subsequent calculation consistent.
                             _db_name = DB.nts_assembly[the_graph.graph["genome_assembly"]][_db_name_form]
                         else:
                             _db_name = copy.deepcopy(db_name)
@@ -196,402 +249,538 @@ class TheGraph(nx.MultiDiGraph):
         return result
 
     @cached_property
-    def lower_chars_graph(self):
-        """Todo.
+    def lower_chars_graph(self) -> dict:
+        """A simple dictionary mapping the node name with its lower characters into the original node name.
 
         Raises:
-            ValueError: Todo.
+            ValueError: If there are multiple nodes which becomes the same after lower character conversion.
 
         Returns:
-            Todo.
+            A dictionary with following format
+            ``{lower_char_id: id}``
         """
         self.log.info(f"Cached properties being calculated: {'lower_chars_graph'}")
+
         result = dict()
-        for i in self.nodes:
+        for i in self.nodes:  # Iterate through all nodes.
             j = i.lower()
-            if j not in result:
+
+            if j not in result:  # Make sure there is only one and only one after lower conversion.
                 result[j] = i
             else:
-                raise ValueError
+                raise ValueError(f"The node {i} and {result[j]} has the same lower character formats.")
+
         return result
 
-    def node_name_alternatives(self, the_id: str) -> tuple:
-        """Todo.
+    def node_name_alternatives(self, identifier: str) -> Tuple[Optional[str], bool]:
+        """Matching a query ID into the ID found in the graph based on some criteria and priorities.
+
+        A query ID is sometimes not found exactly in the graph due to the format it has. However, very slight
+        modifications of the string of query ID could help the pathfinder locate the ID of interest. For example,
+        `actb` can be queried for the pathfinder, but nothing is found as upper character version of the query,
+        `ACTB`, is found in the graph instead.
+
+        Priority is as follows: (1) try to find directly in the graph (2) look for lower-char version (3) look for
+        initial substring before separators (4) check all possible variations of dash and underscore for each of which
+        follow the priority list above.
 
         Args:
-            the_id: Todo.
+            identifier: A bio-ID of interest. This could be an ID in the graph or some other ID to be matched
+                with the corresponding ID in the graph.
 
         Returns:
-            Todo.
+            A tuple with the first element is the bio-ID in the graph if the query is found somehow, else ``None``.
+                The second element is to show whether the query ID is found without any modifications or not.
         """
 
-        def compare_lowers(id_to_find):
-            """Todo.
+        def _node_name_alternatives(the_id: str) -> Tuple[Optional[str], bool]:
+            """Helper function for :py:meth:`_the_graph.TheGraph.node_name_alternatives`.
 
             Args:
-                id_to_find: Todo.
+                the_id: A bio-ID of interest as defined in :py:attr:`_the_graph.TheGraph.node_name_alternatives.identifier`.
 
             Returns:
-                Todo.
+                The same as the parental method.
             """
-            lower_id_find = id_to_find.lower()
-            if lower_id_find in self.lower_chars_graph:
-                return self.lower_chars_graph[lower_id_find], True
-            else:
-                return None, False
 
-        def check_variation(id_str):
-            """Todo.
+            def compare_lowers(id_to_find: str) -> Tuple[Optional[str], bool]:
+                """Check whether lower-character ID is found.
 
-            Args:
-                id_str: Todo.
+                Args:
+                    id_to_find: Query ID.
 
-            Returns:
-                Todo.
-            """
-            lower_id, is_lower_found = compare_lowers(id_str)
-            if is_lower_found:
-                return lower_id, True
+                Returns:
+                    Tuple of found ID (None if unfound) as the first element, and whether it is found as the second.
+                """
+                lower_id_find = id_to_find.lower()
 
-            regex_found = self.regex_pattern.match(id_str)
-            if regex_found:
-                new_id = regex_found.groups()[0]
+                if lower_id_find in self.lower_chars_graph:
+                    return self.lower_chars_graph[lower_id_find], True
 
-                if new_id in self.nodes:
-                    return new_id, True
+                else:
+                    return None, False  # If cannot return anything, just return None (unfound).
 
-                lower_id, is_lower_found = compare_lowers(new_id)
-                if is_lower_found:
+            def check_variation(id_str: str) -> Tuple[Optional[str], bool]:
+                """Search ID in the graph without flanking substring.
+
+                Args:
+                    id_str: Query ID.
+
+                Returns:
+                    Tuple of found ID (None if unfound) as the first element, and whether it is found as the second.
+                """
+                # First, try to find the lower character version of the querry.
+                lower_id, is_lower_found = compare_lowers(id_str)
+                if is_lower_found:  # If something is found, just return it.
                     return lower_id, True
 
-            return None, False
+                # Them, try to match with the regular-expression pattern. The pattern is basically to remove any flanking
+                # numbers (possibly versions) separated with following characters '-', '_', or '.'. In order to match with
+                # the regex patter, the query has to have these separators, but the subsequent integer is optional. Note
+                # that the last separator is of interest only.
+                regex_found = regex_pattern.match(id_str)
+                if regex_found:
+                    new_id = regex_found.groups()[
+                        0
+                    ]  # If found, just get the first section (e.g. the ID without version)
 
-        if the_id in self.nodes:
-            return the_id, False
+                    if new_id in self.nodes:
+                        return new_id, True  # If the substring is in the graph, just return it.
 
-        mti1, mti2 = check_variation(the_id)
-        if mti2:
-            return mti1, mti2
+                    # If not, check whether the lower-character version of the substring is in the graph.
+                    lower_id, is_lower_found = compare_lowers(new_id)
+                    if is_lower_found:
+                        return lower_id, True
 
-        for pa in TheGraph._possible_alternatives(the_id):
+                return None, False  # If cannot return anything, just return None (unfound).
 
-            if pa in self.nodes:
-                return pa, True
+            def possible_alternatives(the_id_pa: str) -> list:
+                """Search a query ID with all possible substitutions of '_' and '-'.
 
-            mpa1, mpa2 = check_variation(pa)
-            if mpa2:
-                return mpa1, mpa2
+                Sometimes the query ID has a '-' in somewhere but the corresponding ID in the graph has '_', or vice versa.
+                The method here creates all possible combinations of query ID where '_' and '-' characters are replaced.
+                For example, if query ID is "AC-TB_1", the method returns: ["AC_TB_1", "AC-TB-1", "AC-TB_1", "AC_TB-1"].
 
-        return None, False
+                Args:
+                    the_id_pa: Query ID.
 
-    @staticmethod
-    def _possible_alternatives(the_id):
-        """Todo.
+                Returns:
+                    All possible versions of query ID.
+                """
+                # Get the indexes of the characters of interests ('_' and '-') in the query ID.
+                char_indices = [ind for ind, i in enumerate(the_id_pa) if i in ["-", "_"]]
 
-        Args:
-            the_id: Todo.
+                possible_alternatives = list()
+                if len(char_indices) > 0:  # If there are more than 1 of such.
+                    for comb in range(len(char_indices) + 1):
+                        for replace_indices in itertools.combinations(char_indices, comb):
 
-        Returns:
-            Todo.
-        """
-        char_indices = [ind for ind, i in enumerate(the_id) if i in ["-", "_"]]
-        possible_alternatives = list()
-        if len(char_indices) > 0:
-            for comb in range(len(char_indices) + 1):
-                for replace_indices in itertools.combinations(char_indices, comb):
-                    replace_indices_other = [i for i in char_indices if i not in replace_indices]
-                    new_id_l = list(the_id)
-                    for ri in replace_indices:
-                        new_id_l[ri] = "_"
-                    for rio in replace_indices_other:
-                        new_id_l[rio] = "-"
-                    possible_alternatives.append("".join(new_id_l))
-        return possible_alternatives
+                            # Create the every combination of such ID and append to the list
+                            replace_indices_other = [i for i in char_indices if i not in replace_indices]
+                            new_id_l = list(the_id_pa)
+                            for ri in replace_indices:
+                                new_id_l[ri] = "_"
+                            for rio in replace_indices_other:
+                                new_id_l[rio] = "-"
+                            possible_alternatives.append("".join(new_id_l))
+
+                return possible_alternatives
+
+            # To be used on check_variation.
+            regex_pattern = re.compile(r"^(.+)(_|-|\.)[0-9]+$")
+
+            if the_id in self.nodes:  # If the ID is already found in the graph, just return it.
+                return the_id, False
+
+            mti1, mti2 = check_variation(the_id)
+            if mti2:  # If a variation is found
+                return mti1, mti2  # Return the found ID and indicate it is a variation.
+
+            for pa in possible_alternatives(the_id):
+
+                if pa in self.nodes:
+                    return pa, True
+
+                mpa1, mpa2 = check_variation(pa)
+                if mpa2:  # If a variation is found
+                    return mpa1, mpa2  # Return the found ID and indicate it is a variation.
+
+            return None, False  # If cannot return anything, just return None (unfound).
+
+        new_ident, is_conv = _node_name_alternatives(identifier)  # Check with the base function
+
+        if new_ident is None:  # If not found, check with the synonym prefix added version.
+            new_ident, is_conv = _node_name_alternatives(f"{DB.synonym_id_nodes_prefix}{identifier}")
+
+        return new_ident, is_conv
 
     @cached_property
-    def get_active_ranges_of_id(self):
-        """Todo.
+    def get_active_ranges_of_id(self) -> Dict[str, List[List]]:
+        """Returns the range of active ensembl releases of nodes, ignoring which assembly the release is coming from.
 
         Returns:
-            Todo.
+            A dictionary with following format
+            ``{id: list_of_ranges``.
         """
         self.log.info(f"Cached properties being calculated: {'get_active_ranges_of_id'}")
         return {n: self._get_active_ranges_of_id(n) for n in self.nodes}
 
-    def _get_active_ranges_of_id(self, input_id):
-        """Todo.
+    def _get_active_ranges_of_id(self, input_id: str) -> List[List]:
+        """Calculating the range of active ensembl releases of nodes separately for backbone nodes and others.
 
         Args:
-            input_id: Todo.
+            input_id: Query ID.
 
         Returns:
-            Todo.
+            Ranges of the ID as list of lists. Outputs should always be increasing, inclusive ranges.
         """
 
-        def _get_active_ranges_of_id_nonbackbone(the_id):  # HELLO #
-            """Todo.
+        def _get_active_ranges_of_id_nonbackbone(the_id: str) -> List[List]:
+            """For the non-backbone nodes, calculates the ranges of IDs using `combined_edges` dictionaries.
 
             Args:
-                the_id: Todo.
+                the_id: Query ID.
 
             Returns:
-                Todo.
+                Ranges of the ID as list of lists. Outputs should always be increasing, inclusive ranges.
             """
             the_node_type = self.nodes[the_id][DB.node_type_str]
+
+            # Get the node info from the relevant combined edge dictionary
             if the_node_type in DB.nts_assembly_gene:
                 rd = self.combined_edges_assembly_specific_genes[the_id]
             else:
                 rd = self.combined_edges[the_id]
-            rels = sorted({s for p in rd for r in rd[p] for s in rd[p][r]})
-            return TheGraph.list_to_ranges(rels)
 
-        def _get_active_ranges_of_id_backbone(the_id):
-            """Todo.
+            # Create the sorted list of all ensembl releases defined for the given node.
+            rels = sorted({s for p in rd for r in rd[p] for s in rd[p][r]})
+            return TheGraph.list_to_ranges(rels)  # Convert the list of ensembl releases into range.
+
+        def _get_active_ranges_of_id_backbone(the_id: str) -> List[List]:
+            """For the backbone nodes, calculates the ranges of IDs.
 
             Args:
-                the_id: Todo.
+                the_id: Query ID.
 
             Returns:
-                Todo.
+                Ranges of the ID as list of lists. Outputs should always be increasing, inclusive ranges.
 
             Raises:
-                ValueError: Todo.
+                ValueError: If there is no ID going out and going in to the query ID.
             """
+            # Get the in- and out-nodes via 'get_next_edge_releases' method.
             t_outs = self.get_next_edge_releases(from_id=the_id, reverse=True)
             t_ins = self.get_next_edge_releases(from_id=the_id, reverse=False)
 
             if len(t_outs) == 0 and len(t_ins) == 0:
-                raise ValueError
+                raise ValueError(f"No out and in edges for the given ID: {the_id}.")
+
             elif len(t_outs) == 0:
-                assert self.nodes[the_id]["Version"] == DB.no_old_node_id, the_id
+                if self.nodes[the_id]["Version"] != DB.no_old_node_id:
+                    # Make sure the graph is constructed as it should be.
+                    raise ValueError(f"If no-out node, the version should be '{DB.no_old_node_id}': {the_id}.")
+                # The t_outs is then the first possible ensembl release. Note that t_ins is not empty.
                 t_outs = [min(self.graph["confident_for_release"])]
+
             elif len(t_ins) == 0:
-                assert self.nodes[the_id]["Version"] == DB.no_new_node_id, the_id
+                if self.nodes[the_id]["Version"] != DB.no_new_node_id:
+                    # Make sure the graph is constructed as it should be.
+                    raise ValueError(f"If no in-node, the version should be '{DB.no_new_node_id}': {the_id}.")
+                # The t_ins is then the last possible ensembl release. Note that t_outs is not empty.
                 t_ins = [max(self.graph["confident_for_release"])]
 
+            # Sort in- and out-releases in increasing order.
+            # If one in-edge and out-edge has the same ensembl release, put in-edges before.
             inout_edges = sorted(
                 itertools.chain(zip(t_outs, itertools.repeat(True)), zip(t_ins, itertools.repeat(False))),
                 reverse=False,
                 key=lambda k: (k[0], -k[1]),
-            )
+            )  # Create a dict with ensembl releases and information of being in- or out-edge.
 
             narrowed = []
             active_state = False
+            # Start from the lowest ensembl release and go up at each iteration.
+            # Assume in the beginning, the ID is not active.
             for ind, (ens_rel, inout) in enumerate(inout_edges):
 
                 if ind == 0:
-                    assert inout
+                    assert inout, "The range building should start with in-edge."
 
                 if not active_state:
+                    # If ID is not active and there is in-node, there is a beginning of new active range.
                     if inout:
                         narrowed.append(ens_rel)
-                        active_state = True
+                        active_state = True  # Set the ID active.
+
+                    # If ID is not active and there is out-node, modify the end of last active range, because to have
+                    # a out-node, the ID must be active (so last element is possibly a branching event).
                     else:
                         narrowed[-1] = ens_rel
                         active_state = False
+
                 else:
+                    # If ID is active and there is in-node, do nothing.
                     if inout:
                         pass
+
+                    # If ID is active and there is out-node, end the range.
                     else:
                         narrowed.append(ens_rel)
-                        active_state = False
-            narrowed = [narrowed[i : i + 2] for i in range(0, len(narrowed), 2)]
-            # outputs always increasing, inclusive ranges, for get_intersecting_ranges
+                        active_state = False  # Set the ID not active.
 
+            # Group the results as list of list.
+            narrowed = [narrowed[i : i + 2] for i in range(0, len(narrowed), 2)]
             return narrowed
 
+        # Use associated function to create the ranges of a node.
         if self.nodes[input_id][DB.node_type_str] == DB.external_search_settings["nts_backbone"]:
             return _get_active_ranges_of_id_backbone(input_id)
         else:
             return _get_active_ranges_of_id_nonbackbone(input_id)
 
-    def get_active_ranges_of_id_ensembl_all_inclusive(self, the_id):
-        """Todo.
+    def get_active_ranges_of_id_ensembl_all_inclusive(self, the_id: str) -> List[List]:
+        """Generate active ranges of Ensembl gene nodes with all assemblies.
+
+        Note that :py:meth:`_the_graph.TheGraph.get_active_ranges_of_id` method provided the range for main assembly
+        that the graph is build on. This method combines the other assemblies together. Also, it verifies whether
+        the :py:meth:`_the_graph.TheGraph.combined_edges` and :py:meth:`_the_graph.TheGraph.get_active_ranges_of_id`
+        methods provides consistent results.
 
         Args:
-            the_id: Todo.
+            the_id: Query ID. Should be either Ensembl gene or assembly specific Ensembl gene IDs.
 
         Raises:
-            ValueError: Todo.
+            ValueError: If there is inconsistency between the outputs of these two functions.
+                If the query is not one of the specified node type.
 
         Returns:
-            Todo.
+            Ranges of the ID as list of lists. Outputs should always be increasing, inclusive ranges.
         """
+        # Use associated function to create the ranges of a node.
         ndt = self.nodes[the_id][DB.node_type_str]
-        if ndt == DB.external_search_settings["nts_backbone"]:
-            narrowed = self.get_active_ranges_of_id[the_id]
-            # sanity check with its connections
-            comb_result = self.combined_edges_genes[the_id]
-            comb_reduced = dict()
+        main_assembly = self.graph["genome_assembly"]
+
+        if ndt == DB.nts_ensembl["gene"]:
+
+            narrowed = self.get_active_ranges_of_id[the_id]  # Get the range of main assembly.
+            comb_result = self.combined_edges_genes[the_id]  # Get the range of main assembly and also others.
+            comb_reduced: Dict[int, set] = dict()  # Create a dict that flattens all ensembl releases on assemblies.
             for i in comb_result:
                 for j in comb_result[i]:
                     if j not in comb_reduced:
                         comb_reduced[j] = set()
                     comb_reduced[j].update(comb_result[i][j])
+
             # Sanity check with externals/other forms etc.
-            if not all([TheGraph.is_point_in_range(narrowed, i) for i in comb_reduced[self.graph["genome_assembly"]]]):
-                raise ValueError
 
-            other_assemblies = [j for i in comb_reduced for j in comb_reduced[i] if i != self.graph["genome_assembly"]]
-            other_assemblies = TheGraph.list_to_ranges(other_assemblies)
+            if not all([TheGraph.is_point_in_range(narrowed, i) for i in comb_reduced[main_assembly]]):
+                raise ValueError(f"Inconsistency in ID range vs combined edges: {the_id}, {narrowed}, {comb_reduced}.")
 
-            return TheGraph.compact_ranges(narrowed + other_assemblies)
+            # Note that ``narrowed == self.list_to_ranges(comb_reduced[main_assembly])`` may not give always True.
+            # It is basically because the ID may be defined even though there is no external ID pointing towards it.
+
+            other_assemblies = [j for i in comb_reduced for j in comb_reduced[i] if i != main_assembly]
+            result_list = self.ranges_to_list(narrowed) + other_assemblies
+
+            # Cannot use compact_ranges method as it necessitates non-overlapping increasing ranges.
+            return TheGraph.list_to_ranges(sorted(set(result_list)))
+
         elif ndt in DB.nts_assembly_gene:
             return self.get_active_ranges_of_id[the_id]
-        else:
-            raise ValueError
 
-    def get_next_edge_releases(self, from_id: str, reverse: bool):
+        else:
+            raise ValueError(f"Query '{the_id}' isn't '{DB.nts_ensembl['gene']}' or in '{DB.nts_assembly_gene}'.")
+
+    def get_next_edge_releases(self, from_id: str, reverse: bool) -> list:
         """Todo.
 
         Args:
-            from_id: Todo.
-            reverse: Todo.
+            from_id: Query ID. Should be with node type of Ensembl gene.
+            reverse: The direction of desired next edges.
+                If ``True``, previous edges are returned. If ``False``, next edges are returned.
 
         Returns:
-            Todo.
+            The Ensembl releases of next (or previous if reverse is ``True``) edges.
 
         Raises:
-            ValueError: Todo.
+            ValueError: If the query ID is not with the node type of graph backbone.
         """
         if self.nodes[from_id][DB.node_type_str] != DB.external_search_settings["nts_backbone"]:
-            raise ValueError
+            raise ValueError(f"The method should be called only for backbone nodes: '{from_id}'.")
 
         return list(
             {
-                an_edge["old_release"]
-                if (not np.isinf(an_edge["new_release"]) and not reverse)
-                else an_edge["new_release"]
+                an_edge["old_release"]  # (8) Get the 'old release' attribute of the edge.
+                if (not np.isinf(an_edge["new_release"]) and not reverse)  # (7) In forward dir and non-retired edge
+                else an_edge["new_release"]  # (9) Else (reverse dir or non-retired edge), get the 'new release' attr.
+                # (1) Get the node_after based on the direction of interest
                 for node_after in nx.neighbors(self if not reverse else self.rev, from_id)
+                # (2) Get the edge data between each node_after and from_id.
+                # (3) For every multi-edge-ind (mei).
                 for mei, an_edge in (self if not reverse else self.rev).get_edge_data(from_id, node_after).items()
                 if (
+                    # (4) Check if the connection is in the backbone
                     self.nodes[node_after][DB.node_type_str] == self.nodes[from_id][DB.node_type_str]
                     and (
-                        node_after != from_id or (np.isinf(an_edge["new_release"]) and not reverse)
-                    )  # keep inf self-loop for forward'
+                        node_after != from_id  # (5) Check if this is not a self-loop.
+                        or (
+                            np.isinf(an_edge["new_release"])
+                            # (6.1) or self-loop but an_edge["new_release"] is np.inf (happens when not retired at all)
+                            and not reverse
+                        )  # (6.2) but if we are at forward.
+                    )  # (6.3) That is, keep inf self-loop for forward.
                 )
-            }
-        )
+            }  # (10) Create a set out of those to remove the duplicates.
+        )  # (11) Convert into a list at the end.
 
-    def get_active_ranges_of_base_id_alternative(self, base_id):
-        """Todo.
+    def get_active_ranges_of_base_id_alternative(self, base_id: str) -> List[List]:
+        """Get the range of an base ID based on the child IDs it is connected to.
 
         Args:
-            base_id: Todo.
+            base_id: Query ID. Should be with node type of Ensembl base ID.
 
         Returns:
-            Todo.
+            Ranges of the ID as list of lists. Outputs should always be increasing, inclusive ranges.
         """
         associated_ids = self.neighbors(base_id)
-        all_ranges = sorted(r for ai in associated_ids for r in self.get_active_ranges_of_id_ensembl_all_inclusive(ai))
-        return TheGraph.compact_ranges(all_ranges)
+        all_ranges = [r for ai in associated_ids for r in self.get_active_ranges_of_id_ensembl_all_inclusive(ai)]
+        return self.list_to_ranges(self.ranges_to_list(all_ranges))
 
     @staticmethod
-    def list_to_ranges(i: list):
-        """Todo.
+    def list_to_ranges(lst: List[int]) -> List[List]:
+        """Convert sorted non-repeating list of integers into list of inclusive non-overlapping ranges.
 
         Args:
-            i: Todo.
+            lst: List of integers. It should be sorted in increasing order. Repeating element is not allowed.
+                The output of :py:meth:`_the_graph.TheGraph.ranges_to_list` is a perfect input here.
 
         Returns:
-            Todo.
+            Ranges as list of lists. Outputs should always be increasing, inclusive ranges. With positive integers.
         """
         res = list()
-        for _, a in itertools.groupby(enumerate(i), lambda pair: pair[1] - pair[0]):
+        for _, a in itertools.groupby(enumerate(lst), lambda pair: pair[1] - pair[0]):
             b = list(a)
             res.append([b[0][1], b[-1][1]])
         return res
 
-    def available_releases_given_database_assembly(self, db, asy):
-        """Todo.
+    def ranges_to_list(self, lor: List[List]) -> List[int]:
+        """Convert list of inclusive non-overlapping ranges into sorted sorted non-repeating list of integers.
 
         Args:
-            db: Todo.
-            asy: Todo.
+            lor: Ranges as list of lists. Should always be increasing, inclusive ranges. With positive integers.
+                The output of :py:meth:`_the_graph.TheGraph.list_to_ranges` is a perfect input here.
 
         Returns:
-            Todo.
+            Sorted non-repeating list of integers.
         """
-        return {j3 for i in self.node_trios for j1, j2, j3 in self.node_trios[i] if j1 == db and j2 == asy}
+        return sorted(
+            {
+                k
+                for i, j in lor
+                for k in range(i, j + 1 if not np.isinf(j) else max(self.graph["confident_for_release"]) + 1)
+            }
+        )
 
     @cached_property
-    def node_trios(self):  # Uses so much unnecessary memory
-        """Todo."""
+    def node_trios(self) -> Dict[str, Set[tuple]]:
+        """Creates a dict for all nodes with `node_trios` calculated by :py:meth:`_the_graph.TheGraph._node_trios`.
+
+        Returns:
+            A memory intensive dictionary with node name as the key and calculated `node_trios` as the value.
+        """
         self.log.info(f"Cached properties being calculated: {'node_trios'}")
         return {n: self._node_trios(n) for n in self.nodes}
 
-    def _node_trios(self, the_id):
-        """Todo.
+    def _node_trios(self, the_id: str) -> Set[tuple]:
+        """Calculates the unique tuple called `trios` (database, assembly, Ensembl release) for a given ID.
 
         Args:
-            the_id: Todo.
+            the_id: Query ID.
 
         Returns:
-            Todo.
+            Set of trios.
         """
 
-        def non_inf_range(l1: int, l2: Union[float, int]):
+        def non_inf_range(l1: int, l2: Union[float, int]) -> range:
+            """Convert the np.inf range element into a Ensembl release.
 
+            Args:
+                l1: Left hand side of a range.
+                l2: Right hand side of a range.
+                    This item is converted into the max Ensembl release of the graph if this is `np.inf`.
+
+            Raises:
+                ValueError: If not ``0 < l1 <= l2``.
+
+            Returns:
+                The range instance which iterates from `l1` to `l2`, including both.
+            """
             if not 0 < l1 <= l2:
                 raise ValueError
 
             return range(l1, (l2 if not np.isinf(l2) else max(self.graph["confident_for_release"])) + 1)
 
-        # external ise database ismi digerleriyse node_type
-
-        # database, assembly, ensembl release
+        # Use associated function to create the ranges of a node.
         the_node_type = self.nodes[the_id][DB.node_type_str]
-        if the_node_type == DB.nts_ensembl["gene"]:
+        # If it is external 'database' is external database name (not node type). For others it is node type.
+
+        if the_node_type == DB.nts_ensembl["gene"] and self.nodes[the_id]["Version"] in DB.alternative_versions:
+            ass = self.graph["genome_assembly"]
             return {
-                (the_node_type, self.graph["genome_assembly"], k)
+                (DB.nts_assembly[ass]["gene"], ass, k)
                 for i, j in self.get_active_ranges_of_id[the_id]
                 for k in non_inf_range(i, j)
             }
+        elif the_node_type == DB.nts_ensembl["gene"]:
+            rd = self.combined_edges_genes[the_id]
         elif the_node_type in DB.nts_assembly_gene:
             rd = self.combined_edges_assembly_specific_genes[the_id]
-            return {(p, r, s) for p in rd for r in rd[p] for s in rd[p][r]}
         else:
             rd = self.combined_edges[the_id]
-            return {(p, r, s) for p in rd for r in rd[p] for s in rd[p][r]}
+
+        return {(p, r, s) for p in rd for r in rd[p] for s in rd[p][r]}
 
     @staticmethod
-    def compact_ranges(lor):
-        """Todo.
+    def compact_ranges(list_of_ranges: List[List]) -> List[List]:
+        """Reduce the list of ranges into least possible number of ranges.
+
+        O(n) time and space complexity: a forward in place compaction and copying back the elements,
+        as then each inner step is O(1) (get/set instead of del).
 
         Args:
-            lor: Todo.
+            list_of_ranges: List of increasing, inclusive ranges. The elements are positive integers. Note that there
+                should be no overlapping elements.
+                The output of :py:meth:`_the_graph.TheGraph.list_to_ranges` or
+                :py:meth:`_the_graph.TheGraph._get_active_ranges_of_id` are a perfect input here.
 
         Returns:
-            Todo.
+            List of ranges as defined in :py:attr:`_the_graph.TheGraph.compact_ranges.list_of_ranges`.
         """
-        # lot = list of ranges (increasing, inclusive ranges) output of get_active_ranges_of_id_backbone
-        #  O(n) time and space complexity: a forward in place compaction and copying back the elements,
-        #  as then each inner step is O(1) (get/set instead of del)
         next_index = 0  # Keeps track of the last used index in our result
-        for index in range(len(lor) - 1):
-            if lor[next_index][1] + 1 >= lor[index + 1][0]:
-                lor[next_index][1] = lor[index + 1][1]
+        for index in range(len(list_of_ranges) - 1):
+
+            if list_of_ranges[next_index][1] + 1 >= list_of_ranges[index + 1][0]:
+                list_of_ranges[next_index][1] = list_of_ranges[index + 1][1]
+
             else:
                 next_index += 1
-                lor[next_index] = lor[index + 1]
-        return lor[: next_index + 1]
+                list_of_ranges[next_index] = list_of_ranges[index + 1]
+
+        return list_of_ranges[: next_index + 1]
 
     @staticmethod
-    def get_intersecting_ranges(lor1, lor2, compact: bool = True):
-        """Todo.
+    def get_intersecting_ranges(lor1: List[List], lor2: List[List], compact: bool = True) -> List[List]:
+        """As the name suggest, calculates the intersecting ranges of two list of ranges.
 
         Args:
-            lor1: Todo.
-            lor2: Todo.
-            compact: Todo.
+            lor1: List of ranges as defined in :py:attr:`_the_graph.TheGraph.compact_ranges.list_of_ranges`.
+            lor2: List of ranges as defined in :py:attr:`_the_graph.TheGraph.compact_ranges.list_of_ranges`.
+            compact: If set `True`, returns the reduced list of ranges via
+                :py:meth:`_the_graph.TheGraph.compact_ranges` method.
 
         Returns:
-            Todo.
+            List of ranges as defined in :py:attr:`_the_graph.TheGraph.compact_ranges.list_of_ranges`.
         """
-        # a and b is sorted,
-        # Each list will contain lists of length 2, which represent a range (inclusive)
-        # the ranges will always increase and never overlap
-
         result = [
             [max(first[0], second[0]), min(first[1], second[1])]
             for first in lor1
@@ -602,31 +791,31 @@ class TheGraph(nx.MultiDiGraph):
         return TheGraph.compact_ranges(result) if compact else result
 
     @staticmethod
-    def is_point_in_range(lor, p):
-        """Todo.
+    def is_point_in_range(lor: List[List], p: int) -> bool:
+        """Simple method to determine whether a given integer is covered by list of ranges.
 
         Args:
-            lor: Todo.
-            p: Todo.
+            lor: List of ranges as defined in :py:attr:`_the_graph.TheGraph.compact_ranges.list_of_ranges`.
+            p: A positive integer.
 
         Returns:
-            Todo.
+            ``True`` if it is in the range, ``False`` otherwise.
         """
         for l1, l2 in lor:
             if l1 <= p <= l2:
                 return True
         return False
 
-    def get_two_nodes_coinciding_releases(self, id1, id2, compact: bool = True):
-        """Todo.
+    def get_two_nodes_coinciding_releases(self, id1: str, id2: str, compact: bool = True) -> List[List]:
+        """Find the intersecting range of two nodes in the graph.
 
         Args:
-            id1: Todo.
-            id2: Todo.
-            compact: Todo.
+            id1: First Query ID.
+            id2: Second Query ID.
+            compact: Parameter to pass into :py:meth:`_the_graph.TheGraph.get_intersecting_ranges` method.
 
         Returns:
-            Todo.
+            List of ranges as defined in :py:attr:`_the_graph.TheGraph.compact_ranges.list_of_ranges`.
         """
         r1 = self.get_active_ranges_of_id[id1]
         r2 = self.get_active_ranges_of_id[id2]
@@ -636,11 +825,11 @@ class TheGraph(nx.MultiDiGraph):
         return r
 
     @cached_property
-    def available_external_databases(self):
-        """Todo.
+    def available_external_databases(self) -> set:
+        """Find the available external databases found in the graph.
 
         Returns:
-            Todo.
+            Set of all external databases in the graph.
         """
         self.log.info(f"Cached properties being calculated: {'available_external_databases'}")
         return {
@@ -648,14 +837,14 @@ class TheGraph(nx.MultiDiGraph):
         }
 
     @cached_property
-    def available_external_databases_assembly(self):
-        """Todo.
+    def available_external_databases_assembly(self) -> Dict[int, set]:
+        """Find the available external databases found in the graph for each assembly separately.
 
         Returns:
-            Todo.
+            Dict of all external databases in the graph, assemblies as keys.
         """
         self.log.info(f"Cached properties being calculated: {'available_external_databases_assembly'}")
-        result = {i: set() for i in self.available_genome_assemblies}
+        result: Dict[int, set] = {i: set() for i in self.available_genome_assemblies}
         for i in self.combined_edges:
             d = self.combined_edges[i]
             for i in d:
@@ -706,6 +895,20 @@ class TheGraph(nx.MultiDiGraph):
             output.update({k for i in td for j in td[i] for k in td[i][j]})
 
         return output
+
+    def available_releases_given_database_assembly(self, database_name, assembly):
+        """Todo.
+
+        Args:
+            database_name: Todo.
+            assembly: Todo.
+
+        Returns:
+            Todo.
+        """
+        return {
+            j3 for i in self.node_trios for j1, j2, j3 in self.node_trios[i] if j1 == database_name and j2 == assembly
+        }
 
     def get_id_list(self, database: str, assembly: int, release: int) -> list:
         """Todo.

@@ -3,85 +3,59 @@ Reference
 
 .. contents::
     :local:
-    :depth: 1
+    :depth: 3
     :backlinks: none
 
-API
-***
 
-.. autoclass:: idtrack._api.API
+.. automodule:: idtrack._api
     :members:
     :private-members:
     :show-inheritance: True
 
-DatabaseManager
-***************
 
-.. autoclass:: idtrack._database_manager.DatabaseManager
+.. automodule:: idtrack._database_manager
     :members:
     :private-members:
     :show-inheritance: True
 
-ExternalDatabases
-*****************
 
-.. autoclass:: idtrack._external_databases.ExternalDatabases
+.. automodule:: idtrack._external_databases
     :members:
     :private-members:
     :show-inheritance: True
 
-Track
-*****
 
-.. autoclass:: idtrack._track.Track
+.. automodule:: idtrack._track
     :members:
     :private-members:
     :show-inheritance:
 
-TheGraph
-********
 
-.. autoclass:: idtrack._the_graph.TheGraph
+.. automodule:: idtrack._the_graph
     :members:
     :private-members:
     :show-inheritance:
 
-GraphMaker
-**********
 
-.. autoclass:: idtrack._graph_maker.GraphMaker
+.. automodule:: idtrack._graph_maker
     :members:
     :private-members:
     :show-inheritance:
 
-TrackTests
-**********
 
-.. autoclass:: idtrack._track_tests.TrackTests
+.. automodule:: idtrack._track_tests
     :members:
     :private-members:
     :show-inheritance:
 
-VerifyOrganism
-**************
 
-.. autoclass:: idtrack._verify_organism.VerifyOrganism
+.. automodule:: idtrack._verify_organism
     :members:
     :private-members:
     :show-inheritance:
 
-DB
-**
 
-.. autoclass:: idtrack._db.DB
-    :members:
-    :private-members:
-    :show-inheritance:
-
-Verbose
-*******
-
-.. automodule:: idtrack._verbose
+.. automodule:: idtrack._db
     :members:
     :private-members:
     :show-inheritance:

@@ -10,7 +10,7 @@ import logging
 import warnings
 from collections import Counter
 from functools import cached_property
-from typing import Callable, Dict, Iterable, Optional, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 import networkx as nx
 import numpy as np
@@ -20,7 +20,6 @@ from ._database_manager import DatabaseManager
 from ._db import DB
 from ._graph_maker import GraphMaker
 from ._the_graph import TheGraph
-from ._verbose import progress_bar
 
 
 class Track:
@@ -39,7 +38,7 @@ class Track:
 
         Args:
             db_manager: See parameter in :py:attr:`_graph.Graph.__init__.db_manager`.
-            kwargs: Keyword arguments to be used in :py:attr:`_graph.Graph.get_graph.get_graph`.
+            kwargs: Keyword arguments to be passed to :py:attr:`_the_graph.TheGraph.get_graph`.
         """
         self.log = logging.getLogger("track")
         self.db_manager = db_manager
@@ -1232,6 +1231,8 @@ class Track:
             "external_jump",
             # "external_step",  # TODO: calculcate "external_jump_depth" and put here.
             "final_asy_min_prior",
+            "final_asy_min_prior_count",
+            "final_conv_asy_min_prior_count",
             # "edge_scores_reduced",
             # "ensembl_step",  # Not really relevant
             # "ens_node_importance", # Handled separately at the end due to computational cost
@@ -1255,17 +1256,22 @@ class Track:
                 fcc = dict_of_dict[dct]["final_conversion"]["final_conversion_confidence"]
                 ordered_score["final_conversion_conf"] = fcc
                 ordered_score["final_conv_asy_min_prior"] = _temp[target]["final_assembly_min_priority"]
+                ordered_score["final_conv_asy_min_prior_count"] = -_temp[target]["final_assembly_priority_count"]
+                ordered_score["final_asy_min_prior_count"] = -len(dict_of_dict[dct]["final_assembly_priority"][0])
+
                 minimum_scores[(dct, target)] = [ordered_score[i] for i in importance_order]
 
         the_min_key: Callable = minimum_scores.get
         best_score_key = min(minimum_scores, key=the_min_key)
         best_score_value = minimum_scores[best_score_key]
         best_scoring_targets = [i for i in minimum_scores if best_score_value == minimum_scores[i]]
+        the_same_switch, node_score_switch = False, False
 
         # If multiple target's passed here, choose the target that is the same as from_id.
         final_targets = {j for _, j in best_scoring_targets}
         if from_id in final_targets:
             best_scoring_targets = [(i, j) for i, j in best_scoring_targets if j == from_id]
+            the_same_switch = True
 
         # If multiple dct's passed here, calculate the node score importance as an additional metric
         final_ensembl_targets = {i for i, _ in best_scoring_targets}
@@ -1277,6 +1283,7 @@ class Track:
             best_scoring_targets_ns = {i for i in minimum_scores_ns if best_score_value_ns == minimum_scores_ns[i]}
             assert len(best_scoring_targets_ns) > 0
             best_scoring_targets = [(i, j) for i, j in best_scoring_targets if i in best_scoring_targets_ns]
+            node_score_switch = True
 
         # Narrow down the results based on the findings and return.
         output = dict()
@@ -1287,6 +1294,11 @@ class Track:
             output[bst]["final_conversion"]["final_elements"][trgt] = dict_of_dict[bst]["final_conversion"][
                 "final_elements"
             ][trgt]
+            output[bst]["final_conversion"]["final_elements"][trgt]["filter_scores"] = {
+                "initial_filter": minimum_scores[(bst, trgt)],
+                "same_as_input_filter": the_same_switch,
+                "node_importance_filter": minimum_scores_ns[bst] if node_score_switch else None,
+            }
 
         return output  # choose the best & shortest
 
@@ -1303,6 +1315,7 @@ class Track:
         prioritize_to_one_filter: bool = False,
         return_path: bool = False,
         deprioritize_lrg_genes: bool = True,
+        return_ensembl_alternative: bool = True,
     ):
         """Todo.
 
@@ -1318,6 +1331,7 @@ class Track:
             prioritize_to_one_filter: Todo.
             return_path: Todo.
             deprioritize_lrg_genes: Todo.
+            return_ensembl_alternative: Todo.
 
         Returns:
             Todo.
@@ -1394,19 +1408,23 @@ class Track:
 
             for cnvt in converted:
                 if final_database is None or final_database == DB.nts_ensembl["gene"]:
-                    _min_prio_backbone = DB.assembly_mysqlport_priority[self.graph.graph["genome_assembly"]]["Priority"]
+                    prio_list = self._create_priority_list_ensembl(cnvt, to_release)
                     converted[cnvt]["final_conversion"] = Track._final_conversion_dict_prepare(
                         confidence=0,
                         sysns=[cnvt],
                         paths=[[]] if return_path else None,
                         add_ass_jump_list=[0],
-                        min_priority_list=[_min_prio_backbone],
+                        min_priority_list=[min(prio_list)],
+                        len_priority_list=[len(prio_list)],
+                        final_database=DB.nts_ensembl["gene"],
                     )
                 elif (
                     final_database in self.graph.available_external_databases
                     or final_database == DB.nts_base_ensembl["gene"]
                 ):
-                    converted = self._final_conversion(converted, cnvt, final_database, to_release, return_path)
+                    converted = self._final_conversion(
+                        converted, cnvt, final_database, to_release, return_path, return_ensembl_alternative
+                    )
                 else:
                     raise ValueError
 
@@ -1422,13 +1440,22 @@ class Track:
             else:
                 return self._path_score_sorter_all_targets(converted, from_id, to_release)
 
+    def _create_priority_list_ensembl(self, from_id: str, to_release: int):
+        ceg = self.graph.combined_edges_genes[from_id]
+        ceg_assembly_list = sorted({j for i in ceg for j in ceg[i] if to_release in ceg[i][j]})
+        if len(ceg_assembly_list) == 0:
+            raise ValueError
+        return [DB.assembly_mysqlport_priority[i]["Priority"] for i in ceg_assembly_list]
+
     @staticmethod
     def _final_conversion_dict_prepare(
         confidence: Union[int, float],
         sysns: list,
-        paths: Optional[list[list]],
+        paths: Optional[List[List]],
         min_priority_list: list,
+        len_priority_list: list,
         add_ass_jump_list: list,
+        final_database: str,
     ):
         """Todo.
 
@@ -1437,7 +1464,9 @@ class Track:
             sysns: Todo.
             paths: Todo.
             min_priority_list: Todo.
+            len_priority_list: Todo
             add_ass_jump_list: Todo.
+            final_database: Todo.
 
         Returns:
             Todo.
@@ -1445,8 +1474,10 @@ class Track:
         if paths is not None:
             return {
                 "final_conversion_confidence": confidence,
+                "final_database": final_database,
                 "final_elements": {
                     s: {
+                        "final_assembly_priority_count": len_priority_list[ind],
                         "final_assembly_min_priority": min_priority_list[ind],
                         "additional_assembly_jump": add_ass_jump_list[ind],
                         "the_path": tuple(tuple(i) for i in paths[ind]),
@@ -1457,8 +1488,10 @@ class Track:
         else:
             return {
                 "final_conversion_confidence": confidence,
+                "final_database": final_database,
                 "final_elements": {
                     s: {
+                        "final_assembly_priority_count": len_priority_list[ind],
                         "final_assembly_min_priority": min_priority_list[ind],
                         "additional_assembly_jump": add_ass_jump_list[ind],
                     }
@@ -1466,7 +1499,15 @@ class Track:
                 },
             }
 
-    def _final_conversion(self, converted: dict, cnvt: str, final_database: str, ens_release: int, return_path: bool):
+    def _final_conversion(
+        self,
+        converted: dict,
+        cnvt: str,
+        final_database: str,
+        ens_release: int,
+        return_path: bool,
+        return_ensembl_alternative: bool,
+    ):
         """Todo.
 
         Args:
@@ -1474,7 +1515,8 @@ class Track:
             cnvt: Todo.
             final_database: Todo.
             ens_release: Todo.
-            return_path: Todo
+            return_path: Todo.
+            return_ensembl_alternative: Todo.
 
         Returns:
             Todo.
@@ -1550,94 +1592,40 @@ class Track:
             # the path will continue with final conversion so assembly penalty should be calculated again.
             _s1, _s2 = conv_dict[conv_dict_key]["final_assembly_priority"]
             penalty, step_pri, _ = self.minimum_assembly_jumps(a_path, _s1, _s2)
-            return [penalty, min(step_pri)]
+            return [penalty, min(step_pri), len(step_pri)]
 
         syn_ids_path, conf = _final_conversion_path(cnvt, final_database, from_release=ens_release)
 
         syn_ids = [i[-1][1] for i in syn_ids_path]
 
-        if len(syn_ids) == 0:
+        if len(syn_ids) == 0 and return_ensembl_alternative:
             # Alternativelu return ensembl itself, return confidence np.inf [which means unsuccessful]
-            _min_prio_backbone = DB.assembly_mysqlport_priority[self.graph.graph["genome_assembly"]]["Priority"]
+
+            prio_list = self._create_priority_list_ensembl(cnvt, ens_release)
+
             converted[cnvt]["final_conversion"] = Track._final_conversion_dict_prepare(
                 confidence=np.inf,  # as it is not the main target.
                 sysns=[cnvt],
                 paths=[[]] if return_path else None,
                 add_ass_jump_list=[0],
-                min_priority_list=[_min_prio_backbone],
+                min_priority_list=[min(prio_list)],
+                len_priority_list=[len(prio_list)],
+                final_database=DB.nts_ensembl["gene"],
             )
         else:
             conversion_metrics = [_final_conversion_helper(converted, cnvt, i) for i in syn_ids_path]
-            sl1, sl2 = list(map(list, zip(*conversion_metrics)))
+            sl1, sl2, sl3 = list(map(list, zip(*conversion_metrics)))
             converted[cnvt]["final_conversion"] = Track._final_conversion_dict_prepare(
                 confidence=conf,
                 sysns=syn_ids,
                 paths=syn_ids_path if return_path else None,
                 add_ass_jump_list=sl1,
                 min_priority_list=sl2,
+                len_priority_list=sl3,
+                final_database=final_database,
             )
 
         return converted
-
-    def get_tree_with_id(self, the_id):
-        """Todo.
-
-        Args:
-            the_id: Todo.
-
-        Returns:
-            Todo.
-        """
-        res = list()
-        for components in nx.weakly_connected_components(self.graph):
-            if the_id in components:
-                res.append(self.graph.subgraph(components))
-        return res
-
-    def unfound_correct(self, gene_list: Union[list, set, tuple], verbose: bool = False) -> tuple:
-        """Todo.
-
-        Args:
-            gene_list: Todo.
-            verbose: Todo.
-
-        Raises:
-            ValueError: Todo.
-
-        Returns:
-            Todo.
-        """
-        lost_ids = list()
-        converted_ids = list()
-        result = list()
-
-        for ind, gl in enumerate(gene_list):
-            progress_bar(ind, len(gene_list) - 1, frequency=0.01, verbose=verbose)
-
-            new_gl, is_converted = self.graph.node_name_alternatives(gl)
-
-            # As the last resort, try to look at among synonyms.
-            if new_gl is None:
-                new_gl, is_converted = self.graph.node_name_alternatives(f"{DB.synonym_id_nodes_prefix}{gl}")
-                is_converted = True if new_gl is not None else False
-
-            if new_gl is None:
-                lost_ids.append(gl)
-            elif new_gl and is_converted:
-                converted_ids.append(gl)
-                result.append(new_gl)
-            elif new_gl:
-                result.append(gl)
-            else:
-                raise ValueError
-
-        if len(converted_ids) > 0:
-            self.log.warning(f"Number of converted IDs with small modifications: {len(converted_ids)}")
-
-        if len(lost_ids) > 0:
-            self.log.warning(f"Number of IDs not found in the graph: {len(lost_ids)}")
-
-        return result, converted_ids, lost_ids
 
     def identify_source(self, dataset_ids: list, mode: str):
         """Todo.
@@ -1652,7 +1640,7 @@ class Track:
         Raises:
             ValueError: Todo.
         """
-        possible_trios = list()
+        possible_trios: List[Any] = list()
         for di in dataset_ids:
             # assembly = self.get_external_assembly()
             if mode == "complete":

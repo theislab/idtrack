@@ -161,7 +161,7 @@ class GraphMaker:
                     )
 
         # Compose all graphs into one. If there is a
-        g = nx.compose_all([graph_s[f] for f in form_list])
+        g: TheGraph = nx.compose_all([graph_s[f] for f in form_list])
         # To make the form_list cached in the object.
         g.attach_included_forms(form_list)
 
@@ -388,18 +388,6 @@ class GraphMaker:
                 thed = edge_data[DB.connection_dict]
                 available_releases = {k for i in thed for j in thed[i] for k in thed[i][j]}
                 g[e1][e2][e3]["available_releases"] = available_releases
-
-        # Run cached_property functions to save them into the disk.
-        # _ = g.combined_edges
-        # _ = g.combined_edges_assembly_specific_genes
-        # _ = g.combined_edges_genes
-        # _ = g.lower_chars_graph
-        # _ = g.get_active_ranges_of_id
-        # _ = g.available_external_databases
-        # _ = g.external_database_connection_form
-        # _ = g.available_genome_assemblies
-        # _ = g.available_external_databases_assembly
-        # _ = g.node_trios
 
         return g
 
