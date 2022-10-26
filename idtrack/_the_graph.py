@@ -124,6 +124,7 @@ class TheGraph(nx.MultiDiGraph):
         Returns:
             A dictionary with following format
             ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.
+            Can have multiple assemblies as some main assembly genes are shared across different assemblies.
         """
         self.log.info(f"Cached properties being calculated: {'combined_edges_genes'}")
 
@@ -144,6 +145,7 @@ class TheGraph(nx.MultiDiGraph):
         Returns:
             A dictionary with following format
             ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.
+            But ut has only one assembly, whose hint is given in the database_name.
         """
         self.log.info(f"Cached properties being calculated: {'combined_edges_assembly_specific_genes'}")
 
@@ -854,43 +856,62 @@ class TheGraph(nx.MultiDiGraph):
         return result
 
     @cached_property
-    def external_database_connection_form(self) -> dict:
-        """Todo.
+    def external_database_connection_form(self) -> Dict[str, str]:
+        """Finds which form of Ensembl ID the external database identifiers are connected to.
+
+        Each external database connects to a specific form (gene, transcript, translation) Ensembl ID. The relevant
+        form is chosen by :py:class:`_external_databases.ExternalDatabases` class.
 
         Returns:
-            Todo.
+            Dictionary mapping external database name into the associated form (gene, transcript, translation).
 
         Raises:
-            ValueError: Todo.
+            ValueError: If non-Ensembl node is connected.
         """
         self.log.info(f"Cached properties being calculated: {'external_database_connection_form'}")
+
+        # Get the available databases to be matched
         aed = self.available_external_databases
         res = dict()
 
-        for e in aed:
-            ra = list()
+        for e in aed:  # For each database
+            ra: List[str] = list()
+            # Get the identifiers (node names) from all Ensembl releases and assemblies for a given external database.
             nodes = self.get_external_database_nodes(e)
 
             for node in nodes:
-                r = [self.nodes[nei][DB.node_type_str] for nei in self.neighbors(node)]
-                a = [i.split("_")[1] for i in r if i.startswith("ensembl")]
 
-                if any([i not in self.available_forms for i in a]) and len(a) > 0:
-                    raise ValueError(a, e, node)
+                for nei in self.neighbors(node):
 
-                ra.extend(a)
+                    # Look at the node type of each neighbour
+                    nei_nts = self.nodes[nei][DB.node_type_str]
+                    # Convert to nts_ensembl if it is nts_assembly, else keep at it is.
+                    nei_nts = DB.nts_assembly_reverse.get(nei_nts, nei_nts)
+
+                    if nei_nts not in DB.nts_ensembl_reverse:  # The result should be a nts_ensembl always.
+                        raise ValueError(f"Not connected only to Ensembl ID. DB:{e}, From:{node}, To:{nei}, {nei_nts}")
+
+                    nei_form = DB.nts_ensembl_reverse[nei_nts]  # Find the form
+
+                    # Due to some weird annotations like: PRDX3P2 [RefSeq_mRNA, HGNC Symbol]
+                    # Not all the elements in 'ra' is the same. The rare ones are just exceptions, or misannotations.
+                    # Counter resolves the issue although not ideal.
+
+                    ra.append(nei_form)
+
             res[e] = Counter(ra).most_common(1)[0][0]
         return res
 
     @cached_property
-    def available_genome_assemblies(self):
-        """Todo.
+    def available_genome_assemblies(self) -> Set[int]:
+        """Find the genome assemblies found in the graph by iterating through all nodes.
 
         Returns:
-            Todo.
+            Genome assemblies, which is also found in :py:attr:`_db.DB.assembly_mysqlport_priority`.
         """
         self.log.info(f"Cached properties being calculated: {'available_genome_assemblies'}")
-        output = set()
+
+        output = set()  # Initialize a set and iterate through all 'combined_edges' dictionaries.
         for td in (self.combined_edges, self.combined_edges_genes, self.combined_edges_assembly_specific_genes):
             output.update({k for i in td for j in td[i] for k in td[i][j]})
 
@@ -898,6 +919,10 @@ class TheGraph(nx.MultiDiGraph):
 
     def available_releases_given_database_assembly(self, database_name, assembly):
         """Todo.
+
+        The method uses 'node_trios' unnecessarily method, which consumes a lot of memory and hinders high
+        computational efficiency. However, this method is used only in testing purposes, when the speed and memory is
+        not of a concern.
 
         Args:
             database_name: Todo.

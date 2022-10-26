@@ -389,6 +389,21 @@ class GraphMaker:
                 available_releases = {k for i in thed for j in thed[i] for k in thed[i][j]}
                 g[e1][e2][e3]["available_releases"] = available_releases
 
+        # TODO: Adding assembly_releases {ass: {rels}} in ensembl_gene as a node attribute.
+        #   This is to use it in the combined_edges_genes etc.
+        #   The problem is the assembly_37_ensembl_genes that does not have a external id will not be represented
+        #   in the graph
+        #
+        #   dm=idt.track.db_manager.change_release(100).change_form('gene').change_assembly(37)
+        #   ids_amc_df = dm.get_db("ids", save_after_calculation=False)
+        #   ids_amc=set(dm.id_ver_from_df(ids_amc_df))
+        #
+        #   if the id is already present but not assembl_gene ->
+        #   if the id is not present at all
+        #   if the id is present as ensembl_gene
+        #
+        #   maybe: just create a dict out of this instead [do not edit the nodes graph etc]?
+
         return g
 
     def _merge_nodes_with_the_same_in_lower_case(self, g: TheGraph):

@@ -296,6 +296,7 @@ class TrackTests(Track, ABC):
         from_fraction: float = 1.0,
         verbose: bool = True,
         verbose_detailed: bool = False,
+        return_ensembl_alternative: bool = False,
     ):
         """Todo.
 
@@ -311,6 +312,7 @@ class TrackTests(Track, ABC):
             from_fraction: Todo.
             verbose: Todo.
             verbose_detailed: Todo.
+            return_ensembl_alternative: Todo
 
         Raises:
             ValueError: Todo.
@@ -386,6 +388,7 @@ class TrackTests(Track, ABC):
                             final_database=to_database,
                             go_external=go_external,
                             prioritize_to_one_filter=prioritize_to_one_filter,
+                            return_ensembl_alternative=return_ensembl_alternative,
                         )
                     else:
                         converted_item = self.convert(
@@ -395,6 +398,7 @@ class TrackTests(Track, ABC):
                             final_database=to_database,
                             go_external=go_external,
                             prioritize_to_one_filter=prioritize_to_one_filter,
+                            return_ensembl_alternative=return_ensembl_alternative,
                         )
                     metrics["converted_item_dict"][the_id] = converted_item
 
@@ -521,6 +525,7 @@ class TrackTests(Track, ABC):
             from_fraction=from_fraction,
             verbose=verbose,
             verbose_detailed=verbose_detailed,
+            return_ensembl_alternative=False,
         )
 
     def is_external_conversion_robust(self, convert_using_release: bool, verbose: bool = True):
@@ -534,7 +539,9 @@ class TrackTests(Track, ABC):
             Todo.
         """
         for asym in DB.assembly_mysqlport_priority:
-            database, _, ens_rel = self.random_dataset_source_generator(assembly=asym, include_ensembl=False)
+            database, _, ens_rel = self.random_dataset_source_generator(
+                assembly=asym, form=DB.backbone_form, include_ensembl=False
+            )
             dm = self.db_manager.change_assembly(asym).change_release(ens_rel)
 
             df = dm.get_db("external_relevant")
@@ -562,34 +569,44 @@ class TrackTests(Track, ABC):
             )
             converts = res["conversion"]
             for from_id in converts:
-                if set(converts[from_id]) == base_dict[from_id]:
+                if set(converts[from_id]) != base_dict[from_id]:
                     self.log.warning(
                         f"Inconsistent external conversion for '{(database, asym, ens_rel)}':\n"
                         f"ID: {from_id},\n"
-                        f"converted: {converts[from_id]},\n"
-                        f"base expectation: {base_dict[from_id]}"
+                        f"Converted: {converts[from_id]},\n"
+                        f"Base expectation: {base_dict[from_id]}"
                     )
                     return False
         return True
 
-    def random_dataset_source_generator(self, assembly: int, include_ensembl: bool, release_lower_limit: int = None):
+    def random_dataset_source_generator(
+        self, assembly: int, include_ensembl: bool, release_lower_limit: int = None, form: str = None
+    ):
         """Todo.
 
         Args:
             assembly: Todo.
             include_ensembl: Todo.
             release_lower_limit: Todo.
+            form: Todo.
 
         Returns:
             Todo.
         """
         all_possible_sources = copy.deepcopy(list(self.graph.available_external_databases_assembly[assembly]))
+        if form is not None:
+            all_possible_sources = [
+                i for i in all_possible_sources if self.graph.external_database_connection_form[i] == form
+            ]
+
         if include_ensembl:
-            all_possible_sources.append(DB.nts_base_ensembl[DB.backbone_form])
-            if assembly != self.graph.graph["genome_assembly"]:
-                all_possible_sources.append(DB.nts_assembly[assembly][DB.backbone_form])
+            if form is None:
+                all_possible_sources.extend(list(DB.nts_assembly[assembly].values()))
             else:
-                all_possible_sources.append(DB.nts_ensembl[DB.backbone_form])
+                all_possible_sources.append(DB.nts_assembly[assembly][form])
+
+        if form is None or form == DB.backbone_form:
+            all_possible_sources.append(DB.nts_base_ensembl[DB.backbone_form])
 
         selected_database = random.choice(all_possible_sources)
         possible_releases = self.graph.available_releases_given_database_assembly(selected_database, assembly)

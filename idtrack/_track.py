@@ -1654,7 +1654,7 @@ class Track:
             else:
                 raise ValueError
 
-        return list(Counter(possible_trios).most_common())  # TODO
+        return list(Counter(possible_trios).most_common())
 
     def convert_optimized_multiple(self):
         """Accept multiple ID list and return the most optimal set of IDs, minimizing the clashes.

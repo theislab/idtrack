@@ -8,15 +8,16 @@ from typing import Any, Dict
 
 
 class DB:
-    """Keeps some variables shared across different classes."""
+    """Keeps some constants shared across different classes."""
 
     # Delimiter separating the ID and the version of an ensembl identifier.
     id_ver_delimiter = "."
     first_version: int = 1  # just and arbitrary assumption
 
-    # FTP and REST API Timeouts
-    connection_timeout = 10
-    reading_timeout = 10
+    # FTP and REST API Timeouts. It’s a good practice to set connect timeouts to slightly larger than a multiple of 3,
+    # which is the default TCP packet retransmission window.
+    connection_timeout = 12
+    reading_timeout = 12
 
     # FTP server from which the above databases will be downloaded.
     ensembl_ftp_base = "ftp.ensembl.org"
