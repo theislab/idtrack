@@ -65,7 +65,7 @@ class TheGraph(nx.MultiDiGraph):
         _ = self.hyperconnective_nodes
 
     @cached_property
-    def rev(self) -> nx.MultiDiGraph:
+    def rev(self) -> "TheGraph":
         """The same graph but the edges are in reverse orientation.
 
         Returns:
@@ -893,7 +893,7 @@ class TheGraph(nx.MultiDiGraph):
 
                     nei_form = DB.nts_ensembl_reverse[nei_nts]  # Find the form
 
-                    # Due to some weird annotations like: PRDX3P2 [RefSeq_mRNA, HGNC Symbol]
+                    # Due to some weird annotations like: PRDX3P2 being in 'RefSeq_mRNA' and also 'HGNC Symbol'
                     # Not all the elements in 'ra' is the same. The rare ones are just exceptions, or misannotations.
                     # Counter resolves the issue although not ideal.
 
@@ -917,34 +917,51 @@ class TheGraph(nx.MultiDiGraph):
 
         return output
 
-    def available_releases_given_database_assembly(self, database_name, assembly):
-        """Todo.
+    def available_releases_given_database_assembly(self, database_name: str, assembly: int) -> Set[int]:
+        """Possible Ensembl releases defined for a given database and assembly.
 
-        The method uses 'node_trios' unnecessarily method, which consumes a lot of memory and hinders high
+        The method uses `node_trios` unnecessarily method, which consumes a lot of memory and hinders high
         computational efficiency. However, this method is used only in testing purposes, when the speed and memory is
         not of a concern.
 
+        It is important to note that not all databases are defined in all Ensembl release. To see for more information,
+        have a look at the :py:class:`_external_databases.ExternalDatabases`.
+
         Args:
-            database_name: Todo.
-            assembly: Todo.
+            database_name: External database or node type (except `external`) it should be one of the item from
+                :py:meth:`_the_graph.TheGraph.available_external_databases`. The method also works with `node types`
+                (except `external`), since they are also defined in `node_trios`. Important to note that the `node type`
+                for Ensembl should follow :py:attr:`_db.DB.nts_assembly` or :py:attr:`_db.DB.nts_base_ensembl`.
+            assembly: Assembly, it should be one of the item from
+                :py:meth:`_the_graph.TheGraph.available_genome_assemblies`.
 
         Returns:
-            Todo.
+            Available Ensembl releases as set of integers.
         """
         return {
             j3 for i in self.node_trios for j1, j2, j3 in self.node_trios[i] if j1 == database_name and j2 == assembly
         }
 
-    def get_id_list(self, database: str, assembly: int, release: int) -> list:
-        """Todo.
+    def get_id_list(self, database: str, assembly: int, release: int) -> List[str]:
+        """Given a trio (database, assembly, release), generates a list of node names (identifiers).
+
+        Similar to :py:meth:`_the_graph.TheGraph.available_releases_given_database_assembly`, the method uses
+        `node_trios` unnecessarily method, which consumes a lot of memory and hinders high
+        computational efficiency. However, this method is used only in testing purposes, when the speed and memory is
+        not of a concern.
+
+        It is imporant to note that the Ensembl IDs with versions :py:attr:`_db.DB.alternative_versions` will be also
+        returned if the database is the Ensembl gene with the main assembly, and the assembly is the main assembly.
 
         Args:
-            database: Todo.
-            assembly: Todo.
-            release: Todo.
+            database: External database name if the `node type` is `external`, else `node type`. The `node type`
+                for Ensembl should follow :py:attr:`_db.DB.nts_assembly` or :py:attr:`_db.DB.nts_base_ensembl`.
+            assembly: Assembly, it should be one of the item from
+                :py:meth:`_the_graph.TheGraph.available_genome_assemblies`.
+            release: Requested Ensembl releases as an integer.
 
         Returns:
-            Todo.
+            Node names (identifiers) list.
         """
         the_key = (database, assembly, release)
         final_list = list()
@@ -961,14 +978,15 @@ class TheGraph(nx.MultiDiGraph):
                 final_list.append(n)
         return final_list
 
-    def get_external_database_nodes(self, database_name) -> set:
-        """Todo.
+    def get_external_database_nodes(self, database_name: str) -> Set[str]:
+        """For a given external database, returns set of all node names defined at least once in that database.
 
         Args:
-            database_name: Todo.
+            database_name: External database, it should be one of the item from
+                :py:meth:`_the_graph.TheGraph.available_external_databases`.
 
         Returns:
-            Todo.
+            Node names (identifiers) set.
         """
         return {
             i

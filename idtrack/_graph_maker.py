@@ -8,7 +8,7 @@ import itertools
 import logging
 import os
 import string
-from typing import Optional
+from typing import Optional, Union
 
 import networkx as nx
 import numpy as np
@@ -27,7 +27,7 @@ class GraphMaker:
     base ID. Ensembl transcripts (with base IDs and versions) are connected to gene, and Ensembl proteins are
     connected to transcripts. Additionally, a selected set of external databases are connected to the related Ensembl
     IDs: for example UniProt IDs are associated with proteins, while RefSeq transcript IDs are associated with
-    transcripts. The ``Graph`` class also saves the resulting graph into the defined temporary directory for later
+    transcripts. The ``GraphMaker`` class also saves the resulting graph into the defined temporary directory for later
     calculations.
     """
 
@@ -40,7 +40,7 @@ class GraphMaker:
                 It contains the temporary directory to save the resultant graph.
 
         Raises:
-            ValueError: ``Graph`` has to be created with the latest release possible defined in ``db_manager``. If not,
+            ValueError: ``GraphMaker`` has to be created with the latest release possible in ``db_manager``. If not,
                 the exception is raised.
         """
         # Instance attributes
@@ -55,7 +55,8 @@ class GraphMaker:
         """Initialize the external database downloads.
 
         Raises:
-            NotImplementedError: Not implemented yet.
+            NotImplementedError: Not implemented yet. Currently, the necessary data sources are downloaded when needed
+                during the graph construction process.
         """
         raise NotImplementedError
 
@@ -63,7 +64,9 @@ class GraphMaker:
         """When new release arrive, just add new nodes.
 
         Raises:
-            NotImplementedError: Not implemented yet.
+            NotImplementedError: Not implemented yet. Currently, the user is expected to recreate whole graph using
+                ``get_graph`` method. Note that not all databases need to be re-downloaded, the program will only
+                download the new release, and re-construct the graph.
         """
         raise NotImplementedError
 
@@ -77,9 +80,9 @@ class GraphMaker:
         """Main method to construct the graph.
 
         It creates the graph with Ensembl gene, transcript and protein information. It also adds
-        ``DB.nts_base_ensembl[f]`` nodes into the graph, which has only base Ensembl gene ID. External database entries
-        described in ``DatabaseManager`` will be part of the graph. Normally, user is not expected to use this method,
-        as the method is utilized in ``get_graph`` method.
+        ``DB.nts_base_ensembl[f]`` nodes into the graph, which has only base Ensembl gene ID (no version).
+        External database entries described in ``ExternalDatabases`` will be part of the graph. Normally, user
+        is not expected to use this method, as the method is utilized in ``get_graph`` method.
 
         Args:
             narrow: Determine whether a some more information should be added between Ensembl gene IDs. For example,
@@ -88,16 +91,13 @@ class GraphMaker:
             form_list: Determine which forms (transcript, translation, gene) should be included. If ``None``, then
                 include all possible forms defined in ``DatabaseManager``.
                 It has to be list composed of following strings: 'gene', 'transcript', 'translation'.
-            narrow_external: If set ``False``, all possible external databases defined in Ensembl *MySQL* server will be
+            narrow_external: If set ``False``, all possible external databases defined in Ensembl MySQL server will be
                 included into the graph. The graph will be immensely larger, and the ID history travel calculation will
                 be very slow. Additionally, the success of ID conversion under such a setting it has not been
                 tested yet.
-            remove_hypterconnecting: If set ``True``, the external nodes with out degree higher than a certain
-                threshold will be removed. This is to improve the speed, as these nodes sometimes create a huge
-                bottleneck in the pathfinder algorithm.
 
         Returns:
-            Resultant multi edge directed graph.
+            Resultant multiedge directed graph.
 
         Raises:
             ValueError: Unexpected error.
@@ -105,6 +105,8 @@ class GraphMaker:
 
         def add_edge(n1: str, n2: str, db12: str, a12: int, er12: int):
             """A simple function to create edges between provided nodes. Edits the graph that is under the construction.
+
+            The edge attribute will be added in the following format: ``{DB.connection_dict: {db12: {a12: {er12}}}}``.
 
             Args:
                 n1: The first node of the edge. The edge is taken from this node.
@@ -120,17 +122,25 @@ class GraphMaker:
                 raise ValueError(n1, n2, db12, a12, er12)
 
             if not g.has_edge(n1, n2):
+                # If there is no edge between the nodes, create one.
                 n_edge_att = {DB.connection_dict: {db12: {a12: {er12}}}}
                 g.add_edge(n1, n2, **n_edge_att)
-            else:
+
+            else:  # If there is an edge between the nodes, edit accordingly.
                 if len(g.get_edge_data(n1, n2)) != 1:
-                    raise ValueError  # test it to use '0' below
+                    # It is actually tested in TrackTest.is_node_consistency_robust. This is a result of
+                    # DatabasaManager and GraphMaker's shared work.
+                    raise ValueError(f"There is already an edge between '{n1}' and '{n2}'.")
+
                 elif db12 not in g[n1][n2][0][DB.connection_dict]:
                     g[n1][n2][0][DB.connection_dict][db12] = {a12: {er12}}
+
                 elif a12 not in g[n1][n2][0][DB.connection_dict][db12]:
                     g[n1][n2][0][DB.connection_dict][db12][a12] = {er12}
+
                 elif er12 not in g[n1][n2][0][DB.connection_dict][db12][a12]:
                     g[n1][n2][0][DB.connection_dict][db12][a12].add(er12)
+
                 else:
                     raise ValueError(n1, n2, db12, a12, er12, g[n1][n2][0][DB.connection_dict])
 
@@ -172,6 +182,8 @@ class GraphMaker:
             rc = db_manager.get_db("relationcurrent", save_after_calculation=db_manager.store_raw_always)
 
             for _ind, entry in rc.iterrows():
+
+                # To make the edge direction from transcript to gene, translation to transcript
                 for e1_str, e2_str in (("transcript", "gene"), ("translation", "transcript")):
 
                     e1 = entry[e1_str]
@@ -309,6 +321,7 @@ class GraphMaker:
                     for f in form_list:
                         fids = np.unique(nn_aa["node"][nn_aa["form"] == f])
                         bool_filter = pd.concat([bool_filter, df_aa[f].isin(fids)], axis=1)
+                    # Include into the graph if at least one of the gene, transc, transl exist.
                     bool_filter = np.sum(bool_filter, axis=1) > 0
                     df_aa = df_aa[bool_filter]
 
@@ -380,7 +393,7 @@ class GraphMaker:
         g.graph["misplaced_external_entry"] = set(misplaced_external_entry)
 
         # Merge the nodes that are the same when they are convert into lowercase/uppercase.
-        g = self._merge_nodes_with_the_same_in_lower_case(g)
+        g = self._merge_nodes_with_the_same_in_lower_case(g)  # Separated into a function for reading clarity.
 
         for e1, e2, e3 in g.edges:
             edge_data = g.get_edge_data(e1, e2, e3)
@@ -952,18 +965,18 @@ class GraphMaker:
         return g
 
     @staticmethod
-    def split_id(id_to_split: str, which_part: str):
-        """Todo.
+    def split_id(id_to_split: str, which_part: str) -> Union[str, float]:
+        """Simpler method to retrieve ID or Version part of a node name.
 
         Args:
-            id_to_split: Todo.
-            which_part: Todo.
+            id_to_split: Query node name.
+            which_part: Either 'Version' or 'ID'.
 
         Returns:
-            Todo.
+            The requested substring of the node name.
 
         Raises:
-            ValueError: Todo.
+            ValueError: If 'which_part' is assigned to some other value than 'Version', or 'ID'.
         """
         if id_to_split.count(DB.id_ver_delimiter) != 1:
             raise ValueError(f"Ensembl node has more than one delimiter. {id_to_split}")
@@ -981,8 +994,8 @@ class GraphMaker:
     def remove_non_gene_trees(graph: TheGraph, forms_remove: list = None) -> TheGraph:
         """Removes the edges between the nodes with the same `node type` and removes abstract nodes (Void and Retired).
 
-        The nodes between two the same ``DB.node_type_str`` will be removed. Also, the nodes with versions
-        ``DB.no_new_node_id`` and ``DB.no_old_node_id`` will be also removed.
+        The nodes between two the same :py:attr:`_db.DB.node_type_str` will be removed. Also, the nodes with versions
+        :py:attr:`_db.DB.no_new_node_id` and :py:attr:`_db.DB.no_old_node_id` will be also removed.
 
         Args:
             graph: The output of :py:attr:`_graph.Graph.construct_graph` or
@@ -992,23 +1005,26 @@ class GraphMaker:
         Returns:
             Resultant multi edge directed graph.
         """
-        forms_remove = (
+        forms_remove = (  # If forms_remove none, fill the variable with the defaults.
             [DB.nts_ensembl[i] for i in ["transcript", "translation"]] if forms_remove is None else forms_remove
         )
 
-        node_to_remove = []
-        edge_to_remove = []
+        node_to_remove = list()
+        edge_to_remove = list()
 
-        for n in graph.nodes:
+        for n in graph.nodes:  # Iterate through all nodes.
 
             the_node = graph.nodes[n]
-            nt = the_node[DB.node_type_str]
+            nt = the_node[DB.node_type_str]  # Get the node type
 
             if nt in forms_remove:
 
                 if the_node["Version"] in DB.alternative_versions:
-                    node_to_remove.append(n)  # we only remove Void or retired
+                    node_to_remove.append(n)  # We only remove Void or retired
+
                 else:
+                    # Remove the edges between nodes with the same node type.
+                    # This is essentially removing all the historical relationship trees.
                     for m in graph.neighbors(n):
                         mt = graph.nodes[m][DB.node_type_str]
                         if nt == mt:
@@ -1016,6 +1032,7 @@ class GraphMaker:
                             for k in kmn:
                                 edge_to_remove.append((n, m, k))
 
+        # Have to remove after the for-loop as it will raise error.
         for c in edge_to_remove:
             graph.remove_edge(*c)
         for c in node_to_remove:

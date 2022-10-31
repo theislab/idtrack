@@ -31,8 +31,18 @@ class DB:
     myqsl_user = "anonymous"
     mysql_togo = ""
     assembly_mysqlport_priority: dict = {  # assembly -> [mysql_port, assembly priority]
-        38: {"Port": 3306, "Priority": 1, "MinRelease": 48},  # From Ensembl 48 onwards only
-        37: {"Port": 3337, "Priority": 2, "MinRelease": 79},  # Databases for archive GRCh37 - release 79 onwards
+        # Port depends on which genome assembly is of interest. Refer to the following link.
+        # https://www.ensembl.org/info/data/mysql.html
+        38: {
+            "Port": 3306,
+            "Priority": 1,  # Set as the highest priority assembly. The lower is better.
+            "MinRelease": 48,  # Specified in above link, the MySQL server does not let you download an deeper.
+        },
+        37: {
+            "Port": 3337,
+            "Priority": 2,  # Second priority, as the assembl GRCh38 is generated after GRCh37.
+            "MinRelease": 79,  # Note: deeper versions is available via FTP server.
+        },
     }
     # # Priority should follow 1, 2, 3
     assembly_priority = list()
@@ -50,7 +60,7 @@ class DB:
     # Node Types
     node_type_str = "node_type"
     nts_external = "external"
-    forms_in_order = ["gene", "transcript", "translation"]
+    forms_in_order = ["gene", "transcript", "translation"]  # Warning: the order is important here.
     backbone_form = "gene"
 
     nts_ensembl = {i: f"ensembl_{i}" for i in forms_in_order}  # ensembl_gene
