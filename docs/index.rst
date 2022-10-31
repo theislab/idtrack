@@ -1,5 +1,5 @@
-**idtrack [under development]**
-===============================
+**idtrack**
+===========
 
 .. include:: readme.rst
 

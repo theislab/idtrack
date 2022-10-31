@@ -21,7 +21,7 @@ class TheGraph(nx.MultiDiGraph):
     """Graph object containing all the information about the relationships between bio-IDs.
 
     It is a subclass of :py:class:`networkx.MultiDiGraph`, with some additional methods to aid the pathfinder
-    algorithm in :py:class:`_track.Track`. The object is constructed by :py:class:`_graph_maker.GraphMaker`.
+    algorithm in :py:class:`Track`. The object is constructed by :py:class:`GraphMaker`.
     """
 
     def __init__(self, *args, **kwargs):
@@ -40,7 +40,7 @@ class TheGraph(nx.MultiDiGraph):
     def attach_included_forms(self, available_forms: list) -> None:
         """Set the ``available_forms`` variable for the instance.
 
-        This is a separate function and mainly aimed to be used by :py:class:`_graph_maker.GraphMaker` during the
+        This is a separate function and mainly aimed to be used by :py:class:`GraphMaker` during the
         process of constructing the graph. Just after the graphs for the forms of interests (typically `gene`,
         `transcript`, and `protein`) are merged, this method is called to store which forms are included in the graph.
         Setting the variable before merging the graphs causes errors and inconsistencies.
@@ -78,7 +78,7 @@ class TheGraph(nx.MultiDiGraph):
         """Cached property for hyper-connective nodes as keys and number of connections as values.
 
         Hyper-connective nodes are defined as external nodes with more than
-        :py:attr:`_db.DB.hyperconnecting_threshold`. This nodes creates a huge bottleneck in finding the synonyms
+        :py:attr:`DB.hyperconnecting_threshold`. This nodes creates a huge bottleneck in finding the synonyms
         of a node and hence the pathfinder algorithm. The pathfinder algoritm is hence speed-up by ignoring these nodes
         in the search process. This is in theory sacrificing the precision of the algorithm a little bit, but
         in practice these nodes generally does not have not very precise ID matching. Most of the case, the relavant
@@ -165,13 +165,13 @@ class TheGraph(nx.MultiDiGraph):
     def _combined_edges_genes_helper(the_result) -> dict:
         """Helper method is called for two methods only.
 
-        The method is called by :py:meth:`_the_graph.TheGraph.combined_edges_assembly_specific_genes` and
-        :py:meth:`_the_graph.TheGraph.combined_edges_genes` only. The aim of the method is to merge all the data
+        The method is called by :py:meth:`TheGraph.combined_edges_assembly_specific_genes` and
+        :py:meth:`TheGraph.combined_edges_genes` only. The aim of the method is to merge all the data
         coming from multiple external databases.
 
         Note that the main reason of having a separate methods for these two is basically due to the fact that `gene`
         nodes has no outgoing edges except to another `gene` node. For this reason,
-        :py:meth:`_the_graph.TheGraph._combined_edges` method has been used with reversed graph. In order to have the
+        :py:meth:`TheGraph._combined_edges` method has been used with reversed graph. In order to have the
         information for Ensembl genes or Ensembl assembly genes, the information from all edges should be merged and
         the name for the database has to be edited accordingly.
 
@@ -179,7 +179,7 @@ class TheGraph(nx.MultiDiGraph):
         the gene, and also to make the naming consistent.
 
         Args:
-            the_result: A dictionary as the output of :py:meth:`_the_graph.TheGraph._combined_edges`.
+            the_result: A dictionary as the output of :py:meth:`TheGraph._combined_edges`.
 
         Returns:
             A dictionary with following format
@@ -205,7 +205,7 @@ class TheGraph(nx.MultiDiGraph):
 
         The method fills the dictionary with nodes provided as a parameter. The edge data coming from the same node
         types (the edge between the same node type can exist only between backbone nodes as tested in
-        :py:meth:`_track_test.TrackTest.is_edge_with_same_nts_only_at_backbone_nodes`) are excluded.
+        :py:meth:`TrackTest.is_edge_with_same_nts_only_at_backbone_nodes`) are excluded.
 
         Args:
             node_list: Node names to be calculated.
@@ -296,10 +296,10 @@ class TheGraph(nx.MultiDiGraph):
         """
 
         def _node_name_alternatives(the_id: str) -> Tuple[Optional[str], bool]:
-            """Helper function for :py:meth:`_the_graph.TheGraph.node_name_alternatives`.
+            """Helper function for :py:meth:`TheGraph.node_name_alternatives`.
 
             Args:
-                the_id: A bio-ID of interest as defined in :py:attr:`_the_graph.TheGraph.node_name_alternatives.identifier`.
+                the_id: A bio-ID of interest as defined in :py:attr:`TheGraph.node_name_alternatives.identifier`.
 
             Returns:
                 The same as the parental method.
@@ -543,9 +543,9 @@ class TheGraph(nx.MultiDiGraph):
     def get_active_ranges_of_id_ensembl_all_inclusive(self, the_id: str) -> List[List]:
         """Generate active ranges of Ensembl gene nodes with all assemblies.
 
-        Note that :py:meth:`_the_graph.TheGraph.get_active_ranges_of_id` method provided the range for main assembly
+        Note that :py:meth:`TheGraph.get_active_ranges_of_id` method provided the range for main assembly
         that the graph is build on. This method combines the other assemblies together. Also, it verifies whether
-        the :py:meth:`_the_graph.TheGraph.combined_edges` and :py:meth:`_the_graph.TheGraph.get_active_ranges_of_id`
+        the :py:meth:`TheGraph.combined_edges` and :py:meth:`TheGraph.get_active_ranges_of_id`
         methods provides consistent results.
 
         Args:
@@ -594,7 +594,7 @@ class TheGraph(nx.MultiDiGraph):
             raise ValueError(f"Query '{the_id}' isn't '{DB.nts_ensembl['gene']}' or in '{DB.nts_assembly_gene}'.")
 
     def get_next_edge_releases(self, from_id: str, reverse: bool) -> list:
-        """Todo.
+        """Retrieves the next edge releases from a node, depending on the directionality of the graph.
 
         Args:
             from_id: Query ID. Should be with node type of Ensembl gene.
@@ -654,7 +654,7 @@ class TheGraph(nx.MultiDiGraph):
 
         Args:
             lst: List of integers. It should be sorted in increasing order. Repeating element is not allowed.
-                The output of :py:meth:`_the_graph.TheGraph.ranges_to_list` is a perfect input here.
+                The output of :py:meth:`TheGraph.ranges_to_list` is a perfect input here.
 
         Returns:
             Ranges as list of lists. Outputs should always be increasing, inclusive ranges. With positive integers.
@@ -670,7 +670,7 @@ class TheGraph(nx.MultiDiGraph):
 
         Args:
             lor: Ranges as list of lists. Should always be increasing, inclusive ranges. With positive integers.
-                The output of :py:meth:`_the_graph.TheGraph.list_to_ranges` is a perfect input here.
+                The output of :py:meth:`TheGraph.list_to_ranges` is a perfect input here.
 
         Returns:
             Sorted non-repeating list of integers.
@@ -685,7 +685,7 @@ class TheGraph(nx.MultiDiGraph):
 
     @cached_property
     def node_trios(self) -> Dict[str, Set[tuple]]:
-        """Creates a dict for all nodes with `node_trios` calculated by :py:meth:`_the_graph.TheGraph._node_trios`.
+        """Creates a dict for all nodes with `node_trios` calculated by :py:meth:`TheGraph._node_trios`.
 
         Returns:
             A memory intensive dictionary with node name as the key and calculated `node_trios` as the value.
@@ -752,11 +752,11 @@ class TheGraph(nx.MultiDiGraph):
         Args:
             list_of_ranges: List of increasing, inclusive ranges. The elements are positive integers. Note that there
                 should be no overlapping elements.
-                The output of :py:meth:`_the_graph.TheGraph.list_to_ranges` or
-                :py:meth:`_the_graph.TheGraph._get_active_ranges_of_id` are a perfect input here.
+                The output of :py:meth:`TheGraph.list_to_ranges` or
+                :py:meth:`TheGraph._get_active_ranges_of_id` are a perfect input here.
 
         Returns:
-            List of ranges as defined in :py:attr:`_the_graph.TheGraph.compact_ranges.list_of_ranges`.
+            List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.
         """
         next_index = 0  # Keeps track of the last used index in our result
         for index in range(len(list_of_ranges) - 1):
@@ -775,13 +775,13 @@ class TheGraph(nx.MultiDiGraph):
         """As the name suggest, calculates the intersecting ranges of two list of ranges.
 
         Args:
-            lor1: List of ranges as defined in :py:attr:`_the_graph.TheGraph.compact_ranges.list_of_ranges`.
-            lor2: List of ranges as defined in :py:attr:`_the_graph.TheGraph.compact_ranges.list_of_ranges`.
+            lor1: List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.
+            lor2: List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.
             compact: If set `True`, returns the reduced list of ranges via
-                :py:meth:`_the_graph.TheGraph.compact_ranges` method.
+                :py:meth:`TheGraph.compact_ranges` method.
 
         Returns:
-            List of ranges as defined in :py:attr:`_the_graph.TheGraph.compact_ranges.list_of_ranges`.
+            List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.
         """
         result = [
             [max(first[0], second[0]), min(first[1], second[1])]
@@ -797,7 +797,7 @@ class TheGraph(nx.MultiDiGraph):
         """Simple method to determine whether a given integer is covered by list of ranges.
 
         Args:
-            lor: List of ranges as defined in :py:attr:`_the_graph.TheGraph.compact_ranges.list_of_ranges`.
+            lor: List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.
             p: A positive integer.
 
         Returns:
@@ -814,10 +814,10 @@ class TheGraph(nx.MultiDiGraph):
         Args:
             id1: First Query ID.
             id2: Second Query ID.
-            compact: Parameter to pass into :py:meth:`_the_graph.TheGraph.get_intersecting_ranges` method.
+            compact: Parameter to pass into :py:meth:`TheGraph.get_intersecting_ranges` method.
 
         Returns:
-            List of ranges as defined in :py:attr:`_the_graph.TheGraph.compact_ranges.list_of_ranges`.
+            List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.
         """
         r1 = self.get_active_ranges_of_id[id1]
         r2 = self.get_active_ranges_of_id[id2]
@@ -860,7 +860,7 @@ class TheGraph(nx.MultiDiGraph):
         """Finds which form of Ensembl ID the external database identifiers are connected to.
 
         Each external database connects to a specific form (gene, transcript, translation) Ensembl ID. The relevant
-        form is chosen by :py:class:`_external_databases.ExternalDatabases` class.
+        form is chosen by :py:class:`ExternalDatabases` class.
 
         Returns:
             Dictionary mapping external database name into the associated form (gene, transcript, translation).
@@ -907,7 +907,7 @@ class TheGraph(nx.MultiDiGraph):
         """Find the genome assemblies found in the graph by iterating through all nodes.
 
         Returns:
-            Genome assemblies, which is also found in :py:attr:`_db.DB.assembly_mysqlport_priority`.
+            Genome assemblies, which is also found in :py:attr:`DB.assembly_mysqlport_priority`.
         """
         self.log.info(f"Cached properties being calculated: {'available_genome_assemblies'}")
 
@@ -925,15 +925,15 @@ class TheGraph(nx.MultiDiGraph):
         not of a concern.
 
         It is important to note that not all databases are defined in all Ensembl release. To see for more information,
-        have a look at the :py:class:`_external_databases.ExternalDatabases`.
+        have a look at the :py:class:`ExternalDatabases`.
 
         Args:
             database_name: External database or node type (except `external`) it should be one of the item from
-                :py:meth:`_the_graph.TheGraph.available_external_databases`. The method also works with `node types`
+                :py:meth:`TheGraph.available_external_databases`. The method also works with `node types`
                 (except `external`), since they are also defined in `node_trios`. Important to note that the `node type`
-                for Ensembl should follow :py:attr:`_db.DB.nts_assembly` or :py:attr:`_db.DB.nts_base_ensembl`.
+                for Ensembl should follow :py:attr:`DB.nts_assembly` or :py:attr:`DB.nts_base_ensembl`.
             assembly: Assembly, it should be one of the item from
-                :py:meth:`_the_graph.TheGraph.available_genome_assemblies`.
+                :py:meth:`TheGraph.available_genome_assemblies`.
 
         Returns:
             Available Ensembl releases as set of integers.
@@ -945,19 +945,19 @@ class TheGraph(nx.MultiDiGraph):
     def get_id_list(self, database: str, assembly: int, release: int) -> List[str]:
         """Given a trio (database, assembly, release), generates a list of node names (identifiers).
 
-        Similar to :py:meth:`_the_graph.TheGraph.available_releases_given_database_assembly`, the method uses
+        Similar to :py:meth:`TheGraph.available_releases_given_database_assembly`, the method uses
         `node_trios` unnecessarily method, which consumes a lot of memory and hinders high
         computational efficiency. However, this method is used only in testing purposes, when the speed and memory is
         not of a concern.
 
-        It is imporant to note that the Ensembl IDs with versions :py:attr:`_db.DB.alternative_versions` will be also
+        It is imporant to note that the Ensembl IDs with versions :py:attr:`DB.alternative_versions` will be also
         returned if the database is the Ensembl gene with the main assembly, and the assembly is the main assembly.
 
         Args:
             database: External database name if the `node type` is `external`, else `node type`. The `node type`
-                for Ensembl should follow :py:attr:`_db.DB.nts_assembly` or :py:attr:`_db.DB.nts_base_ensembl`.
+                for Ensembl should follow :py:attr:`DB.nts_assembly` or :py:attr:`DB.nts_base_ensembl`.
             assembly: Assembly, it should be one of the item from
-                :py:meth:`_the_graph.TheGraph.available_genome_assemblies`.
+                :py:meth:`TheGraph.available_genome_assemblies`.
             release: Requested Ensembl releases as an integer.
 
         Returns:
@@ -983,7 +983,7 @@ class TheGraph(nx.MultiDiGraph):
 
         Args:
             database_name: External database, it should be one of the item from
-                :py:meth:`_the_graph.TheGraph.available_external_databases`.
+                :py:meth:`TheGraph.available_external_databases`.
 
         Returns:
             Node names (identifiers) set.

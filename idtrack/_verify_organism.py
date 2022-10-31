@@ -85,11 +85,11 @@ class VerifyOrganism:
             read_timeout: The number of seconds the client will wait for the server to send a response
 
         Returns:
-            Todo.
+            Two dataframes to be used by the instance methods later on.
 
         Raises:
-            ValueError: Todo.
-            TimeoutError: Todo.
+            ValueError: Unexpected error.
+            TimeoutError: If allowed time is passed.
         """
         self.log.info("Ensembl Rest API query to get the organism names and associated releases.")
 

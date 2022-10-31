@@ -25,12 +25,6 @@ Reference
     :show-inheritance: True
 
 
-.. automodule:: idtrack._track
-    :members:
-    :private-members:
-    :show-inheritance:
-
-
 .. automodule:: idtrack._the_graph
     :members:
     :private-members:
@@ -43,13 +37,19 @@ Reference
     :show-inheritance:
 
 
-.. automodule:: idtrack._track_tests
+.. automodule:: idtrack._verify_organism
     :members:
     :private-members:
     :show-inheritance:
 
 
-.. automodule:: idtrack._verify_organism
+.. automodule:: idtrack._track
+    :members:
+    :private-members:
+    :show-inheritance:
+
+
+.. automodule:: idtrack._track_tests
     :members:
     :private-members:
     :show-inheritance:

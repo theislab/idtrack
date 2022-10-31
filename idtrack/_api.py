@@ -6,7 +6,7 @@
 
 import copy
 import logging
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from tqdm.autonotebook import tqdm
 
@@ -18,13 +18,13 @@ from ._verify_organism import VerifyOrganism
 
 
 class API:
-    """Todo."""
+    """Application programming interface for simple operations using ``idtrack`` package."""
 
     def __init__(self, local_repository: str) -> None:
-        """Todo.
+        """Class initialization.
 
         Args:
-            local_repository: Todo.
+            local_repository: An absolute path in local machine to store downloaded and preprocessed content.
         """
         # Instance attributes
         self.log = logging.getLogger("api")
@@ -33,7 +33,7 @@ class API:
         self.track: Union[Track, TrackTests]
 
     def configure_logger(self):
-        """Todo."""
+        """Configure logger in a way that shows the logs in a specified format."""
         if not self.logger_configured:
             logging.basicConfig(
                 level=logging.INFO,
@@ -48,14 +48,16 @@ class API:
         """Calculate cached variables of the graph object using only one method."""
         self.track.graph.calculate_caches()
 
-    def get_ensembl_organism(self, tentative_organism_name: str) -> tuple:
-        """Todo.
+    def get_ensembl_organism(self, tentative_organism_name: str) -> Tuple[str, int]:
+        """Make sure the user enters correct organism name and retrieves latest Ensembl release with ease.
 
         Args:
-            tentative_organism_name: Todo.
+            tentative_organism_name: Organism of interest.
+                This does not have to be formal name. For example, 'human', 'hsapiens' as well as formal name
+                'homo_sapiens' is accepted by the program.
 
         Returns:
-            Todo.
+            Formal organism name and associated latest Ensembl release.
         """
         vdf = VerifyOrganism(tentative_organism_name)
         formal_name = vdf.get_formal_name()
@@ -63,12 +65,15 @@ class API:
         return formal_name, latest_release
 
     def initialize_graph(self, organism_name: str, ensembl_release: int, return_test: bool = False):
-        """Todo.
+        """Creates a graph and initializes pathfinder class.
 
         Args:
-            organism_name: Todo.
-            ensembl_release: Todo.
-            return_test: Todo.
+            organism_name: Formal organism name as an output of ``get_ensembl_organism`` method.
+            ensembl_release: Ensembl release of interest. The object will work on only given Ensembl release, but some
+                methods does not care which form the DatabaseManager is defined to.
+                The latest possible Ensembl release is the best choice for graph building with no drawbacks.
+            return_test: If ``True``, return the ``TrackTest`` object instead, which has some functions to test the
+                pathfinder performance and graph integrity.
         """
         backbone_form = copy.deepcopy(DB.backbone_form)
         dm = DatabaseManager(organism_name, ensembl_release, backbone_form, self.local_repository)
@@ -87,19 +92,31 @@ class API:
         prioritize_to_one_filter: bool = True,
         return_path: bool = False,
     ) -> dict:
-        """Todo.
+        """Finds corresponding identifier in specified target using the constructed graph and pathfinder algorithm.
 
         Args:
-            identifier: Todo.
-            from_release: Todo.
-            to_release: Todo.
-            final_database: Todo.
-            prioritize_to_one_filter: Todo.
-            return_path: Todo.
+            identifier: Query ID.
+            from_release: Query ID is from which Ensembl release, if provided.
+            to_release: Ensembl release for target gene set.
+                Which Ensembl release the user wants to convert the ID into. The default is the latest Ensembl release.
+            final_database: Database for the target gene set.
+                Which database the user wants to convert the ID into. The default is 'ensembl_gene'.
+            prioritize_to_one_filter: Decide to use a series of filters to score the possible paths, and ideally choose
+                a single target at the end.
+            return_path: If ``True``, returns the path from source to query ID.
 
         Returns:
-            Todo.
+            A dictionary with following keys
+
+            - ``"final_ids"``: Final IDs after conversion.
+            - ``"final_database"``: Final database of the final IDs.
+            - ``"graph_id"``: The last node in history travel, so it is an Ensembl gene ID.
+            - ``"query_id"``: The input query ID.
+            - ``"no_corresponding"``: If ``True``, there is no such ID in the graph.
+            - ``"no_conversion"``: If ``True``, it is not possible to convert into the target. It is 1-to-0 matching.
+            - ``"the_path"``: The path from source to query ID. (If `return_path` is set to ``True``.)
         """
+        # Get the graph ID if possible.
         new_ident, _ = self.track.graph.node_name_alternatives(identifier)
         no_corresponding, no_conversion = False, False
 
@@ -154,16 +171,16 @@ class API:
 
         return result
 
-    def convert_identifier_multiple(self, identifier_list, verbose: bool = True, **kwargs):
-        """Todo.
+    def convert_identifier_multiple(self, identifier_list, verbose: bool = True, **kwargs) -> List[dict]:
+        """Basically ``convert_identifier`` method for multiple conversion procedure with progress bar.
 
         Args:
-            identifier_list: Todo.
-            kwargs: Todo
-            verbose: Todo.
+            identifier_list: List of query IDs to feed the ``convert_identifier`` method.
+            kwargs: Keyword arguments to pass into ``convert_identifier`` method.
+            verbose: If ``True``, shows the progress.
 
         Returns:
-            Todo.
+            List of ``convert_identifier`` method outputs.
         """
         result = list()
         with tqdm(identifier_list, mininterval=0.25, disable=not verbose) as loop_obj:
@@ -174,15 +191,20 @@ class API:
         return result
 
     def infer_identifier_release(self, id_list: list, mode: str = "ensembl_release", report_winner: bool = True):
-        """Todo.
+        """Infer the source of given set of IDs, by comparing which source covers most of the query IDs.
 
         Args:
-            id_list: Todo.
-            mode: Todo.
-            report_winner: Todo.
+            id_list: List of query IDs.
+            mode:
+                - ``"complete"``: Looks for the best match in terms of database, assembly and Ensembl release.
+                - ``"ensembl_release"``: Looks for the best match in terms of Ensembl release only.
+                - ``"assembly"``: Looks for the best match in terms of genome assembly only.
+                - ``"assembly_ensembl_release"``: Looks for the best match in terms of Ensembl release and assembly.
+            report_winner: If ``True``, return only the winner. If ``False``, return each
+                possible source with corresponding scores.
 
         Returns:
-            Todo.
+            Result based on `mode` parameter.
         """
         found_id_list = list()
         none_id_list = list()

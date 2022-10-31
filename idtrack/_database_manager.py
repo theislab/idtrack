@@ -35,10 +35,10 @@ class DatabaseManager:
         store_raw_always: bool = True,
         genome_assembly: int = None,
     ):
-        """Todo.
+        """Class initialization.
 
         Args:
-            organism: Formal organism name. The output provided by :py:class:`_verify_organism.VerifyOrganism` would be
+            organism: Formal organism name. The output provided by :py:class:`VerifyOrganism` would be
                 a perfect choice.
             ensembl_release: Ensembl release of interest. The object will work on only given Ensembl release, but some
                 methods does not care which form the DatabaseManager is defined to.
@@ -50,9 +50,9 @@ class DatabaseManager:
                 ignore all Ensembl release lower than this integer.
             ignore_after: Similar to 'ignore_before' but as the upper limit as the name suggest.
             compress: If ``True``, the resulting content will be compressed to take less space in the disk.
-            store_raw_always: Todo.
+            store_raw_always: If ``True``, the raw MySQL tables will be also saved in the disk.
             genome_assembly: Genome assembly of interest. The selection should be one of the keys in the
-                :py:attr:`_db.DB.assembly_mysqlport_priority` dictionary. The object will work on only given assembly.
+                :py:attr:`DB.assembly_mysqlport_priority` dictionary. The object will work on only given assembly.
                 The default is the latest genome assembly (also called highest priority assembly).
 
         Raises:
@@ -143,7 +143,7 @@ class DatabaseManager:
 
     @cached_property
     def external_inst(self) -> ExternalDatabases:
-        """Create an instance of :py:class:`_external_databases.ExternalDatabases` and set as a property.
+        """Create an instance of :py:class:`ExternalDatabases` and set as a property.
 
         The parameters of the DatabaseManager instance will be directly passed in the creation of the
         `ExternalDatabases` instance so they will be consistent with each other.
@@ -168,7 +168,7 @@ class DatabaseManager:
         server as a verification.
 
         Returns:
-            Todo.
+            List of integers indicating which Ensembl releases are available.
 
         Raises:
             ValueError: Unexpected error in regex functions.
@@ -240,7 +240,7 @@ class DatabaseManager:
         """Changes the form of DatabaseManager instance with passing all other variables unchanged.
 
         Args:
-            form: New form of interest. Refer to :py:attr:`_database_manager.DatabaseManager.__init__.form`
+            form: New form of interest. Refer to :py:attr:`DatabaseManager.__init__.form`
 
         Returns:
             New instance of DatabaseManager with only 'form' is changed.
@@ -262,7 +262,7 @@ class DatabaseManager:
 
         Args:
             ensembl_release: New Ensembl release of interest.
-                Refer to :py:attr:`_database_manager.DatabaseManager.__init__.ensembl_release`
+                Refer to :py:attr:`DatabaseManager.__init__.ensembl_release`
 
         Returns:
             New instance of DatabaseManager with only 'ensembl_release' is changed.
@@ -284,7 +284,7 @@ class DatabaseManager:
 
         Args:
             genome_assembly: New genome assembly of interest.
-                Refer to :py:attr:`_database_manager.DatabaseManager.__init__.genome_assembly`
+                Refer to :py:attr:`DatabaseManager.__init__.genome_assembly`
 
         Returns:
             New instance of DatabaseManager with only 'genome_assembly' is changed.
@@ -498,7 +498,7 @@ class DatabaseManager:
 
         Returns:
             Dataframe of three columns: `gene_id`, `gene_stable_id`, and `gene_version`. The 'ID' and 'Version' need to
-                be concatanated afterwards.
+            be concatanated afterwards.
         """
         # Determine which columns are interesting for each form.
         stable_id_version, usecols_core, usecols_asso = DatabaseManager._determine_usecols_ids(form)
@@ -560,7 +560,7 @@ class DatabaseManager:
         """Retrieves the relationship between different forms of Ensembl IDs for all Ensembl releases.
 
         It is not recommended as there are some missing rows. Instead use
-        :py:meth:`_database_manager.DatabaseManager.create_relation_current` for all Ensembl releases separately, and
+        :py:meth:`DatabaseManager.create_relation_current` for all Ensembl releases separately, and
         concatanate the resulting data frames.
 
         Returns:
@@ -578,8 +578,8 @@ class DatabaseManager:
     def _create_relation_helper(self, df: pd.DataFrame) -> pd.DataFrame:
         """Helper method for creating 'relationship' dataframes for two methods.
 
-        The two methods is :py:meth:`_database_manager.DatabaseManager.create_relation_current` and
-        :py:meth:`_database_manager.DatabaseManager.create_relation_archive`. The method is not expected to be used by
+        The two methods is :py:meth:`DatabaseManager.create_relation_current` and
+        :py:meth:`DatabaseManager.create_relation_archive`. The method is not expected to be used by
         the user.
 
         Args:
@@ -642,7 +642,7 @@ class DatabaseManager:
             there are 'retirement' events or 'birth' events of IDs.
 
         Raises:
-            ValueError: If the delimiter :py:attr:`_db.DB.id_ver_delimiter` is in Ensembl IDs.
+            ValueError: If the delimiter :py:attr:`DB.id_ver_delimiter` is in Ensembl IDs.
         """
         # Get the tables from the server
         s = self.get_table("stable_id_event", usecols=None, save_after_calculation=self.store_raw_always)
@@ -700,7 +700,7 @@ class DatabaseManager:
         should be 3. For this reason, 1-2 connection should be corrected as 3-2. This method does this.
 
         Args:
-            narrow: The same parameter in :py:attr:`_database_manager.DatabaseManager.create_id_history.narrow`.
+            narrow: The same parameter in :py:attr:`DatabaseManager.create_id_history.narrow`.
             inspect: If inspect is ``True``, then add the newly created columns as new ones into the existing one.
 
         Returns:
@@ -800,15 +800,14 @@ class DatabaseManager:
             filter_mode: Determine what to return after retrieving the data.
                 One of the followings: `relevant`, `all`, `database`, `relevant-database`.
 
-                - `relevant` and `all`
-                    Returns the relationship information. 'all' returns all relationships while
-                    'relevant' returns only those indicated by ``ExternalDatabases`` class.
-                    The result is a dataframe with 'release', 'graph_id', 'id_db', 'name_db', 'ensembl_identity', and
-                    'xref_identity'.
-
-                - `database` and `relevant-database`
-                    Returns the a dataframe indicating databases. The resulting dataframe
-                    contain two columns: 'name_db' and 'count'.
+                - `relevant` and `all`:
+                  Returns the relationship information. 'all' returns all relationships while
+                  'relevant' returns only those indicated by ``ExternalDatabases`` class.
+                  The result is a dataframe with 'release', 'graph_id', 'id_db', 'name_db', 'ensembl_identity', and
+                  'xref_identity'.
+                - `database` and `relevant-database`:
+                  Returns the a dataframe indicating databases. The resulting dataframe
+                  contain two columns: 'name_db' and 'count'.
 
         Returns:
             Dataframe of specifified type via ``filter_mode``.
@@ -961,7 +960,7 @@ class DatabaseManager:
             A dataframe with ``f'{form}_stable_id'`` and ``f'{form}_version'``.
 
         Raises:
-            ValueError: If the delimiter :py:attr:`_db.DB.id_ver_delimiter` is in Ensembl IDs, or if the stable IDs are
+            ValueError: If the delimiter :py:attr:`DB.id_ver_delimiter` is in Ensembl IDs, or if the stable IDs are
                 not unique.
         """
         dbm_the_ids = self.get_db(f"idsraw_{self.form}")
@@ -980,16 +979,22 @@ class DatabaseManager:
         return dbm_the_ids
 
     def create_external_all(self, return_mode: str) -> pd.DataFrame:
-        """Todo.
+        """Download external databases for all assemblies.
+
+        The method considers the 'priority' of the assemblies indicated in
+        :py:attr:`DB.assembly_mysqlport_priority`. The method is not found in 'get_db' so the result is not saved.
 
         Args:
-            return_mode: Todo.
+            return_mode: Either one of three choices `all`, `unique`, `duplicated`. There is currently no use case for
+                `unique`, `duplicated` by the program.
 
         Returns:
-            Todo.
+            Returns the relationship information indicated by ``ExternalDatabases`` class.
+            The result is a dataframe with 'release', 'graph_id', 'id_db', 'name_db', 'ensembl_identity', and
+            'xref_identity', and also 'assembly'.
 
         Raises:
-            ValueError: Todo.
+            ValueError: If `return_mode` is not among the possible ones.
         """
         ass = self.external_inst.give_list_for_case(give_type="assembly")
         df = pd.DataFrame()
@@ -1008,12 +1013,16 @@ class DatabaseManager:
         compare_columns_2 = compare_columns + ["assembly"]
 
         if return_mode == "all":
+            # Drop duplicate rows that have all the columns the same with another row in the dataframe.
+            # This also looks for 'assembly' columns so it is possible to say assemlies are evaluated separately.
             df.drop_duplicates(keep="first", inplace=True, ignore_index=True, subset=compare_columns_2)
             return df
 
         elif return_mode == "unique":
+            # Unlike above, this does not also look for 'assembly' columns, so an entry found in the higher priority
+            # assembly will be kept but the others will be removed.
             df.drop_duplicates(keep="first", inplace=True, ignore_index=True, subset=compare_columns)
-            # drop duplicates: after transition to new assembly. ensembl does not assign new versions etc to the older
+            # Note that: after transition to new assembly. ensembl does not assign new versions etc to the older
             # keep the most priority one.
             return df
 
@@ -1023,24 +1032,64 @@ class DatabaseManager:
             return dfg
 
         else:
-            raise ValueError
+            raise ValueError(f"Undefined parameter for 'return_mode': {return_mode}.")
 
-    def get_db(
-        self, df_indicator, create_even_if_exist=False, save_after_calculation=True, overwrite_even_if_exist=False
-    ):
-        """For saving, exporting, and naming convention.
+    def create_version_info(self) -> pd.DataFrame:
+        """Check whether all Ensembl release has Ensembl IDs with versions or without versions.
 
-        Args:
-            df_indicator: Todo.
-            create_even_if_exist: Todo.
-            save_after_calculation: Todo.
-            overwrite_even_if_exist: Todo.
+        Some organisms such as S. cerevisiae has Ensembl identifiers that has no 'Version', but only 'ID'. The method
+        looks whether this is the case for all the Ensembl releases for a given organism.
 
         Returns:
-            Todo.
+            A dataframe with two columns as `ensembl_release`, `version_info`.
 
         Raises:
-            ValueError: Todo.
+            NotImplementedError: If some Ensembl identifiers without versions, some are not."
+        """
+        ver = list()
+
+        for i in sorted(self.available_releases, reverse=True):
+            db_manager_temp = self.change_release(i)
+            df_ids = db_manager_temp.get_db(f"idsraw_{self.form}", save_after_calculation=self.store_raw_always)
+            _vv = pd.isna(df_ids[f"{self.form}_version"])
+
+            if np.all(_vv):
+                with_version = True
+
+            elif np.any(_vv):
+                raise NotImplementedError("Some identifiers with versions that are NaN, some are not.")
+
+            else:
+                with_version = False
+
+            ver.append([i, with_version])
+
+        df = pd.DataFrame(ver, columns=["ensembl_release", "version_info"])
+        return df
+
+    def get_db(
+        self,
+        df_indicator: str,
+        create_even_if_exist: bool = False,
+        save_after_calculation: bool = True,
+        overwrite_even_if_exist: bool = False,
+    ) -> Union[pd.DataFrame, pd.Series]:
+        """For saving, exporting, and naming convention. Main method to retrieve the data sources.
+
+        Args:
+            df_indicator: A string indicating which dataframe the user is requested to access.
+                It should contain only one or zero '_' character.
+            create_even_if_exist: If ``True``, independent of the status in the disk, the table will be downloaded.
+            save_after_calculation: If ``True``, the downloaded table will be stored in the disk, under a `h5` file at
+                the local directory specified in init method.
+            overwrite_even_if_exist: If ``True``, regardless of whether it is already saved in the disk, the program
+                re-saves removing the previous table with the same name.
+
+        Returns:
+            The data of interest depending on `df_indicator` parameter.
+
+        Raises:
+            ValueError: If `df_indicator` parameter is not in specified format.
         """
 
         def check_exist_as_diff_release(_df_type, _df_indicator):
@@ -1076,7 +1125,7 @@ class DatabaseManager:
                         )
                         f.remove(_hi)
 
-        # Split the df_indicator with "-", to get the extra parameters.
+        # Split the df_indicator with "_", to get the extra parameters.
         # Main point of naming and df_indicator is to include the paramters in the file_names
         # for exporting and importing without writing explicit methods of read/write for each case.
         split_ind = df_indicator.split("_")
@@ -1090,12 +1139,15 @@ class DatabaseManager:
             xr1, xr1_a = check_exist_as_diff_release("common", df_indicator)
             remove_redundant_exist("common", df_indicator, xr1, xr1_a)
             hierarchy, file_path = self.file_name("common", df_indicator, ensembl_release=xr1)
+
         elif main_ind == "versioninfo" and param1_ind is None:
             xr1, xr1_a = check_exist_as_diff_release("processed", df_indicator)
             remove_redundant_exist("processed", df_indicator, xr1, xr1_a)
             hierarchy, file_path = self.file_name("processed", df_indicator, ensembl_release=xr1)
+
         elif param1_ind is None and main_ind in ("relationarchive", "relationcurrent"):
             hierarchy, file_path = self.file_name("common", df_indicator)
+
         else:
             # Get the file name associated with table_key and columns of interest.
             hierarchy, file_path = self.file_name("processed", df_indicator)
@@ -1158,22 +1210,24 @@ class DatabaseManager:
 
         return df
 
-    def read_exported(self, hierarchy, file_path):
-        """Todo.
+    def read_exported(self, hierarchy: str, file_path: str) -> Union[pd.DataFrame, pd.Series]:
+        """Read the data souces saved previously given h5 file path and the 'h5 key'.
+
+        The method is not expected to be used by the user.
 
         Args:
-            hierarchy: Todo.
-            file_path: Todo.
+            hierarchy: The key to retrieve the associated table in h5 file.
+            file_path: Absolute path for h5 file.
 
         Returns:
-            Todo.
+            The table of interest as a pandas object.
 
         Raises:
-            FileNotFoundError: Todo.
-            KeyError: Todo.
+            FileNotFoundError: If the file indicated by `file_path` is not exist or not readable.
+            KeyError: If there is no key `hierarchy` in the ``h5`` file defined by `file_path`.
         """
         if not os.access(file_path, os.R_OK):
-            raise FileNotFoundError
+            raise FileNotFoundError("The file is not exist or not readable.")
 
         if not DatabaseManager.check_h5_key(file_path, hierarchy):
             raise KeyError
@@ -1181,20 +1235,22 @@ class DatabaseManager:
         df = pd.read_hdf(file_path, key=hierarchy, mode="r")
         return df
 
-    def file_name(self, df_type, *args, ensembl_release: int = None, **kwargs):
-        """Todo.
+    def file_name(self, df_type: str, *args, ensembl_release: int = None, **kwargs) -> Tuple[str, str]:
+        """Determine file name for reading/writing into h5 file based on dataframe type.
+
+        The method is not expected to be used by the user.
 
         Args:
-            df_type: Todo.
-            args: Todo.
-            ensembl_release: Todo.
-            kwargs: Todo.
+            df_type: Either `processed`, `mysql`, `common`.
+            args: Arguments to pass into the functions, which are specific to each ``df_type``.
+            ensembl_release: Associated Ensembl release of the file of interest.
+            kwargs: Keyword arguments to pass into the functions, which are specific to each ``df_type``.
 
         Returns:
-            Todo.
+            The file name for h5 file and the key to be used inside.
 
         Raises:
-            ValueError: Todo.
+            ValueError: If the parameter `df_type` is not in specified format.
         """
         ensembl_release = self.ensembl_release if not ensembl_release else ensembl_release
 
@@ -1209,7 +1265,7 @@ class DatabaseManager:
             return f"ens{ensembl_release}_{df_type}_{df_indicator}"
 
         if df_type not in ["processed", "mysql", "common"]:
-            raise ValueError
+            raise ValueError("The parameter is not in specified format: df_type")
         if df_type == "processed":
             hierarchy = file_name_processed(*args, **kwargs)
         elif df_type == "common":
@@ -1219,14 +1275,17 @@ class DatabaseManager:
 
         return hierarchy, os.path.join(self.local_repository, f"{self.organism}_assembly-{self.genome_assembly}.h5")
 
-    def export_disk(self, df, hierarchy, file_path, overwrite: bool):
-        """Todo.
+    def export_disk(self, df: Union[pd.DataFrame, pd.Series], hierarchy: str, file_path: str, overwrite: bool):
+        """Stored the pandas object into the given h5 file with specified key.
+
+        The method is not expected to be used by the user.
 
         Args:
-            df: Todo.
-            hierarchy: Todo.
-            file_path: Todo.
-            overwrite: Todo.
+            df: The table to stor into the disk.
+            hierarchy: The key to retrieve the associated table in h5 file.
+            file_path: Absolute path for h5 file.
+            overwrite: If ``True``, regardless of whether it is already saved in the disk, the program
+                re-saves removing the previous table with the same name.
         """
         base_file_path = os.path.basename(file_path)
 
@@ -1250,15 +1309,15 @@ class DatabaseManager:
             df.to_hdf(file_path, key=hierarchy, mode="a", **self._comp_hdf5)
 
     @staticmethod
-    def check_h5_key(file_path, key):
-        """Todo.
+    def check_h5_key(file_path: str, key: str) -> bool:
+        """Check whether the given key is in the h5 file.
 
         Args:
-            file_path: Todo.
-            key: Todo.
+            file_path: Absolute path for h5 file.
+            key: The key to retrieve the associated table in h5 file.
 
         Returns:
-            Todo.
+            If there is such  a key ``True``, else ``False``.
         """
         if not os.access(file_path, os.R_OK):
             return False
@@ -1266,14 +1325,18 @@ class DatabaseManager:
             return key in f
 
     def repack_hdf5(self, remove_list: list = None):
-        """Todo.
+        """Repack h5 file.
+
+        When a table is removed by the h5 file, the associated space is not reclaimed by the operating system. The
+        method here circumvents the problem by removing h5 files completely and re-writing all the tables.
 
         Args:
-            remove_list: Todo.
+            remove_list: Table keys to exclude from re-writing.
         """
         _, file_name = self.file_name("common", "place_holder")
         old_name = file_name + "_to_delete_temp"
         os.rename(file_name, old_name)
+        self.log.info(f"Repacking the h5 file: {file_name}")
 
         with pd.HDFStore(old_name, mode="r") as f:
             all_keys = f.keys()
@@ -1294,11 +1357,11 @@ class DatabaseManager:
 
         os.remove(old_name)
 
-    def tables_in_disk(self):
-        """Todo.
+    def tables_in_disk(self) -> List[str]:
+        """Retrieves the keys in the h5 file, which is associated with the DatabaseManager instance.
 
         Returns:
-            Todo.
+            List of keys (also called hierarchy) in the h5 file.
         """
         _, file_name = self.file_name("common", "place_holder")
 
@@ -1306,37 +1369,40 @@ class DatabaseManager:
             return list()
         else:
             with pd.HDFStore(file_name, mode="r") as f:
-                return f.keys()
+                return list(f.keys())
 
-    def id_ver_from_df(self, dbm_the_ids):
-        """Todo.
+    def id_ver_from_df(self, dbm_the_ids: pd.DataFrame) -> List[str]:
+        """Creates node names given the dataframe of IDs, which has different columns for 'ID' and 'Version'.
 
         Args:
-            dbm_the_ids: Todo.
+            dbm_the_ids: Dataframe of IDs, typically the output of ``db_manager.get_db("ids")``.
 
         Returns:
-            Todo.
+            Node name as "ID.Version" if there is 'Version', else only "ID".
 
         Raises:
-            ValueError: Todo.
+            ValueError: If column names of the `dbm_the_ids` is not as expected.
         """
         if np.all(dbm_the_ids.columns != self._identifiers):
-            raise ValueError
+            raise ValueError(
+                f"Column names of the 'dbm_the_ids' is not as expected. "
+                f"{dbm_the_ids.columns} vs {self._identifiers}"
+            )
         gri_generator = (DatabaseManager.node_dict_maker(i, j) for i, j in dbm_the_ids.values)
         return list(map(DatabaseManager.node_name_maker, gri_generator))
 
     @staticmethod
-    def node_name_maker(node_dict):
+    def node_name_maker(node_dict: Dict[str, Any]) -> str:
         """This function creates ID-Version.
 
         If the Version information is not there, it only uses ID, which is necessary for some organisms which
         does not have versioned IDs.
 
         Args:
-            node_dict: Todo.
+            node_dict: The output of :py:meth:`DatabaseManager.node_dict_maker`.
 
         Returns:
-            Todo.
+            Node name as "ID.Version" if there is 'Version', else only "ID".
         """
         if node_dict["Version"] and not pd.isna(node_dict["Version"]):
             return node_dict["ID"] + DB.id_ver_delimiter + str(node_dict["Version"])
@@ -1344,147 +1410,140 @@ class DatabaseManager:
             return node_dict["ID"]
 
     @staticmethod
-    def node_dict_maker(id_entry, version_entry):
+    def node_dict_maker(id_entry: str, version_entry: Any) -> Dict[str, Any]:
         """Create a dict for ID and Version.
 
         Args:
-            id_entry: Todo.
-            version_entry: Todo.
+            id_entry: For example, the first part of (`ENSG00000000001`) in `ENSG00000000001.1` before delimiter.
+            version_entry: For example, the second part of (`1`) in `ENSG00000000001.1` before delimiter.
 
         Returns:
-            Todo.
+            Dictionary in the format of ``{"ID": id_entry, "Version": version_entry}``
 
         Raises:
-            ValueError: Todo.
+            ValueError: If 'Version' is not floating number (cannot be converted into integer).
         """
-        if (
-            version_entry
-            and not pd.isna(version_entry)
-            and version_entry != DB.no_old_node_id
-            and version_entry != DB.no_new_node_id
-        ):
+        if version_entry and not pd.isna(version_entry) and version_entry not in DB.alternative_versions:
             if int(version_entry) != float(version_entry):
-                raise ValueError
+                raise ValueError(f"Version is floating: {(id_entry, version_entry)}")
             else:
                 version_entry = int(version_entry)
         return {"ID": id_entry, "Version": version_entry}
 
-    def version_fix_incomplete(self, df_fx, id_col_fx, ver_col_fx):
-        """Todo.
-
-        Args:
-            df_fx: Todo.
-            id_col_fx: Todo.
-            ver_col_fx: Todo.
-
-        Returns:
-            Todo.
-        """
-        # Get the columns that do not have any id
-        na_cols_fx = pd.isna(df_fx[id_col_fx])
-        # Split the dataframe to process separately
-        df_fm1, df_fm2 = df_fx[na_cols_fx].copy(deep=True), df_fx[~na_cols_fx].copy(deep=True)
-        version_info = self.check_version_info()
-        df_fm1 = self.version_fix(df_fm1, ver_col_fx, version_info="without_version")
-        df_fm2 = self.version_fix(df_fm2, ver_col_fx, version_info=version_info)
-        # Concatenate the results and return.
-        df_fx = pd.concat([df_fm1, df_fm2], axis=0)
-        df_fx.reset_index(inplace=True, drop=True)
-        return df_fx
-
     def version_uniformize(self, df: pd.DataFrame, version_str: str) -> pd.DataFrame:
-        """Todo.
+        """Final operation for :py:meth:`DatabaseManager.create_ids`.
 
-        Todo further.
+        The method is not expected to be used by the user.
+
+        Make the 'Version' column, integer if there is 'Version' information, else, make put ``np.nan`` instead. The
+        operation is in line with :py:meth:`DatabaseManager.create_version_info` method.
+        Note that ``np.nan`` values will be used by `node_name_maker` and `node_name_maker` methods.
 
         Args:
-            df: Todo.
-            version_str: Todo.
+            df: Input dataframe, see the `create_ids` method for more detail.
+            version_str: Which column contain the 'Version' information
 
         Returns:
-            Todo.
+            Corrected version of the dataframe in terms of 'Version' information.
 
         Raises:
-            NotImplementedError: Todo.
+            NotImplementedError: If some Ensembl identifiers without versions, some are not."
         """
         contains_na = pd.isna(df[version_str])
         if np.all(contains_na):
             # If there is no version information associated with stable_ids. For some organisms like S. cerevisiae
             df[version_str] = np.nan
             return df
+
         elif np.any(contains_na):
-            raise NotImplementedError("Some versions are NaN, some are not.")
+            raise NotImplementedError("Some identifiers with versions that are NaN, some are not.")
+
         else:
             df[version_str] = df[version_str].astype(int)
             return df
 
-    def version_fix(self, df, version_str, version_info: str = None):
-        """Todo.
+    def version_fix_incomplete(self, df_fx: pd.DataFrame, id_col_fx: str, ver_col_fx: str) -> pd.DataFrame:
+        """The same logic with ``version_fix`` method, but do different process if associated 'ID' is ``np.nan``.
 
         Args:
-            df:  Todo.
-            version_str: Todo.
-            version_info:  Todo.
+            df_fx: Input dataframe to fix the version information.
+            id_col_fx: Which column contain the 'ID' information.
+            ver_col_fx: Which column contain the 'Version' information.
 
         Returns:
-             Todo.
+            Modified dataframe in terms of version information.
+        """
+        # Get the columns that do not have any id
+        na_cols_fx = pd.isna(df_fx[id_col_fx])
+
+        # Split the dataframe to process separately
+        df_fm1, df_fm2 = df_fx[na_cols_fx].copy(deep=True), df_fx[~na_cols_fx].copy(deep=True)
+        version_info = self.check_version_info()
+        df_fm1 = self.version_fix(df_fm1, ver_col_fx, version_info="without_version")
+        df_fm2 = self.version_fix(df_fm2, ver_col_fx, version_info=version_info)
+
+        # Concatenate the results and return.
+        df_fx = pd.concat([df_fm1, df_fm2], axis=0)
+        df_fx.reset_index(inplace=True, drop=True)
+
+        return df_fx
+
+    def version_fix(self, df: pd.DataFrame, version_str: str, version_info: str = None) -> pd.DataFrame:
+        """Depending the version information of the organism, uniformize the identifiers.
+
+        The method is not expected to be used by the user.
+
+        Args:
+            df: Input dataframe to fix the version information.
+            version_str: Which column contain the 'Version' information.
+            version_info: The program parameter obtained somehow by ``check_version_info`` method.
+
+        Returns:
+            Modified dataframe in terms of version information.
 
         Raises:
-            ValueError: Todo.
+            ValueError: If `version_info` is not one of the output of `check_version_info` method.
         """
+        # If version_info is not entered, just re-calculate.
         version_info = version_info if version_info else self.check_version_info()
+
         if version_info == "add_version":
+            # Set the constant value of DB.first_version as the Version.
             df[version_str] = DB.first_version
+
         elif version_info == "without_version":
             df[version_str] = np.nan
+
         elif version_info == "with_version":
             df[version_str] = df[version_str].astype(int)
+
         else:
-            raise ValueError
+            raise ValueError("Undefined choice for 'version_info'.")
+
         return df
 
-    def check_version_info(self):
-        """Todo.
-
-        the same for all the release for a given animal.
+    def check_version_info(self) -> str:
+        """Look at across all Ensembl releases and decide the 'version_info' variable to be used in the program.
 
         Returns:
-            Todo.
+            Either `without_version` when all Ensembl releases has identifiers without 'Versions',
+            `with_version` when all Ensembl releases has identifiers with 'Versions',
+            or `add_version` when some Ensembl releases has identifiers with 'Versions'.
 
         Raises:
-            ValueError: Todo.
+            ValueError: If the dataframe obtained by ``self.get_db("versioninfo")`` has a problematic column.
         """
         vi_df = self.get_db("versioninfo")
         narrowed = vi_df["version_info"].unique()
+
         if narrowed.dtype != np.dtype("bool"):
-            raise ValueError
+            raise ValueError("Data type of 'version_info' column must be boolean.")
+
         if len(narrowed) == 1 and narrowed[0]:
             return "without_version"
+
         elif len(narrowed) == 1:
             return "with_version"
+
         else:
             return "add_version"
-
-    def create_version_info(self):
-        """Todo.
-
-        Returns:
-            Todo.
-
-        Raises:
-            NotImplementedError: Todo.
-        """
-        ver = list()
-        for i in sorted(self.available_releases, reverse=True):
-            db_manager_temp = self.change_release(i)
-            df_ids = db_manager_temp.get_db(f"idsraw_{self.form}", save_after_calculation=self.store_raw_always)
-            _vv = pd.isna(df_ids[f"{self.form}_version"])
-            if np.all(_vv):
-                with_version = True
-            elif np.any(_vv):
-                raise NotImplementedError("Some versions are NaN, some are not.")
-            else:
-                with_version = False
-            ver.append([i, with_version])
-        df = pd.DataFrame(ver, columns=["ensembl_release", "version_info"])
-        return df

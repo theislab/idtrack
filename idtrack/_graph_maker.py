@@ -528,7 +528,7 @@ class GraphMaker:
         """Creates a graph with connected nodes based on historical relationships between each Ensembl IDs.
 
         Args:
-            narrow: See parameter in :py:attr:`_graph.Graph.construct_graph.narrow`
+            narrow: See parameter in :py:attr:`Graph.construct_graph.narrow`
             db_manager: The method reads ID history dataframe, and Ensembl IDs lists at each Ensembl release,
                 provided by ``DatabaseManager``.
 
@@ -994,12 +994,12 @@ class GraphMaker:
     def remove_non_gene_trees(graph: TheGraph, forms_remove: list = None) -> TheGraph:
         """Removes the edges between the nodes with the same `node type` and removes abstract nodes (Void and Retired).
 
-        The nodes between two the same :py:attr:`_db.DB.node_type_str` will be removed. Also, the nodes with versions
-        :py:attr:`_db.DB.no_new_node_id` and :py:attr:`_db.DB.no_old_node_id` will be also removed.
+        The nodes between two the same :py:attr:`DB.node_type_str` will be removed. Also, the nodes with versions
+        :py:attr:`DB.no_new_node_id` and :py:attr:`DB.no_old_node_id` will be also removed.
 
         Args:
-            graph: The output of :py:attr:`_graph.Graph.construct_graph` or
-                :py:attr:`_graph.Graph.construct_graph_form`.
+            graph: The output of :py:attr:`Graph.construct_graph` or
+                :py:attr:`Graph.construct_graph_form`.
             forms_remove: Determine which `node type` are of interest.
 
         Returns:
@@ -1050,7 +1050,7 @@ class GraphMaker:
         """Simplifies the graph construction process.
 
         Args:
-            narrow: See parameter in :py:attr:`_graph.Graph.construct_graph.narrow`
+            narrow: See parameter in :py:attr:`Graph.construct_graph.narrow`
             create_even_if_exist: Determine whether create the graph even if it exists. If there is no graph in the
                 provided temporary directory, the graph will be created regardless.
             save_after_calculation: Determine whether resultant graph will be saved or not.
@@ -1101,7 +1101,7 @@ class GraphMaker:
         Facilitates to recognize the graph based on file name.
 
         Args:
-            narrow: See parameter in :py:attr:`_graph.Graph.construct_graph.narrow`
+            narrow: See parameter in :py:attr:`Graph.construct_graph.narrow`
 
         Returns:
             Absolute file path in the temporary directory provided by ``DatabaseManager``.
@@ -1117,8 +1117,8 @@ class GraphMaker:
 
         Args:
             g: Multi edge directed graph object to stor in the disk.
-            file_path: Absolute target path, provided by :py:meth:`_graph.Graph.create_file_name`
-            overwrite: See parameter in :py:attr:`_graph.Graph.get_graph.overwrite_even_if_exist`
+            file_path: Absolute target path, provided by :py:meth:`Graph.create_file_name`
+            overwrite: See parameter in :py:attr:`Graph.get_graph.overwrite_even_if_exist`
         """
         if not os.access(file_path, os.R_OK) or overwrite:
             self.log.info(f"The graph is being exported as '{file_path}'.")
