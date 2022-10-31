@@ -31,8 +31,8 @@
    :target: https://pepy.tech/project/idtrack
    :alt: downloads
 
-****
-====
+
+
 
 .. image:: https://raw.githubusercontent.com/theislab/idtrack/development/docs/_logo/logo.png
     :width: 350
