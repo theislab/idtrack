@@ -1,3 +1,6 @@
+**idtrack**
+===========
+
 |PyPI| |PyPIDownloads| |Python Version| |License| |Read the Docs| |Build| |Tests| |Codecov| |pre-commit| |Black|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/idtrack.svg
@@ -7,7 +10,7 @@
    :target: https://pypi.org/project/idtrack
    :alt: Python Version
 .. |License| image:: https://img.shields.io/github/license/theislab/idtrack
-   :target: https://opensource.org/licenses/BSD
+   :target: https://opensource.org/licenses/BSD-3-Clause
    :alt: License
 .. |Read the Docs| image:: https://img.shields.io/readthedocs/idtrack/latest.svg?label=Read%20the%20Docs
    :target: https://idtrack.readthedocs.io/
