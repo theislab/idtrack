@@ -3,83 +3,59 @@ Reference
 
 .. contents::
     :local:
-    :depth: 1
+    :depth: 3
     :backlinks: none
 
 
-DatabaseManager
-***************
-
-.. autoclass:: idtrack._database_manager.DatabaseManager
+.. automodule:: idtrack._api
     :members:
     :private-members:
     :show-inheritance: True
 
-ExternalDatabases
-*****************
 
-.. autoclass:: idtrack._database_manager.ExternalDatabases
+.. automodule:: idtrack._database_manager
     :members:
     :private-members:
     :show-inheritance: True
 
-Track
-*****
 
-.. autoclass:: idtrack._track.Track
+.. automodule:: idtrack._external_databases
+    :members:
+    :private-members:
+    :show-inheritance: True
+
+
+.. automodule:: idtrack._the_graph
     :members:
     :private-members:
     :show-inheritance:
 
-Graph
-*****
 
-.. autoclass:: idtrack._graph.Graph
+.. automodule:: idtrack._graph_maker
     :members:
     :private-members:
     :show-inheritance:
 
-TrackTests
-**********
 
-.. autoclass:: idtrack._track_tests.TrackTests
+.. automodule:: idtrack._verify_organism
     :members:
     :private-members:
     :show-inheritance:
 
-VerifyOrganism
-**************
 
-.. autoclass:: idtrack._verify_organism.VerifyOrganism
+.. automodule:: idtrack._track
     :members:
     :private-members:
     :show-inheritance:
 
-Dataset
-*******
 
-.. autoclass:: idtrack._dataset.Dataset
+.. automodule:: idtrack._track_tests
     :members:
     :private-members:
     :show-inheritance:
 
-DB
-**
 
-.. autoclass:: idtrack._db.DB
-    :members:
-    :private-members:
-    :show-inheritance:
-
-Functions
-*********
-
-.. automodule:: idtrack._functions
-    :members:
-    :private-members:
-    :show-inheritance:
-
-.. automodule:: idtrack._verbose
+.. automodule:: idtrack._db
     :members:
     :private-members:
     :show-inheritance:
