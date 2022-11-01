@@ -2,81 +2,80 @@
  "cells": [
   {
    "cell_type": "markdown",
-   "id": "d0089374-5182-4b7e-935a-447dd27f3a91",
-   "metadata": {
-    "pycharm": {
-     "name": "#%% md\n"
-    }
-   },
+   "id": "2a04ff2e-9cab-4760-b8ec-0ef8b36e4f5d",
+   "metadata": {},
    "source": [
-    "# Initialization"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "id": "0827d574-aa2a-4d81-acb8-e742a8be44a5",
-   "metadata": {
-    "pycharm": {
-     "name": "#%%\n"
-    }
-   },
-   "outputs": [],
-   "source": [
-    "#bok"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "id": "591aa0bd-892a-464c-966d-c39ff914f0aa",
-   "metadata": {
-    "pycharm": {
-     "name": "#%% md\n"
-    }
-   },
-   "source": [
-    "## A1"
+    "# Initialization "
    ]
   },
   {
    "cell_type": "code",
    "execution_count": 1,
-   "id": "726f193b-6c6c-4fb7-b33c-5b7ad993cfd0",
-   "metadata": {
-    "pycharm": {
-     "name": "#%%\n"
-    }
-   },
-   "outputs": [],
-   "source": [
-    "#bok"
-   ]
-  },
-  {
-   "cell_type": "markdown",
-   "id": "32fe6961-5584-46e4-9834-9d5bdf5102d6",
+   "id": "89b49214-d6a0-4e9f-a4b4-feddde076978",
    "metadata": {
     "pycharm": {
      "name": "#%% md\n"
     }
    },
+   "outputs": [],
    "source": [
-    "## A2"
+    "import sys\n",
+    "sys.path.append(\"../..\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "75611a93-37e2-4119-a566-76a4fb6b3b57",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import os\n",
+    "import time\n",
+    "import scanpy as sc\n",
+    "import idtrack\n",
+    "import pickle"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "315ebb01-6ca5-4158-b908-1d88c702151b",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%load_ext autoreload\n",
+    "%autoreload 2"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "383c559f-3900-4737-99d1-19255a4c6507",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2022-11-01 20:32:24 INFO:graph_maker: The graph is being read.\n"
+     ]
+    }
+   ],
+   "source": [
+    "local_dir = \"/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp\"\n",
+    "idt = idtrack.API(local_repository=local_dir)\n",
+    "idt.configure_logger()\n",
+    "idt.initialize_graph(organism_name='homo_sapiens', ensembl_release=107, return_test=True)"
    ]
   },
   {
    "cell_type": "code",
    "execution_count": null,
-   "id": "8e24bee4-459b-4a70-8011-5c3a0f6c4aa4",
-   "metadata": {
-    "pycharm": {
-     "name": "#%%\n"
-    }
-   },
+   "id": "2d6cdc89-9932-4dcd-9404-a36fb2c3878c",
+   "metadata": {},
    "outputs": [],
-   "source": [
-    "bok"
-   ]
+   "source": []
   }
  ],
  "metadata": {

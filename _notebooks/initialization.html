@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Initialization &mdash; idtrack 0.0.2 documentation</title>
+  <title>Initialization &mdash; idtrack 0.0.3 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/custom_cookietemple.css" type="text/css" />
@@ -19,15 +19,16 @@
         <script src="../_static/underscore.js"></script>
         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
         <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
         <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-        <script src="../_static/dark_mode_js/default_dark.js"></script>
+        <script src="../_static/dark_mode_js/default_light.js"></script>
         <script src="../_static/dark_mode_js/theme_switcher.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Tutorial" href="Untitled.html" />
+    <link rel="next" title="HLCA Datasets" href="results_preliminary_for_hlca.html" />
     <link rel="prev" title="Usage" href="../usage.html" /> 
 </head>
 
@@ -36,7 +37,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../index.html">
+            <a href="../index.html" class="icon icon-home"> idtrack
             <img src="../_static/logo.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
@@ -51,13 +52,8 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../usage.html">Usage</a><ul class="current">
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Initialization</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#A1">A1</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#A2">A2</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="Untitled.html">Tutorial</a></li>
-<li class="toctree-l2"><a class="reference internal" href="results_preliminary_for_hlca.html">results_preliminary_for_hlca</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Initialization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="results_preliminary_for_hlca.html">HLCA Datasets</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
@@ -372,35 +368,62 @@ div.rendered_html tbody tr:hover {
 <section id="Initialization">
 <h1>Initialization<a class="headerlink" href="#Initialization" title="Permalink to this heading"></a></h1>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1">#bok</span>
-</pre></div>
-</div>
-</div>
-<section id="A1">
-<h2>A1<a class="headerlink" href="#A1" title="Permalink to this heading"></a></h2>
-<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1">#bok</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;../..&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-</section>
-<section id="A2">
-<h2>A2<a class="headerlink" href="#A2" title="Permalink to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">scanpy</span> <span class="k">as</span> <span class="nn">sc</span>
+<span class="kn">import</span> <span class="nn">idtrack</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
+<span class="o">%</span><span class="k">autoreload</span> 2
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">local_dir</span> <span class="o">=</span> <span class="s2">&quot;/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp&quot;</span>
+<span class="n">idt</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="n">local_dir</span><span class="p">)</span>
+<span class="n">idt</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
+<span class="n">idt</span><span class="o">.</span><span class="n">initialize_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s1">&#39;homo_sapiens&#39;</span><span class="p">,</span> <span class="n">ensembl_release</span><span class="o">=</span><span class="mi">107</span><span class="p">,</span> <span class="n">return_test</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 20:32:24 INFO:graph_maker: The graph is being read.
+</pre></div></div>
+</div>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">bok</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
 </pre></div>
 </div>
 </div>
-</section>
 </section>
 
 
@@ -408,7 +431,7 @@ div.rendered_html tbody tr:hover {
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="../usage.html" class="btn btn-neutral float-left" title="Usage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="Untitled.html" class="btn btn-neutral float-right" title="Tutorial" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="results_preliminary_for_hlca.html" class="btn btn-neutral float-right" title="HLCA Datasets" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

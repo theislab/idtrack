@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack._db &mdash; idtrack 0.0.3 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/custom_cookietemple.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/dark_mode_css/general.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/dark_mode_css/dark.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script src="../../_static/dark_mode_js/default_light.js"></script>
+        <script src="../../_static/dark_mode_js/theme_switcher.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> idtrack
+            <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>idtrack._db</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack._db</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+
+<span class="c1"># Kemal Inecik</span>
+<span class="c1"># k.inecik@gmail.com</span>
+
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span>
+
+
+<div class="viewcode-block" id="DB"><a class="viewcode-back" href="../../reference.html#idtrack._db.DB">[docs]</a><span class="k">class</span> <span class="nc">DB</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Keeps some constants shared across different classes.&quot;&quot;&quot;</span>
+
+    <span class="c1"># Delimiter separating the ID and the version of an ensembl identifier.</span>
+    <span class="n">id_ver_delimiter</span> <span class="o">=</span> <span class="s2">&quot;.&quot;</span>
+    <span class="n">first_version</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># just and arbitrary assumption</span>
+
+    <span class="c1"># FTP and REST API Timeouts. It’s a good practice to set connect timeouts to slightly larger than a multiple of 3,</span>
+    <span class="c1"># which is the default TCP packet retransmission window.</span>
+    <span class="n">connection_timeout</span> <span class="o">=</span> <span class="mi">12</span>
+    <span class="n">reading_timeout</span> <span class="o">=</span> <span class="mi">12</span>
+
+    <span class="c1"># FTP server from which the above databases will be downloaded.</span>
+    <span class="n">ensembl_ftp_base</span> <span class="o">=</span> <span class="s2">&quot;ftp.ensembl.org&quot;</span>
+
+    <span class="c1"># Ensembl REST API to fetch information of organisms and latest releases.</span>
+    <span class="n">rest_server_api</span> <span class="o">=</span> <span class="s2">&quot;https://rest.ensembl.org&quot;</span>
+    <span class="n">rest_server_ext</span> <span class="o">=</span> <span class="s2">&quot;/info/species?&quot;</span>
+
+    <span class="c1"># MYSQL</span>
+    <span class="n">mysql_host</span> <span class="o">=</span> <span class="s2">&quot;ensembldb.ensembl.org&quot;</span>
+    <span class="n">myqsl_user</span> <span class="o">=</span> <span class="s2">&quot;anonymous&quot;</span>
+    <span class="n">mysql_togo</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">assembly_mysqlport_priority</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{</span>  <span class="c1"># assembly -&gt; [mysql_port, assembly priority]</span>
+        <span class="c1"># Port depends on which genome assembly is of interest. Refer to the following link.</span>
+        <span class="c1"># https://www.ensembl.org/info/data/mysql.html</span>
+        <span class="mi">38</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;Port&quot;</span><span class="p">:</span> <span class="mi">3306</span><span class="p">,</span>
+            <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>  <span class="c1"># Set as the highest priority assembly. The lower is better.</span>
+            <span class="s2">&quot;MinRelease&quot;</span><span class="p">:</span> <span class="mi">48</span><span class="p">,</span>  <span class="c1"># Specified in above link, the MySQL server does not let you download an deeper.</span>
+        <span class="p">},</span>
+        <span class="mi">37</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;Port&quot;</span><span class="p">:</span> <span class="mi">3337</span><span class="p">,</span>
+            <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>  <span class="c1"># Second priority, as the assembl GRCh38 is generated after GRCh37.</span>
+            <span class="s2">&quot;MinRelease&quot;</span><span class="p">:</span> <span class="mi">79</span><span class="p">,</span>  <span class="c1"># Note: deeper versions is available via FTP server.</span>
+        <span class="p">},</span>
+    <span class="p">}</span>
+    <span class="c1"># # Priority should follow 1, 2, 3</span>
+    <span class="n">assembly_priority</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">ap1</span> <span class="ow">in</span> <span class="n">assembly_mysqlport_priority</span><span class="p">:</span>
+        <span class="n">assembly_priority</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="n">ap1</span><span class="p">][</span><span class="s2">&quot;Priority&quot;</span><span class="p">])</span>
+    <span class="n">assembly_priority</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">assembly_priority</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Protected Non-int Version Strings/Thresholds</span>
+    <span class="n">synonym_id_nodes_prefix</span> <span class="o">=</span> <span class="s2">&quot;synonym_id::&quot;</span>
+    <span class="n">no_old_node_id</span> <span class="o">=</span> <span class="s2">&quot;Void&quot;</span>
+    <span class="n">no_new_node_id</span> <span class="o">=</span> <span class="s2">&quot;Retired&quot;</span>
+    <span class="n">alternative_versions</span> <span class="o">=</span> <span class="p">{</span><span class="n">no_new_node_id</span><span class="p">,</span> <span class="n">no_old_node_id</span><span class="p">}</span>
+    <span class="n">hyperconnecting_threshold</span> <span class="o">=</span> <span class="mi">50</span>
+
+    <span class="c1"># Node Types</span>
+    <span class="n">node_type_str</span> <span class="o">=</span> <span class="s2">&quot;node_type&quot;</span>
+    <span class="n">nts_external</span> <span class="o">=</span> <span class="s2">&quot;external&quot;</span>
+    <span class="n">forms_in_order</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span> <span class="s2">&quot;transcript&quot;</span><span class="p">,</span> <span class="s2">&quot;translation&quot;</span><span class="p">]</span>  <span class="c1"># Warning: the order is important here.</span>
+    <span class="n">backbone_form</span> <span class="o">=</span> <span class="s2">&quot;gene&quot;</span>
+
+    <span class="n">nts_ensembl</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;ensembl_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">forms_in_order</span><span class="p">}</span>  <span class="c1"># ensembl_gene</span>
+    <span class="n">nts_ensembl_reverse</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">nts_ensembl</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+    <span class="n">nts_assembly</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">j</span><span class="p">:</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;assembly_</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s2">_ensembl_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span> <span class="s2">&quot;transcript&quot;</span><span class="p">,</span> <span class="s2">&quot;translation&quot;</span><span class="p">]}</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">assembly_mysqlport_priority</span>
+    <span class="p">}</span>  <span class="c1"># assembly_37_ensembl_gene</span>
+
+    <span class="n">nts_assembly_reverse</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nts_assembly</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">nts_assembly</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">nts_assembly_reverse</span><span class="p">[</span><span class="n">nts_assembly</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]]</span> <span class="o">=</span> <span class="n">nts_ensembl</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+
+    <span class="n">nts_base_ensembl</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;base_ensembl_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">forms_in_order</span><span class="p">}</span>
+    <span class="n">nts_bidirectional_synonymous_search</span> <span class="o">=</span> <span class="p">{</span><span class="n">nts_external</span><span class="p">,</span> <span class="n">nts_base_ensembl</span><span class="p">[</span><span class="n">backbone_form</span><span class="p">]}</span>
+
+    <span class="c1"># Only gene assembly genes</span>
+    <span class="n">nts_assembly_gene</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">ntas1</span> <span class="ow">in</span> <span class="n">nts_assembly</span><span class="p">:</span>
+        <span class="n">nts_assembly_gene</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">nts_assembly</span><span class="p">[</span><span class="n">ntas1</span><span class="p">][</span><span class="s2">&quot;gene&quot;</span><span class="p">])</span>
+
+    <span class="c1"># Edge/Note Attributes:</span>
+    <span class="n">connection_dict</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;connection&quot;</span>
+    <span class="n">conn_dict_str_ensembl_base</span> <span class="o">=</span> <span class="s2">&quot;ensembl_base&quot;</span>  <span class="c1"># as a database in connection_dict</span>
+
+    <span class="c1"># PathFinder Settings</span>
+    <span class="n">external_search_settings</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;jump_limit&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="s2">&quot;synonymous_max_depth&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="s2">&quot;nts_backbone&quot;</span><span class="p">:</span> <span class="n">nts_ensembl</span><span class="p">[</span><span class="n">backbone_form</span><span class="p">],</span>
+    <span class="p">}</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

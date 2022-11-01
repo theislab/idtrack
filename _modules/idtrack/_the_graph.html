@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack._the_graph &mdash; idtrack 0.0.3 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/custom_cookietemple.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/dark_mode_css/general.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/dark_mode_css/dark.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script src="../../_static/dark_mode_js/default_light.js"></script>
+        <script src="../../_static/dark_mode_js/theme_switcher.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> idtrack
+            <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>idtrack._the_graph</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack._the_graph</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+
+<span class="c1"># Kemal Inecik</span>
+<span class="c1"># k.inecik@gmail.com</span>
+
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">cached_property</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Set</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">._db</span> <span class="kn">import</span> <span class="n">DB</span>
+
+
+<div class="viewcode-block" id="TheGraph"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph">[docs]</a><span class="k">class</span> <span class="nc">TheGraph</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Graph object containing all the information about the relationships between bio-IDs.</span>
+
+<span class="sd">    It is a subclass of :py:class:`networkx.MultiDiGraph`, with some additional methods to aid the pathfinder</span>
+<span class="sd">    algorithm in :py:class:`Track`. The object is constructed by :py:class:`GraphMaker`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Class initialization.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            args: Arguments to be passed to :py:class:`networkx.MultiDiGraph`.</span>
+<span class="sd">            kwargs: Keyword arguments to be passed to :py:class:`networkx.MultiDiGraph`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>  <span class="c1"># SubClass initialization</span>
+
+        <span class="c1"># Other variables</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;the_graph&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">available_forms</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="TheGraph.attach_included_forms"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.attach_included_forms">[docs]</a>    <span class="k">def</span> <span class="nf">attach_included_forms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">available_forms</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Set the ``available_forms`` variable for the instance.</span>
+
+<span class="sd">        This is a separate function and mainly aimed to be used by :py:class:`GraphMaker` during the</span>
+<span class="sd">        process of constructing the graph. Just after the graphs for the forms of interests (typically `gene`,</span>
+<span class="sd">        `transcript`, and `protein`) are merged, this method is called to store which forms are included in the graph.</span>
+<span class="sd">        Setting the variable before merging the graphs causes errors and inconsistencies.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            available_forms: Determine which forms (transcript, translation, gene) are included.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">available_forms</span> <span class="o">=</span> <span class="n">available_forms</span></div>
+
+<div class="viewcode-block" id="TheGraph.calculate_caches"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.calculate_caches">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_caches</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Calculate cached variables using only one method.&quot;&quot;&quot;</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges_assembly_specific_genes</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges_genes</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower_chars_graph</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_active_ranges_of_id</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_external_databases</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_database_connection_form</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_genome_assemblies</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_external_databases_assembly</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_trios</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hyperconnective_nodes</span></div>
+
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span> <span class="nf">rev</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;TheGraph&quot;</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;The same graph but the edges are in reverse orientation.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            ``TheGraph`` object without copying another one in the memory.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">reverse</span><span class="p">(</span><span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span> <span class="nf">hyperconnective_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Cached property for hyper-connective nodes as keys and number of connections as values.</span>
+
+<span class="sd">        Hyper-connective nodes are defined as external nodes with more than</span>
+<span class="sd">        :py:attr:`DB.hyperconnecting_threshold`. This nodes creates a huge bottleneck in finding the synonyms</span>
+<span class="sd">        of a node and hence the pathfinder algorithm. The pathfinder algoritm is hence speed-up by ignoring these nodes</span>
+<span class="sd">        in the search process. This is in theory sacrificing the precision of the algorithm a little bit, but</span>
+<span class="sd">        in practice these nodes generally does not have not very precise ID matching. Most of the case, the relavant</span>
+<span class="sd">        IDs are matched via some other external ID, so the performance of the pathfinder algorithm actually improves</span>
+<span class="sd">        if hyper-connective nodes are ignored.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary of hyper-connective nodes as keys and number of connections as values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">hcn_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>  <span class="c1"># Initialize a dictionary</span>
+
+        <span class="k">for</span> <span class="n">hcn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+            <span class="n">od</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_degree</span><span class="p">[</span><span class="n">hcn</span><span class="p">]</span>
+            <span class="c1"># Note that external ids are always has edges going out, so in_degree is not relevant here.</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">hcn</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_external</span> <span class="ow">and</span> <span class="n">od</span> <span class="o">&gt;</span> <span class="n">DB</span><span class="o">.</span><span class="n">hyperconnecting_threshold</span><span class="p">:</span>
+                <span class="n">hcn_dict</span><span class="p">[</span><span class="n">hcn</span><span class="p">]</span> <span class="o">=</span> <span class="n">od</span>
+
+        <span class="k">return</span> <span class="n">hcn_dict</span>
+
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span> <span class="nf">combined_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Combines all the edge data for a given node except `Ensembl gene` and `assembly specific Ensembl gene` nodes.</span>
+
+<span class="sd">        It iterates all the edges of a given node to construct a dictionary with a specified format.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A dictionary with following format</span>
+<span class="sd">            ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached properties being calculated: </span><span class="si">{</span><span class="s1">&#39;combined_edges&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Note that the `TheGraph._combined_edges` method does not return assembly_specific_genes and ensembl_gene.</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">TheGraph</span><span class="o">.</span><span class="n">_combined_edges</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span> <span class="nf">combined_edges_genes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Combines all the edge data for a given node for only `Ensembl gene` nodes.</span>
+
+<span class="sd">        It iterates all the edges of a given node to construct a dictionary with a specified format.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A dictionary with following format</span>
+<span class="sd">            ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.</span>
+<span class="sd">            Can have multiple assemblies as some main assembly genes are shared across different assemblies.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached properties being calculated: </span><span class="si">{</span><span class="s1">&#39;combined_edges_genes&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Choose only the nodes that has a node type of &#39;ensembl_gene&#39;</span>
+        <span class="n">non_captured_genes</span> <span class="o">=</span> <span class="p">[</span><span class="n">nd</span> <span class="k">for</span> <span class="n">nd</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">nd</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]]</span>
+        <span class="c1"># Note that TrackTest.is_combined_edges_dicts_overlapping_and_complete checks whether there is an error</span>
+        <span class="c1"># in terms of missing nodes, or repeated nodes in all combined_edges properties.</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">TheGraph</span><span class="o">.</span><span class="n">_combined_edges</span><span class="p">(</span><span class="n">non_captured_genes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rev</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">TheGraph</span><span class="o">.</span><span class="n">_combined_edges_genes_helper</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">result</span><span class="p">}</span>
+
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span> <span class="nf">combined_edges_assembly_specific_genes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Combines all the edge data for a given node for only `assembly specific Ensembl gene` nodes.</span>
+
+<span class="sd">        It iterates all the edges of a given node to construct a dictionary with a specified format.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A dictionary with following format</span>
+<span class="sd">            ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.</span>
+<span class="sd">            But ut has only one assembly, whose hint is given in the database_name.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached properties being calculated: </span><span class="si">{</span><span class="s1">&#39;combined_edges_assembly_specific_genes&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Choose only the nodes that has a node type of &#39;assembly_x_ensembl_gene&#39;.</span>
+        <span class="n">non_captured_genes</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">nd</span>
+            <span class="k">for</span> <span class="n">nd</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span>
+            <span class="k">if</span> <span class="n">nd</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">nd</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]</span>
+        <span class="p">]</span>
+        <span class="c1"># Note that TrackTest.is_combined_edges_dicts_overlapping_and_complete checks whether there is an error</span>
+        <span class="c1"># in terms of missing nodes, or repeated nodes in all combined_edges properties.</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">TheGraph</span><span class="o">.</span><span class="n">_combined_edges</span><span class="p">(</span><span class="n">non_captured_genes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rev</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">TheGraph</span><span class="o">.</span><span class="n">_combined_edges_genes_helper</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">result</span><span class="p">}</span>
+
+<div class="viewcode-block" id="TheGraph._combined_edges_genes_helper"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph._combined_edges_genes_helper">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_combined_edges_genes_helper</span><span class="p">(</span><span class="n">the_result</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Helper method is called for two methods only.</span>
+
+<span class="sd">        The method is called by :py:meth:`TheGraph.combined_edges_assembly_specific_genes` and</span>
+<span class="sd">        :py:meth:`TheGraph.combined_edges_genes` only. The aim of the method is to merge all the data</span>
+<span class="sd">        coming from multiple external databases.</span>
+
+<span class="sd">        Note that the main reason of having a separate methods for these two is basically due to the fact that `gene`</span>
+<span class="sd">        nodes has no outgoing edges except to another `gene` node. For this reason,</span>
+<span class="sd">        :py:meth:`TheGraph._combined_edges` method has been used with reversed graph. In order to have the</span>
+<span class="sd">        information for Ensembl genes or Ensembl assembly genes, the information from all edges should be merged and</span>
+<span class="sd">        the name for the database has to be edited accordingly.</span>
+
+<span class="sd">        Here, `ensembl_gene` is renamed with `assembly_X_ensembl_gene` for more intuitive understanding of the source of</span>
+<span class="sd">        the gene, and also to make the naming consistent.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            the_result: A dictionary as the output of :py:meth:`TheGraph._combined_edges`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A dictionary with following format</span>
+<span class="sd">            ``{database_name: {assembly: {ensembl release set}}}``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">output</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>  <span class="c1"># Initialize a dict</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">the_result</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">the_result</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">j</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">output</span><span class="p">:</span>
+                    <span class="n">output</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+                <span class="n">output</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">the_result</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">])</span>  <span class="c1"># Combine the info from databases</span>
+
+        <span class="c1"># Rename the database_name as mentioned in the docstring. Also, separate assemblies accordingly.</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">DB</span><span class="o">.</span><span class="n">nts_assembly</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">]:</span> <span class="p">{</span><span class="n">j</span><span class="p">:</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">output</span><span class="p">)[</span><span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">output</span> <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="n">i</span><span class="p">}</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">output</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">output</span></div>
+
+<div class="viewcode-block" id="TheGraph._combined_edges"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph._combined_edges">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_combined_edges</span><span class="p">(</span><span class="n">node_list</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">nx</span><span class="o">.</span><span class="n">classes</span><span class="o">.</span><span class="n">reportviews</span><span class="o">.</span><span class="n">NodeView</span><span class="p">,</span> <span class="nb">list</span><span class="p">],</span> <span class="n">the_graph</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Combines the database, assembly, ensembl release information from all edges from a given node.</span>
+
+<span class="sd">        The method fills the dictionary with nodes provided as a parameter. The edge data coming from the same node</span>
+<span class="sd">        types (the edge between the same node type can exist only between backbone nodes as tested in</span>
+<span class="sd">        :py:meth:`TrackTest.is_edge_with_same_nts_only_at_backbone_nodes`) are excluded.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            node_list: Node names to be calculated.</span>
+<span class="sd">            the_graph: The graph to be used for the calculation. It is generally `self` or `self.rev` depending on</span>
+<span class="sd">                how it has been wanted to calculate.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A dictionary with following format</span>
+<span class="sd">            ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">node_list</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">the_graph</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+
+                <span class="k">if</span> <span class="n">the_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span> <span class="o">!=</span> <span class="n">the_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]:</span>
+                    <span class="c1"># Exclude the edges connecting the nodes from the same node type (exclude backbone connections).</span>
+
+                    <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+                        <span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+                    <span class="n">edge_info</span> <span class="o">=</span> <span class="n">the_graph</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_dict</span><span class="p">]</span>
+
+                    <span class="k">for</span> <span class="n">db_name</span> <span class="ow">in</span> <span class="n">edge_info</span><span class="p">:</span>
+
+                        <span class="k">if</span> <span class="n">db_name</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl_reverse</span><span class="p">:</span>  <span class="c1"># if db_name is a ensembl_x</span>
+                            <span class="n">_db_name_form</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl_reverse</span><span class="p">[</span><span class="n">db_name</span><span class="p">]</span>  <span class="c1"># get the form</span>
+                            <span class="c1"># Get the corresponding node type in assembly specific dictionary. This is to make</span>
+                            <span class="c1"># sure assemblies are intuitively separated into different db_names and make</span>
+                            <span class="c1"># all subsequent calculation consistent.</span>
+                            <span class="n">_db_name</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_assembly</span><span class="p">[</span><span class="n">the_graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;genome_assembly&quot;</span><span class="p">]][</span><span class="n">_db_name_form</span><span class="p">]</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">_db_name</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">db_name</span><span class="p">)</span>
+
+                        <span class="k">if</span> <span class="n">_db_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                            <span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">_db_name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+
+                        <span class="k">for</span> <span class="n">assembly_name</span> <span class="ow">in</span> <span class="n">edge_info</span><span class="p">[</span><span class="n">db_name</span><span class="p">]:</span>
+
+                            <span class="k">if</span> <span class="n">assembly_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">_db_name</span><span class="p">]:</span>
+                                <span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">_db_name</span><span class="p">][</span><span class="n">assembly_name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+                            <span class="n">release_set</span> <span class="o">=</span> <span class="n">edge_info</span><span class="p">[</span><span class="n">db_name</span><span class="p">][</span><span class="n">assembly_name</span><span class="p">]</span>
+                            <span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">_db_name</span><span class="p">][</span><span class="n">assembly_name</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">release_set</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span> <span class="nf">lower_chars_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;A simple dictionary mapping the node name with its lower characters into the original node name.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If there are multiple nodes which becomes the same after lower character conversion.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A dictionary with following format</span>
+<span class="sd">            ``{lower_char_id: id}``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached properties being calculated: </span><span class="si">{</span><span class="s1">&#39;lower_chars_graph&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>  <span class="c1"># Iterate through all nodes.</span>
+            <span class="n">j</span> <span class="o">=</span> <span class="n">i</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">j</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>  <span class="c1"># Make sure there is only one and only one after lower conversion.</span>
+                <span class="n">result</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The node </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="si">}</span><span class="s2"> has the same lower character formats.&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result</span>
+
+<div class="viewcode-block" id="TheGraph.node_name_alternatives"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.node_name_alternatives">[docs]</a>    <span class="k">def</span> <span class="nf">node_name_alternatives</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Matching a query ID into the ID found in the graph based on some criteria and priorities.</span>
+
+<span class="sd">        A query ID is sometimes not found exactly in the graph due to the format it has. However, very slight</span>
+<span class="sd">        modifications of the string of query ID could help the pathfinder locate the ID of interest. For example,</span>
+<span class="sd">        `actb` can be queried for the pathfinder, but nothing is found as upper character version of the query,</span>
+<span class="sd">        `ACTB`, is found in the graph instead.</span>
+
+<span class="sd">        Priority is as follows: (1) try to find directly in the graph (2) look for lower-char version (3) look for</span>
+<span class="sd">        initial substring before separators (4) check all possible variations of dash and underscore for each of which</span>
+<span class="sd">        follow the priority list above.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            identifier: A bio-ID of interest. This could be an ID in the graph or some other ID to be matched</span>
+<span class="sd">                with the corresponding ID in the graph.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A tuple with the first element is the bio-ID in the graph if the query is found somehow, else ``None``.</span>
+<span class="sd">                The second element is to show whether the query ID is found without any modifications or not.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">_node_name_alternatives</span><span class="p">(</span><span class="n">the_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]:</span>
+            <span class="sd">&quot;&quot;&quot;Helper function for :py:meth:`TheGraph.node_name_alternatives`.</span>
+
+<span class="sd">            Args:</span>
+<span class="sd">                the_id: A bio-ID of interest as defined in :py:attr:`TheGraph.node_name_alternatives.identifier`.</span>
+
+<span class="sd">            Returns:</span>
+<span class="sd">                The same as the parental method.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+
+            <span class="k">def</span> <span class="nf">compare_lowers</span><span class="p">(</span><span class="n">id_to_find</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]:</span>
+                <span class="sd">&quot;&quot;&quot;Check whether lower-character ID is found.</span>
+
+<span class="sd">                Args:</span>
+<span class="sd">                    id_to_find: Query ID.</span>
+
+<span class="sd">                Returns:</span>
+<span class="sd">                    Tuple of found ID (None if unfound) as the first element, and whether it is found as the second.</span>
+<span class="sd">                &quot;&quot;&quot;</span>
+                <span class="n">lower_id_find</span> <span class="o">=</span> <span class="n">id_to_find</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+                <span class="k">if</span> <span class="n">lower_id_find</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower_chars_graph</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower_chars_graph</span><span class="p">[</span><span class="n">lower_id_find</span><span class="p">],</span> <span class="kc">True</span>
+
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">False</span>  <span class="c1"># If cannot return anything, just return None (unfound).</span>
+
+            <span class="k">def</span> <span class="nf">check_variation</span><span class="p">(</span><span class="n">id_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]:</span>
+                <span class="sd">&quot;&quot;&quot;Search ID in the graph without flanking substring.</span>
+
+<span class="sd">                Args:</span>
+<span class="sd">                    id_str: Query ID.</span>
+
+<span class="sd">                Returns:</span>
+<span class="sd">                    Tuple of found ID (None if unfound) as the first element, and whether it is found as the second.</span>
+<span class="sd">                &quot;&quot;&quot;</span>
+                <span class="c1"># First, try to find the lower character version of the querry.</span>
+                <span class="n">lower_id</span><span class="p">,</span> <span class="n">is_lower_found</span> <span class="o">=</span> <span class="n">compare_lowers</span><span class="p">(</span><span class="n">id_str</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">is_lower_found</span><span class="p">:</span>  <span class="c1"># If something is found, just return it.</span>
+                    <span class="k">return</span> <span class="n">lower_id</span><span class="p">,</span> <span class="kc">True</span>
+
+                <span class="c1"># Them, try to match with the regular-expression pattern. The pattern is basically to remove any flanking</span>
+                <span class="c1"># numbers (possibly versions) separated with following characters &#39;-&#39;, &#39;_&#39;, or &#39;.&#39;. In order to match with</span>
+                <span class="c1"># the regex patter, the query has to have these separators, but the subsequent integer is optional. Note</span>
+                <span class="c1"># that the last separator is of interest only.</span>
+                <span class="n">regex_found</span> <span class="o">=</span> <span class="n">regex_pattern</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">id_str</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">regex_found</span><span class="p">:</span>
+                    <span class="n">new_id</span> <span class="o">=</span> <span class="n">regex_found</span><span class="o">.</span><span class="n">groups</span><span class="p">()[</span>
+                        <span class="mi">0</span>
+                    <span class="p">]</span>  <span class="c1"># If found, just get the first section (e.g. the ID without version)</span>
+
+                    <span class="k">if</span> <span class="n">new_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">new_id</span><span class="p">,</span> <span class="kc">True</span>  <span class="c1"># If the substring is in the graph, just return it.</span>
+
+                    <span class="c1"># If not, check whether the lower-character version of the substring is in the graph.</span>
+                    <span class="n">lower_id</span><span class="p">,</span> <span class="n">is_lower_found</span> <span class="o">=</span> <span class="n">compare_lowers</span><span class="p">(</span><span class="n">new_id</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">is_lower_found</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">lower_id</span><span class="p">,</span> <span class="kc">True</span>
+
+                <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">False</span>  <span class="c1"># If cannot return anything, just return None (unfound).</span>
+
+            <span class="k">def</span> <span class="nf">possible_alternatives</span><span class="p">(</span><span class="n">the_id_pa</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+                <span class="sd">&quot;&quot;&quot;Search a query ID with all possible substitutions of &#39;_&#39; and &#39;-&#39;.</span>
+
+<span class="sd">                Sometimes the query ID has a &#39;-&#39; in somewhere but the corresponding ID in the graph has &#39;_&#39;, or vice versa.</span>
+<span class="sd">                The method here creates all possible combinations of query ID where &#39;_&#39; and &#39;-&#39; characters are replaced.</span>
+<span class="sd">                For example, if query ID is &quot;AC-TB_1&quot;, the method returns: [&quot;AC_TB_1&quot;, &quot;AC-TB-1&quot;, &quot;AC-TB_1&quot;, &quot;AC_TB-1&quot;].</span>
+
+<span class="sd">                Args:</span>
+<span class="sd">                    the_id_pa: Query ID.</span>
+
+<span class="sd">                Returns:</span>
+<span class="sd">                    All possible versions of query ID.</span>
+<span class="sd">                &quot;&quot;&quot;</span>
+                <span class="c1"># Get the indexes of the characters of interests (&#39;_&#39; and &#39;-&#39;) in the query ID.</span>
+                <span class="n">char_indices</span> <span class="o">=</span> <span class="p">[</span><span class="n">ind</span> <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">the_id_pa</span><span class="p">)</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">]]</span>
+
+                <span class="n">possible_alternatives</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">char_indices</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># If there are more than 1 of such.</span>
+                    <span class="k">for</span> <span class="n">comb</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">char_indices</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                        <span class="k">for</span> <span class="n">replace_indices</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span><span class="n">char_indices</span><span class="p">,</span> <span class="n">comb</span><span class="p">):</span>
+
+                            <span class="c1"># Create the every combination of such ID and append to the list</span>
+                            <span class="n">replace_indices_other</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">char_indices</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">replace_indices</span><span class="p">]</span>
+                            <span class="n">new_id_l</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">the_id_pa</span><span class="p">)</span>
+                            <span class="k">for</span> <span class="n">ri</span> <span class="ow">in</span> <span class="n">replace_indices</span><span class="p">:</span>
+                                <span class="n">new_id_l</span><span class="p">[</span><span class="n">ri</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span>
+                            <span class="k">for</span> <span class="n">rio</span> <span class="ow">in</span> <span class="n">replace_indices_other</span><span class="p">:</span>
+                                <span class="n">new_id_l</span><span class="p">[</span><span class="n">rio</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;-&quot;</span>
+                            <span class="n">possible_alternatives</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">new_id_l</span><span class="p">))</span>
+
+                <span class="k">return</span> <span class="n">possible_alternatives</span>
+
+            <span class="c1"># To be used on check_variation.</span>
+            <span class="n">regex_pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^(.+)(_|-|\.)[0-9]+$&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">the_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>  <span class="c1"># If the ID is already found in the graph, just return it.</span>
+                <span class="k">return</span> <span class="n">the_id</span><span class="p">,</span> <span class="kc">False</span>
+
+            <span class="n">mti1</span><span class="p">,</span> <span class="n">mti2</span> <span class="o">=</span> <span class="n">check_variation</span><span class="p">(</span><span class="n">the_id</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">mti2</span><span class="p">:</span>  <span class="c1"># If a variation is found</span>
+                <span class="k">return</span> <span class="n">mti1</span><span class="p">,</span> <span class="n">mti2</span>  <span class="c1"># Return the found ID and indicate it is a variation.</span>
+
+            <span class="k">for</span> <span class="n">pa</span> <span class="ow">in</span> <span class="n">possible_alternatives</span><span class="p">(</span><span class="n">the_id</span><span class="p">):</span>
+
+                <span class="k">if</span> <span class="n">pa</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">pa</span><span class="p">,</span> <span class="kc">True</span>
+
+                <span class="n">mpa1</span><span class="p">,</span> <span class="n">mpa2</span> <span class="o">=</span> <span class="n">check_variation</span><span class="p">(</span><span class="n">pa</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">mpa2</span><span class="p">:</span>  <span class="c1"># If a variation is found</span>
+                    <span class="k">return</span> <span class="n">mpa1</span><span class="p">,</span> <span class="n">mpa2</span>  <span class="c1"># Return the found ID and indicate it is a variation.</span>
+
+            <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">False</span>  <span class="c1"># If cannot return anything, just return None (unfound).</span>
+
+        <span class="n">new_ident</span><span class="p">,</span> <span class="n">is_conv</span> <span class="o">=</span> <span class="n">_node_name_alternatives</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>  <span class="c1"># Check with the base function</span>
+
+        <span class="k">if</span> <span class="n">new_ident</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># If not found, check with the synonym prefix added version.</span>
+            <span class="n">new_ident</span><span class="p">,</span> <span class="n">is_conv</span> <span class="o">=</span> <span class="n">_node_name_alternatives</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">synonym_id_nodes_prefix</span><span class="si">}{</span><span class="n">identifier</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">new_ident</span><span class="p">,</span> <span class="n">is_conv</span></div>
+
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span> <span class="nf">get_active_ranges_of_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">]]:</span>
+        <span class="sd">&quot;&quot;&quot;Returns the range of active ensembl releases of nodes, ignoring which assembly the release is coming from.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A dictionary with following format</span>
+<span class="sd">            ``{id: list_of_ranges``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached properties being calculated: </span><span class="si">{</span><span class="s1">&#39;get_active_ranges_of_id&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">n</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_active_ranges_of_id</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">}</span>
+
+<div class="viewcode-block" id="TheGraph._get_active_ranges_of_id"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph._get_active_ranges_of_id">[docs]</a>    <span class="k">def</span> <span class="nf">_get_active_ranges_of_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Calculating the range of active ensembl releases of nodes separately for backbone nodes and others.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            input_id: Query ID.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Ranges of the ID as list of lists. Outputs should always be increasing, inclusive ranges.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">_get_active_ranges_of_id_nonbackbone</span><span class="p">(</span><span class="n">the_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">]:</span>
+            <span class="sd">&quot;&quot;&quot;For the non-backbone nodes, calculates the ranges of IDs using `combined_edges` dictionaries.</span>
+
+<span class="sd">            Args:</span>
+<span class="sd">                the_id: Query ID.</span>
+
+<span class="sd">            Returns:</span>
+<span class="sd">                Ranges of the ID as list of lists. Outputs should always be increasing, inclusive ranges.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="n">the_node_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">the_id</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span>
+
+            <span class="c1"># Get the node info from the relevant combined edge dictionary</span>
+            <span class="k">if</span> <span class="n">the_node_type</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_assembly_gene</span><span class="p">:</span>
+                <span class="n">rd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges_assembly_specific_genes</span><span class="p">[</span><span class="n">the_id</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">rd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges</span><span class="p">[</span><span class="n">the_id</span><span class="p">]</span>
+
+            <span class="c1"># Create the sorted list of all ensembl releases defined for the given node.</span>
+            <span class="n">rels</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">s</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">rd</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rd</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">rd</span><span class="p">[</span><span class="n">p</span><span class="p">][</span><span class="n">r</span><span class="p">]})</span>
+            <span class="k">return</span> <span class="n">TheGraph</span><span class="o">.</span><span class="n">list_to_ranges</span><span class="p">(</span><span class="n">rels</span><span class="p">)</span>  <span class="c1"># Convert the list of ensembl releases into range.</span>
+
+        <span class="k">def</span> <span class="nf">_get_active_ranges_of_id_backbone</span><span class="p">(</span><span class="n">the_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">]:</span>
+            <span class="sd">&quot;&quot;&quot;For the backbone nodes, calculates the ranges of IDs.</span>
+
+<span class="sd">            Args:</span>
+<span class="sd">                the_id: Query ID.</span>
+
+<span class="sd">            Returns:</span>
+<span class="sd">                Ranges of the ID as list of lists. Outputs should always be increasing, inclusive ranges.</span>
+
+<span class="sd">            Raises:</span>
+<span class="sd">                ValueError: If there is no ID going out and going in to the query ID.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="c1"># Get the in- and out-nodes via &#39;get_next_edge_releases&#39; method.</span>
+            <span class="n">t_outs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_next_edge_releases</span><span class="p">(</span><span class="n">from_id</span><span class="o">=</span><span class="n">the_id</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">t_ins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_next_edge_releases</span><span class="p">(</span><span class="n">from_id</span><span class="o">=</span><span class="n">the_id</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t_outs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">t_ins</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No out and in edges for the given ID: </span><span class="si">{</span><span class="n">the_id</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">t_outs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">the_id</span><span class="p">][</span><span class="s2">&quot;Version&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">no_old_node_id</span><span class="p">:</span>
+                    <span class="c1"># Make sure the graph is constructed as it should be.</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;If no-out node, the version should be &#39;</span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">no_old_node_id</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">the_id</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+                <span class="c1"># The t_outs is then the first possible ensembl release. Note that t_ins is not empty.</span>
+                <span class="n">t_outs</span> <span class="o">=</span> <span class="p">[</span><span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;confident_for_release&quot;</span><span class="p">])]</span>
+
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">t_ins</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">the_id</span><span class="p">][</span><span class="s2">&quot;Version&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">no_new_node_id</span><span class="p">:</span>
+                    <span class="c1"># Make sure the graph is constructed as it should be.</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;If no in-node, the version should be &#39;</span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">no_new_node_id</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">the_id</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+                <span class="c1"># The t_ins is then the last possible ensembl release. Note that t_outs is not empty.</span>
+                <span class="n">t_ins</span> <span class="o">=</span> <span class="p">[</span><span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;confident_for_release&quot;</span><span class="p">])]</span>
+
+            <span class="c1"># Sort in- and out-releases in increasing order.</span>
+            <span class="c1"># If one in-edge and out-edge has the same ensembl release, put in-edges before.</span>
+            <span class="n">inout_edges</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+                <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">t_outs</span><span class="p">,</span> <span class="n">itertools</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="kc">True</span><span class="p">)),</span> <span class="nb">zip</span><span class="p">(</span><span class="n">t_ins</span><span class="p">,</span> <span class="n">itertools</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="kc">False</span><span class="p">))),</span>
+                <span class="n">reverse</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="p">(</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">-</span><span class="n">k</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="p">)</span>  <span class="c1"># Create a dict with ensembl releases and information of being in- or out-edge.</span>
+
+            <span class="n">narrowed</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">active_state</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="c1"># Start from the lowest ensembl release and go up at each iteration.</span>
+            <span class="c1"># Assume in the beginning, the ID is not active.</span>
+            <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="p">(</span><span class="n">ens_rel</span><span class="p">,</span> <span class="n">inout</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">inout_edges</span><span class="p">):</span>
+
+                <span class="k">if</span> <span class="n">ind</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">assert</span> <span class="n">inout</span><span class="p">,</span> <span class="s2">&quot;The range building should start with in-edge.&quot;</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">active_state</span><span class="p">:</span>
+                    <span class="c1"># If ID is not active and there is in-node, there is a beginning of new active range.</span>
+                    <span class="k">if</span> <span class="n">inout</span><span class="p">:</span>
+                        <span class="n">narrowed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ens_rel</span><span class="p">)</span>
+                        <span class="n">active_state</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># Set the ID active.</span>
+
+                    <span class="c1"># If ID is not active and there is out-node, modify the end of last active range, because to have</span>
+                    <span class="c1"># a out-node, the ID must be active (so last element is possibly a branching event).</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">narrowed</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">ens_rel</span>
+                        <span class="n">active_state</span> <span class="o">=</span> <span class="kc">False</span>
+
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># If ID is active and there is in-node, do nothing.</span>
+                    <span class="k">if</span> <span class="n">inout</span><span class="p">:</span>
+                        <span class="k">pass</span>
+
+                    <span class="c1"># If ID is active and there is out-node, end the range.</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">narrowed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ens_rel</span><span class="p">)</span>
+                        <span class="n">active_state</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># Set the ID not active.</span>
+
+            <span class="c1"># Group the results as list of list.</span>
+            <span class="n">narrowed</span> <span class="o">=</span> <span class="p">[</span><span class="n">narrowed</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">narrowed</span><span class="p">),</span> <span class="mi">2</span><span class="p">)]</span>
+            <span class="k">return</span> <span class="n">narrowed</span>
+
+        <span class="c1"># Use associated function to create the ranges of a node.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">input_id</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">external_search_settings</span><span class="p">[</span><span class="s2">&quot;nts_backbone&quot;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="n">_get_active_ranges_of_id_backbone</span><span class="p">(</span><span class="n">input_id</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_get_active_ranges_of_id_nonbackbone</span><span class="p">(</span><span class="n">input_id</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TheGraph.get_active_ranges_of_id_ensembl_all_inclusive"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.get_active_ranges_of_id_ensembl_all_inclusive">[docs]</a>    <span class="k">def</span> <span class="nf">get_active_ranges_of_id_ensembl_all_inclusive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">the_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Generate active ranges of Ensembl gene nodes with all assemblies.</span>
+
+<span class="sd">        Note that :py:meth:`TheGraph.get_active_ranges_of_id` method provided the range for main assembly</span>
+<span class="sd">        that the graph is build on. This method combines the other assemblies together. Also, it verifies whether</span>
+<span class="sd">        the :py:meth:`TheGraph.combined_edges` and :py:meth:`TheGraph.get_active_ranges_of_id`</span>
+<span class="sd">        methods provides consistent results.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            the_id: Query ID. Should be either Ensembl gene or assembly specific Ensembl gene IDs.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If there is inconsistency between the outputs of these two functions.</span>
+<span class="sd">                If the query is not one of the specified node type.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Ranges of the ID as list of lists. Outputs should always be increasing, inclusive ranges.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Use associated function to create the ranges of a node.</span>
+        <span class="n">ndt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">the_id</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span>
+        <span class="n">main_assembly</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;genome_assembly&quot;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">ndt</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]:</span>
+
+            <span class="n">narrowed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_active_ranges_of_id</span><span class="p">[</span><span class="n">the_id</span><span class="p">]</span>  <span class="c1"># Get the range of main assembly.</span>
+            <span class="n">comb_result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges_genes</span><span class="p">[</span><span class="n">the_id</span><span class="p">]</span>  <span class="c1"># Get the range of main assembly and also others.</span>
+            <span class="n">comb_reduced</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">set</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>  <span class="c1"># Create a dict that flattens all ensembl releases on assemblies.</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">comb_result</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">comb_result</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                    <span class="k">if</span> <span class="n">j</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">comb_reduced</span><span class="p">:</span>
+                        <span class="n">comb_reduced</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+                    <span class="n">comb_reduced</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">comb_result</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">])</span>
+
+            <span class="c1"># Sanity check with externals/other forms etc.</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="n">TheGraph</span><span class="o">.</span><span class="n">is_point_in_range</span><span class="p">(</span><span class="n">narrowed</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">comb_reduced</span><span class="p">[</span><span class="n">main_assembly</span><span class="p">]]):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Inconsistency in ID range vs combined edges: </span><span class="si">{</span><span class="n">the_id</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">narrowed</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">comb_reduced</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Note that ``narrowed == self.list_to_ranges(comb_reduced[main_assembly])`` may not give always True.</span>
+            <span class="c1"># It is basically because the ID may be defined even though there is no external ID pointing towards it.</span>
+
+            <span class="n">other_assemblies</span> <span class="o">=</span> <span class="p">[</span><span class="n">j</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">comb_reduced</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">comb_reduced</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">main_assembly</span><span class="p">]</span>
+            <span class="n">result_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ranges_to_list</span><span class="p">(</span><span class="n">narrowed</span><span class="p">)</span> <span class="o">+</span> <span class="n">other_assemblies</span>
+
+            <span class="c1"># Cannot use compact_ranges method as it necessitates non-overlapping increasing ranges.</span>
+            <span class="k">return</span> <span class="n">TheGraph</span><span class="o">.</span><span class="n">list_to_ranges</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">result_list</span><span class="p">)))</span>
+
+        <span class="k">elif</span> <span class="n">ndt</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_assembly_gene</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_active_ranges_of_id</span><span class="p">[</span><span class="n">the_id</span><span class="p">]</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Query &#39;</span><span class="si">{</span><span class="n">the_id</span><span class="si">}</span><span class="s2">&#39; isn&#39;t &#39;</span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="s1">&#39;gene&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&#39; or in &#39;</span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">nts_assembly_gene</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TheGraph.get_next_edge_releases"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.get_next_edge_releases">[docs]</a>    <span class="k">def</span> <span class="nf">get_next_edge_releases</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">reverse</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Retrieves the next edge releases from a node, depending on the directionality of the graph.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            from_id: Query ID. Should be with node type of Ensembl gene.</span>
+<span class="sd">            reverse: The direction of desired next edges.</span>
+<span class="sd">                If ``True``, previous edges are returned. If ``False``, next edges are returned.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The Ensembl releases of next (or previous if reverse is ``True``) edges.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If the query ID is not with the node type of graph backbone.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">from_id</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">external_search_settings</span><span class="p">[</span><span class="s2">&quot;nts_backbone&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The method should be called only for backbone nodes: &#39;</span><span class="si">{</span><span class="n">from_id</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="n">an_edge</span><span class="p">[</span><span class="s2">&quot;old_release&quot;</span><span class="p">]</span>  <span class="c1"># (8) Get the &#39;old release&#39; attribute of the edge.</span>
+                <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">an_edge</span><span class="p">[</span><span class="s2">&quot;new_release&quot;</span><span class="p">])</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">reverse</span><span class="p">)</span>  <span class="c1"># (7) In forward dir and non-retired edge</span>
+                <span class="k">else</span> <span class="n">an_edge</span><span class="p">[</span><span class="s2">&quot;new_release&quot;</span><span class="p">]</span>  <span class="c1"># (9) Else (reverse dir or non-retired edge), get the &#39;new release&#39; attr.</span>
+                <span class="c1"># (1) Get the node_after based on the direction of interest</span>
+                <span class="k">for</span> <span class="n">node_after</span> <span class="ow">in</span> <span class="n">nx</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="bp">self</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">reverse</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">rev</span><span class="p">,</span> <span class="n">from_id</span><span class="p">)</span>
+                <span class="c1"># (2) Get the edge data between each node_after and from_id.</span>
+                <span class="c1"># (3) For every multi-edge-ind (mei).</span>
+                <span class="k">for</span> <span class="n">mei</span><span class="p">,</span> <span class="n">an_edge</span> <span class="ow">in</span> <span class="p">(</span><span class="bp">self</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">reverse</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">rev</span><span class="p">)</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="n">from_id</span><span class="p">,</span> <span class="n">node_after</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="c1"># (4) Check if the connection is in the backbone</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">node_after</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">from_id</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span>
+                    <span class="ow">and</span> <span class="p">(</span>
+                        <span class="n">node_after</span> <span class="o">!=</span> <span class="n">from_id</span>  <span class="c1"># (5) Check if this is not a self-loop.</span>
+                        <span class="ow">or</span> <span class="p">(</span>
+                            <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">an_edge</span><span class="p">[</span><span class="s2">&quot;new_release&quot;</span><span class="p">])</span>
+                            <span class="c1"># (6.1) or self-loop but an_edge[&quot;new_release&quot;] is np.inf (happens when not retired at all)</span>
+                            <span class="ow">and</span> <span class="ow">not</span> <span class="n">reverse</span>
+                        <span class="p">)</span>  <span class="c1"># (6.2) but if we are at forward.</span>
+                    <span class="p">)</span>  <span class="c1"># (6.3) That is, keep inf self-loop for forward.</span>
+                <span class="p">)</span>
+            <span class="p">}</span>  <span class="c1"># (10) Create a set out of those to remove the duplicates.</span>
+        <span class="p">)</span>  <span class="c1"># (11) Convert into a list at the end.</span></div>
+
+<div class="viewcode-block" id="TheGraph.get_active_ranges_of_base_id_alternative"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.get_active_ranges_of_base_id_alternative">[docs]</a>    <span class="k">def</span> <span class="nf">get_active_ranges_of_base_id_alternative</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Get the range of an base ID based on the child IDs it is connected to.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            base_id: Query ID. Should be with node type of Ensembl base ID.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Ranges of the ID as list of lists. Outputs should always be increasing, inclusive ranges.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">associated_ids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">base_id</span><span class="p">)</span>
+        <span class="n">all_ranges</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">ai</span> <span class="ow">in</span> <span class="n">associated_ids</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_active_ranges_of_id_ensembl_all_inclusive</span><span class="p">(</span><span class="n">ai</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_to_ranges</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ranges_to_list</span><span class="p">(</span><span class="n">all_ranges</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="TheGraph.list_to_ranges"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.list_to_ranges">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">list_to_ranges</span><span class="p">(</span><span class="n">lst</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Convert sorted non-repeating list of integers into list of inclusive non-overlapping ranges.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            lst: List of integers. It should be sorted in increasing order. Repeating element is not allowed.</span>
+<span class="sd">                The output of :py:meth:`TheGraph.ranges_to_list` is a perfect input here.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Ranges as list of lists. Outputs should always be increasing, inclusive ranges. With positive integers.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">lst</span><span class="p">),</span> <span class="k">lambda</span> <span class="n">pair</span><span class="p">:</span> <span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+            <span class="n">b</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+            <span class="n">res</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">b</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]])</span>
+        <span class="k">return</span> <span class="n">res</span></div>
+
+<div class="viewcode-block" id="TheGraph.ranges_to_list"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.ranges_to_list">[docs]</a>    <span class="k">def</span> <span class="nf">ranges_to_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lor</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Convert list of inclusive non-overlapping ranges into sorted sorted non-repeating list of integers.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            lor: Ranges as list of lists. Should always be increasing, inclusive ranges. With positive integers.</span>
+<span class="sd">                The output of :py:meth:`TheGraph.list_to_ranges` is a perfect input here.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Sorted non-repeating list of integers.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="n">k</span>
+                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">lor</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="k">else</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;confident_for_release&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="p">}</span>
+        <span class="p">)</span></div>
+
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span> <span class="nf">node_trios</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">]]:</span>
+        <span class="sd">&quot;&quot;&quot;Creates a dict for all nodes with `node_trios` calculated by :py:meth:`TheGraph._node_trios`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A memory intensive dictionary with node name as the key and calculated `node_trios` as the value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached properties being calculated: </span><span class="si">{</span><span class="s1">&#39;node_trios&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">n</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_node_trios</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">}</span>
+
+<div class="viewcode-block" id="TheGraph._node_trios"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph._node_trios">[docs]</a>    <span class="k">def</span> <span class="nf">_node_trios</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">the_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Calculates the unique tuple called `trios` (database, assembly, Ensembl release) for a given ID.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            the_id: Query ID.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Set of trios.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">non_inf_range</span><span class="p">(</span><span class="n">l1</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">l2</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">range</span><span class="p">:</span>
+            <span class="sd">&quot;&quot;&quot;Convert the np.inf range element into a Ensembl release.</span>
+
+<span class="sd">            Args:</span>
+<span class="sd">                l1: Left hand side of a range.</span>
+<span class="sd">                l2: Right hand side of a range.</span>
+<span class="sd">                    This item is converted into the max Ensembl release of the graph if this is `np.inf`.</span>
+
+<span class="sd">            Raises:</span>
+<span class="sd">                ValueError: If not ``0 &lt; l1 &lt;= l2``.</span>
+
+<span class="sd">            Returns:</span>
+<span class="sd">                The range instance which iterates from `l1` to `l2`, including both.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">l1</span> <span class="o">&lt;=</span> <span class="n">l2</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span>
+
+            <span class="k">return</span> <span class="nb">range</span><span class="p">(</span><span class="n">l1</span><span class="p">,</span> <span class="p">(</span><span class="n">l2</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">l2</span><span class="p">)</span> <span class="k">else</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;confident_for_release&quot;</span><span class="p">]))</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Use associated function to create the ranges of a node.</span>
+        <span class="n">the_node_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">the_id</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span>
+        <span class="c1"># If it is external &#39;database&#39; is external database name (not node type). For others it is node type.</span>
+
+        <span class="k">if</span> <span class="n">the_node_type</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">the_id</span><span class="p">][</span><span class="s2">&quot;Version&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">alternative_versions</span><span class="p">:</span>
+            <span class="n">ass</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;genome_assembly&quot;</span><span class="p">]</span>
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">nts_assembly</span><span class="p">[</span><span class="n">ass</span><span class="p">][</span><span class="s2">&quot;gene&quot;</span><span class="p">],</span> <span class="n">ass</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_active_ranges_of_id</span><span class="p">[</span><span class="n">the_id</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">non_inf_range</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span>
+            <span class="p">}</span>
+        <span class="k">elif</span> <span class="n">the_node_type</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]:</span>
+            <span class="n">rd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges_genes</span><span class="p">[</span><span class="n">the_id</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">the_node_type</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_assembly_gene</span><span class="p">:</span>
+            <span class="n">rd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges_assembly_specific_genes</span><span class="p">[</span><span class="n">the_id</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">rd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges</span><span class="p">[</span><span class="n">the_id</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="p">{(</span><span class="n">p</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">rd</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rd</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">rd</span><span class="p">[</span><span class="n">p</span><span class="p">][</span><span class="n">r</span><span class="p">]}</span></div>
+
+<div class="viewcode-block" id="TheGraph.compact_ranges"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.compact_ranges">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">compact_ranges</span><span class="p">(</span><span class="n">list_of_ranges</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Reduce the list of ranges into least possible number of ranges.</span>
+
+<span class="sd">        O(n) time and space complexity: a forward in place compaction and copying back the elements,</span>
+<span class="sd">        as then each inner step is O(1) (get/set instead of del).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            list_of_ranges: List of increasing, inclusive ranges. The elements are positive integers. Note that there</span>
+<span class="sd">                should be no overlapping elements.</span>
+<span class="sd">                The output of :py:meth:`TheGraph.list_to_ranges` or</span>
+<span class="sd">                :py:meth:`TheGraph._get_active_ranges_of_id` are a perfect input here.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">next_index</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># Keeps track of the last used index in our result</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">list_of_ranges</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+
+            <span class="k">if</span> <span class="n">list_of_ranges</span><span class="p">[</span><span class="n">next_index</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&gt;=</span> <span class="n">list_of_ranges</span><span class="p">[</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="n">list_of_ranges</span><span class="p">[</span><span class="n">next_index</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">list_of_ranges</span><span class="p">[</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">next_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">list_of_ranges</span><span class="p">[</span><span class="n">next_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">list_of_ranges</span><span class="p">[</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">list_of_ranges</span><span class="p">[:</span> <span class="n">next_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="TheGraph.get_intersecting_ranges"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.get_intersecting_ranges">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_intersecting_ranges</span><span class="p">(</span><span class="n">lor1</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">],</span> <span class="n">lor2</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">],</span> <span class="n">compact</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;As the name suggest, calculates the intersecting ranges of two list of ranges.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            lor1: List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.</span>
+<span class="sd">            lor2: List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.</span>
+<span class="sd">            compact: If set `True`, returns the reduced list of ranges via</span>
+<span class="sd">                :py:meth:`TheGraph.compact_ranges` method.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">[</span><span class="nb">max</span><span class="p">(</span><span class="n">first</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">second</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">min</span><span class="p">(</span><span class="n">first</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">second</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+            <span class="k">for</span> <span class="n">first</span> <span class="ow">in</span> <span class="n">lor1</span>
+            <span class="k">for</span> <span class="n">second</span> <span class="ow">in</span> <span class="n">lor2</span>
+            <span class="k">if</span> <span class="nb">max</span><span class="p">(</span><span class="n">first</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">second</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&lt;=</span> <span class="nb">min</span><span class="p">(</span><span class="n">first</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">second</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">TheGraph</span><span class="o">.</span><span class="n">compact_ranges</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="k">if</span> <span class="n">compact</span> <span class="k">else</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="TheGraph.is_point_in_range"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.is_point_in_range">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">is_point_in_range</span><span class="p">(</span><span class="n">lor</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">],</span> <span class="n">p</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Simple method to determine whether a given integer is covered by list of ranges.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            lor: List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.</span>
+<span class="sd">            p: A positive integer.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            ``True`` if it is in the range, ``False`` otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span> <span class="ow">in</span> <span class="n">lor</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">l1</span> <span class="o">&lt;=</span> <span class="n">p</span> <span class="o">&lt;=</span> <span class="n">l2</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="TheGraph.get_two_nodes_coinciding_releases"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.get_two_nodes_coinciding_releases">[docs]</a>    <span class="k">def</span> <span class="nf">get_two_nodes_coinciding_releases</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">id1</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">id2</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">compact</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Find the intersecting range of two nodes in the graph.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            id1: First Query ID.</span>
+<span class="sd">            id2: Second Query ID.</span>
+<span class="sd">            compact: Parameter to pass into :py:meth:`TheGraph.get_intersecting_ranges` method.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">r1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_active_ranges_of_id</span><span class="p">[</span><span class="n">id1</span><span class="p">]</span>
+        <span class="n">r2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_active_ranges_of_id</span><span class="p">[</span><span class="n">id2</span><span class="p">]</span>
+
+        <span class="n">r</span> <span class="o">=</span> <span class="n">TheGraph</span><span class="o">.</span><span class="n">get_intersecting_ranges</span><span class="p">(</span><span class="n">r1</span><span class="p">,</span> <span class="n">r2</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="n">compact</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">r</span></div>
+
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span> <span class="nf">available_external_databases</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Find the available external databases found in the graph.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Set of all external databases in the graph.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached properties being calculated: </span><span class="si">{</span><span class="s1">&#39;available_external_databases&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">j</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_external</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="p">}</span>
+
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span> <span class="nf">available_external_databases_assembly</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">set</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Find the available external databases found in the graph for each assembly separately.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dict of all external databases in the graph, assemblies as keys.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached properties being calculated: </span><span class="si">{</span><span class="s1">&#39;available_external_databases_assembly&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">result</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">set</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="nb">set</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_genome_assemblies</span><span class="p">}</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges</span><span class="p">:</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">d</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">d</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                    <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_external_databases</span><span class="p">:</span>
+                        <span class="n">result</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span> <span class="nf">external_database_connection_form</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Finds which form of Ensembl ID the external database identifiers are connected to.</span>
+
+<span class="sd">        Each external database connects to a specific form (gene, transcript, translation) Ensembl ID. The relevant</span>
+<span class="sd">        form is chosen by :py:class:`ExternalDatabases` class.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary mapping external database name into the associated form (gene, transcript, translation).</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If non-Ensembl node is connected.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached properties being calculated: </span><span class="si">{</span><span class="s1">&#39;external_database_connection_form&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Get the available databases to be matched</span>
+        <span class="n">aed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_external_databases</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">aed</span><span class="p">:</span>  <span class="c1"># For each database</span>
+            <span class="n">ra</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+            <span class="c1"># Get the identifiers (node names) from all Ensembl releases and assemblies for a given external database.</span>
+            <span class="n">nodes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_external_database_nodes</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+
+                <span class="k">for</span> <span class="n">nei</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
+
+                    <span class="c1"># Look at the node type of each neighbour</span>
+                    <span class="n">nei_nts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">nei</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span>
+                    <span class="c1"># Convert to nts_ensembl if it is nts_assembly, else keep at it is.</span>
+                    <span class="n">nei_nts</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_assembly_reverse</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">nei_nts</span><span class="p">,</span> <span class="n">nei_nts</span><span class="p">)</span>
+
+                    <span class="k">if</span> <span class="n">nei_nts</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl_reverse</span><span class="p">:</span>  <span class="c1"># The result should be a nts_ensembl always.</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Not connected only to Ensembl ID. DB:</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">, From:</span><span class="si">{</span><span class="n">node</span><span class="si">}</span><span class="s2">, To:</span><span class="si">{</span><span class="n">nei</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">nei_nts</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+                    <span class="n">nei_form</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl_reverse</span><span class="p">[</span><span class="n">nei_nts</span><span class="p">]</span>  <span class="c1"># Find the form</span>
+
+                    <span class="c1"># Due to some weird annotations like: PRDX3P2 being in &#39;RefSeq_mRNA&#39; and also &#39;HGNC Symbol&#39;</span>
+                    <span class="c1"># Not all the elements in &#39;ra&#39; is the same. The rare ones are just exceptions, or misannotations.</span>
+                    <span class="c1"># Counter resolves the issue although not ideal.</span>
+
+                    <span class="n">ra</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nei_form</span><span class="p">)</span>
+
+            <span class="n">res</span><span class="p">[</span><span class="n">e</span><span class="p">]</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">(</span><span class="n">ra</span><span class="p">)</span><span class="o">.</span><span class="n">most_common</span><span class="p">(</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">res</span>
+
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span> <span class="nf">available_genome_assemblies</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Find the genome assemblies found in the graph by iterating through all nodes.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Genome assemblies, which is also found in :py:attr:`DB.assembly_mysqlport_priority`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached properties being calculated: </span><span class="si">{</span><span class="s1">&#39;available_genome_assemblies&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>  <span class="c1"># Initialize a set and iterate through all &#39;combined_edges&#39; dictionaries.</span>
+        <span class="k">for</span> <span class="n">td</span> <span class="ow">in</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">combined_edges</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges_genes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges_assembly_specific_genes</span><span class="p">):</span>
+            <span class="n">output</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">k</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">td</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">td</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">td</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]})</span>
+
+        <span class="k">return</span> <span class="n">output</span>
+
+<div class="viewcode-block" id="TheGraph.available_releases_given_database_assembly"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.available_releases_given_database_assembly">[docs]</a>    <span class="k">def</span> <span class="nf">available_releases_given_database_assembly</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">database_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Possible Ensembl releases defined for a given database and assembly.</span>
+
+<span class="sd">        The method uses `node_trios` unnecessarily method, which consumes a lot of memory and hinders high</span>
+<span class="sd">        computational efficiency. However, this method is used only in testing purposes, when the speed and memory is</span>
+<span class="sd">        not of a concern.</span>
+
+<span class="sd">        It is important to note that not all databases are defined in all Ensembl release. To see for more information,</span>
+<span class="sd">        have a look at the :py:class:`ExternalDatabases`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            database_name: External database or node type (except `external`) it should be one of the item from</span>
+<span class="sd">                :py:meth:`TheGraph.available_external_databases`. The method also works with `node types`</span>
+<span class="sd">                (except `external`), since they are also defined in `node_trios`. Important to note that the `node type`</span>
+<span class="sd">                for Ensembl should follow :py:attr:`DB.nts_assembly` or :py:attr:`DB.nts_base_ensembl`.</span>
+<span class="sd">            assembly: Assembly, it should be one of the item from</span>
+<span class="sd">                :py:meth:`TheGraph.available_genome_assemblies`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Available Ensembl releases as set of integers.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">j3</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_trios</span> <span class="k">for</span> <span class="n">j1</span><span class="p">,</span> <span class="n">j2</span><span class="p">,</span> <span class="n">j3</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_trios</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="n">j1</span> <span class="o">==</span> <span class="n">database_name</span> <span class="ow">and</span> <span class="n">j2</span> <span class="o">==</span> <span class="n">assembly</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="TheGraph.get_id_list"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.get_id_list">[docs]</a>    <span class="k">def</span> <span class="nf">get_id_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">database</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Given a trio (database, assembly, release), generates a list of node names (identifiers).</span>
+
+<span class="sd">        Similar to :py:meth:`TheGraph.available_releases_given_database_assembly`, the method uses</span>
+<span class="sd">        `node_trios` unnecessarily method, which consumes a lot of memory and hinders high</span>
+<span class="sd">        computational efficiency. However, this method is used only in testing purposes, when the speed and memory is</span>
+<span class="sd">        not of a concern.</span>
+
+<span class="sd">        It is imporant to note that the Ensembl IDs with versions :py:attr:`DB.alternative_versions` will be also</span>
+<span class="sd">        returned if the database is the Ensembl gene with the main assembly, and the assembly is the main assembly.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            database: External database name if the `node type` is `external`, else `node type`. The `node type`</span>
+<span class="sd">                for Ensembl should follow :py:attr:`DB.nts_assembly` or :py:attr:`DB.nts_base_ensembl`.</span>
+<span class="sd">            assembly: Assembly, it should be one of the item from</span>
+<span class="sd">                :py:meth:`TheGraph.available_genome_assemblies`.</span>
+<span class="sd">            release: Requested Ensembl releases as an integer.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Node names (identifiers) list.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">the_key</span> <span class="o">=</span> <span class="p">(</span><span class="n">database</span><span class="p">,</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span>
+        <span class="n">final_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]</span>
+                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="s2">&quot;Version&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">alternative_versions</span>
+            <span class="p">):</span>
+                <span class="k">continue</span>
+
+            <span class="n">trios</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_trios</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">the_key</span> <span class="ow">in</span> <span class="n">trios</span><span class="p">:</span>
+                <span class="n">final_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">final_list</span></div>
+
+<div class="viewcode-block" id="TheGraph.get_external_database_nodes"><a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.get_external_database_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">get_external_database_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">database_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;For a given external database, returns set of all node names defined at least once in that database.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            database_name: External database, it should be one of the item from</span>
+<span class="sd">                :py:meth:`TheGraph.available_external_databases`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Node names (identifiers) set.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">i</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_external</span> <span class="ow">and</span> <span class="n">database_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="p">}</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

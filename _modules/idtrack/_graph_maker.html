@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack._graph_maker &mdash; idtrack 0.0.3 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/custom_cookietemple.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/dark_mode_css/general.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/dark_mode_css/dark.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script src="../../_static/dark_mode_js/default_light.js"></script>
+        <script src="../../_static/dark_mode_js/theme_switcher.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> idtrack
+            <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>idtrack._graph_maker</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack._graph_maker</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+
+<span class="c1"># Kemal Inecik</span>
+<span class="c1"># k.inecik@gmail.com</span>
+
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">string</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="kn">from</span> <span class="nn">._database_manager</span> <span class="kn">import</span> <span class="n">DatabaseManager</span>
+<span class="kn">from</span> <span class="nn">._db</span> <span class="kn">import</span> <span class="n">DB</span>
+<span class="kn">from</span> <span class="nn">._the_graph</span> <span class="kn">import</span> <span class="n">TheGraph</span>
+
+
+<div class="viewcode-block" id="GraphMaker"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker">[docs]</a><span class="k">class</span> <span class="nc">GraphMaker</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Creates ID history graph.</span>
+
+<span class="sd">    It includes Ensembl gene ID history. Ensembl ID history is obtained from Ensembl</span>
+<span class="sd">    resources, which shows the connection between different Ensembl base IDs or different versions of the same Ensembl</span>
+<span class="sd">    base ID. Ensembl transcripts (with base IDs and versions) are connected to gene, and Ensembl proteins are</span>
+<span class="sd">    connected to transcripts. Additionally, a selected set of external databases are connected to the related Ensembl</span>
+<span class="sd">    IDs: for example UniProt IDs are associated with proteins, while RefSeq transcript IDs are associated with</span>
+<span class="sd">    transcripts. The ``GraphMaker`` class also saves the resulting graph into the defined temporary directory for later</span>
+<span class="sd">    calculations.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Note: Example chaotic ID history: ENSG00000263464</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_manager</span><span class="p">:</span> <span class="n">DatabaseManager</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Class initialization.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            db_manager: Needed to download all necessary tables and data frames.</span>
+<span class="sd">                It contains the temporary directory to save the resultant graph.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: ``GraphMaker`` has to be created with the latest release possible in ``db_manager``. If not,</span>
+<span class="sd">                the exception is raised.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Instance attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;graph_maker&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Make sure the graph is constructed from the latest release available.</span>
+        <span class="k">if</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">ensembl_release</span> <span class="o">!=</span> <span class="nb">max</span><span class="p">(</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;Graph&#39; has to be created with the latest release possible defined in &#39;db_manager&#39;.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span> <span class="o">=</span> <span class="n">db_manager</span>
+
+<div class="viewcode-block" id="GraphMaker.initialize_downloads"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.initialize_downloads">[docs]</a>    <span class="k">def</span> <span class="nf">initialize_downloads</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize the external database downloads.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            NotImplementedError: Not implemented yet. Currently, the necessary data sources are downloaded when needed</span>
+<span class="sd">                during the graph construction process.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
+
+<div class="viewcode-block" id="GraphMaker.update_graph_with_the_new_release"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.update_graph_with_the_new_release">[docs]</a>    <span class="k">def</span> <span class="nf">update_graph_with_the_new_release</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;When new release arrive, just add new nodes.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            NotImplementedError: Not implemented yet. Currently, the user is expected to recreate whole graph using</span>
+<span class="sd">                ``get_graph`` method. Note that not all databases need to be re-downloaded, the program will only</span>
+<span class="sd">                download the new release, and re-construct the graph.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
+
+    <span class="c1"># flake8: noqa: C901</span>
+<div class="viewcode-block" id="GraphMaker.construct_graph"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.construct_graph">[docs]</a>    <span class="k">def</span> <span class="nf">construct_graph</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">narrow</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">form_list</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">narrow_external</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TheGraph</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Main method to construct the graph.</span>
+
+<span class="sd">        It creates the graph with Ensembl gene, transcript and protein information. It also adds</span>
+<span class="sd">        ``DB.nts_base_ensembl[f]`` nodes into the graph, which has only base Ensembl gene ID (no version).</span>
+<span class="sd">        External database entries described in ``ExternalDatabases`` will be part of the graph. Normally, user</span>
+<span class="sd">        is not expected to use this method, as the method is utilized in ``get_graph`` method.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            narrow: Determine whether a some more information should be added between Ensembl gene IDs. For example,</span>
+<span class="sd">                which genome assembly is used, or when was the connection is established. For usual uses, no need to</span>
+<span class="sd">                set it ``True``.</span>
+<span class="sd">            form_list: Determine which forms (transcript, translation, gene) should be included. If ``None``, then</span>
+<span class="sd">                include all possible forms defined in ``DatabaseManager``.</span>
+<span class="sd">                It has to be list composed of following strings: &#39;gene&#39;, &#39;transcript&#39;, &#39;translation&#39;.</span>
+<span class="sd">            narrow_external: If set ``False``, all possible external databases defined in Ensembl MySQL server will be</span>
+<span class="sd">                included into the graph. The graph will be immensely larger, and the ID history travel calculation will</span>
+<span class="sd">                be very slow. Additionally, the success of ID conversion under such a setting it has not been</span>
+<span class="sd">                tested yet.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Resultant multiedge directed graph.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: Unexpected error.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">add_edge</span><span class="p">(</span><span class="n">n1</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">n2</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">db12</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">a12</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">er12</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;A simple function to create edges between provided nodes. Edits the graph that is under the construction.</span>
+
+<span class="sd">            The edge attribute will be added in the following format: ``{DB.connection_dict: {db12: {a12: {er12}}}}``.</span>
+
+<span class="sd">            Args:</span>
+<span class="sd">                n1: The first node of the edge. The edge is taken from this node.</span>
+<span class="sd">                n2: The second node of the edge. The edge is taken to this node.</span>
+<span class="sd">                db12: Database for such a connection</span>
+<span class="sd">                a12: Ensembl release for such a connection.</span>
+<span class="sd">                er12: Assembly for such a connection.</span>
+
+<span class="sd">            Raises:</span>
+<span class="sd">                ValueError: If there are more than one edge between the source and the target node.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="k">if</span> <span class="n">n1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span> <span class="ow">or</span> <span class="n">n2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">db12</span><span class="p">,</span> <span class="n">a12</span><span class="p">,</span> <span class="n">er12</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">g</span><span class="o">.</span><span class="n">has_edge</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">):</span>
+                <span class="c1"># If there is no edge between the nodes, create one.</span>
+                <span class="n">n_edge_att</span> <span class="o">=</span> <span class="p">{</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_dict</span><span class="p">:</span> <span class="p">{</span><span class="n">db12</span><span class="p">:</span> <span class="p">{</span><span class="n">a12</span><span class="p">:</span> <span class="p">{</span><span class="n">er12</span><span class="p">}}}}</span>
+                <span class="n">g</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="o">**</span><span class="n">n_edge_att</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># If there is an edge between the nodes, edit accordingly.</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">))</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="c1"># It is actually tested in TrackTest.is_node_consistency_robust. This is a result of</span>
+                    <span class="c1"># DatabasaManager and GraphMaker&#39;s shared work.</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;There is already an edge between &#39;</span><span class="si">{</span><span class="n">n1</span><span class="si">}</span><span class="s2">&#39; and &#39;</span><span class="si">{</span><span class="n">n2</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
+
+                <span class="k">elif</span> <span class="n">db12</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">g</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_dict</span><span class="p">]:</span>
+                    <span class="n">g</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_dict</span><span class="p">][</span><span class="n">db12</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">a12</span><span class="p">:</span> <span class="p">{</span><span class="n">er12</span><span class="p">}}</span>
+
+                <span class="k">elif</span> <span class="n">a12</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">g</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_dict</span><span class="p">][</span><span class="n">db12</span><span class="p">]:</span>
+                    <span class="n">g</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_dict</span><span class="p">][</span><span class="n">db12</span><span class="p">][</span><span class="n">a12</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">er12</span><span class="p">}</span>
+
+                <span class="k">elif</span> <span class="n">er12</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">g</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_dict</span><span class="p">][</span><span class="n">db12</span><span class="p">][</span><span class="n">a12</span><span class="p">]:</span>
+                    <span class="n">g</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_dict</span><span class="p">][</span><span class="n">db12</span><span class="p">][</span><span class="n">a12</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">er12</span><span class="p">)</span>
+
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">db12</span><span class="p">,</span> <span class="n">a12</span><span class="p">,</span> <span class="n">er12</span><span class="p">,</span> <span class="n">g</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_dict</span><span class="p">])</span>
+
+        <span class="c1"># The order is important for form_list in compose_all, due to some clashing ensembl IDs.</span>
+        <span class="n">form_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_form_of_interests</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">form_list</span> <span class="k">else</span> <span class="n">form_list</span>
+        <span class="n">dbman_s</span> <span class="o">=</span> <span class="p">{</span><span class="n">f</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">change_form</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">form_list</span><span class="p">}</span>
+        <span class="n">graph_s</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">f</span><span class="p">:</span> <span class="n">GraphMaker</span><span class="o">.</span><span class="n">remove_non_gene_trees</span><span class="p">(</span>  <span class="c1"># Remove_non_gene_tree before compose_all.</span>
+                <span class="c1"># The time travel will be between gene IDs, so no need to have such edges.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">construct_graph_form</span><span class="p">(</span><span class="n">narrow</span><span class="p">,</span> <span class="n">dbman_s</span><span class="p">[</span><span class="n">f</span><span class="p">])</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">form_list</span>
+        <span class="p">}</span>
+
+        <span class="c1"># Fun fact: There are exceptional Ensembl protein IDs that starts with &#39;ENST&#39;, and sometimes there are</span>
+        <span class="c1"># clash of IDs (the same ID is defined in Ensembl proteins and Ensembl transcripts). For example,</span>
+        <span class="c1"># &quot;ENST00000515292.1&quot;. It does not clash in time, that is, they are defined in different ensembl releases.</span>
+        <span class="c1"># Report all possible conflicts.</span>
+        <span class="k">for</span> <span class="n">m</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span><span class="n">form_list</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">graph_s</span> <span class="ow">and</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">graph_s</span><span class="p">:</span>
+                <span class="n">gm</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">graph_s</span><span class="p">[</span><span class="n">m</span><span class="p">]</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
+                <span class="n">gn</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">graph_s</span><span class="p">[</span><span class="n">n</span><span class="p">]</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
+                <span class="n">intersection</span> <span class="o">=</span> <span class="n">gm</span> <span class="o">&amp;</span> <span class="n">gn</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">intersection</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Intersecting Ensembl nodes: Nodes in &#39;</span><span class="si">{</span><span class="n">m</span><span class="si">}</span><span class="s2">&#39; will &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;be replaced by &#39;</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">&#39;: &#39;</span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">intersection</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;.&quot;</span>
+                    <span class="p">)</span>
+
+        <span class="c1"># Compose all graphs into one. If there is a</span>
+        <span class="n">g</span><span class="p">:</span> <span class="n">TheGraph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">compose_all</span><span class="p">([</span><span class="n">graph_s</span><span class="p">[</span><span class="n">f</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">form_list</span><span class="p">])</span>
+        <span class="c1"># To make the form_list cached in the object.</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">attach_included_forms</span><span class="p">(</span><span class="n">form_list</span><span class="p">)</span>
+
+        <span class="c1"># Establish connection between different forms</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Establishing connection between different forms.&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">ensembl_release</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">:</span>
+            <span class="n">db_manager</span> <span class="o">=</span> <span class="n">dbman_s</span><span class="p">[</span><span class="s2">&quot;transcript&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">ensembl_release</span><span class="p">)</span>  <span class="c1"># Does not matter which form.</span>
+            <span class="n">rc</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;relationcurrent&quot;</span><span class="p">,</span> <span class="n">save_after_calculation</span><span class="o">=</span><span class="n">db_manager</span><span class="o">.</span><span class="n">store_raw_always</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">_ind</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">rc</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+
+                <span class="c1"># To make the edge direction from transcript to gene, translation to transcript</span>
+                <span class="k">for</span> <span class="n">e1_str</span><span class="p">,</span> <span class="n">e2_str</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">&quot;transcript&quot;</span><span class="p">,</span> <span class="s2">&quot;gene&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;translation&quot;</span><span class="p">,</span> <span class="s2">&quot;transcript&quot;</span><span class="p">)):</span>
+
+                    <span class="n">e1</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="n">e1_str</span><span class="p">]</span>
+                    <span class="n">e2</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="n">e2_str</span><span class="p">]</span>
+
+                    <span class="k">if</span> <span class="n">e1</span> <span class="ow">and</span> <span class="n">e2</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">e1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span> <span class="ow">or</span> <span class="n">e2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="ne">ValueError</span>
+
+                        <span class="c1"># Edges are from transcript to gene, from translation to transcript</span>
+                        <span class="n">sly</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">genome_assembly</span>
+                        <span class="n">add_edge</span><span class="p">(</span><span class="n">e1</span><span class="p">,</span> <span class="n">e2</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="n">e1_str</span><span class="p">],</span> <span class="n">sly</span><span class="p">,</span> <span class="n">ensembl_release</span><span class="p">)</span>
+
+        <span class="c1"># Establish connection between different databases</span>
+        <span class="n">graph_nodes_before_external</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
+        <span class="n">graph_nodes_added_assembly</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">i</span><span class="p">:</span> <span class="nb">set</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">genome_assembly</span>
+        <span class="p">}</span>
+        <span class="n">misplaced_external_entry</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="n">establish_form_connection</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="n">min_ens_release</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">added_assemblies</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">form_list</span><span class="p">:</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Edges between external IDs to Ensembl IDs is being added for &#39;</span><span class="si">{</span><span class="n">f</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
+            <span class="n">nodes_from_previous_release</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">ens_rel</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">):</span>
+                <span class="c1"># the order is important in adding new nodes into the core graph.</span>
+                <span class="c1"># it is important to capture correct ens_release in min_ens_release dictionary</span>
+
+                <span class="n">db_manager</span> <span class="o">=</span> <span class="n">dbman_s</span><span class="p">[</span><span class="n">f</span><span class="p">]</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">ens_rel</span><span class="p">)</span>
+                <span class="n">rc</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">create_external_all</span><span class="p">(</span><span class="n">return_mode</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">)</span>
+
+                <span class="k">for</span> <span class="n">_ind</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">rc</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+                    <span class="c1"># Note that the `rc` dataframe have higher priority assembly entries at the top.</span>
+
+                    <span class="n">e1</span><span class="p">,</span> <span class="n">e2</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;graph_id&quot;</span><span class="p">],</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;id_db&quot;</span><span class="p">]</span>
+                    <span class="n">er</span><span class="p">,</span> <span class="n">edb</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;release&quot;</span><span class="p">],</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;name_db&quot;</span><span class="p">]</span>
+                    <span class="n">sly</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">&quot;assembly&quot;</span><span class="p">])</span>
+
+                    <span class="k">if</span> <span class="n">sly</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span>
+
+                    <span class="k">if</span> <span class="n">e1</span> <span class="ow">and</span> <span class="n">e2</span> <span class="ow">and</span> <span class="n">er</span> <span class="ow">and</span> <span class="n">edb</span> <span class="ow">and</span> <span class="n">sly</span><span class="p">:</span>
+
+                        <span class="k">if</span> <span class="n">e1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph_nodes_before_external</span><span class="p">:</span>
+                            <span class="c1"># Here, Only add the node once and retire. For Homo sapiens these nodes are added at</span>
+                            <span class="c1"># previous assemblies, but retired before the last assembly and the Ensembl MySQL server,</span>
+                            <span class="c1"># minimum release (For 37, it is 79). They are nevertheless important to add, as maybe an</span>
+                            <span class="c1"># external ID bridge them to the active ones.</span>
+                            <span class="c1"># For example, &#39;ENSG00000148828.5&#39;, &#39;ENSG00000167765.3&#39;</span>
+
+                            <span class="k">if</span> <span class="n">sly</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">:</span>
+                                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                                    <span class="s2">&quot;The main assembly created for the graph should contain all the &quot;</span>
+                                    <span class="s2">&quot;nodes in the external table.&quot;</span>
+                                <span class="p">)</span>
+
+                            <span class="k">elif</span> <span class="nb">any</span><span class="p">(</span>
+                                <span class="p">[</span><span class="n">e1</span> <span class="ow">in</span> <span class="n">graph_nodes_added_assembly</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">graph_nodes_added_assembly</span> <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">sly</span><span class="p">]</span>
+                            <span class="p">):</span>
+                                <span class="c1"># Hypothetical statement for now, as there are only two assembly in Ensembl.</span>
+                                <span class="c1"># &#39;create_external_all&#39; method should have resolve the issue.</span>
+                                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Node should have been already added by a higher priority assembly.&quot;</span><span class="p">)</span>
+
+                            <span class="k">elif</span> <span class="n">e1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph_nodes_added_assembly</span><span class="p">[</span><span class="n">sly</span><span class="p">]:</span>
+
+                                <span class="k">if</span> <span class="n">sly</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">min_ens_release</span><span class="p">:</span>
+                                    <span class="n">min_ens_release</span><span class="p">[</span><span class="n">sly</span><span class="p">]</span> <span class="o">=</span> <span class="n">ens_rel</span>
+                                <span class="k">elif</span> <span class="n">ens_rel</span> <span class="o">!=</span> <span class="n">min_ens_release</span><span class="p">[</span><span class="n">sly</span><span class="p">]:</span>
+                                    <span class="c1"># The duplicate entries were already removed by `create_external_all` method.</span>
+                                    <span class="c1"># IDs retired before `min(db_manager.available_releases)` will be missing only.</span>
+                                    <span class="c1"># In the first possible release, all should have been already added.</span>
+
+                                    <span class="c1"># Here, the if-elif statement is written in case of third assembly in the future.</span>
+                                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                                        <span class="s2">&quot;The new nodes here should have been added in &quot;</span>
+                                        <span class="s2">&quot;the first Ensembl release possible.&quot;</span>
+                                    <span class="p">)</span>
+                                <span class="n">graph_nodes_added_assembly</span><span class="p">[</span><span class="n">sly</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">e1</span><span class="p">)</span>
+
+                                <span class="n">node_attributes_3</span> <span class="o">=</span> <span class="p">{</span>
+                                    <span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">:</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_assembly</span><span class="p">[</span><span class="n">sly</span><span class="p">][</span><span class="n">f</span><span class="p">],</span>
+                                    <span class="s2">&quot;ID&quot;</span><span class="p">:</span> <span class="n">GraphMaker</span><span class="o">.</span><span class="n">split_id</span><span class="p">(</span><span class="n">e1</span><span class="p">,</span> <span class="s2">&quot;ID&quot;</span><span class="p">),</span>
+                                    <span class="s2">&quot;Version&quot;</span><span class="p">:</span> <span class="n">GraphMaker</span><span class="o">.</span><span class="n">split_id</span><span class="p">(</span><span class="n">e1</span><span class="p">,</span> <span class="s2">&quot;Version&quot;</span><span class="p">),</span>
+                                <span class="p">}</span>
+                                <span class="n">g</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">e1</span><span class="p">,</span> <span class="o">**</span><span class="n">node_attributes_3</span><span class="p">)</span>
+
+                                <span class="n">nodes_from_previous_release</span> <span class="o">+=</span> <span class="mi">1</span>
+                                <span class="n">establish_form_connection</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">e1</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">sly</span><span class="p">])</span>
+                                <span class="n">added_assemblies</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">sly</span><span class="p">)</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="c1"># Do nothing. The hope is a second external database is bridging to a known Ensembl ID.</span>
+                                <span class="k">pass</span>
+
+                        <span class="k">if</span> <span class="n">e2</span> <span class="ow">in</span> <span class="n">graph_nodes_before_external</span><span class="p">:</span>
+                            <span class="n">misplaced_external_entry</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e2</span><span class="p">)</span>
+                            <span class="c1"># Some external database entries contains an Ensembl ID as an external ID. If such an item</span>
+                            <span class="c1"># is a part of the graph before externals, store them in the graph attributes at the end.</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="c1"># Create a node with external ID, store relevant database and ensembl release information.</span>
+                            <span class="k">if</span> <span class="n">e2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+                                <span class="n">node_attributes_2</span> <span class="o">=</span> <span class="p">{</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">:</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_external</span><span class="p">}</span>
+                                <span class="n">g</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">e2</span><span class="p">,</span> <span class="o">**</span><span class="n">node_attributes_2</span><span class="p">)</span>
+
+                            <span class="k">if</span> <span class="n">e1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+                                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Node &#39;</span><span class="si">{</span><span class="n">e1</span><span class="si">}</span><span class="s2">&#39; should have been added.&quot;</span><span class="p">)</span>
+                            <span class="c1"># Edges are from external ID to Ensembl ID.</span>
+                            <span class="n">add_edge</span><span class="p">(</span><span class="n">e2</span><span class="p">,</span> <span class="n">e1</span><span class="p">,</span> <span class="n">edb</span><span class="p">,</span> <span class="n">sly</span><span class="p">,</span> <span class="n">er</span><span class="p">)</span>
+                            <span class="n">added_assemblies</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">sly</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">nodes_from_previous_release</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;New nodes added as assembly nodes: </span><span class="si">{</span><span class="n">nodes_from_previous_release</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">misplaced_external_entry</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Misplaced external entry: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">misplaced_external_entry</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">establish_form_connection</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+
+            <span class="n">added_edge</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Different forms of assembly-Ensembl-nodes are being connecting.&quot;</span><span class="p">)</span>
+            <span class="n">new_nodes</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">establish_form_connection</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">,</span> <span class="s2">&quot;form&quot;</span><span class="p">,</span> <span class="s2">&quot;assembly&quot;</span><span class="p">])</span>
+            <span class="n">new_nodes</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="s2">&quot;first&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">avail_assemblies</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">new_nodes</span><span class="p">[</span><span class="s2">&quot;assembly&quot;</span><span class="p">])</span>
+
+            <span class="k">for</span> <span class="n">aa</span> <span class="ow">in</span> <span class="n">avail_assemblies</span><span class="p">:</span>
+                <span class="n">nn_aa</span> <span class="o">=</span> <span class="n">new_nodes</span><span class="p">[</span><span class="n">new_nodes</span><span class="p">[</span><span class="s2">&quot;assembly&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">aa</span><span class="p">]</span>
+                <span class="n">dm_aa</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">aa</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">the_er</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dm_aa</span><span class="o">.</span><span class="n">available_releases</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+                    <span class="n">dm_aa_er</span> <span class="o">=</span> <span class="n">dm_aa</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">the_er</span><span class="p">)</span>
+                    <span class="n">df_aa</span> <span class="o">=</span> <span class="n">dm_aa_er</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;relationcurrent&quot;</span><span class="p">)</span>
+
+                    <span class="c1"># Attach nodes that has found in the graph and there are form relationships.</span>
+                    <span class="n">bool_filter</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+                    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">form_list</span><span class="p">:</span>
+                        <span class="n">fids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">nn_aa</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">][</span><span class="n">nn_aa</span><span class="p">[</span><span class="s2">&quot;form&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">f</span><span class="p">])</span>
+                        <span class="n">bool_filter</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">bool_filter</span><span class="p">,</span> <span class="n">df_aa</span><span class="p">[</span><span class="n">f</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">fids</span><span class="p">)],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="c1"># Include into the graph if at least one of the gene, transc, transl exist.</span>
+                    <span class="n">bool_filter</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">bool_filter</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+                    <span class="n">df_aa</span> <span class="o">=</span> <span class="n">df_aa</span><span class="p">[</span><span class="n">bool_filter</span><span class="p">]</span>
+
+                    <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">df_aa</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+
+                        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">form_list</span><span class="p">:</span>
+                            <span class="n">anid</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="n">f</span><span class="p">]</span>
+
+                            <span class="k">if</span> <span class="n">anid</span> <span class="ow">and</span> <span class="n">anid</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+                                <span class="n">node_attributes_4</span> <span class="o">=</span> <span class="p">{</span>
+                                    <span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">:</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_assembly</span><span class="p">[</span><span class="n">aa</span><span class="p">][</span><span class="n">f</span><span class="p">],</span>
+                                    <span class="s2">&quot;ID&quot;</span><span class="p">:</span> <span class="n">GraphMaker</span><span class="o">.</span><span class="n">split_id</span><span class="p">(</span><span class="n">anid</span><span class="p">,</span> <span class="s2">&quot;ID&quot;</span><span class="p">),</span>
+                                    <span class="s2">&quot;Version&quot;</span><span class="p">:</span> <span class="n">GraphMaker</span><span class="o">.</span><span class="n">split_id</span><span class="p">(</span><span class="n">anid</span><span class="p">,</span> <span class="s2">&quot;Version&quot;</span><span class="p">),</span>
+                                <span class="p">}</span>
+                                <span class="n">g</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">anid</span><span class="p">,</span> <span class="o">**</span><span class="n">node_attributes_4</span><span class="p">)</span>
+
+                        <span class="k">for</span> <span class="n">e1_str</span><span class="p">,</span> <span class="n">e2_str</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">&quot;transcript&quot;</span><span class="p">,</span> <span class="s2">&quot;gene&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;translation&quot;</span><span class="p">,</span> <span class="s2">&quot;transcript&quot;</span><span class="p">)):</span>
+
+                            <span class="n">new1</span><span class="p">,</span> <span class="n">new2</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="n">e1_str</span><span class="p">],</span> <span class="n">item</span><span class="p">[</span><span class="n">e2_str</span><span class="p">]</span>
+                            <span class="k">if</span> <span class="n">new1</span> <span class="ow">and</span> <span class="n">new2</span><span class="p">:</span>
+                                <span class="k">if</span> <span class="ow">not</span> <span class="n">g</span><span class="o">.</span><span class="n">has_edge</span><span class="p">(</span><span class="n">new1</span><span class="p">,</span> <span class="n">new2</span><span class="p">):</span>
+                                    <span class="n">added_edge</span> <span class="o">+=</span> <span class="mi">1</span>
+                                <span class="n">add_edge</span><span class="p">(</span><span class="n">new1</span><span class="p">,</span> <span class="n">new2</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_assembly</span><span class="p">[</span><span class="n">aa</span><span class="p">][</span><span class="n">e1_str</span><span class="p">],</span> <span class="n">aa</span><span class="p">,</span> <span class="n">the_er</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">added_edge</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;New edges are added between assembly Ensembl nodes: </span><span class="si">{</span><span class="n">added_edge</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Add versionless versions as well</span>
+        <span class="k">if</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;version_info&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;without_version&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Versionless Ensembl IDs are being connected.&quot;</span><span class="p">)</span>
+
+            <span class="n">added_assemblies</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">)</span>
+            <span class="n">avail_assemblies</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">added_assemblies</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">aa</span> <span class="ow">in</span> <span class="n">avail_assemblies</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]:</span>
+                    <span class="c1"># transcript and translation does not have base.</span>
+                    <span class="c1"># It causes the tracking algorithm unnecessarily process too many possibilities.</span>
+                    <span class="k">for</span> <span class="n">er</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">aa</span><span class="p">)</span><span class="o">.</span><span class="n">available_releases</span><span class="p">:</span>
+
+                        <span class="n">db_manager</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">change_form</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">aa</span><span class="p">)</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">er</span><span class="p">)</span>
+
+                        <span class="n">ids_db</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;ids&quot;</span><span class="p">)</span>
+                        <span class="n">ids</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">id_ver_from_df</span><span class="p">(</span><span class="n">ids_db</span><span class="p">)</span>
+
+                        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">ids</span><span class="p">:</span>
+
+                            <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span> <span class="ow">and</span> <span class="n">aa</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">:</span>
+                                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">aa</span><span class="p">,</span> <span class="n">er</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+                            <span class="k">elif</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+                                <span class="k">pass</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">m</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="s2">&quot;ID&quot;</span><span class="p">]</span>
+                                <span class="k">if</span> <span class="n">m</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+                                    <span class="n">node_attributes</span> <span class="o">=</span> <span class="p">{</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">:</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_base_ensembl</span><span class="p">[</span><span class="n">f</span><span class="p">]}</span>
+                                    <span class="n">g</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="o">**</span><span class="n">node_attributes</span><span class="p">)</span>
+
+                                <span class="c1"># Edges are from versionless base ID to ID (with version).</span>
+                                <span class="n">add_edge</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_base_ensembl</span><span class="p">[</span><span class="n">f</span><span class="p">],</span> <span class="n">aa</span><span class="p">,</span> <span class="n">er</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Edges between versionless ID to version ID has been added for &#39;</span><span class="si">{</span><span class="n">f</span><span class="si">}</span><span class="s2">&#39;, assembly </span><span class="si">{</span><span class="n">aa</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;The graph will be constructed with &#39;versionless&#39; IDs. It has not been extensively tested.&quot;</span><span class="p">)</span>
+
+        <span class="n">new_form</span> <span class="o">=</span> <span class="s2">&quot;-&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">form_list</span><span class="p">)</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">ensembl_release</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">new_form</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,)</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_form</span>  <span class="c1"># Need to update this, as &#39;construct_graph_form&#39; puts the form here previously.</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;narrow_external&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">narrow_external</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;misplaced_external_entry&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">misplaced_external_entry</span><span class="p">)</span>
+
+        <span class="c1"># Merge the nodes that are the same when they are convert into lowercase/uppercase.</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_merge_nodes_with_the_same_in_lower_case</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>  <span class="c1"># Separated into a function for reading clarity.</span>
+
+        <span class="k">for</span> <span class="n">e1</span><span class="p">,</span> <span class="n">e2</span><span class="p">,</span> <span class="n">e3</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">edges</span><span class="p">:</span>
+            <span class="n">edge_data</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="n">e1</span><span class="p">,</span> <span class="n">e2</span><span class="p">,</span> <span class="n">e3</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">DB</span><span class="o">.</span><span class="n">connection_dict</span> <span class="ow">in</span> <span class="n">edge_data</span><span class="p">:</span>
+                <span class="n">thed</span> <span class="o">=</span> <span class="n">edge_data</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_dict</span><span class="p">]</span>
+                <span class="n">available_releases</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">thed</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">thed</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">thed</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]}</span>
+                <span class="n">g</span><span class="p">[</span><span class="n">e1</span><span class="p">][</span><span class="n">e2</span><span class="p">][</span><span class="n">e3</span><span class="p">][</span><span class="s2">&quot;available_releases&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">available_releases</span>
+
+        <span class="c1"># TODO: Adding assembly_releases {ass: {rels}} in ensembl_gene as a node attribute.</span>
+        <span class="c1">#   This is to use it in the combined_edges_genes etc.</span>
+        <span class="c1">#   The problem is the assembly_37_ensembl_genes that does not have a external id will not be represented</span>
+        <span class="c1">#   in the graph</span>
+        <span class="c1">#</span>
+        <span class="c1">#   dm=idt.track.db_manager.change_release(100).change_form(&#39;gene&#39;).change_assembly(37)</span>
+        <span class="c1">#   ids_amc_df = dm.get_db(&quot;ids&quot;, save_after_calculation=False)</span>
+        <span class="c1">#   ids_amc=set(dm.id_ver_from_df(ids_amc_df))</span>
+        <span class="c1">#</span>
+        <span class="c1">#   if the id is already present but not assembl_gene -&gt;</span>
+        <span class="c1">#   if the id is not present at all</span>
+        <span class="c1">#   if the id is present as ensembl_gene</span>
+        <span class="c1">#</span>
+        <span class="c1">#   maybe: just create a dict out of this instead [do not edit the nodes graph etc]?</span>
+
+        <span class="k">return</span> <span class="n">g</span></div>
+
+    <span class="k">def</span> <span class="nf">_merge_nodes_with_the_same_in_lower_case</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g</span><span class="p">:</span> <span class="n">TheGraph</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Synonymous external nodes are being merged into one.&quot;</span><span class="p">)</span>
+        <span class="n">before_node_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
+        <span class="c1"># Get the problematic nodes</span>
+        <span class="n">merge_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">intm</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+            <span class="n">jntm</span> <span class="o">=</span> <span class="n">intm</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">jntm</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">merge_dict</span><span class="p">:</span>
+                <span class="n">merge_dict</span><span class="p">[</span><span class="n">jntm</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">intm</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">merge_dict</span><span class="p">[</span><span class="n">jntm</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">intm</span><span class="p">)</span>
+        <span class="n">merge_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">j</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">merge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">}</span>
+        <span class="c1"># Merge them separately</span>
+
+        <span class="n">reverse_g</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">reverse</span><span class="p">(</span><span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">_lower_name</span><span class="p">,</span> <span class="n">merge_list</span> <span class="ow">in</span> <span class="n">merge_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
+            <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">m</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_external</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">merge_list</span><span class="p">]):</span>
+                <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;The method is only for &#39;external&#39; nodes.&quot;</span><span class="p">)</span>
+
+            <span class="n">all_out_edges</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">merge_list</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">[</span><span class="n">m</span><span class="p">][</span><span class="n">n</span><span class="p">])</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span>  <span class="c1"># Make sure it is allowed to use &#39;0&#39; below.</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">all_out_edges</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+            <span class="c1"># Merge the edge attributes, if the target is the same</span>
+            <span class="n">distiled_out</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">edge_key</span> <span class="ow">in</span> <span class="n">all_out_edges</span><span class="p">:</span>
+                <span class="n">target_node</span> <span class="o">=</span> <span class="n">edge_key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">edge_data</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">edges</span><span class="p">[</span><span class="n">edge_key</span><span class="p">]</span>
+
+                <span class="k">if</span> <span class="n">target_node</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">distiled_out</span><span class="p">:</span>
+                    <span class="n">distiled_out</span><span class="p">[</span><span class="n">target_node</span><span class="p">]</span> <span class="o">=</span> <span class="n">edge_data</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">distiled_out</span><span class="p">[</span><span class="n">target_node</span><span class="p">]:</span>  <span class="c1"># Go over attributes to update</span>
+
+                        <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">connection_dict</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The method is only for certain edge attributes&#39;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
+
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">for</span> <span class="n">edi_db</span> <span class="ow">in</span> <span class="n">edge_data</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>  <span class="c1"># {edi_db: {edi_ass: set()}}</span>
+                                <span class="k">if</span> <span class="n">edi_db</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">distiled_out</span><span class="p">[</span><span class="n">target_node</span><span class="p">][</span><span class="n">i</span><span class="p">]:</span>
+                                    <span class="n">distiled_out</span><span class="p">[</span><span class="n">target_node</span><span class="p">][</span><span class="n">i</span><span class="p">][</span><span class="n">edi_db</span><span class="p">]</span> <span class="o">=</span> <span class="n">edge_data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">edi_db</span><span class="p">]</span>
+                                <span class="k">else</span><span class="p">:</span>
+                                    <span class="k">for</span> <span class="n">edi_ass</span> <span class="ow">in</span> <span class="n">edge_data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">edi_db</span><span class="p">]:</span>
+                                        <span class="k">if</span> <span class="n">edi_ass</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">distiled_out</span><span class="p">[</span><span class="n">target_node</span><span class="p">][</span><span class="n">i</span><span class="p">][</span><span class="n">edi_db</span><span class="p">]:</span>
+                                            <span class="n">distiled_out</span><span class="p">[</span><span class="n">target_node</span><span class="p">][</span><span class="n">i</span><span class="p">][</span><span class="n">edi_db</span><span class="p">][</span><span class="n">edi_ass</span><span class="p">]</span> <span class="o">=</span> <span class="n">edge_data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">edi_db</span><span class="p">][</span>
+                                                <span class="n">edi_ass</span>
+                                            <span class="p">]</span>
+                                        <span class="k">else</span><span class="p">:</span>  <span class="c1"># Then, merge the releases</span>
+                                            <span class="n">distiled_out</span><span class="p">[</span><span class="n">target_node</span><span class="p">][</span><span class="n">i</span><span class="p">][</span><span class="n">edi_db</span><span class="p">][</span><span class="n">edi_ass</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                                                <span class="n">distiled_out</span><span class="p">[</span><span class="n">target_node</span><span class="p">][</span><span class="n">i</span><span class="p">][</span><span class="n">edi_db</span><span class="p">][</span><span class="n">edi_ass</span><span class="p">]</span>
+                                                <span class="o">|</span> <span class="n">edge_data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">edi_db</span><span class="p">][</span><span class="n">edi_ass</span><span class="p">]</span>
+                                            <span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">merge_list</span><span class="p">:</span>  <span class="c1"># all_in_edges = list()</span>
+                <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">reverse_g</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">reverse_g</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="n">m</span><span class="p">])</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span>  <span class="c1"># Make sure it is allowed to use &#39;0&#39; below.</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;External nodes should always have edges going out, not going in.&quot;</span><span class="p">)</span>
+                        <span class="c1"># all_in_edges.append((n, m, 0))  # edge key for forward graph (not reverse)</span>
+
+            <span class="n">merged_node_attributes</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">merge_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">merge_list</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+                <span class="n">node_att</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">m</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">na</span> <span class="ow">in</span> <span class="n">node_att</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">na</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">merged_node_attributes</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span>
+                    <span class="k">elif</span> <span class="n">na</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span> <span class="ow">and</span> <span class="n">merged_node_attributes</span><span class="p">[</span><span class="n">na</span><span class="p">]</span> <span class="o">==</span> <span class="n">node_att</span><span class="p">[</span><span class="n">na</span><span class="p">]:</span>
+                        <span class="k">pass</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+            <span class="c1"># Find new correct name, the one with most edges or most upper case elements is winner,</span>
+            <span class="n">correct_name_scorer</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+                <span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">m</span><span class="p">))),</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">reverse_g</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">m</span><span class="p">))),</span>
+                    <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">m</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">string</span><span class="o">.</span><span class="n">ascii_uppercase</span><span class="p">),</span>
+                    <span class="n">m</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">merge_list</span>
+            <span class="p">)</span>
+            <span class="n">correct_name</span> <span class="o">=</span> <span class="n">correct_name_scorer</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># the best one, &#39;-1&#39; is as the last element is ID</span>
+
+            <span class="c1"># remove nodes and all associated edges</span>
+            <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">merge_list</span><span class="p">:</span>
+                <span class="n">g</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+
+            <span class="n">g</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">correct_name</span><span class="p">,</span> <span class="o">**</span><span class="n">merged_node_attributes</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">distiled_out</span><span class="p">:</span>
+                <span class="n">g</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">correct_name</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">**</span><span class="n">distiled_out</span><span class="p">[</span><span class="n">target</span><span class="p">])</span>
+
+        <span class="n">removed_node_count</span> <span class="o">=</span> <span class="n">before_node_count</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">removed_node_count</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Number of removed nodes in the process of merging synonymous nodes: </span><span class="si">{</span><span class="n">removed_node_count</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">g</span>
+
+<div class="viewcode-block" id="GraphMaker.construct_graph_form"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.construct_graph_form">[docs]</a>    <span class="k">def</span> <span class="nf">construct_graph_form</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">narrow</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">db_manager</span><span class="p">:</span> <span class="n">DatabaseManager</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TheGraph</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Creates a graph with connected nodes based on historical relationships between each Ensembl IDs.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            narrow: See parameter in :py:attr:`Graph.construct_graph.narrow`</span>
+<span class="sd">            db_manager: The method reads ID history dataframe, and Ensembl IDs lists at each Ensembl release,</span>
+<span class="sd">                provided by ``DatabaseManager``.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Resultant multi edge directed graph.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: Unexpected error.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">ms_creator</span><span class="p">():</span>
+            <span class="c1"># Download the mapping session table from MYSQL server</span>
+            <span class="n">df_ms</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">get_table</span><span class="p">(</span><span class="s2">&quot;mapping_session&quot;</span><span class="p">,</span> <span class="n">save_after_calculation</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># not a raw indeed</span>
+
+            <span class="c1"># The downloaded column type for old and new release is string, convert them into float.</span>
+            <span class="c1"># Note that due to some early versions like 18.2, converting to int here is not recommended.</span>
+            <span class="n">df_ms</span><span class="p">[</span><span class="s2">&quot;new_release&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_ms</span><span class="p">[</span><span class="s2">&quot;new_release&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+            <span class="n">df_ms</span><span class="p">[</span><span class="s2">&quot;old_release&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_ms</span><span class="p">[</span><span class="s2">&quot;old_release&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+            <span class="c1"># Make sure there is only one to many</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">df_ms</span><span class="p">[</span><span class="s2">&quot;new_release&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Multiple rows in &#39;mapping_session&#39; for one &#39;new_release&#39;.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">df_ms</span>
+
+        <span class="k">def</span> <span class="nf">edge_attribute_maker</span><span class="p">(</span><span class="n">the_edge_old_rel</span><span class="p">,</span> <span class="n">the_edge_new_rel</span><span class="p">,</span> <span class="n">weight</span><span class="p">):</span>
+            <span class="c1"># Initialize the dictionary for edge attributes.</span>
+            <span class="n">the_ea</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;weight&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">weight</span><span class="p">),</span>
+                <span class="s2">&quot;old_release&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">the_edge_old_rel</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">the_edge_old_rel</span><span class="p">)</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>
+                <span class="s2">&quot;new_release&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">the_edge_new_rel</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">the_edge_new_rel</span><span class="p">)</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>
+            <span class="p">}</span>
+
+            <span class="c1"># If some additional information is requested for the edge attributes, get them from ms dataframe.</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">narrow</span><span class="p">:</span>
+                <span class="n">mss</span> <span class="o">=</span> <span class="n">ms</span><span class="p">[(</span><span class="n">ms</span><span class="p">[</span><span class="s2">&quot;new_release&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">the_edge_new_rel</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">ms</span><span class="p">[</span><span class="s2">&quot;old_release&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">the_edge_old_rel</span><span class="p">)]</span>
+
+                <span class="c1"># If there is one row corresponding to new_release and old_release.</span>
+                <span class="k">if</span> <span class="n">mss</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">mss</span> <span class="o">=</span> <span class="n">mss</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">the_ea</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                        <span class="p">{</span>
+                            <span class="s2">&quot;mapping_session_id&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">mss</span><span class="p">[</span><span class="s2">&quot;mapping_session_id&quot;</span><span class="p">]),</span>
+                            <span class="s2">&quot;created&quot;</span><span class="p">:</span> <span class="n">mss</span><span class="p">[</span><span class="s2">&quot;created&quot;</span><span class="p">],</span>
+                            <span class="s2">&quot;old_db_name&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">mss</span><span class="p">[</span><span class="s2">&quot;old_db_name&quot;</span><span class="p">]),</span>
+                            <span class="s2">&quot;old_assembly&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">mss</span><span class="p">[</span><span class="s2">&quot;old_assembly&quot;</span><span class="p">]),</span>
+                            <span class="s2">&quot;new_db_name&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">mss</span><span class="p">[</span><span class="s2">&quot;new_db_name&quot;</span><span class="p">]),</span>
+                            <span class="s2">&quot;new_assembly&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">mss</span><span class="p">[</span><span class="s2">&quot;new_assembly&quot;</span><span class="p">]),</span>
+                        <span class="p">}</span>
+                    <span class="p">)</span>
+
+                <span class="c1"># If there is no row corresponding to new_release and old_release.</span>
+                <span class="k">elif</span> <span class="n">mss</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">the_ea</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                        <span class="p">{</span>
+                            <span class="n">_ea</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+                            <span class="k">for</span> <span class="n">_ea</span> <span class="ow">in</span> <span class="p">[</span>
+                                <span class="s2">&quot;mapping_session_id&quot;</span><span class="p">,</span>
+                                <span class="s2">&quot;created&quot;</span><span class="p">,</span>
+                                <span class="s2">&quot;old_db_name&quot;</span><span class="p">,</span>
+                                <span class="s2">&quot;old_assembly&quot;</span><span class="p">,</span>
+                                <span class="s2">&quot;new_db_name&quot;</span><span class="p">,</span>
+                                <span class="s2">&quot;new_assembly&quot;</span><span class="p">,</span>
+                            <span class="p">]</span>
+                        <span class="p">}</span>
+                    <span class="p">)</span>
+
+                <span class="c1"># Otherwise, just raise an error.</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Multiple rows in &#39;mapping_session&#39; for &#39;new_release&#39; of </span><span class="si">{</span><span class="n">the_edge_new_rel</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">the_ea</span>
+
+        <span class="k">def</span> <span class="nf">find_edge_score</span><span class="p">(</span><span class="n">lookup_cols_tuple</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>  <span class="c1"># try to find row corresponding to input multiindex, lookup_cols_tuple.</span>
+                <span class="k">return</span> <span class="n">df_w</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">lookup_cols_tuple</span><span class="p">][</span><span class="s2">&quot;score&quot;</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>  <span class="c1"># If no row is found, then the edge score is not known.</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="k">def</span> <span class="nf">find_last_loop_release</span><span class="p">(</span><span class="n">lookup_cols_tuple</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>  <span class="c1"># try to find row corresponding to input multiindex, lookup_cols_tuple.</span>
+                <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">lookup_cols_tuple</span><span class="p">][</span><span class="s2">&quot;new_release&quot;</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>  <span class="c1"># Otherwise, just put None</span>
+                <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="k">def</span> <span class="nf">edge_maker_pipe</span><span class="p">(</span><span class="n">id_1</span><span class="p">,</span> <span class="n">ver_1</span><span class="p">,</span> <span class="n">id_2</span><span class="p">,</span> <span class="n">ver_2</span><span class="p">,</span> <span class="n">rel_1</span><span class="p">,</span> <span class="n">rel_2</span><span class="p">,</span> <span class="n">the_weight</span><span class="p">):</span>
+            <span class="c1"># First create a dictionary for the node attributes</span>
+            <span class="n">node_att_1</span> <span class="o">=</span> <span class="n">DatabaseManager</span><span class="o">.</span><span class="n">node_dict_maker</span><span class="p">(</span><span class="n">id_1</span><span class="p">,</span> <span class="n">ver_1</span><span class="p">)</span>
+            <span class="n">node_att_2</span> <span class="o">=</span> <span class="n">DatabaseManager</span><span class="o">.</span><span class="n">node_dict_maker</span><span class="p">(</span><span class="n">id_2</span><span class="p">,</span> <span class="n">ver_2</span><span class="p">)</span>
+            <span class="c1"># Create a node name based on the node attributes.</span>
+            <span class="n">node_1</span> <span class="o">=</span> <span class="n">DatabaseManager</span><span class="o">.</span><span class="n">node_name_maker</span><span class="p">(</span><span class="n">node_att_1</span><span class="p">)</span>
+            <span class="n">node_2</span> <span class="o">=</span> <span class="n">DatabaseManager</span><span class="o">.</span><span class="n">node_name_maker</span><span class="p">(</span><span class="n">node_att_2</span><span class="p">)</span>
+            <span class="c1"># Create edge attributes using the</span>
+            <span class="n">edge_a</span> <span class="o">=</span> <span class="n">edge_attribute_maker</span><span class="p">(</span><span class="n">rel_1</span><span class="p">,</span> <span class="n">rel_2</span><span class="p">,</span> <span class="n">the_weight</span><span class="p">)</span>  <span class="c1"># old==new</span>
+            <span class="n">g</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">node_1</span><span class="p">,</span> <span class="n">node_2</span><span class="p">,</span> <span class="o">**</span><span class="n">edge_a</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Graph is being created: </span><span class="si">{</span><span class="n">db_manager</span><span class="o">.</span><span class="n">form</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Initialize important variables</span>
+        <span class="n">ms</span> <span class="o">=</span> <span class="n">ms_creator</span><span class="p">()</span>
+        <span class="n">version_info</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">check_version_info</span><span class="p">()</span>
+        <span class="n">_available_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">)</span>
+        <span class="c1"># Create the ID history information from ensembl sources</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="n">df_indicator</span><span class="o">=</span><span class="s2">&quot;idhistory_narrow&quot;</span> <span class="k">if</span> <span class="n">narrow</span> <span class="k">else</span> <span class="s2">&quot;idhistory&quot;</span><span class="p">)</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;old_stable_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;old_stable_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>  <span class="c1"># Convert back to np.nan</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;new_stable_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;new_stable_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+        <span class="c1"># No need to check whether DB.id_ver_delimiter is in the version or ID name. As the methods used to fetch the</span>
+        <span class="c1"># data already controls that.</span>
+
+        <span class="c1"># Split the created edge connection data info two: df, df_w</span>
+        <span class="n">min_available</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">version_info</span> <span class="o">==</span> <span class="s2">&quot;without_version&quot;</span><span class="p">:</span>
+            <span class="n">graph_down_bool</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="p">(</span>
+                    <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;new_stable_id&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;old_stable_id&quot;</span><span class="p">])</span>  <span class="c1"># keep branches or</span>
+                    <span class="o">|</span> <span class="p">(</span>
+                        <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;new_stable_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;old_stable_id&quot;</span><span class="p">])</span>  <span class="c1"># keep self loops</span>
+                        <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;score&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1.0</span><span class="p">)</span>
+                    <span class="p">)</span>  <span class="c1"># as it would not change anything</span>
+                <span class="p">)</span>
+                <span class="o">&amp;</span> <span class="o">~</span><span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;old_stable_id&quot;</span><span class="p">])</span>  <span class="c1"># no void entry</span>
+                <span class="o">&amp;</span> <span class="o">~</span><span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;new_stable_id&quot;</span><span class="p">])</span>  <span class="c1"># no retirement entry</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;old_release&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">min_available</span><span class="p">)</span>
+            <span class="p">)</span>  <span class="c1"># ignore before available.</span>
+            <span class="n">weight_down_bool</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span> <span class="kc">False</span><span class="p">)</span>  <span class="c1"># Zero the same id event exists</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">common_down_bool</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="o">~</span><span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;old_stable_id&quot;</span><span class="p">])</span>  <span class="c1"># no void entry</span>
+                <span class="o">&amp;</span> <span class="o">~</span><span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;new_stable_id&quot;</span><span class="p">])</span>  <span class="c1"># no retirement entry</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;new_version&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># remove 0 versions: like the ones ASMPATCHG00000000170.0</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;old_version&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="c1"># ignore before available.</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;old_release&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">min_available</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">graph_down_bool</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;new_stable_id&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;old_stable_id&quot;</span><span class="p">])</span>  <span class="c1"># keep branches or</span>
+                <span class="o">|</span> <span class="p">(</span>
+                    <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;new_stable_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;old_stable_id&quot;</span><span class="p">])</span>
+                    <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;new_version&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;old_version&quot;</span><span class="p">])</span>  <span class="c1"># keep self loops</span>
+                    <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;score&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1.0</span><span class="p">)</span>
+                <span class="p">)</span>  <span class="c1"># as it would not change anything</span>
+            <span class="p">)</span> <span class="o">&amp;</span> <span class="n">common_down_bool</span>
+            <span class="n">weight_down_bool</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="p">(</span>
+                    <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;new_stable_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;old_stable_id&quot;</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;new_version&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;old_version&quot;</span><span class="p">])</span>
+                <span class="p">)</span>  <span class="c1"># keep the same id events, no self loops</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="o">~</span><span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;score&quot;</span><span class="p">]))</span>  <span class="c1"># no undefined score</span>
+                <span class="o">&amp;</span> <span class="n">common_down_bool</span>
+            <span class="p">)</span>
+
+        <span class="c1"># First dataframe will be a one that will be used to fetch edge weight later in the process.</span>
+        <span class="n">df_w</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">weight_down_bool</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">lookup_columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;old_stable_id&quot;</span><span class="p">,</span> <span class="s2">&quot;old_version&quot;</span><span class="p">,</span> <span class="s2">&quot;new_stable_id&quot;</span><span class="p">,</span> <span class="s2">&quot;new_version&quot;</span><span class="p">]</span>
+        <span class="n">duplicated_dw_w_bool</span> <span class="o">=</span> <span class="n">df_w</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">lookup_columns</span><span class="p">,</span> <span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">duplicated_dw_w</span> <span class="o">=</span> <span class="n">df_w</span><span class="p">[</span><span class="n">duplicated_dw_w_bool</span><span class="p">]</span>  <span class="c1"># ignore those! this is actually a silly mistake by annotators.</span>
+        <span class="n">df_w</span> <span class="o">=</span> <span class="n">df_w</span><span class="p">[</span><span class="o">~</span><span class="n">duplicated_dw_w_bool</span><span class="p">]</span>
+        <span class="n">df_w</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="n">lookup_columns</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verify_integrity</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">df_w</span><span class="o">.</span><span class="n">sort_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">duplicated_dw_w</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Edge weights ignored due to duplicate entries: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">duplicated_dw_w</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="c1"># Second dataframe will be directly used to add nodes.</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">graph_down_bool</span><span class="p">]</span>
+
+        <span class="n">g</span> <span class="o">=</span> <span class="n">TheGraph</span><span class="p">(</span>  <span class="c1"># because of multiple self loops of some nodes</span>
+            <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">db_manager</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">db_manager</span><span class="o">.</span><span class="n">ensembl_release</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">db_manager</span><span class="o">.</span><span class="n">form</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="nb">type</span><span class="o">=</span><span class="n">db_manager</span><span class="o">.</span><span class="n">form</span><span class="p">,</span>
+            <span class="n">ensembl_release</span><span class="o">=</span><span class="n">db_manager</span><span class="o">.</span><span class="n">ensembl_release</span><span class="p">,</span>
+            <span class="n">genome_assembly</span><span class="o">=</span><span class="n">db_manager</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">,</span>
+            <span class="n">organism</span><span class="o">=</span><span class="n">db_manager</span><span class="o">.</span><span class="n">organism</span><span class="p">,</span>
+            <span class="n">confident_for_release</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">,</span>
+            <span class="n">version_info</span><span class="o">=</span><span class="n">version_info</span><span class="p">,</span>
+            <span class="n">narrow</span><span class="o">=</span><span class="n">narrow</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Edges between across different IDs and self loops are being added.&quot;</span><span class="p">)</span>
+        <span class="c1"># Add each row in the filtered dataframe as an edge between two nodes.</span>
+        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+            <span class="c1"># Make sure old and new releases are integers (available releases can be only integer), and also one of the</span>
+            <span class="c1"># defined available release for the given organism.</span>
+            <span class="n">_or</span><span class="p">,</span> <span class="n">_nr</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;old_release&quot;</span><span class="p">]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;new_release&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">_or</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_available_set</span> <span class="ow">or</span> <span class="n">_nr</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_available_set</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span>
+
+            <span class="c1"># Create the edge using the pipe function.</span>
+            <span class="n">edge_maker_pipe</span><span class="p">(</span>
+                <span class="n">id_1</span><span class="o">=</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;old_stable_id&quot;</span><span class="p">],</span>
+                <span class="n">ver_1</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;old_version&quot;</span><span class="p">]),</span>
+                <span class="n">id_2</span><span class="o">=</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;new_stable_id&quot;</span><span class="p">],</span>
+                <span class="n">ver_2</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;new_version&quot;</span><span class="p">]),</span>
+                <span class="n">rel_1</span><span class="o">=</span><span class="n">_or</span><span class="p">,</span>
+                <span class="n">rel_2</span><span class="o">=</span><span class="n">_nr</span><span class="p">,</span>
+                <span class="n">the_weight</span><span class="o">=</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;score&quot;</span><span class="p">],</span>
+            <span class="p">)</span>
+
+        <span class="c1"># As we do not need df dataframe anymore, transform it into a new format to be used for other purpose.</span>
+        <span class="c1"># It will be used in find_last_loop_release function later in the process.</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s2">&quot;old_release&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="c1"># Sort the df so that the highest old_release is at the top</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="n">lookup_columns</span><span class="p">,</span> <span class="n">keep</span><span class="o">=</span><span class="s2">&quot;first&quot;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># Remove everything except the highest old release.</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="n">lookup_columns</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verify_integrity</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">sort_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># Convert the df into multiindex</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Edges between the same IDs are being added.&quot;</span><span class="p">)</span>
+        <span class="c1"># Initialize some temporary variables</span>
+        <span class="n">re_d_prev</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">re_prev_rel</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">ll_re</span><span class="p">:</span> <span class="nb">zip</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="nb">set</span><span class="p">(),</span> <span class="n">itertools</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="kc">True</span><span class="p">))</span>
+        <span class="c1"># Get the latest release IDs to create following variables and also to label some nodes as latest at the end.</span>
+        <span class="n">latest_rel_ids_df</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;ids&quot;</span><span class="p">,</span> <span class="n">save_after_calculation</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">latest_release_ids</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">db_manager</span><span class="o">.</span><span class="n">id_ver_from_df</span><span class="p">(</span><span class="n">latest_rel_ids_df</span><span class="p">))</span>
+        <span class="c1"># These will be used to get the latest possible ID.Versions&#39; latest definition in the database.</span>
+        <span class="n">latest_nodes_last_rel_from_db</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">DatabaseManager</span><span class="o">.</span><span class="n">node_name_maker</span><span class="p">(</span><span class="n">DatabaseManager</span><span class="o">.</span><span class="n">node_dict_maker</span><span class="p">(</span><span class="n">i_id</span><span class="p">,</span> <span class="n">i_ver</span><span class="p">)):</span> <span class="n">find_last_loop_release</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">i_id</span><span class="p">,</span> <span class="n">i_ver</span><span class="p">,</span> <span class="n">i_id</span><span class="p">,</span> <span class="n">i_ver</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="p">(</span><span class="n">i_id</span><span class="p">,</span> <span class="n">i_ver</span><span class="p">)</span> <span class="ow">in</span> <span class="n">latest_rel_ids_df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()</span>
+        <span class="p">}</span>
+        <span class="c1"># Get the information from the df, created above. Basically because sometimes, the last ID.Version redefined,</span>
+        <span class="c1"># so self-loops are created. This is just to keep track of these self-loops when finding the latest</span>
+        <span class="c1"># redefinition of the latest release IDs.</span>
+        <span class="n">latest_nodes_last_rel</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">latest_release_ids</span><span class="p">}</span>
+        <span class="n">latest_nodes_last_rel_locked</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="kc">False</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">latest_release_ids</span><span class="p">}</span>
+        <span class="c1"># Some entities are retired and then refined in a later release, these are to keep track of them.</span>
+        <span class="n">void_added</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">reassignment_retirement</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># First, follow each release in reversed direction.</span>
+        <span class="c1"># This loop aims to add edges between &#39;the-same-ID different-version&#39; couples.</span>
+        <span class="c1"># Also, finds the first appearance of an ID, and adds DB.no_old_node_id to ID.</span>
+        <span class="c1"># When an ID disappears and then reappears the graph structure should be consistent. In these cases, we</span>
+        <span class="c1"># add an edge between Retired-to-ID. This loop also aims to find this re-appearance issues.</span>
+        <span class="k">for</span> <span class="n">ind_re</span><span class="p">,</span> <span class="n">rel_re</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">)):</span>
+            <span class="c1"># Create a DatabaseManager object with the release of interest.</span>
+            <span class="n">rel_db_re</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">rel_re</span><span class="p">)</span>
+
+            <span class="c1"># Get the IDs and create a dictionary from ID to Version.</span>
+            <span class="n">ids_re</span> <span class="o">=</span> <span class="n">rel_db_re</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;ids&quot;</span><span class="p">,</span> <span class="n">save_after_calculation</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">re_d</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">j</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">ids_re</span><span class="o">.</span><span class="n">values</span><span class="p">}</span>
+
+            <span class="c1"># This block should be inspected by the reader together with the last lines of this for loop.</span>
+            <span class="c1"># Get the IDs which was present in later release but not here, so there is birth of an ID.</span>
+            <span class="n">new_void_id_candidates</span> <span class="o">=</span> <span class="n">re_d_prev</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">-</span> <span class="n">re_d</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>  <span class="c1"># void-3</span>
+            <span class="c1"># If ID is common in two consecutive releases..</span>
+            <span class="n">intersecting_ids</span> <span class="o">=</span> <span class="n">re_d_prev</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">re_d</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+            <span class="c1"># then, get the IDs with different versions to add an edge in between.</span>
+            <span class="n">new_version_edge_candidates</span> <span class="o">=</span> <span class="p">{</span><span class="n">ii</span> <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="n">intersecting_ids</span> <span class="k">if</span> <span class="n">re_d_prev</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">!=</span> <span class="n">re_d</span><span class="p">[</span><span class="n">ii</span><span class="p">]}</span>
+            <span class="c1"># Ff the versions are also the same, keep them as additional elements in the next loops &#39;re_d_prev&#39;</span>
+            <span class="n">extend_backwards_candidates</span> <span class="o">=</span> <span class="p">{</span><span class="n">ii</span><span class="p">:</span> <span class="n">re_d</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="n">intersecting_ids</span> <span class="k">if</span> <span class="n">re_d_prev</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">==</span> <span class="n">re_d</span><span class="p">[</span><span class="n">ii</span><span class="p">]}</span>
+
+            <span class="c1"># In this block, the ID.Versions at latest release is checked. The aim is to find the first appearance</span>
+            <span class="c1"># of an ID.Versions at latest release. The dictionary created here will be used later in the process.</span>
+            <span class="n">ids_re_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">rel_db_re</span><span class="o">.</span><span class="n">id_ver_from_df</span><span class="p">(</span><span class="n">ids_re</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">lat_id</span> <span class="ow">in</span> <span class="n">latest_nodes_last_rel</span><span class="p">:</span>  <span class="c1"># Run the loop for latest release IDs only, not of this iteration.</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">latest_nodes_last_rel_locked</span><span class="p">[</span><span class="n">lat_id</span><span class="p">]</span> <span class="ow">and</span> <span class="n">lat_id</span> <span class="ow">in</span> <span class="n">ids_re_set</span><span class="p">:</span>
+                    <span class="n">from_db</span> <span class="o">=</span> <span class="n">latest_nodes_last_rel_from_db</span><span class="p">[</span><span class="n">lat_id</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">from_db</span> <span class="ow">and</span> <span class="n">from_db</span> <span class="o">&gt;</span> <span class="n">rel_re</span><span class="p">:</span>
+                        <span class="n">latest_nodes_last_rel_locked</span><span class="p">[</span><span class="n">lat_id</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+                        <span class="c1"># Self loops can be further defined after the first appearance of the latest_id, so keep the</span>
+                        <span class="c1"># last possible old_release to use afterwards.</span>
+                        <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">from_db</span><span class="p">)</span> <span class="o">!=</span> <span class="n">from_db</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="ne">ValueError</span>
+                        <span class="n">latest_nodes_last_rel</span><span class="p">[</span><span class="n">lat_id</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">from_db</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">latest_nodes_last_rel</span><span class="p">[</span><span class="n">lat_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">rel_re</span>
+                <span class="c1"># If &#39;lat_id not in ids_re_set&#39; but a release is previously associated, then the ID-Version is edge is</span>
+                <span class="c1"># here, so ignore this ID afterwards</span>
+                <span class="k">elif</span> <span class="n">latest_nodes_last_rel</span><span class="p">[</span><span class="n">lat_id</span><span class="p">]</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>  <span class="c1"># and lat_id not in ids_re_set</span>
+                    <span class="n">latest_nodes_last_rel_locked</span><span class="p">[</span><span class="n">lat_id</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+
+            <span class="c1"># When an ID is redefined after with a new version, then add this information as a new edge.</span>
+            <span class="k">for</span> <span class="n">nvec</span> <span class="ow">in</span> <span class="n">new_version_edge_candidates</span><span class="p">:</span>
+                <span class="c1"># Get the edge score using the dataframe created before.</span>
+                <span class="n">check_edge_score</span> <span class="o">=</span> <span class="p">(</span><span class="n">nvec</span><span class="p">,</span> <span class="n">re_d</span><span class="p">[</span><span class="n">nvec</span><span class="p">],</span> <span class="n">nvec</span><span class="p">,</span> <span class="n">re_d_prev</span><span class="p">[</span><span class="n">nvec</span><span class="p">])</span>
+                <span class="c1"># Create the edge using the pipe function.</span>
+                <span class="n">edge_maker_pipe</span><span class="p">(</span>
+                    <span class="n">id_1</span><span class="o">=</span><span class="n">nvec</span><span class="p">,</span>
+                    <span class="n">ver_1</span><span class="o">=</span><span class="n">re_d</span><span class="p">[</span><span class="n">nvec</span><span class="p">],</span>
+                    <span class="n">id_2</span><span class="o">=</span><span class="n">nvec</span><span class="p">,</span>
+                    <span class="n">ver_2</span><span class="o">=</span><span class="n">re_d_prev</span><span class="p">[</span><span class="n">nvec</span><span class="p">],</span>
+                    <span class="n">rel_1</span><span class="o">=</span><span class="n">rel_re</span><span class="p">,</span>
+                    <span class="n">rel_2</span><span class="o">=</span><span class="n">re_prev_rel</span><span class="p">,</span>
+                    <span class="n">the_weight</span><span class="o">=</span><span class="n">find_edge_score</span><span class="p">(</span><span class="n">check_edge_score</span><span class="p">),</span>
+                <span class="p">)</span>
+
+            <span class="c1"># In the last iteration of this loop, dump every ID in current rel, including the ones possibly</span>
+            <span class="c1"># postponed adding for a long time as a member of &#39;extend_backwards_candidates&#39;.</span>
+            <span class="k">if</span> <span class="n">ind_re</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">ll_re</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="n">re_d</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">itertools</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="kc">True</span><span class="p">))</span>  <span class="c1"># dump everything</span>
+
+            <span class="k">for</span> <span class="n">nvic</span><span class="p">,</span> <span class="n">is_ll_re</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">new_void_id_candidates</span><span class="p">,</span> <span class="n">itertools</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="kc">False</span><span class="p">)),</span> <span class="n">ll_re</span><span class="p">):</span>
+                <span class="c1"># Note that if an ID branched out (in reverse direction) while losing itself, this loop also</span>
+                <span class="c1"># treats them as a birth.</span>
+
+                <span class="c1"># Since last iteration dumping event has to have a different old and new release (which is the same)</span>
+                <span class="n">version_this_case</span> <span class="o">=</span> <span class="n">re_d_prev</span><span class="p">[</span><span class="n">nvic</span><span class="p">]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">is_ll_re</span> <span class="k">else</span> <span class="n">re_d</span><span class="p">[</span><span class="n">nvic</span><span class="p">]</span>
+                <span class="n">rel1_this_case</span> <span class="o">=</span> <span class="n">rel_re</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">is_ll_re</span> <span class="k">else</span> <span class="n">rel_re</span>
+                <span class="n">rel2_this_case</span> <span class="o">=</span> <span class="n">re_prev_rel</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">is_ll_re</span> <span class="k">else</span> <span class="n">rel_re</span>
+
+                <span class="c1"># Sometimes (for example, for homo sapiens at release 105 for following genes: &quot;LRG_1170&quot;, &quot;LRG_170&quot;,</span>
+                <span class="c1"># &quot;LRG_131&quot;, &quot;LRG_143&quot;, &quot;LRG_166&quot;, &quot;LRG_167&quot;), two birth is associated with the same ID. However, this</span>
+                <span class="c1"># breaks the graphs edge structure. This block following kind of issues:</span>
+                <span class="c1"># from-[Void-1-2-Retired, Void-1-2-3] fixes-as-[Void-1-2-Retired-1-2-3].</span>
+                <span class="c1"># This help us to follow the edges any problem in the recursive path finder method of this class.</span>
+                <span class="k">if</span> <span class="n">nvic</span> <span class="ow">in</span> <span class="n">void_added</span><span class="p">:</span>  <span class="c1"># If there is a birth defined for this ID</span>
+                    <span class="c1"># Get the data of it and remove from the dictionary as it will be fixed here.</span>
+                    <span class="n">rel1_come_alive</span><span class="p">,</span> <span class="n">rel2_come_alive</span><span class="p">,</span> <span class="n">version_for_come_alive</span> <span class="o">=</span> <span class="n">void_added</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">nvic</span><span class="p">)</span>
+                    <span class="c1"># Remove the previously added birth edge</span>
+                    <span class="n">g</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span>
+                        <span class="n">key</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>  <span class="c1"># as there is only one edge</span>
+                        <span class="n">u</span><span class="o">=</span><span class="n">DatabaseManager</span><span class="o">.</span><span class="n">node_name_maker</span><span class="p">(</span><span class="n">DatabaseManager</span><span class="o">.</span><span class="n">node_dict_maker</span><span class="p">(</span><span class="n">nvic</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">no_old_node_id</span><span class="p">)),</span>
+                        <span class="n">v</span><span class="o">=</span><span class="n">DatabaseManager</span><span class="o">.</span><span class="n">node_name_maker</span><span class="p">(</span>
+                            <span class="n">DatabaseManager</span><span class="o">.</span><span class="n">node_dict_maker</span><span class="p">(</span><span class="n">nvic</span><span class="p">,</span> <span class="n">version_for_come_alive</span><span class="p">)</span>
+                        <span class="p">),</span>
+                    <span class="p">)</span>
+                    <span class="c1"># Instead, add an edge from Retired to ID with the same edge attributes</span>
+                    <span class="n">edge_maker_pipe</span><span class="p">(</span>
+                        <span class="n">id_1</span><span class="o">=</span><span class="n">nvic</span><span class="p">,</span>
+                        <span class="n">ver_1</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">no_new_node_id</span><span class="p">,</span>
+                        <span class="n">id_2</span><span class="o">=</span><span class="n">nvic</span><span class="p">,</span>
+                        <span class="n">ver_2</span><span class="o">=</span><span class="n">version_for_come_alive</span><span class="p">,</span>
+                        <span class="n">rel_1</span><span class="o">=</span><span class="n">rel1_come_alive</span><span class="p">,</span>
+                        <span class="n">rel_2</span><span class="o">=</span><span class="n">rel2_come_alive</span><span class="p">,</span>
+                        <span class="n">the_weight</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="n">reassignment_retirement</span> <span class="o">+=</span> <span class="mi">1</span>  <span class="c1"># Count to report at the end.</span>
+                <span class="c1"># As birth is associated with the ID, then add it into the dictionary for above block.</span>
+                <span class="n">void_added</span><span class="p">[</span><span class="n">nvic</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">rel1_this_case</span><span class="p">,</span> <span class="n">rel2_this_case</span><span class="p">,</span> <span class="n">version_this_case</span><span class="p">)</span>
+
+                <span class="c1"># Create the edge using the pipe function.</span>
+                <span class="n">edge_maker_pipe</span><span class="p">(</span>
+                    <span class="n">id_1</span><span class="o">=</span><span class="n">nvic</span><span class="p">,</span>
+                    <span class="n">ver_1</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">no_old_node_id</span><span class="p">,</span>
+                    <span class="n">id_2</span><span class="o">=</span><span class="n">nvic</span><span class="p">,</span>
+                    <span class="n">ver_2</span><span class="o">=</span><span class="n">version_this_case</span><span class="p">,</span>
+                    <span class="n">rel_1</span><span class="o">=</span><span class="n">rel1_this_case</span><span class="p">,</span>
+                    <span class="n">rel_2</span><span class="o">=</span><span class="n">rel2_this_case</span><span class="p">,</span>
+                    <span class="n">the_weight</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="c1"># Prepare variables for the next iteration.</span>
+            <span class="n">re_d_prev</span> <span class="o">=</span> <span class="n">re_d</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">re_d_prev</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">extend_backwards_candidates</span><span class="p">)</span>
+            <span class="n">re_prev_rel</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">rel_re</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">reassignment_retirement</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Retired ID come alive again: </span><span class="si">{</span><span class="n">reassignment_retirement</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="c1"># Make sure all latest releases IDs are visited at least once.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">latest_nodes_last_rel</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="nb">int</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">latest_nodes_last_rel</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span>
+
+        <span class="c1"># Then, very similar to above reverse loop, but in forward direction.</span>
+        <span class="c1"># Main aim of this loop is to add Retired information to the nodes.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Edges showing the retirement of IDs are being added.&quot;</span><span class="p">)</span>
+        <span class="n">fo_d_prev</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>  <span class="c1"># Initialize some variables</span>
+        <span class="n">fo_prev_rel</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">rel_fo</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">):</span>
+            <span class="c1"># Create a DatabaseManager object with the release of interest.</span>
+            <span class="n">rel_db_fo</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">rel_fo</span><span class="p">)</span>
+
+            <span class="c1"># Get the IDs and create a dictionary from ID to Version.</span>
+            <span class="n">ids_fo</span> <span class="o">=</span> <span class="n">rel_db_fo</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;ids&quot;</span><span class="p">,</span> <span class="n">save_after_calculation</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">fo_d</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">j</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">ids_fo</span><span class="o">.</span><span class="n">values</span><span class="p">}</span>
+
+            <span class="c1"># Similar to above for loop in reverse direction. Only difference is the aim is to keep</span>
+            <span class="c1"># track of retired IDs only. There is no dumping all IDs in the last iteration as above, since not being</span>
+            <span class="c1"># retired is actually important information, showing it exist in the latest release.</span>
+            <span class="n">new_retired_id_candidates</span> <span class="o">=</span> <span class="n">fo_d_prev</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">-</span> <span class="n">fo_d</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+            <span class="n">intersecting_ids</span> <span class="o">=</span> <span class="n">fo_d_prev</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">fo_d</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+            <span class="n">extend_forwards_candidates</span> <span class="o">=</span> <span class="p">{</span><span class="n">ii</span><span class="p">:</span> <span class="n">fo_d</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="n">intersecting_ids</span> <span class="k">if</span> <span class="n">fo_d_prev</span><span class="p">[</span><span class="n">ii</span><span class="p">]</span> <span class="o">==</span> <span class="n">fo_d</span><span class="p">[</span><span class="n">ii</span><span class="p">]}</span>
+
+            <span class="k">for</span> <span class="n">nric</span> <span class="ow">in</span> <span class="n">new_retired_id_candidates</span><span class="p">:</span>
+                <span class="c1"># Create the edge using the pipe function.</span>
+                <span class="n">edge_maker_pipe</span><span class="p">(</span>
+                    <span class="n">id_1</span><span class="o">=</span><span class="n">nric</span><span class="p">,</span>
+                    <span class="n">ver_1</span><span class="o">=</span><span class="n">fo_d_prev</span><span class="p">[</span><span class="n">nric</span><span class="p">],</span>
+                    <span class="n">id_2</span><span class="o">=</span><span class="n">nric</span><span class="p">,</span>
+                    <span class="n">ver_2</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">no_new_node_id</span><span class="p">,</span>
+                    <span class="n">rel_1</span><span class="o">=</span><span class="n">fo_prev_rel</span><span class="p">,</span>
+                    <span class="n">rel_2</span><span class="o">=</span><span class="n">rel_fo</span><span class="p">,</span>
+                    <span class="n">the_weight</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="c1"># Prepare variables for the next iteration.</span>
+            <span class="n">fo_d_prev</span> <span class="o">=</span> <span class="n">fo_d</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">fo_d_prev</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">extend_forwards_candidates</span><span class="p">)</span>
+            <span class="n">fo_prev_rel</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">rel_fo</span><span class="p">)</span>
+
+        <span class="c1"># In some cases, the table from `dm_manager.get(&#39;idhistory_narrow&#39;)` has some edges, that is completely</span>
+        <span class="c1"># problematic. For example, &#39;ENSG00000289022&#39; gene is defined in release_105, but it does not seem to</span>
+        <span class="c1"># exist in the release gene id lists (neither 104, 105, 106 and also online sources).</span>
+        <span class="c1"># Delete the edge if there are other edges from the previous node.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Problematic nodes in Ensembl ID history are being removed.&quot;</span><span class="p">)</span>
+        <span class="n">ids_amc</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">problematic_nodes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">amc_rel</span> <span class="ow">in</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">:</span>
+            <span class="c1"># Create a DatabaseManager object with the release of interest.</span>
+            <span class="n">amc_dm</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">amc_rel</span><span class="p">)</span>
+
+            <span class="c1"># Get the IDs and create a dictionary from ID to Version.</span>
+            <span class="n">ids_amc_df</span> <span class="o">=</span> <span class="n">amc_dm</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;ids&quot;</span><span class="p">,</span> <span class="n">save_after_calculation</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">ids_amc</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">amc_dm</span><span class="o">.</span><span class="n">id_ver_from_df</span><span class="p">(</span><span class="n">ids_amc_df</span><span class="p">)))</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">node</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ids_amc</span> <span class="ow">and</span> <span class="n">GraphMaker</span><span class="o">.</span><span class="n">split_id</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s2">&quot;Version&quot;</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">alternative_versions</span><span class="p">:</span>
+                <span class="n">problematic_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">problematic_nodes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Nodes are deleted due to Ensembl ID history mistake: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">problematic_nodes</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">problematic_nodes</span><span class="p">:</span>
+                <span class="n">g</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="c1"># In reverse loop, we got the latest redefinition (let&#39;s say &#39;x&#39;) of latest release IDs. Here, an edge is</span>
+        <span class="c1"># added to them from x-to-inf. This is very essential for the recursive pathfinder to work robustly.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Self-loops for latest release entries are being added.&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="p">(</span><span class="n">lrc_id</span><span class="p">,</span> <span class="n">lrc_ver</span><span class="p">)</span> <span class="ow">in</span> <span class="n">latest_rel_ids_df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+            <span class="c1"># Create the last node name using the conventional class methods.</span>
+            <span class="n">last_node_name</span> <span class="o">=</span> <span class="n">DatabaseManager</span><span class="o">.</span><span class="n">node_name_maker</span><span class="p">(</span><span class="n">DatabaseManager</span><span class="o">.</span><span class="n">node_dict_maker</span><span class="p">(</span><span class="n">lrc_id</span><span class="p">,</span> <span class="n">lrc_ver</span><span class="p">))</span>
+
+            <span class="c1"># Create the edge using the pipe function.</span>
+            <span class="n">edge_maker_pipe</span><span class="p">(</span>
+                <span class="n">id_1</span><span class="o">=</span><span class="n">lrc_id</span><span class="p">,</span>
+                <span class="n">ver_1</span><span class="o">=</span><span class="n">lrc_ver</span><span class="p">,</span>
+                <span class="n">id_2</span><span class="o">=</span><span class="n">lrc_id</span><span class="p">,</span>
+                <span class="n">ver_2</span><span class="o">=</span><span class="n">lrc_ver</span><span class="p">,</span>
+                <span class="c1"># Get the saved release for the old_release of the edge.</span>
+                <span class="n">rel_1</span><span class="o">=</span><span class="n">latest_nodes_last_rel</span><span class="p">[</span><span class="n">last_node_name</span><span class="p">],</span>
+                <span class="n">rel_2</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>
+                <span class="n">the_weight</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Node attributes are being added.&quot;</span><span class="p">)</span>
+        <span class="c1"># Add some node features as node attributes.</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">{</span><span class="n">n</span><span class="p">:</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="n">db_manager</span><span class="o">.</span><span class="n">form</span><span class="p">]</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">},</span> <span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">)</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">{</span><span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">latest_release_ids</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">},</span> <span class="s2">&quot;is_latest&quot;</span><span class="p">)</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">{</span><span class="n">n</span><span class="p">:</span> <span class="n">GraphMaker</span><span class="o">.</span><span class="n">split_id</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="s2">&quot;ID&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">},</span> <span class="s2">&quot;ID&quot;</span><span class="p">)</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="p">{</span><span class="n">n</span><span class="p">:</span> <span class="n">GraphMaker</span><span class="o">.</span><span class="n">split_id</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="s2">&quot;Version&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">},</span> <span class="s2">&quot;Version&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">g</span></div>
+
+<div class="viewcode-block" id="GraphMaker.split_id"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.split_id">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">split_id</span><span class="p">(</span><span class="n">id_to_split</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">which_part</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Simpler method to retrieve ID or Version part of a node name.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            id_to_split: Query node name.</span>
+<span class="sd">            which_part: Either &#39;Version&#39; or &#39;ID&#39;.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The requested substring of the node name.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If &#39;which_part&#39; is assigned to some other value than &#39;Version&#39;, or &#39;ID&#39;.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">id_to_split</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">id_ver_delimiter</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Ensembl node has more than one delimiter. </span><span class="si">{</span><span class="n">id_to_split</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">which_part</span> <span class="o">==</span> <span class="s2">&quot;ID&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">id_to_split</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">id_ver_delimiter</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">which_part</span> <span class="o">==</span> <span class="s2">&quot;Version&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="n">id_to_split</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">id_ver_delimiter</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">id_to_split</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">id_ver_delimiter</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="p">)</span>  <span class="c1"># there are max 1 as checked previously</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span></div>
+
+<div class="viewcode-block" id="GraphMaker.remove_non_gene_trees"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.remove_non_gene_trees">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">remove_non_gene_trees</span><span class="p">(</span><span class="n">graph</span><span class="p">:</span> <span class="n">TheGraph</span><span class="p">,</span> <span class="n">forms_remove</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TheGraph</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Removes the edges between the nodes with the same `node type` and removes abstract nodes (Void and Retired).</span>
+
+<span class="sd">        The nodes between two the same :py:attr:`DB.node_type_str` will be removed. Also, the nodes with versions</span>
+<span class="sd">        :py:attr:`DB.no_new_node_id` and :py:attr:`DB.no_old_node_id` will be also removed.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            graph: The output of :py:attr:`Graph.construct_graph` or</span>
+<span class="sd">                :py:attr:`Graph.construct_graph_form`.</span>
+<span class="sd">            forms_remove: Determine which `node type` are of interest.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Resultant multi edge directed graph.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">forms_remove</span> <span class="o">=</span> <span class="p">(</span>  <span class="c1"># If forms_remove none, fill the variable with the defaults.</span>
+            <span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;transcript&quot;</span><span class="p">,</span> <span class="s2">&quot;translation&quot;</span><span class="p">]]</span> <span class="k">if</span> <span class="n">forms_remove</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">forms_remove</span>
+        <span class="p">)</span>
+
+        <span class="n">node_to_remove</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="n">edge_to_remove</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>  <span class="c1"># Iterate through all nodes.</span>
+
+            <span class="n">the_node</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>
+            <span class="n">nt</span> <span class="o">=</span> <span class="n">the_node</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span>  <span class="c1"># Get the node type</span>
+
+            <span class="k">if</span> <span class="n">nt</span> <span class="ow">in</span> <span class="n">forms_remove</span><span class="p">:</span>
+
+                <span class="k">if</span> <span class="n">the_node</span><span class="p">[</span><span class="s2">&quot;Version&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">alternative_versions</span><span class="p">:</span>
+                    <span class="n">node_to_remove</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>  <span class="c1"># We only remove Void or retired</span>
+
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Remove the edges between nodes with the same node type.</span>
+                    <span class="c1"># This is essentially removing all the historical relationship trees.</span>
+                    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+                        <span class="n">mt</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">m</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span>
+                        <span class="k">if</span> <span class="n">nt</span> <span class="o">==</span> <span class="n">mt</span><span class="p">:</span>
+                            <span class="n">kmn</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="n">m</span><span class="p">]]</span>
+                            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">kmn</span><span class="p">:</span>
+                                <span class="n">edge_to_remove</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">k</span><span class="p">))</span>
+
+        <span class="c1"># Have to remove after the for-loop as it will raise error.</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">edge_to_remove</span><span class="p">:</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span><span class="o">*</span><span class="n">c</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">node_to_remove</span><span class="p">:</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">graph</span></div>
+
+<div class="viewcode-block" id="GraphMaker.get_graph"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.get_graph">[docs]</a>    <span class="k">def</span> <span class="nf">get_graph</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">narrow</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">create_even_if_exist</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">save_after_calculation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">overwrite_even_if_exist</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TheGraph</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Simplifies the graph construction process.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            narrow: See parameter in :py:attr:`Graph.construct_graph.narrow`</span>
+<span class="sd">            create_even_if_exist: Determine whether create the graph even if it exists. If there is no graph in the</span>
+<span class="sd">                provided temporary directory, the graph will be created regardless.</span>
+<span class="sd">            save_after_calculation: Determine whether resultant graph will be saved or not.</span>
+<span class="sd">            overwrite_even_if_exist: If the graph will be saved, determine whether the program should overwrite.</span>
+<span class="sd">                If ``False``, it does not re-saves the calculated (or loaded) graph.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Resultant multi edge directed graph, which can be used in all future calculations.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Get the file name and narrow parameter.</span>
+        <span class="n">file_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_file_name</span><span class="p">(</span><span class="n">narrow</span><span class="p">)</span>
+
+        <span class="c1"># If the file name is not accessible for reading, or explicitly prompt to do so, then create the graph.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">)</span> <span class="ow">or</span> <span class="n">create_even_if_exist</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;The graph is being constructed.&quot;</span><span class="p">)</span>
+            <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">construct_graph</span><span class="p">(</span><span class="n">narrow</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># Otherwise, just read the file that is already in the directory.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;The graph is being read.&quot;</span><span class="p">)</span>
+            <span class="n">g</span> <span class="o">=</span> <span class="n">GraphMaker</span><span class="o">.</span><span class="n">read_exported</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+        <span class="c1"># If prompt, save the dataframe in requested format.</span>
+        <span class="k">if</span> <span class="n">save_after_calculation</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">export_disk</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">file_path</span><span class="p">,</span> <span class="n">overwrite_even_if_exist</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">g</span></div>
+
+<div class="viewcode-block" id="GraphMaker.read_exported"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.read_exported">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">read_exported</span><span class="p">(</span><span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TheGraph</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Read the `pickle` file in the provided file path, which contains the graph.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            file_path: Absolute path of the file of interest.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Resultant multi edge directed graph.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            FileNotFoundError: When there is no file in the provided directory.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span>
+
+        <span class="k">return</span> <span class="n">nx</span><span class="o">.</span><span class="n">read_gpickle</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GraphMaker.create_file_name"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.create_file_name">[docs]</a>    <span class="k">def</span> <span class="nf">create_file_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">narrow</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;File name creator which includes some information regarding the construction process.</span>
+
+<span class="sd">        Facilitates to recognize the graph based on file name.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            narrow: See parameter in :py:attr:`Graph.construct_graph.narrow`</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Absolute file path in the temporary directory provided by ``DatabaseManager``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">narrow_ext</span> <span class="o">=</span> <span class="s2">&quot;_narrow&quot;</span> <span class="k">if</span> <span class="n">narrow</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">min_ext</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;_min</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">ignore_before</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">ignore_before</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">max_ext</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;_max</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">ignore_after</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">ignore_after</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">ext</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;ens</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">ensembl_release</span><span class="si">}{</span><span class="n">min_ext</span><span class="si">}{</span><span class="n">max_ext</span><span class="si">}{</span><span class="n">narrow_ext</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">local_repository</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;graph_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">ext</span><span class="si">}</span><span class="s2">.pickle&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GraphMaker.export_disk"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.export_disk">[docs]</a>    <span class="k">def</span> <span class="nf">export_disk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g</span><span class="p">:</span> <span class="n">TheGraph</span><span class="p">,</span> <span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Write the `pickle` file in the provided file path, which contains the graph.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            g: Multi edge directed graph object to stor in the disk.</span>
+<span class="sd">            file_path: Absolute target path, provided by :py:meth:`Graph.create_file_name`</span>
+<span class="sd">            overwrite: See parameter in :py:attr:`Graph.get_graph.overwrite_even_if_exist`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">)</span> <span class="ow">or</span> <span class="n">overwrite</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The graph is being exported as &#39;</span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
+            <span class="n">nx</span><span class="o">.</span><span class="n">write_gpickle</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">file_path</span><span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>results_preliminary_for_hlca &mdash; idtrack 0.0.2 documentation</title>
+  <title>HLCA Datasets &mdash; idtrack 0.0.3 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/custom_cookietemple.css" type="text/css" />
@@ -19,16 +19,17 @@
         <script src="../_static/underscore.js"></script>
         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
         <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
         <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-        <script src="../_static/dark_mode_js/default_dark.js"></script>
+        <script src="../_static/dark_mode_js/default_light.js"></script>
         <script src="../_static/dark_mode_js/theme_switcher.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Reference" href="../reference.html" />
-    <link rel="prev" title="Tutorial" href="Untitled.html" /> 
+    <link rel="prev" title="Initialization" href="initialization.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -36,7 +37,7 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../index.html">
+            <a href="../index.html" class="icon icon-home"> idtrack
             <img src="../_static/logo.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
@@ -52,13 +53,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../usage.html">Usage</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="initialization.html">Initialization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Untitled.html">Tutorial</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">results_preliminary_for_hlca</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#Conversion-and-save">Conversion and save</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#how-many-target-hit">how many target hit</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#HGNC-vs-Ensembl-gene-as-targets">HGNC vs Ensembl gene as targets</a></li>
-</ul>
-</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">HLCA Datasets</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
@@ -82,7 +77,7 @@
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
           <li><a href="../usage.html">Usage</a> &raquo;</li>
-      <li>results_preliminary_for_hlca</li>
+      <li>HLCA Datasets</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/_notebooks/results_preliminary_for_hlca.ipynb.txt" rel="nofollow"> View page source</a>
       </li>
@@ -370,17 +365,13 @@ div.rendered_html tbody tr:hover {
     text-align: unset;
 }
 </style>
-<section id="results_preliminary_for_hlca">
-<h1>results_preliminary_for_hlca<a class="headerlink" href="#results_preliminary_for_hlca" title="Permalink to this heading"></a></h1>
+<section id="HLCA-Datasets">
+<h1>HLCA Datasets<a class="headerlink" href="#HLCA-Datasets" title="Permalink to this heading"></a></h1>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">scanpy</span> <span class="k">as</span> <span class="nn">sc</span>
-<span class="kn">import</span> <span class="nn">pickle</span>
-<span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
 <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;../..&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -389,8 +380,11 @@ div.rendered_html tbody tr:hover {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">idtrack</span> <span class="kn">import</span> <span class="o">*</span>
-<span class="kn">from</span> <span class="nn">idtrack._track_tests</span> <span class="kn">import</span> <span class="o">*</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">scanpy</span> <span class="k">as</span> <span class="nn">sc</span>
+<span class="kn">import</span> <span class="nn">idtrack</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
 </pre></div>
 </div>
 </div>
@@ -398,17 +392,20 @@ div.rendered_html tbody tr:hover {
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">logger_config</span><span class="p">()</span>
-<span class="n">local_dir</span> <span class="o">=</span> <span class="s2">&quot;/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp&quot;</span>  <span class="c1"># or any other local directory</span>
-<span class="n">dm</span> <span class="o">=</span> <span class="n">DatabaseManager</span><span class="p">(</span><span class="s2">&quot;homo_sapiens&quot;</span><span class="p">,</span> <span class="mi">107</span><span class="p">,</span> <span class="s2">&quot;gene&quot;</span><span class="p">,</span> <span class="n">local_dir</span><span class="p">,</span> <span class="mi">79</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
+<span class="o">%</span><span class="k">autoreload</span> 2
 </pre></div>
 </div>
 </div>
+<p>Initialize the graph and pathfinder</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tt</span><span class="p">:</span> <span class="n">TrackTests</span> <span class="o">=</span> <span class="n">TrackTests</span><span class="p">(</span><span class="n">dm</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">local_dir</span> <span class="o">=</span> <span class="s2">&quot;/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp&quot;</span>
+<span class="n">idt</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="n">local_dir</span><span class="p">)</span>
+<span class="n">idt</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
+<span class="n">idt</span><span class="o">.</span><span class="n">initialize_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s1">&#39;homo_sapiens&#39;</span><span class="p">,</span> <span class="n">ensembl_release</span><span class="o">=</span><span class="mi">107</span><span class="p">,</span> <span class="n">return_test</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -417,11 +414,37 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-08-16 23:41:21 INFO:graph: The graph is being read.
+2022-11-01 16:45:08 INFO:graph_maker: The graph is being read.
 </pre></div></div>
 </div>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">calculate_graph_caches</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 16:45:47 INFO:the_graph: Cached properties being calculated: combined_edges
+2022-11-01 16:46:32 INFO:the_graph: Cached properties being calculated: combined_edges_assembly_specific_genes
+2022-11-01 16:46:35 INFO:the_graph: Cached properties being calculated: combined_edges_genes
+2022-11-01 16:46:46 INFO:the_graph: Cached properties being calculated: lower_chars_graph
+2022-11-01 16:46:47 INFO:the_graph: Cached properties being calculated: get_active_ranges_of_id
+2022-11-01 16:47:06 INFO:the_graph: Cached properties being calculated: available_external_databases
+2022-11-01 16:47:07 INFO:the_graph: Cached properties being calculated: external_database_connection_form
+2022-11-01 16:47:40 INFO:the_graph: Cached properties being calculated: available_genome_assemblies
+2022-11-01 16:47:40 INFO:the_graph: Cached properties being calculated: available_external_databases_assembly
+2022-11-01 16:47:41 INFO:the_graph: Cached properties being calculated: node_trios
+</pre></div></div>
+</div>
+<p>The datasets of HLCA</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">base_path</span> <span class="o">=</span> <span class="s2">&quot;/lustre/groups/ml01/workspace/hlca_lisa.sikkema_malte.luecken/HLCA_reproducibility/data&quot;</span>
@@ -471,54 +494,26 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 </div>
-<section id="Conversion-and-save">
-<h2>Conversion and save<a class="headerlink" href="#Conversion-and-save" title="Permalink to this heading"></a></h2>
+<p>Run the ID conversion with HGNC Symbol (a.k.a gene name)</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">results</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="n">final_database</span><span class="o">=</span><span class="s2">&quot;HGNC Symbol&quot;</span>
 
-<span class="k">for</span> <span class="n">ddadaata</span> <span class="ow">in</span> <span class="n">adata_dict</span><span class="p">:</span>
+<span class="k">for</span> <span class="n">dataset_name</span> <span class="ow">in</span> <span class="n">adata_dict</span><span class="p">:</span>
 
-    <span class="n">adata</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">adata_dict</span><span class="p">[</span><span class="n">ddadaata</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">adata</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">adata_dict</span><span class="p">[</span><span class="n">dataset_name</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
     <span class="n">gene_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
 
-    <span class="n">entered_gene_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
-    <span class="n">return_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">matching</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">convert_identifier_multiple</span><span class="p">(</span><span class="n">gene_list</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="n">final_database</span><span class="p">,</span> <span class="n">pbar_prefix</span><span class="o">=</span><span class="n">dataset_name</span><span class="p">)</span>
+    <span class="n">binned_conversions</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">classify_multiple_conversion</span><span class="p">(</span><span class="n">matching</span><span class="p">)</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="n">ddadaata</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">gl</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">gene_list</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">ind</span> <span class="o">%</span> <span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">ind</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span><span class="o">-</span><span class="mi">5</span><span class="p">:</span>
-            <span class="n">progress_bar</span><span class="p">(</span><span class="n">ind</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">idt</span><span class="o">.</span><span class="n">print_binned_conversion</span><span class="p">(</span><span class="n">binned_conversions</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source release: </span><span class="si">{</span><span class="n">idt</span><span class="o">.</span><span class="n">infer_identifier_source</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-        <span class="n">new_gl</span><span class="p">,</span> <span class="n">is_converted</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">unfound_node_solutions</span><span class="p">(</span><span class="n">gl</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">new_gl</span><span class="p">,</span> <span class="n">is_converted</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">unfound_node_solutions</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">synonym_id_nodes_prefix</span><span class="si">}{</span><span class="n">gl</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-            <span class="n">is_converted</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">False</span>
-
-        <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
-        <span class="k">elif</span> <span class="n">new_gl</span> <span class="ow">and</span> <span class="n">is_converted</span><span class="p">:</span>
-            <span class="n">conv</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">new_gl</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;ensembl_gene&#39;</span><span class="p">,</span> <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-            <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">conv</span><span class="p">)</span> <span class="k">if</span> <span class="n">conv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[])</span>
-            <span class="n">entered_gene_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_gl</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">new_gl</span><span class="p">:</span>
-            <span class="n">conv</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">gl</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;ensembl_gene&#39;</span><span class="p">,</span> <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-            <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">conv</span><span class="p">)</span> <span class="k">if</span> <span class="n">conv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[])</span>
-            <span class="n">entered_gene_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gl</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">identify_source</span><span class="p">(</span><span class="n">entered_gene_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
-    <span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">Counter</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">return_list</span><span class="p">])</span><span class="o">.</span><span class="n">most_common</span><span class="p">())[:</span><span class="mi">10</span><span class="p">])</span>
-    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">return_list</span><span class="p">)</span>
-    <span class="n">results</span><span class="p">[</span><span class="n">ddadaata</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="n">j</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">gene_list</span><span class="p">,</span> <span class="n">return_list</span><span class="p">)}</span>
-    <span class="nb">print</span><span class="p">()</span>
-
-<span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">local_dir</span><span class="p">,</span> <span class="s2">&quot;results_preliminary_for_hlca.pk&quot;</span><span class="p">)</span>
-<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
-    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saved: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">result</span><span class="p">[</span><span class="n">dataset_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">binned_conversions</span>
 </pre></div>
 </div>
 </div>
@@ -526,167 +521,731 @@ div.rendered_html tbody tr:hover {
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "11847d070b2443998685a846df1a9429", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
 <div class="highlight"><pre>
-Kaminski_2020
-Progress: |████████████████████| 100.0%
-((&#39;HGNC Symbol&#39;, 94), 30503)
-[(1, 45536), (0, 411)]
-
-Meyer_2021
-Progress: |████████████████████| 100.0%
-((&#39;HGNC Symbol&#39;, 93), 20407)
-[(1, 20898), (0, 24)]
-
-MeyerNikolic_unpubl
-Progress: |████████████████████| 100.0%
-((&#39;HGNC Symbol&#39;, 93), 23406)
-[(1, 33404), (0, 174), (2, 4)]
-
-Barbry_unpubl
-Progress: |████████████████████| 100.0%
-((&#39;HGNC Symbol&#39;, 98), 14650)
-[(1, 16829), (0, 29), (2, 1)]
-
-Regev_2021
-Progress: |████████████████████| 100.0%
-((&#39;HGNC Symbol&#39;, 93), 21864)
-[(1, 30809), (0, 173), (2, 1)]
-
-Thienpont_2018
-Progress: |████████████████████| 100.0%
-((&#39;Vega gene&#39;, 88), 26131)
-[(1, 27630), (0, 327), (2, 1)]
-
-Budinger_2020
-Progress: |████████████████████| 100.0%
-((&#39;HGNC Symbol&#39;, 93), 20189)
-[(1, 26219), (0, 96), (2, 1)]
-
-Banovich_Kropski_2020
-Progress: |████████████████████| 100.0%
-((&#39;Vega gene&#39;, 84), 31238)
-[(1, 33191), (0, 497), (2, 4), (3, 2)]
-
-Sheppard_2020
-Progress: |████████████████████| 100.0%
-((&#39;Vega gene&#39;, 88), 25403)
-[(1, 26826), (0, 320), (2, 1)]
-
-Wunderink_2021
-Progress: |████████████████████| 100.0%
-((&#39;HGNC Symbol&#39;, 93), 17918)
-[(1, 21742), (0, 76), (2, 1)]
-
-Lambrechts_2021
-Progress: |████████████████████| 100.0%
-((&#39;HGNC Symbol&#39;, 93), 23388)
-[(1, 33386), (0, 148), (2, 4)]
-
-Zhang_2021
-Progress: |████████████████████| 100.0%
-((&#39;HGNC Symbol&#39;, 93), 18311)
-[(1, 18460), (0, 14)]
-
-Duong_lungMAP_unpubl
-Progress: |████████████████████| 100.0%
-((&#39;HGNC Symbol&#39;, 93), 20182)
-[(1, 27578), (0, 99), (2, 1)]
-
-Janssen_2020
-Progress: |████████████████████| 100.0%
-((&#39;HGNC Symbol&#39;, 93), 23388)
-[(1, 33386), (0, 148), (2, 4)]
-
-Sun_2020
-Progress: |████████████████████| 100.0%
-((&#39;HGNC Symbol&#39;, 93), 19762)
-[(1, 26479), (0, 98), (2, 1)]
-
-Gomperts_2021
-Progress: |████████████████████| 100.0%
-((&#39;Vega gene&#39;, 84), 22785)
-[(1, 30778), (0, 449), (2, 2)]
-
-Eils_2020
-Progress: |████████████████████| 100.0%
-((&#39;Vega gene&#39;, 80), 30184)
-[(1, 31840), (0, 895), (3, 2), (2, 1)]
-
-Schiller_2020
-Progress: |████████████████████| 100.0%
-((&#39;Vega gene&#39;, 83), 23134)
-[(1, 31462), (0, 641), (2, 1)]
-
-Misharin_Budinger_2018
-Progress: |████████████████████| 100.0%
-((&#39;Vega gene&#39;, 88), 25415)
-[(1, 26855), (0, 325), (3, 1)]
-
-Shalek_2018
-Progress: |████████████████████| 100.0%
-((&#39;Vega gene&#39;, 79), 22538)
-[(1, 24738), (0, 589), (2, 1)]
-
-Schiller_2021
-Progress: |████████████████████| 100.0%
-((&#39;HGNC Symbol&#39;, 99), 17254)
-[(1, 17519), (0, 14)]
-
-Peer_Massague_2020
-Progress: |████████████████████| 100.0%
-((&#39;Vega gene&#39;, 88), 18570)
-[(1, 19119), (0, 103)]
-
-Lafyatis_2019
-Progress: |████████████████████| 100.0%
-((&#39;HGNC Symbol&#39;, 93), 21561)
-[(1, 22132), (0, 29), (2, 3)]
-
-Tata_unpubl
-Progress: |████████████████████| 100.0%
-((&#39;HGNC Symbol&#39;, 96), 23028)
-[(1, 31862), (0, 49), (2, 4)]
-
-Xu_2020
-Progress: |████████████████████| 100.0%
-((&#39;Vega gene&#39;, 80), 30184)
-[(1, 31840), (0, 895), (3, 2), (2, 1)]
-
-Sims_2019
-Progress: |████████████████████| 100.0%
-((&#39;Vega gene&#39;, 83), 42864)
-[(1, 58980), (0, 1737), (2, 6), (3, 2)]
-
-Schultze_unpubl
-Progress: |████████████████████| 100.0%
-((&#39;HGNC Symbol&#39;, 91), 19501)
-[(1, 24440), (0, 91), (2, 1)]
-
+changed_only_1_to_n: 59
+changed_only_1_to_1: 4002
+alternative_target_1_to_1: 12331
+alternative_target_1_to_n: 13
+matching_1_to_0: 98
+matching_1_to_1: 33446
+matching_1_to_n: 59
+input_identifiers: 45947
+Source release: (38, 94)
 </pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "9b7408901e444b04a5c81c03570992d2", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 3
+changed_only_1_to_1: 997
+alternative_target_1_to_1: 368
+alternative_target_1_to_n: 2
+matching_1_to_0: 17
+matching_1_to_1: 20532
+matching_1_to_n: 3
+input_identifiers: 20922
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "fc1fb4c5762c4955beaef27d07a7c20e", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 17:01:46 WARNING:api: Number of unfound IDs: 27.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 15
+changed_only_1_to_1: 2711
+alternative_target_1_to_1: 8342
+alternative_target_1_to_n: 10
+matching_1_to_0: 106
+matching_1_to_1: 25109
+matching_1_to_n: 15
+input_identifiers: 33582
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "3111b1df8a174fd5973838b5337e3a0a", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 17:05:38 WARNING:api: Number of unfound IDs: 1.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 1
+changed_only_1_to_1: 972
+alternative_target_1_to_1: 1679
+alternative_target_1_to_n: 4
+matching_1_to_0: 20
+matching_1_to_1: 15155
+matching_1_to_n: 1
+input_identifiers: 16859
+Source release: (38, 98)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "005da307a7b24dacbc9e506e30eaf5f1", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 17:10:14 WARNING:api: Number of unfound IDs: 48.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 8
+changed_only_1_to_1: 2520
+alternative_target_1_to_1: 7387
+alternative_target_1_to_n: 9
+matching_1_to_0: 113
+matching_1_to_1: 23466
+matching_1_to_n: 8
+input_identifiers: 30983
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "6084674865b24738ab59f83ae3cb5e11", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 8
+changed_only_1_to_1: 3598
+alternative_target_1_to_1: 5342
+alternative_target_1_to_n: 43
+matching_1_to_0: 171
+matching_1_to_1: 22394
+matching_1_to_n: 8
+input_identifiers: 27958
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "af611a39d2db4633bc08db52b5bd0d16", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 6
+changed_only_1_to_1: 2122
+alternative_target_1_to_1: 4807
+alternative_target_1_to_n: 6
+matching_1_to_0: 56
+matching_1_to_1: 21441
+matching_1_to_n: 6
+input_identifiers: 26316
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "68cb461c488e4f59ba5419da43f40a17", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 17:23:19 WARNING:api: Number of unfound IDs: 1.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 15
+changed_only_1_to_1: 4470
+alternative_target_1_to_1: 8131
+alternative_target_1_to_n: 57
+matching_1_to_0: 262
+matching_1_to_1: 25229
+matching_1_to_n: 15
+input_identifiers: 33694
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "7314c34b299846e58556425282ccc8d6", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 6
+changed_only_1_to_1: 3464
+alternative_target_1_to_1: 5020
+alternative_target_1_to_n: 40
+matching_1_to_0: 166
+matching_1_to_1: 21915
+matching_1_to_n: 6
+input_identifiers: 27147
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "5e921956d1c24c0c82f4e037f2b077e5", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 17:32:07 WARNING:api: Number of unfound IDs: 12.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 2
+changed_only_1_to_1: 1712
+alternative_target_1_to_1: 2907
+alternative_target_1_to_n: 1
+matching_1_to_0: 53
+matching_1_to_1: 18856
+matching_1_to_n: 2
+input_identifiers: 21819
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "5c032231e7fb45bca2b048c19dd1ac31", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 17:36:37 WARNING:api: Number of unfound IDs: 1.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 15
+changed_only_1_to_1: 2693
+alternative_target_1_to_1: 8342
+alternative_target_1_to_n: 10
+matching_1_to_0: 80
+matching_1_to_1: 25091
+matching_1_to_n: 15
+input_identifiers: 33538
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "d9720438e2954c059d18b74a71f5c6c3", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 1
+changed_only_1_to_1: 806
+alternative_target_1_to_1: 99
+alternative_target_1_to_n: 0
+matching_1_to_0: 10
+matching_1_to_1: 18364
+matching_1_to_n: 1
+input_identifiers: 18474
+Source release: (38, 87)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "09d94014f1604c68810f0780298eded4", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 6
+changed_only_1_to_1: 2293
+alternative_target_1_to_1: 5994
+alternative_target_1_to_n: 10
+matching_1_to_0: 51
+matching_1_to_1: 21617
+matching_1_to_n: 6
+input_identifiers: 27678
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "958468d73ccd4cfeb8990bdfef8b611a", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 17:49:35 WARNING:api: Number of unfound IDs: 1.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 15
+changed_only_1_to_1: 2693
+alternative_target_1_to_1: 8342
+alternative_target_1_to_n: 10
+matching_1_to_0: 80
+matching_1_to_1: 25091
+matching_1_to_n: 15
+input_identifiers: 33538
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "696c18308d9148e2b4f11a351bba4c87", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 6
+changed_only_1_to_1: 2192
+alternative_target_1_to_1: 5417
+alternative_target_1_to_n: 8
+matching_1_to_0: 50
+matching_1_to_1: 21097
+matching_1_to_n: 6
+input_identifiers: 26578
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "2bf1779f122b415285f756d52a535948", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 17:58:31 WARNING:api: Number of unfound IDs: 187.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 14
+changed_only_1_to_1: 4744
+alternative_target_1_to_1: 5910
+alternative_target_1_to_n: 28
+matching_1_to_0: 348
+matching_1_to_1: 24929
+matching_1_to_n: 14
+input_identifiers: 31229
+Source release: (38, 89)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "8a2b766280f2419797fd5ed78a0407ad", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 18:03:05 WARNING:api: Number of unfound IDs: 7.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 17
+changed_only_1_to_1: 5448
+alternative_target_1_to_1: 7519
+alternative_target_1_to_n: 44
+matching_1_to_0: 612
+matching_1_to_1: 24546
+matching_1_to_n: 17
+input_identifiers: 32738
+Source release: (37, 79)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "008f46e4106841339a71a90a093a563e", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 18:07:29 WARNING:api: Number of unfound IDs: 40.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 8
+changed_only_1_to_1: 4469
+alternative_target_1_to_1: 6431
+alternative_target_1_to_n: 26
+matching_1_to_0: 533
+matching_1_to_1: 25106
+matching_1_to_n: 8
+input_identifiers: 32104
+Source release: (38, 89)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "a2e5274c9fe443dfb10729bb5c312a89", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 7
+changed_only_1_to_1: 3464
+alternative_target_1_to_1: 5009
+alternative_target_1_to_n: 43
+matching_1_to_0: 177
+matching_1_to_1: 21945
+matching_1_to_n: 7
+input_identifiers: 27181
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "5e2e5223e32e4cd6a5e8cd6982c9cfd1", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 18:16:00 WARNING:api: Number of unfound IDs: 22.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 7
+changed_only_1_to_1: 3647
+alternative_target_1_to_1: 3642
+alternative_target_1_to_n: 33
+matching_1_to_0: 492
+matching_1_to_1: 21154
+matching_1_to_n: 7
+input_identifiers: 25328
+Source release: (37, 79)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "8b5db330f19c471b9ba8df329bf01f64", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 0
+changed_only_1_to_1: 497
+alternative_target_1_to_1: 193
+alternative_target_1_to_n: 0
+matching_1_to_0: 10
+matching_1_to_1: 17330
+matching_1_to_n: 0
+input_identifiers: 17533
+Source release: (38, 99)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "1e7401da2b3a42ecb9660089686957d6", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 4
+changed_only_1_to_1: 1545
+alternative_target_1_to_1: 1247
+alternative_target_1_to_n: 11
+matching_1_to_0: 63
+matching_1_to_1: 17897
+matching_1_to_n: 4
+input_identifiers: 19222
+Source release: (38, 86)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "fd257de91e4443a19367084417791c62", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 18:28:49 WARNING:api: Number of unfound IDs: 1.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 6
+changed_only_1_to_1: 1032
+alternative_target_1_to_1: 442
+alternative_target_1_to_n: 2
+matching_1_to_0: 21
+matching_1_to_1: 21693
+matching_1_to_n: 6
+input_identifiers: 22164
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "23fa11973588423b9ebd474cc61e48a6", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 18:33:10 WARNING:api: Number of unfound IDs: 1.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 11
+changed_only_1_to_1: 1954
+alternative_target_1_to_1: 7632
+alternative_target_1_to_n: 6
+matching_1_to_0: 36
+matching_1_to_1: 24230
+matching_1_to_n: 11
+input_identifiers: 31915
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "27e686db2ccd483f986d2ccff8794860", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 18:37:43 WARNING:api: Number of unfound IDs: 7.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 17
+changed_only_1_to_1: 5448
+alternative_target_1_to_1: 7519
+alternative_target_1_to_n: 44
+matching_1_to_0: 612
+matching_1_to_1: 24546
+matching_1_to_n: 17
+input_identifiers: 32738
+Source release: (37, 79)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "183d0d4b44574bdc90b89d42e14da46e", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 985
+changed_only_1_to_1: 8062
+alternative_target_1_to_1: 16431
+alternative_target_1_to_n: 265
+matching_1_to_0: 1461
+matching_1_to_1: 41583
+matching_1_to_n: 985
+input_identifiers: 60725
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 18:45:32 WARNING:api: Number of unfound IDs: 10.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 83)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "ed799fded826408db2abc9c6dc1da898", "version_major": 2, "version_minor": 0}</script></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
-<span class="ansi-red-fg">NameError</span>                                 Traceback (most recent call last)
-Input <span class="ansi-green-fg">In [6]</span>, in <span class="ansi-cyan-fg">&lt;cell line: 40&gt;</span><span class="ansi-blue-fg">()</span>
-<span class="ansi-green-intense-fg ansi-bold">     39</span> file_path <span style="color: rgb(98,98,98)">=</span> os<span style="color: rgb(98,98,98)">.</span>path<span style="color: rgb(98,98,98)">.</span>join(local_dir, <span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">results_preliminary_for_hlca.pk</span><span style="color: rgb(175,0,0)">&#34;</span>)
-<span class="ansi-green-intense-fg ansi-bold">     40</span> <span class="ansi-bold" style="color: rgb(0,135,0)">with</span> <span style="color: rgb(0,135,0)">open</span>(file_path, <span style="color: rgb(175,0,0)">&#39;</span><span style="color: rgb(175,0,0)">wb</span><span style="color: rgb(175,0,0)">&#39;</span>) <span class="ansi-bold" style="color: rgb(0,135,0)">as</span> handle:
-<span class="ansi-green-fg">---&gt; 41</span>     pickle<span style="color: rgb(98,98,98)">.</span>dump(<span class="ansi-yellow-bg">result</span>, handle)
-<span class="ansi-green-intense-fg ansi-bold">     42</span>     <span style="color: rgb(0,135,0)">print</span>(<span style="color: rgb(175,0,0)">f</span><span style="color: rgb(175,0,0)">&#34;</span><span style="color: rgb(175,0,0)">Saved: </span><span class="ansi-bold" style="color: rgb(175,95,135)">{</span>file_path<span class="ansi-bold" style="color: rgb(175,95,135)">}</span><span style="color: rgb(175,0,0)">&#34;</span>)
-
-<span class="ansi-red-fg">NameError</span>: name &#39;result&#39; is not defined
+changed_only_1_to_n: 5
+changed_only_1_to_1: 2070
+alternative_target_1_to_1: 3820
+alternative_target_1_to_n: 6
+matching_1_to_0: 46
+matching_1_to_1: 20655
+matching_1_to_n: 5
+input_identifiers: 24532
+Source release: (38, 91)
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">local_dir</span><span class="p">,</span> <span class="s2">&quot;results_preliminary_for_hlca.pk&quot;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">time_suffix</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">-%H%M%S&quot;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">gmtime</span><span class="p">())</span>
+<span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">local_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;results_for_hlca_datasets_</span><span class="si">{</span><span class="n">final_database</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">time_suffix</span><span class="si">}</span><span class="s2">.pk&quot;</span><span class="p">)</span>
 <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
-    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saved: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -696,42 +1255,762 @@ Input <span class="ansi-green-fg">In [6]</span>, in <span class="ansi-cyan-fg">&
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Saved: /lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/results_preliminary_for_hlca.pk
+Saved: /lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/results_for_hlca_datasets_HGNC Symbol_20221101-175029.pk
 </pre></div></div>
 </div>
-</section>
-<section id="how-many-target-hit">
-<h2>how many target hit<a class="headerlink" href="#how-many-target-hit" title="Permalink to this heading"></a></h2>
+<p>Run the ID conversion with Ensembl gene ID</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">all_targets</span> <span class="o">=</span> <span class="p">{</span><span class="n">j</span> <span class="k">for</span> <span class="n">database</span> <span class="ow">in</span> <span class="n">results</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">][</span><span class="n">i</span><span class="p">]}</span>
-<span class="nb">len</span><span class="p">(</span><span class="n">all_targets</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="n">final_database</span><span class="o">=</span><span class="s2">&quot;ensembl_gene&quot;</span>
+
+<span class="k">for</span> <span class="n">dataset_name</span> <span class="ow">in</span> <span class="n">adata_dict</span><span class="p">:</span>
+
+    <span class="n">adata</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">adata_dict</span><span class="p">[</span><span class="n">dataset_name</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">gene_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+
+    <span class="n">matching</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">convert_identifier_multiple</span><span class="p">(</span><span class="n">gene_list</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="n">final_database</span><span class="p">,</span> <span class="n">pbar_prefix</span><span class="o">=</span><span class="n">dataset_name</span><span class="p">)</span>
+    <span class="n">binned_conversions</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">classify_multiple_conversion</span><span class="p">(</span><span class="n">matching</span><span class="p">)</span>
+
+    <span class="n">idt</span><span class="o">.</span><span class="n">print_binned_conversion</span><span class="p">(</span><span class="n">binned_conversions</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source release: </span><span class="si">{</span><span class="n">idt</span><span class="o">.</span><span class="n">infer_identifier_source</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">result</span><span class="p">[</span><span class="n">dataset_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">binned_conversions</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
-</pre></div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "7dd6f11d24a34ef2b4a4c4632c9de016", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-57606
+changed_only_1_to_n: 498
+changed_only_1_to_1: 45351
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 98
+matching_1_to_1: 45351
+matching_1_to_n: 498
+input_identifiers: 45947
+Source release: (38, 94)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "53225519e3f845e48bb7eaebb13e86b4", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 213
+changed_only_1_to_1: 20692
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 17
+matching_1_to_1: 20692
+matching_1_to_n: 213
+input_identifiers: 20922
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "a42cb90948b54de6958302d2cff60fe2", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 19:00:01 WARNING:api: Number of unfound IDs: 27.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 290
+changed_only_1_to_1: 33186
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 106
+matching_1_to_1: 33186
+matching_1_to_n: 290
+input_identifiers: 33582
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "ad674ae7ef714647bbf54b407627df1d", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 19:02:32 WARNING:api: Number of unfound IDs: 1.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 101
+changed_only_1_to_1: 16738
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 20
+matching_1_to_1: 16738
+matching_1_to_n: 101
+input_identifiers: 16859
+Source release: (38, 98)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "3c1c1d4afd484709b2b718017ceafe43", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 19:05:32 WARNING:api: Number of unfound IDs: 48.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 222
+changed_only_1_to_1: 30648
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 113
+matching_1_to_1: 30648
+matching_1_to_n: 222
+input_identifiers: 30983
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "f8725202b97a48ada853b94bd5d59a85", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 246
+changed_only_1_to_1: 27541
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 171
+matching_1_to_1: 27541
+matching_1_to_n: 246
+input_identifiers: 27958
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "12752b95015d4af5947ed2ad19f9e6ae", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 194
+changed_only_1_to_1: 26066
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 56
+matching_1_to_1: 26066
+matching_1_to_n: 194
+input_identifiers: 26316
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "f9334ab3dfd6403883548d3ce6c91d62", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 19:14:30 WARNING:api: Number of unfound IDs: 1.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 336
+changed_only_1_to_1: 33096
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 262
+matching_1_to_1: 33096
+matching_1_to_n: 336
+input_identifiers: 33694
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "79a94fa7878141668a9a931884870406", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 239
+changed_only_1_to_1: 26742
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 166
+matching_1_to_1: 26742
+matching_1_to_n: 239
+input_identifiers: 27147
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "e77ee98e87e24ee2a664701ba8327dd6", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 19:20:28 WARNING:api: Number of unfound IDs: 12.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 169
+changed_only_1_to_1: 21597
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 53
+matching_1_to_1: 21597
+matching_1_to_n: 169
+input_identifiers: 21819
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "200143378fde48e7800a2a5c419c1ff1", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 19:23:33 WARNING:api: Number of unfound IDs: 1.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 290
+changed_only_1_to_1: 33168
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 80
+matching_1_to_1: 33168
+matching_1_to_n: 290
+input_identifiers: 33538
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "bf8a2c8546154edb9b9e721e71cd8c64", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 159
+changed_only_1_to_1: 18305
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 10
+matching_1_to_1: 18305
+matching_1_to_n: 159
+input_identifiers: 18474
+Source release: (38, 87)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "1be1458b79a14689b8b11d51af8b0f0a", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 180
+changed_only_1_to_1: 27447
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 51
+matching_1_to_1: 27447
+matching_1_to_n: 180
+input_identifiers: 27678
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "e9bd78446e0b4138abb493d93d3dd0ae", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 19:32:22 WARNING:api: Number of unfound IDs: 1.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 290
+changed_only_1_to_1: 33168
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 80
+matching_1_to_1: 33168
+matching_1_to_n: 290
+input_identifiers: 33538
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "2a35367482e74c7e9226cd20554f4f8e", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 161
+changed_only_1_to_1: 26367
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 50
+matching_1_to_1: 26367
+matching_1_to_n: 161
+input_identifiers: 26578
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "6ee2e6bca8ab49649463ba6acadafeb4", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 19:38:22 WARNING:api: Number of unfound IDs: 187.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 274
+changed_only_1_to_1: 30607
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 348
+matching_1_to_1: 30607
+matching_1_to_n: 274
+input_identifiers: 31229
+Source release: (38, 89)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "5b7171308ab249cda35c917f7b7a3405", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 19:41:17 WARNING:api: Number of unfound IDs: 7.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 284
+changed_only_1_to_1: 31842
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 612
+matching_1_to_1: 31842
+matching_1_to_n: 284
+input_identifiers: 32738
+Source release: (37, 79)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "a84a16c119cd400a8b4df041a3a7f4c6", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 19:44:19 WARNING:api: Number of unfound IDs: 40.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 263
+changed_only_1_to_1: 31308
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 533
+matching_1_to_1: 31308
+matching_1_to_n: 263
+input_identifiers: 32104
+Source release: (38, 89)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "161c8636125e4fdc9d5f6159460cf8f8", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 251
+changed_only_1_to_1: 26753
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 177
+matching_1_to_1: 26753
+matching_1_to_n: 251
+input_identifiers: 27181
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "3d7eab0338684401b0cfe1f74d926461", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 19:50:15 WARNING:api: Number of unfound IDs: 22.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 198
+changed_only_1_to_1: 24638
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 492
+matching_1_to_1: 24638
+matching_1_to_n: 198
+input_identifiers: 25328
+Source release: (37, 79)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "d282610363964372a04ff4126869002d", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 139
+changed_only_1_to_1: 17384
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 10
+matching_1_to_1: 17384
+matching_1_to_n: 139
+input_identifiers: 17533
+Source release: (38, 99)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "d549a76987264a419eb818aceff387d7", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 155
+changed_only_1_to_1: 19004
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 63
+matching_1_to_1: 19004
+matching_1_to_n: 155
+input_identifiers: 19222
+Source release: (38, 86)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "d2a054f266f04e7e800c76037a62e674", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 19:58:46 WARNING:api: Number of unfound IDs: 1.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 258
+changed_only_1_to_1: 21885
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 21
+matching_1_to_1: 21885
+matching_1_to_n: 258
+input_identifiers: 22164
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "5b54dc1e04c847118af834826b50cf84", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 20:01:33 WARNING:api: Number of unfound IDs: 1.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 280
+changed_only_1_to_1: 31599
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 36
+matching_1_to_1: 31599
+matching_1_to_n: 280
+input_identifiers: 31915
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "2ab6cd59bc9146af8b3f923862a2653d", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 20:04:44 WARNING:api: Number of unfound IDs: 7.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 284
+changed_only_1_to_1: 31842
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 612
+matching_1_to_1: 31842
+matching_1_to_n: 284
+input_identifiers: 32738
+Source release: (37, 79)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "f85ea4ebb9eb4aa4927998b7bf4d9457", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 1830
+changed_only_1_to_1: 57434
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 1461
+matching_1_to_1: 57434
+matching_1_to_n: 1830
+input_identifiers: 60725
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2022-11-01 20:09:57 WARNING:api: Number of unfound IDs: 10.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 83)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "c19ada802d404d89a951a0ba58a47438", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+changed_only_1_to_n: 196
+changed_only_1_to_1: 24290
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 46
+matching_1_to_1: 24290
+matching_1_to_n: 196
+input_identifiers: 24532
+Source release: (38, 91)
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">database</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
-    <span class="n">all_targets</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">(</span><span class="n">j</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">][</span><span class="n">i</span><span class="p">])</span>
-    <span class="n">n_to_1_events</span> <span class="o">=</span> <span class="p">[</span><span class="n">j</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="n">all_targets</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">]</span>
-    <span class="n">one_to_events</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">][</span><span class="n">i</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">]</span>
-    <span class="n">one_to_0_events</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">][</span><span class="n">i</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">]</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">database</span><span class="si">}</span><span class="se">\n</span><span class="s2">Source_Count:</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="n">database</span><span class="p">])</span><span class="si">}</span><span class="se">\n</span><span class="s2">Target_Count:</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">all_targets</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;n-to-1_events:</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">n_to_1_events</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">1-to-n_events:</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">one_to_events</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">1-to-0_events:</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">one_to_0_events</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">()</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">time_suffix</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">-%H%M%S&quot;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">gmtime</span><span class="p">())</span>
+<span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">local_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;results_for_hlca_datasets_</span><span class="si">{</span><span class="n">final_database</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">time_suffix</span><span class="si">}</span><span class="s2">.pk&quot;</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saved: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -740,294 +2019,16 @@ Saved: /lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/results_prelimina
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Kaminski_2020
-Source_Count:45947
-Target_Count:45378
-n-to-1_events:305
-1-to-n_events:0
-1-to-0_events:411
-
-Meyer_2021
-Source_Count:20922
-Target_Count:20801
-n-to-1_events:189
-1-to-n_events:0
-1-to-0_events:24
-
-MeyerNikolic_unpubl
-Source_Count:33582
-Target_Count:32815
-n-to-1_events:1145
-1-to-n_events:4
-1-to-0_events:174
-
-Barbry_unpubl
-Source_Count:16859
-Target_Count:16768
-n-to-1_events:126
-1-to-n_events:1
-1-to-0_events:29
-
-Regev_2021
-Source_Count:30983
-Target_Count:30388
-n-to-1_events:826
-1-to-n_events:1
-1-to-0_events:173
-
-Thienpont_2018
-Source_Count:27958
-Target_Count:27428
-n-to-1_events:393
-1-to-n_events:1
-1-to-0_events:327
-
-Budinger_2020
-Source_Count:26316
-Target_Count:25943
-n-to-1_events:545
-1-to-n_events:1
-1-to-0_events:96
-
-Banovich_Kropski_2020
-Source_Count:33694
-Target_Count:32824
-n-to-1_events:731
-1-to-n_events:6
-1-to-0_events:497
-
-Sheppard_2020
-Source_Count:27147
-Target_Count:26617
-n-to-1_events:409
-1-to-n_events:1
-1-to-0_events:320
-
-Wunderink_2021
-Source_Count:21819
-Target_Count:21551
-n-to-1_events:377
-1-to-n_events:1
-1-to-0_events:76
-
-Lambrechts_2021
-Source_Count:33538
-Target_Count:32815
-n-to-1_events:1127
-1-to-n_events:4
-1-to-0_events:148
-
-Zhang_2021
-Source_Count:18474
-Target_Count:18405
-n-to-1_events:107
-1-to-n_events:0
-1-to-0_events:14
-
-Duong_lungMAP_unpubl
-Source_Count:27678
-Target_Count:27262
-n-to-1_events:623
-1-to-n_events:1
-1-to-0_events:99
-
-Janssen_2020
-Source_Count:33538
-Target_Count:32815
-n-to-1_events:1127
-1-to-n_events:4
-1-to-0_events:148
-
-Sun_2020
-Source_Count:26578
-Target_Count:26213
-n-to-1_events:524
-1-to-n_events:1
-1-to-0_events:98
-
-Gomperts_2021
-Source_Count:31229
-Target_Count:26036
-n-to-1_events:9187
-1-to-n_events:2
-1-to-0_events:449
-
-Eils_2020
-Source_Count:32738
-Target_Count:31246
-n-to-1_events:1157
-1-to-n_events:3
-1-to-0_events:895
-
-Schiller_2020
-Source_Count:32104
-Target_Count:28188
-n-to-1_events:6474
-1-to-n_events:1
-1-to-0_events:641
-
-Misharin_Budinger_2018
-Source_Count:27181
-Target_Count:26642
-n-to-1_events:417
-1-to-n_events:1
-1-to-0_events:325
-
-Shalek_2018
-Source_Count:25328
-Target_Count:24488
-n-to-1_events:492
-1-to-n_events:1
-1-to-0_events:589
-
-Schiller_2021
-Source_Count:17533
-Target_Count:17444
-n-to-1_events:148
-1-to-n_events:0
-1-to-0_events:14
-
-Peer_Massague_2020
-Source_Count:19222
-Target_Count:19031
-n-to-1_events:170
-1-to-n_events:0
-1-to-0_events:103
-
-Lafyatis_2019
-Source_Count:22164
-Target_Count:21993
-n-to-1_events:280
-1-to-n_events:3
-1-to-0_events:29
-
-Tata_unpubl
-Source_Count:31915
-Target_Count:31527
-n-to-1_events:667
-1-to-n_events:4
-1-to-0_events:49
-
-Xu_2020
-Source_Count:32738
-Target_Count:31246
-n-to-1_events:1157
-1-to-n_events:3
-1-to-0_events:895
-
-Sims_2019
-Source_Count:60725
-Target_Count:55303
-n-to-1_events:5680
-1-to-n_events:8
-1-to-0_events:1737
-
-Schultze_unpubl
-Source_Count:24532
-Target_Count:24251
-n-to-1_events:369
-1-to-n_events:1
-1-to-0_events:91
-
+Saved: /lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/results_for_hlca_datasets_ensembl_gene_20221101-191345.pk
 </pre></div></div>
 </div>
-</section>
-<section id="HGNC-vs-Ensembl-gene-as-targets">
-<h2>HGNC vs Ensembl gene as targets<a class="headerlink" href="#HGNC-vs-Ensembl-gene-as-targets" title="Permalink to this heading"></a></h2>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ddadaata</span> <span class="o">=</span> <span class="s2">&quot;Kaminski_2020&quot;</span>
-<span class="n">adata</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">adata_dict</span><span class="p">[</span><span class="n">ddadaata</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
-
-<span class="n">gene_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
-<span class="n">entered_gene_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
-<span class="n">return_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">ddadaata</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">))</span>
-
-<span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">gl</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">gene_list</span><span class="p">):</span>
-
-    <span class="k">if</span> <span class="n">ind</span> <span class="o">%</span> <span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">ind</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span><span class="o">-</span><span class="mi">5</span><span class="p">:</span>
-        <span class="n">progress_bar</span><span class="p">(</span><span class="n">ind</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-
-    <span class="n">new_gl</span><span class="p">,</span> <span class="n">is_converted</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">unfound_node_solutions</span><span class="p">(</span><span class="n">gl</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">new_gl</span><span class="p">,</span> <span class="n">is_converted</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">unfound_node_solutions</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">synonym_id_nodes_prefix</span><span class="si">}{</span><span class="n">gl</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="n">is_converted</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">False</span>
-
-    <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
-    <span class="k">elif</span> <span class="n">new_gl</span> <span class="ow">and</span> <span class="n">is_converted</span><span class="p">:</span>
-        <span class="n">conv</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">new_gl</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;ensembl_gene&#39;</span><span class="p">,</span> <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-        <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">conv</span><span class="p">)</span> <span class="k">if</span> <span class="n">conv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[])</span>
-        <span class="n">entered_gene_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_gl</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="n">new_gl</span><span class="p">:</span>
-        <span class="n">conv</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">gl</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;ensembl_gene&#39;</span><span class="p">,</span> <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-        <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">conv</span><span class="p">)</span> <span class="k">if</span> <span class="n">conv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[])</span>
-        <span class="n">entered_gene_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gl</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">identify_source</span><span class="p">(</span><span class="n">entered_gene_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">Counter</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">return_list</span><span class="p">])</span><span class="o">.</span><span class="n">most_common</span><span class="p">())[:</span><span class="mi">10</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">()</span>
-
-<span class="n">gene_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
-<span class="n">entered_gene_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
-<span class="n">return_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">ddadaata</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">))</span>
-
-<span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">gl</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">gene_list</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">ind</span> <span class="o">%</span> <span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">ind</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span><span class="o">-</span><span class="mi">5</span><span class="p">:</span>
-        <span class="n">progress_bar</span><span class="p">(</span><span class="n">ind</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-
-    <span class="n">new_gl</span><span class="p">,</span> <span class="n">is_converted</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">unfound_node_solutions</span><span class="p">(</span><span class="n">gl</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">new_gl</span><span class="p">,</span> <span class="n">is_converted</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">unfound_node_solutions</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">synonym_id_nodes_prefix</span><span class="si">}{</span><span class="n">gl</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="n">is_converted</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">False</span>
-
-    <span class="k">if</span> <span class="n">new_gl</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
-    <span class="k">elif</span> <span class="n">new_gl</span> <span class="ow">and</span> <span class="n">is_converted</span><span class="p">:</span>
-        <span class="n">conv</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">new_gl</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">,</span> <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-        <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">conv</span><span class="p">)</span> <span class="k">if</span> <span class="n">conv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[])</span>
-        <span class="n">entered_gene_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_gl</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="n">new_gl</span><span class="p">:</span>
-        <span class="n">conv</span> <span class="o">=</span> <span class="n">tt</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">gl</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">,</span> <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-        <span class="n">return_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">conv</span><span class="p">)</span> <span class="k">if</span> <span class="n">conv</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[])</span>
-        <span class="n">entered_gene_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gl</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">tt</span><span class="o">.</span><span class="n">identify_source</span><span class="p">(</span><span class="n">entered_gene_list</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">Counter</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">return_list</span><span class="p">])</span><span class="o">.</span><span class="n">most_common</span><span class="p">())[:</span><span class="mi">10</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">gene_list</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">return_list</span><span class="p">)</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">][:</span><span class="mi">10</span><span class="p">]</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
-</pre></div>
-</div>
-</div>
-</section>
 </section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="Untitled.html" class="btn btn-neutral float-left" title="Tutorial" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="initialization.html" class="btn btn-neutral float-left" title="Initialization" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="../reference.html" class="btn btn-neutral float-right" title="Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
