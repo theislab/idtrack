@@ -1,6 +1,3 @@
-**idtrack**
-===========
-
 .. include:: readme.rst
 
 .. toctree::

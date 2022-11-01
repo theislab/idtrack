@@ -14,7 +14,7 @@ from typing import Any, Dict, Union
 
 import networkx as nx
 import numpy as np
-from tqdm.autonotebook import tqdm
+from tqdm.auto import tqdm
 
 from ._db import DB
 from ._track import Track

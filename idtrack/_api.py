@@ -6,9 +6,11 @@
 
 import copy
 import logging
+import os
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-from tqdm.autonotebook import tqdm
+import numpy as np
+from tqdm.auto import tqdm
 
 from ._database_manager import DatabaseManager
 from ._db import DB
@@ -108,12 +110,17 @@ class API:
         Returns:
             A dictionary with following keys
 
-            - ``"final_ids"``: Final IDs after conversion.
+            - ``"target_id"``: Final IDs after conversion.
+            - ``"last_node"``: The last node in history travel, so it is an Ensembl gene ID.
             - ``"final_database"``: Final database of the final IDs.
-            - ``"graph_id"``: The last node in history travel, so it is an Ensembl gene ID.
+            - ``"graph_id"``: The corresponding ID in the graph for the query ID.
+              For example, if the query ID is 'actb', this will be 'ACTB'.
             - ``"query_id"``: The input query ID.
             - ``"no_corresponding"``: If ``True``, there is no such ID in the graph.
             - ``"no_conversion"``: If ``True``, it is not possible to convert into the target. It is 1-to-0 matching.
+            - ``"no_target"``: If ``True``, there is no matching in the described final database, but the history
+              travel was successful until 'last_node'. In other words, 'final_conversion' failed, no mathing identifier
+              is found in the target database but there is mathing identifier in Ensembl.
             - ``"the_path"``: The path from source to query ID. (If `return_path` is set to ``True``.)
         """
         # Get the graph ID if possible.
@@ -134,11 +141,13 @@ class API:
         else:
             no_corresponding = True
 
-        final_ids: List[str] = (
-            list({j for i in cnt for j in cnt[i]["final_conversion"]["final_elements"]})
+        final_ids_together: List[Tuple[str, str]] = (
+            list({(i, j) for i in cnt for j in cnt[i]["final_conversion"]["final_elements"]})
             if not no_corresponding and not no_conversion
             else []
         )
+        target_ids = list({i[1] for i in final_ids_together})
+
         final_database_conv_: Set[Optional[str]] = (
             {cnt[i]["final_conversion"]["final_database"] for i in cnt}
             if not no_corresponding and not no_conversion
@@ -147,13 +156,23 @@ class API:
         assert len(final_database_conv_) == 1
         final_database_conv = list(final_database_conv_)[0]
 
+        final_conf_: Set[Optional[Union[int, float]]] = (
+            {cnt[i]["final_conversion"]["final_conversion_confidence"] for i in cnt}
+            if not no_corresponding and not no_conversion
+            else {None}
+        )
+        assert len(final_conf_) == 1
+        final_conf = list(final_conf_)[0]
+
         result: Dict[str, Any] = {
-            "final_ids": final_ids,
+            "target_id": target_ids,
+            "last_node": final_ids_together,
             "final_database": final_database_conv,
             "graph_id": new_ident,
             "query_id": identifier,
             "no_corresponding": no_corresponding,
             "no_conversion": no_conversion,
+            "no_target": np.isinf(final_conf) if final_conf is not None else False,
         }
 
         if return_path:
@@ -171,26 +190,100 @@ class API:
 
         return result
 
-    def convert_identifier_multiple(self, identifier_list, verbose: bool = True, **kwargs) -> List[dict]:
+    def convert_identifier_multiple(
+        self, identifier_list, verbose: bool = True, pbar_prefix: str = "", **kwargs
+    ) -> List[dict]:
         """Basically ``convert_identifier`` method for multiple conversion procedure with progress bar.
 
         Args:
             identifier_list: List of query IDs to feed the ``convert_identifier`` method.
             kwargs: Keyword arguments to pass into ``convert_identifier`` method.
             verbose: If ``True``, shows the progress.
+            pbar_prefix: The string to be put before the progress bar.
 
         Returns:
             List of ``convert_identifier`` method outputs.
         """
         result = list()
-        with tqdm(identifier_list, mininterval=0.25, disable=not verbose) as loop_obj:
+        with tqdm(identifier_list, mininterval=0.25, disable=not verbose, desc=pbar_prefix) as loop_obj:
             for identifier in loop_obj:
                 loop_obj.set_postfix_str(f"ID:{identifier}", refresh=False)
 
                 result.append(self.convert_identifier(identifier, **kwargs))
         return result
 
-    def infer_identifier_release(self, id_list: list, mode: str = "ensembl_release", report_winner: bool = True):
+    def classify_multiple_conversion(self, matchings: List[Dict[str, Any]]) -> Dict[str, List[dict]]:
+        """Create a dictionary by classifying the results into different bins.
+
+        Args:
+            matchings: The output of ``convert_identifier_multiple`` method.
+
+        Raises:
+            ValueError: Unexpected program error
+
+        Returns:
+            List of ``convert_identifier`` method outputs.
+        """
+        r: Dict[str, List[dict]] = {
+            "changed_only_1_to_n": [],
+            "changed_only_1_to_1": [],
+            "alternative_target_1_to_1": [],
+            "alternative_target_1_to_n": [],
+            "matching_1_to_0": [],
+            "matching_1_to_1": [],
+            "matching_1_to_n": [],
+            "input_identifiers": [],
+        }
+
+        for i in matchings:
+
+            r["input_identifiers"].append(i)
+
+            if i["no_corresponding"]:
+                r["matching_1_to_0"].append(i)
+                continue
+
+            if i["no_conversion"]:
+                r["matching_1_to_0"].append(i)
+                continue
+
+            if len(i["target_id"]) == 0:
+                raise ValueError("Unexpected error.")
+
+            if i["no_target"]:
+
+                if len(i["target_id"]) == 1:
+                    r["alternative_target_1_to_1"].append(i)
+                else:
+                    r["alternative_target_1_to_n"].append(i)
+
+            else:
+
+                if len(i["target_id"]) == 1 and i["target_id"][0] != i["query_id"]:
+                    r["changed_only_1_to_1"].append(i)
+
+                if len(i["target_id"]) > 1 and not any([i["query_id"] == k for k in i["target_id"]]):
+                    r["changed_only_1_to_n"].append(i)
+
+                if len(i["target_id"]) == 1:
+                    r["matching_1_to_1"].append(i)
+
+                if len(i["target_id"]) > 1:
+                    r["matching_1_to_n"].append(i)
+
+        return r
+
+    def print_binned_conversion(self, binned_conversion):
+        """Print the output of ``classify_multiple_conversion`` method.
+
+        Args:
+            binned_conversion: The output of ``classify_multiple_conversion`` method.
+        """
+        print(f"{os.linesep}".join([f"{i}: {len(binned_conversion[i])}" for i in binned_conversion]))
+
+    def infer_identifier_source(
+        self, id_list: list, mode: str = "assembly_ensembl_release", report_only_winner: bool = True
+    ):
         """Infer the source of given set of IDs, by comparing which source covers most of the query IDs.
 
         Args:
@@ -200,7 +293,7 @@ class API:
                 - ``"ensembl_release"``: Looks for the best match in terms of Ensembl release only.
                 - ``"assembly"``: Looks for the best match in terms of genome assembly only.
                 - ``"assembly_ensembl_release"``: Looks for the best match in terms of Ensembl release and assembly.
-            report_winner: If ``True``, return only the winner. If ``False``, return each
+            report_only_winner: If ``True``, return only the winner. If ``False``, return each
                 possible source with corresponding scores.
 
         Returns:
@@ -220,7 +313,7 @@ class API:
             self.log.warning(f"Number of unfound IDs: {len(none_id_list)}.")
 
         identification = self.track.identify_source(found_id_list, mode=mode)
-        if not report_winner:
+        if not report_only_winner:
             return identification
         else:
             return identification[0][0]

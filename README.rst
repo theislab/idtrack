@@ -1,3 +1,6 @@
+**idtrack**
+===========
+
 |PyPI| |PyPIDownloads| |Python Version| |License| |Read the Docs| |Build| |Tests| |Codecov| |pre-commit| |Black|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/idtrack.svg
@@ -30,9 +33,6 @@
 .. |PyPIDownloads| image:: https://pepy.tech/badge/idtrack
    :target: https://pepy.tech/project/idtrack
    :alt: downloads
-
-
-
 
 .. image:: https://raw.githubusercontent.com/theislab/idtrack/development/docs/_logo/logo.png
     :width: 350

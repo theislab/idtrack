@@ -9,6 +9,5 @@ Usage
 .. toctree::
 
     _notebooks/initialization
-    _notebooks/Untitled1
     _notebooks/results_preliminary_for_hlca
 
