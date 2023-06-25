@@ -8,7 +8,7 @@
 
 __author__ = "Kemal Inecik"
 __email__ = "k.inecik@gmail.com"
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 
 from ._api import API  # noqa

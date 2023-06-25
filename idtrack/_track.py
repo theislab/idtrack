@@ -38,7 +38,7 @@ class Track:
 
         Args:
             db_manager: See parameter in :py:attr:`_graph.Graph.__init__.db_manager`.
-            kwargs: Keyword arguments to be passed to :py:attr:`_the_graph.TheGraph.get_graph`.
+            kwargs: Keyword arguments to be passed to :py:attr:`_the_graph.GraphMaker.get_graph`.
         """
         self.log = logging.getLogger("track")
         self.db_manager = db_manager
@@ -47,7 +47,8 @@ class Track:
         # Calculate/Load the graph
         self.graph = graph_creator.get_graph(**kwargs)
         self.version_info = self.graph.graph["version_info"]
-        self._external_entrance_placeholder = -1
+        self._external_entrance_placeholder = {False: -1, True: 10001}
+        self._external_entrance_placeholders = sorted(self._external_entrance_placeholder.values())
 
     def _recursive_synonymous(
         self,
@@ -55,10 +56,10 @@ class Track:
         synonymous_ones: list,
         synonymous_ones_db: list,
         filter_node_type: set,
-        the_path: list = None,
-        the_path_db: list = None,
+        the_path: Optional[list] = None,
+        the_path_db: Optional[list] = None,
         depth_max: int = 0,
-        from_release: int = None,
+        from_release: Optional[int] = None,
         ensembl_backbone_shallow_search: bool = False,
     ):
         """Helper method to be used in :py:meth:`_graph.Track.synonymous_nodes`.
@@ -82,7 +83,6 @@ class Track:
 
         def decide_terminate_externals():
             if input_node_type == DB.nts_external:  # last node nts in the path
-
                 if len(_the_path) > 1:
                     edge_key = self.edge_key_orientor(*_the_path[-2:], 0)
                     the_data = self.graph.get_edge_data(*edge_key)[DB.connection_dict]  # edge_data
@@ -99,7 +99,6 @@ class Track:
 
         def decide_terminate_others():
             if input_node_type != DB.nts_external:  # last node nts in the path
-
                 if input_node_type in filter_node_type and (
                     from_release is None
                     or TheGraph.is_point_in_range(self.graph.get_active_ranges_of_id[_the_id], from_release)
@@ -117,7 +116,6 @@ class Track:
             synonymous_ones_db.append(_the_path_db)
 
         if depth_max > max(Counter(_the_path_db).values()):  # The depth is all node_type.
-
             for graph in (
                 (self.graph, self.graph.rev)
                 # if ensembl_backbone_shallow_search activated, follow only reverse direction. This should typically
@@ -127,9 +125,7 @@ class Track:
                 if not ensembl_backbone_shallow_search or input_node_type in DB.nts_bidirectional_synonymous_search
                 else (self.graph.rev,)
             ):
-
                 for _next_neighbour in graph.neighbors(_the_id):
-
                     if _next_neighbour in _the_path:
                         # prevent bouncing.
                         continue
@@ -184,7 +180,7 @@ class Track:
         the_id: str,
         depth_max: int,
         filter_node_type: set,
-        from_release: int = None,
+        from_release: Optional[int] = None,
         ensembl_backbone_shallow_search: bool = False,
     ):
         """Todo.
@@ -203,7 +199,7 @@ class Track:
             ValueError: Todo.
         """
         if DB.nts_external in filter_node_type:
-            raise ValueError(f"Define which external database: '{filter_node_type}'.")
+            raise ValueError(f"Define which external database: `{filter_node_type}`.")
 
         if ensembl_backbone_shallow_search:
             if depth_max != 2:
@@ -279,7 +275,6 @@ class Track:
         # Note that there is no need to consider assembly here because always this function is used in the context of
         # graph backbone nodes (ensembl gene), and the backbone is always the latest (currently 38).
         for l1, l2 in lor:
-
             if l1 > l2:
                 raise ValueError
 
@@ -340,7 +335,6 @@ class Track:
         # If the queried ID is not 'ensembl_gene':
         # find the synonym_ID with the closest distance to to_release
         if self.graph.nodes[from_id][DB.node_type_str] != DB.external_search_settings["nts_backbone"]:
-
             for syn_id in synonym_ids:
                 n = self.graph.get_active_ranges_of_id[syn_id]
                 m = Track.get_from_release_and_reverse_vars(n, to_release, mode=mode)
@@ -354,7 +348,6 @@ class Track:
             # If the queried ID and synonyms has some overlapping ranges:
             # find the synonym_ID which has coinciding release with from_id and closest to the to_release.
             for syn_id in synonym_ids:
-
                 n = self.graph.get_two_nodes_coinciding_releases(from_id, syn_id)
                 m = Track.get_from_release_and_reverse_vars(n, to_release, mode=mode)
 
@@ -367,7 +360,6 @@ class Track:
             # If the queried ID and synonyms has no overlapping ranges:
             # find the synonym_ID with the closest distance to from_id
             if len(distance_to_target) == 0:
-
                 # Find the closest point (1 or 2 exist due to reverse orientation thing)
                 # of from_id range to the to_release, if it does not contain it.
                 from_id_range = self.graph.get_active_ranges_of_id[from_id]
@@ -476,10 +468,8 @@ class Track:
         more_than_one_edges: dict = dict()
         index_counter: int = 0
         for node_after in nx.neighbors(self.graph if not reverse else self.graph.rev, from_id):
-
             # This forces to follow the same form tree during the recursion
             if self.graph.nodes[node_after][DB.node_type_str] == self.graph.nodes[from_id][DB.node_type_str]:
-
                 for multi_edge_id, an_edge in (
                     (self.graph if not reverse else self.graph.rev).get_edge_data(from_id, node_after).items()
                 ):
@@ -491,7 +481,6 @@ class Track:
                         or (reverse and edge_release <= from_release)
                         or (not reverse and np.isinf(an_edge["new_release"]))
                     ):  # keep last node
-
                         list_to_add = [edge_release, self_loop, from_id, node_after, multi_edge_id]
 
                         node_after_id = self.graph.nodes[node_after]["ID"]
@@ -564,7 +553,7 @@ class Track:
         to_release: int,
         reverse: bool,
         external_settings: dict,
-        external_jump: float = None,
+        external_jump: Optional[float] = None,
         multiple_ensembl_transition: bool = False,
     ) -> set:
         """Todo.
@@ -591,11 +580,10 @@ class Track:
             __edge_hist: Optional[list],
             __edge_hist_non_backbone: Optional[set],
         ) -> None:
-            def _external_path_maker(a_from_id, a_ens_rel, a_syn_pth, free_from_release: bool):
+            def _external_path_maker(a_from_id, a_ens_rel, a_syn_pth, free_from_release: bool, reverse: bool):
                 a_edge_hist_alt = list()
                 a_from_id_ext_path = copy.deepcopy(a_from_id)
                 for a_path_ind, a_next_node in enumerate(a_syn_pth):
-
                     if a_path_ind == 0:
                         continue
                     # 0 is tested TheGraph.is_node_consistency_robust
@@ -604,7 +592,7 @@ class Track:
                             a_from_id_ext_path,
                             a_next_node,
                             0,
-                            a_ens_rel if not free_from_release else self._external_entrance_placeholder,
+                            a_ens_rel if not free_from_release else self._external_entrance_placeholder[reverse],
                         )
                     )
                     a_from_id_ext_path = copy.deepcopy(a_next_node)
@@ -671,18 +659,16 @@ class Track:
                             s3,  # __reverse
                             True,  # __beamed_up
                             _external_jump,  # __external_jump. It does not count as it is starting point
-                            _edge_hist + _external_path_maker(__from_id, s2, s4, switch_met),  # __edge_hist
+                            _edge_hist + _external_path_maker(__from_id, s2, s4, switch_met, s3),  # __edge_hist
                             _edge_hist_non_backbone | _non_backbone_finder(s4),  # __edge_hist_non_backbone
                         )
                         # Add parallel path finding searches
 
             else:
                 for _edge_release, _only_self_loop, _from_id, _node_after, _multi_edge_id in next_edges:
-
                     # Synonymous genes of the gene of interest until the next node in the history travel.
 
                     if not __beamed_up and _external_jump < external_settings["jump_limit"]:
-
                         s = self.choose_relevant_synonym(
                             _from_id,
                             depth_max=external_settings["synonymous_max_depth"],
@@ -702,7 +688,7 @@ class Track:
                                     s3,  # __reverse
                                     True,  # __beamed_up
                                     _external_jump + 1.0,  # __external_jump
-                                    _edge_hist + _external_path_maker(_from_id, s2, s4, True),  # __edge_hist
+                                    _edge_hist + _external_path_maker(_from_id, s2, s4, True, s3),  # __edge_hist
                                     _edge_hist_non_backbone | _non_backbone_finder(s4),  # __edge_hist_non_backbone
                                 )
                                 # Add parallel path finding searches
@@ -824,7 +810,6 @@ class Track:
         # Activate external jump and increase the depth of search at each step
         es = copy.deepcopy(DB.external_search_settings)
         while go_external and len(all_paths) < 1:
-
             all_paths = self.path_search(
                 from_id=from_id,
                 from_release=from_release,
@@ -844,7 +829,6 @@ class Track:
         # If none found, make relaxed search in terms of ensembl transition.
         es = copy.deepcopy(DB.external_search_settings)
         if len(all_paths) < 1:
-
             all_paths = self.path_search(
                 from_id=from_id,
                 from_release=from_release,
@@ -858,7 +842,6 @@ class Track:
         # The same as above except this time with relaxed transition.
         es = copy.deepcopy(DB.external_search_settings)
         while go_external and len(all_paths) < 1:
-
             all_paths = self.path_search(
                 from_id=from_id,
                 from_release=from_release,
@@ -883,7 +866,7 @@ class Track:
         ensembl_include = dict()
         filter_set = copy.deepcopy(self.graph.available_external_databases)
         for i in form_list:
-            ensembl_include_form: set = set([DB.nts_ensembl[i]] + [DB.nts_assembly[j][i] for j in DB.nts_assembly])
+            ensembl_include_form = set([DB.nts_ensembl[i]] + [DB.nts_assembly[j][i] for j in DB.nts_assembly])
             ensembl_include[i] = ensembl_include_form
             filter_set.update(ensembl_include_form)
         return filter_set, ensembl_include
@@ -970,20 +953,20 @@ class Track:
         scores: dict = dict()
 
         for the_path, from_release in zip(all_possible_paths, from_releases):
-
             edge_scores = list()
             external_step = 0
             external_jump = 0
             in_external = False
 
             for the_edge in the_path:
-
                 if len(the_edge) == 3:
                     reverse = from_release > to_release
+
                     if not (the_edge[0] is None and the_edge[2] is None):
                         w = (self.graph if not reverse else self.graph.rev).get_edge_data(*the_edge)["weight"]
                     else:
                         w = score_of_the_queried_item
+
                     edge_scores.append(w)
                     in_external = False
 
@@ -1033,18 +1016,15 @@ class Track:
                 step_pri = sorted(DB.assembly_mysqlport_priority[i]["Priority"] for i in assemblies)
                 assembly_jump, current_priority = 0, max(step_pri)
             else:
-                initial_conversion_conf = (
-                    len(the_path[0]) == 4 and the_path[0][-1] == self._external_entrance_placeholder
-                )
                 the_path = tuple(
                     tuple(list(the_step[:3]) + [er_maker_for_initial_conversion(*the_step)])
-                    if len(the_step) == 4 and the_step[-1] == self._external_entrance_placeholder
-                    # -1 is when you have external to graph conversion and from_release is None.
+                    if len(the_step) == 4 and the_step[-1] in self._external_entrance_placeholders
+                    # -1, 10001 is when you have external to graph conversion and from_release is None.
                     else the_step
                     for the_step in the_path
                 )
-
                 assembly_jump, step_pri, current_priority = self.minimum_assembly_jumps(the_path)
+            initial_conversion_conf = len(the_path[0]) == 4 and the_path[0][-1] in self._external_entrance_placeholders
             to_add = {
                 # explain each
                 "from_id": from_id,
@@ -1246,9 +1226,7 @@ class Track:
         minimum_scores: Dict[tuple, list] = dict()
 
         for dct in dict_of_dict:
-
             for target in dict_of_dict[dct]["final_conversion"]["final_elements"]:
-
                 _temp = dict_of_dict[dct]["final_conversion"]["final_elements"]
                 ordered_score = {i: dict_of_dict[dct][i] for i in importance_order if i in dict_of_dict[dct]}
                 ordered_score["final_asy_min_prior"] = min(dict_of_dict[dct]["final_assembly_priority"][0])

@@ -60,10 +60,10 @@ class VerifyOrganism:
         the_search = self.name_synonyms_dataframe[self.name_synonyms_dataframe["synonym"] == self.organism_query]
         cm = "Please inspect 'name_synonyms_dataframe' variable of this instance for troubleshooting."
         if len(the_search) == 0:
-            raise KeyError(f"The query ('{self.organism_query}') is not defined in the Ensembl database. {cm}")
+            raise KeyError(f"The query (`{self.organism_query}`) is not defined in the Ensembl database. {cm}")
         elif len(the_search) > 1:
             raise ValueError(
-                f"There are multiple entries for query ('{self.organism_query}') "
+                f"There are multiple entries for query (`{self.organism_query}`) "
                 f" in Ensembl database. The query is hence ambiguous. {cm}"
             )
         else:
@@ -114,18 +114,17 @@ class VerifyOrganism:
         latest_ensembl_releases: dict = {}
 
         for organism in decoded_results:
-
             # Make sure the organisms are as they should be.
             if "core" not in organism["groups"]:
                 raise ValueError(
-                    f"'{organism['name']}' does not contain 'core' group. "
+                    f"`{organism['name']}` does not contain 'core' group. "
                     f"This causes many errors when downloading databases in this package."
                 )
                 # Note that 'core' is used in the MySQL or FTP queries by the idtrack package.
 
             # Make sure there is one and only one item for a given organism.
             if organism["name"] in latest_ensembl_releases:
-                raise ValueError(f"'{organism['name']}' has defined more than one latest release.")
+                raise ValueError(f"`{organism['name']}` has defined more than one latest release.")
 
             # In very early releases, there are floating releases like "18.2". This package does not support those.
             if not float(organism["release"]) == int(organism["release"]):

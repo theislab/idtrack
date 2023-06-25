@@ -10,7 +10,7 @@ import os
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
-from tqdm.auto import tqdm
+from tqdm import tqdm
 
 from ._database_manager import DatabaseManager
 from ._db import DB
@@ -34,11 +34,11 @@ class API:
         self.local_repository = local_repository
         self.track: Union[Track, TrackTests]
 
-    def configure_logger(self):
+    def configure_logger(self, level=None):
         """Configure logger in a way that shows the logs in a specified format."""
         if not self.logger_configured:
             logging.basicConfig(
-                level=logging.INFO,
+                level=logging.INFO if level is None else level,
                 datefmt="%Y-%m-%d %H:%M:%S",
                 format="%(asctime)s %(levelname)s:%(name)s: %(message)s",
             )
@@ -236,7 +236,6 @@ class API:
         }
 
         for i in matchings:
-
             r["input_identifiers"].append(i)
 
             if i["no_corresponding"]:
@@ -251,14 +250,12 @@ class API:
                 raise ValueError("Unexpected error.")
 
             if i["no_target"]:
-
                 if len(i["target_id"]) == 1:
                     r["alternative_target_1_to_1"].append(i)
                 else:
                     r["alternative_target_1_to_n"].append(i)
 
             else:
-
                 if len(i["target_id"]) == 1 and i["target_id"][0] != i["query_id"]:
                     r["changed_only_1_to_1"].append(i)
 
@@ -317,3 +314,11 @@ class API:
             return identification
         else:
             return identification[0][0]
+
+    def available_organisms(self) -> Set[str]:
+        """Show which organisms are available to be used in the scope of this package.
+
+        Returns:
+            Set of strings saying which external databases are present in the graph.
+        """
+        return self.track.graph.available_external_databases

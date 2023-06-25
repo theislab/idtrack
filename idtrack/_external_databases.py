@@ -172,14 +172,14 @@ class ExternalDatabases:
         """
         file_name = self.file_name_modified_yaml(mode="configured")
         if not os.access(file_name, os.R_OK):
-            self.log.warning(f"External database config is not found in provided temp directory: '{file_name}'.")
+            self.log.warning(f"External database config is not found in provided temp directory: `{file_name}`.")
 
             file_name = self.file_name_modified_yaml(mode="default")  # Look at the alternative
             if os.access(file_name, os.R_OK):
                 self.log.warning(f"The package uses the default config file for {self.organism}.")
             else:
                 raise FileNotFoundError(
-                    f"No default config file for '{self.organism}' distributed with the package: '{file_name}'. "
+                    f"No default config file for `{self.organism}` distributed with the package: `{file_name}`. "
                     f"Please see `create_template_yaml' method description "
                     f"to learn how to create an external 'yaml' file."
                 )
@@ -210,13 +210,11 @@ class ExternalDatabases:
 
         result = set()
         for db_name in the_dict:
-
             for asm in the_dict[db_name]["Assembly"]:
                 item = the_dict[db_name]["Assembly"][asm]
                 res_ens = map(int, item["Ensembl release"].split(","))
 
                 if self.ensembl_release in res_ens and item["Include"]:
-
                     if give_type == "db" and int(asm) == self.genome_assembly:
                         result.add(db_name)
 

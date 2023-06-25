@@ -10,7 +10,7 @@ import re
 from collections import Counter
 from functools import cached_property
 from itertools import repeat
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -29,11 +29,11 @@ class DatabaseManager:
         ensembl_release: int,
         form: str,
         local_repository: str,
-        ignore_before: int = None,
-        ignore_after: Union[int, float] = None,
+        ignore_before: Optional[int] = None,
+        ignore_after: Optional[Union[int, float]] = None,
         compress: bool = True,
         store_raw_always: bool = True,
-        genome_assembly: int = None,
+        genome_assembly: Optional[int] = None,
     ):
         """Class initialization.
 
@@ -97,9 +97,9 @@ class DatabaseManager:
         self.store_raw_always = store_raw_always
         # If ignore_before is not specified clearly, than use the lowest possible priority defined by the MySQL server.
         default_min_er = max(DB.assembly_mysqlport_priority[i]["MinRelease"] for i in DB.assembly_mysqlport_priority)
-        self.ignore_before: int = ignore_before if ignore_before else default_min_er
+        self.ignore_before: int = ignore_before if ignore_before is not None else default_min_er
         # If ignore_after is not specified, than set it to infinite.
-        self.ignore_after: Union[int, float] = ignore_after if ignore_after else np.inf
+        self.ignore_after: Union[int, float] = ignore_after if ignore_after is not None else np.inf
 
         # Protected attributes
         self.available_form_of_interests = copy.deepcopy(DB.forms_in_order)  # Warning: the order is important.
@@ -337,7 +337,7 @@ class DatabaseManager:
     def get_table(
         self,
         table_key: str,
-        usecols: list = None,
+        usecols: Optional[list] = None,
         create_even_if_exist: bool = False,
         save_after_calculation: bool = True,
         overwrite_even_if_exist: bool = False,
@@ -382,7 +382,7 @@ class DatabaseManager:
 
         return df
 
-    def download_table(self, table_key: str, usecols: list = None) -> pd.DataFrame:
+    def download_table(self, table_key: str, usecols: Optional[list] = None) -> pd.DataFrame:
         """Downloads the raw table from MySQL server and extracts requested columns.
 
         The method is not generally expected to be used by the user. User is expected to use 'get_table' instead.
@@ -402,7 +402,6 @@ class DatabaseManager:
 
         # Connect to the MYSQL server, close the connection after the code block
         with pymysql.connect(**which_mysql_server) as connection:
-
             # Create a cursor to be able to make some queries: First get the associated column names.
             with connection.cursor() as cur1:
                 cur1.execute(f"SHOW columns FROM {table_key}")
@@ -436,7 +435,7 @@ class DatabaseManager:
 
             info_usecols = " for following columns: " + ", ".join(usecols) + "." if usecols else "."
             self.log.info(
-                f"Raw table for '{table_key}' on ensembl release '{self.ensembl_release}' "
+                f"Raw table for `{table_key}` on ensembl release `{self.ensembl_release}` "
                 f"was downloaded{info_usecols}"
             )
 
@@ -486,7 +485,7 @@ class DatabaseManager:
             usecols_asso = ["translation_id", "transcript_id"]
 
         else:
-            raise ValueError(f"Form has to be one of {DB.forms_in_order}. Input form is '{form}'.")
+            raise ValueError(f"Form has to be one of {DB.forms_in_order}. Input form is `{form}`.")
 
         return stable_id_version, usecols_core, usecols_asso
 
@@ -942,7 +941,7 @@ class DatabaseManager:
                 for i in self.available_releases:
                     self.log.info(
                         f"Database content is being created for "
-                        f"'{self.organism}', assembly '{k}', form '{j}', ensembl release '{i}'"
+                        f"`{self.organism}`, assembly `{k}`, form `{j}`, ensembl release `{i}`"
                     )
                     df_temp = self.change_assembly(k).change_release(i).change_form(j).get_db("external_database")
                     df_temp["assembly"] = k
@@ -1093,7 +1092,6 @@ class DatabaseManager:
         """
 
         def check_exist_as_diff_release(_df_type, _df_indicator):
-
             # Get the file name associated with table_key and columns of interest.
             _, _file_path = self.file_name(_df_type, _df_indicator)
 
@@ -1114,13 +1112,12 @@ class DatabaseManager:
             return None, _downloaded_rels
 
         def remove_redundant_exist(_df_type, _df_indicator, _keep_rel, _all_rel_lst):
-
             for _arl in _all_rel_lst:
                 if _arl != _keep_rel:
                     _hi, _fi = self.file_name(_df_type, _df_indicator, ensembl_release=_arl)
                     with pd.HDFStore(_fi, mode="a") as f:
                         self.log.info(
-                            f"Following file is being removed: '{os.path.basename(_fi)}' with key '{_hi}'. "
+                            f"Following file is being removed: `{os.path.basename(_fi)}` with key `{_hi}`. "
                             f"This could cause hdf5 file to not reclaim the emptied disk space."
                         )
                         f.remove(_hi)
@@ -1159,7 +1156,6 @@ class DatabaseManager:
             or create_even_if_exist
             or (not DatabaseManager.check_h5_key(file_path, hierarchy))
         ):
-
             if main_ind == "external" and param1_ind is None:
                 df = self.create_external_db(filter_mode="all")
 
@@ -1235,7 +1231,7 @@ class DatabaseManager:
         df = pd.read_hdf(file_path, key=hierarchy, mode="r")
         return df
 
-    def file_name(self, df_type: str, *args, ensembl_release: int = None, **kwargs) -> Tuple[str, str]:
+    def file_name(self, df_type: str, *args, ensembl_release: Optional[int] = None, **kwargs) -> Tuple[str, str]:
         """Determine file name for reading/writing into h5 file based on dataframe type.
 
         The method is not expected to be used by the user.
@@ -1257,7 +1253,7 @@ class DatabaseManager:
         def file_name_processed(df_indicator: str):
             return f"ens{ensembl_release}_{df_type}_{df_indicator}_{self.form}"
 
-        def file_name_mysql(table_key: str, usecols: list = None):
+        def file_name_mysql(table_key: str, usecols: Optional[list] = None):
             col_suffix = f"{self._column_sep}{self._column_sep.join(sorted(usecols))}" if usecols is not None else ""
             return f"ens{ensembl_release}_{df_type}_{table_key}{col_suffix}"
 
@@ -1290,20 +1286,19 @@ class DatabaseManager:
         base_file_path = os.path.basename(file_path)
 
         if not os.access(file_path, os.R_OK) or overwrite or (not DatabaseManager.check_h5_key(file_path, hierarchy)):
-
             # Remove the file first to prevent hdf5 file to go arbitrarily larger after writing.
             if DatabaseManager.check_h5_key(file_path, hierarchy) or overwrite:
                 with pd.HDFStore(file_path, mode="a") as f:
                     if hierarchy in f:
                         self.log.info(
-                            f"Following file is being removed: '{os.path.basename(file_path)}' "
-                            f"with key '{hierarchy}'. This could cause hdf5 file to not reclaim the "
+                            f"Following file is being removed: `{os.path.basename(file_path)}` "
+                            f"with key `{hierarchy}`. This could cause hdf5 file to not reclaim the "
                             f"newly emptied disk space."
                         )
                         f.remove(hierarchy)
             # Then save the dataframe under the root, compressed.
             self.log.info(
-                f"Exporting to the following file '{base_file_path}' with key '{hierarchy}'"
+                f"Exporting to the following file `{base_file_path}` with key `{hierarchy}`"
                 f"{'' if self.compress else ', uncompressed'}."
             )
             df.to_hdf(file_path, key=hierarchy, mode="a", **self._comp_hdf5)
@@ -1324,7 +1319,7 @@ class DatabaseManager:
         with pd.HDFStore(file_path, mode="r") as f:
             return key in f
 
-    def repack_hdf5(self, remove_list: list = None):
+    def repack_hdf5(self, remove_list: Optional[list] = None):
         """Repack h5 file.
 
         When a table is removed by the h5 file, the associated space is not reclaimed by the operating system. The
@@ -1488,7 +1483,7 @@ class DatabaseManager:
 
         return df_fx
 
-    def version_fix(self, df: pd.DataFrame, version_str: str, version_info: str = None) -> pd.DataFrame:
+    def version_fix(self, df: pd.DataFrame, version_str: str, version_info: Optional[str] = None) -> pd.DataFrame:
         """Depending the version information of the organism, uniformize the identifiers.
 
         The method is not expected to be used by the user.

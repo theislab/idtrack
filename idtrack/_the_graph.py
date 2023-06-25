@@ -219,7 +219,6 @@ class TheGraph(nx.MultiDiGraph):
         result: dict = dict()
         for i in node_list:
             for j in the_graph.neighbors(i):
-
                 if the_graph.nodes[i][DB.node_type_str] != the_graph.nodes[j][DB.node_type_str]:
                     # Exclude the edges connecting the nodes from the same node type (exclude backbone connections).
 
@@ -228,7 +227,6 @@ class TheGraph(nx.MultiDiGraph):
                     edge_info = the_graph[i][j][0][DB.connection_dict]
 
                     for db_name in edge_info:
-
                         if db_name in DB.nts_ensembl_reverse:  # if db_name is a ensembl_x
                             _db_name_form = DB.nts_ensembl_reverse[db_name]  # get the form
                             # Get the corresponding node type in assembly specific dictionary. This is to make
@@ -242,7 +240,6 @@ class TheGraph(nx.MultiDiGraph):
                             result[i][_db_name] = dict()
 
                         for assembly_name in edge_info[db_name]:
-
                             if assembly_name not in result[i][_db_name]:
                                 result[i][_db_name][assembly_name] = set()
 
@@ -376,7 +373,6 @@ class TheGraph(nx.MultiDiGraph):
                 if len(char_indices) > 0:  # If there are more than 1 of such.
                     for comb in range(len(char_indices) + 1):
                         for replace_indices in itertools.combinations(char_indices, comb):
-
                             # Create the every combination of such ID and append to the list
                             replace_indices_other = [i for i in char_indices if i not in replace_indices]
                             new_id_l = list(the_id_pa)
@@ -399,7 +395,6 @@ class TheGraph(nx.MultiDiGraph):
                 return mti1, mti2  # Return the found ID and indicate it is a variation.
 
             for pa in possible_alternatives(the_id):
-
                 if pa in self.nodes:
                     return pa, True
 
@@ -480,14 +475,14 @@ class TheGraph(nx.MultiDiGraph):
             elif len(t_outs) == 0:
                 if self.nodes[the_id]["Version"] != DB.no_old_node_id:
                     # Make sure the graph is constructed as it should be.
-                    raise ValueError(f"If no-out node, the version should be '{DB.no_old_node_id}': {the_id}.")
+                    raise ValueError(f"If no-out node, the version should be `{DB.no_old_node_id}`: {the_id}.")
                 # The t_outs is then the first possible ensembl release. Note that t_ins is not empty.
                 t_outs = [min(self.graph["confident_for_release"])]
 
             elif len(t_ins) == 0:
                 if self.nodes[the_id]["Version"] != DB.no_new_node_id:
                     # Make sure the graph is constructed as it should be.
-                    raise ValueError(f"If no in-node, the version should be '{DB.no_new_node_id}': {the_id}.")
+                    raise ValueError(f"If no in-node, the version should be `{DB.no_new_node_id}`: {the_id}.")
                 # The t_ins is then the last possible ensembl release. Note that t_outs is not empty.
                 t_ins = [max(self.graph["confident_for_release"])]
 
@@ -504,7 +499,6 @@ class TheGraph(nx.MultiDiGraph):
             # Start from the lowest ensembl release and go up at each iteration.
             # Assume in the beginning, the ID is not active.
             for ind, (ens_rel, inout) in enumerate(inout_edges):
-
                 if ind == 0:
                     assert inout, "The range building should start with in-edge."
 
@@ -563,7 +557,6 @@ class TheGraph(nx.MultiDiGraph):
         main_assembly = self.graph["genome_assembly"]
 
         if ndt == DB.nts_ensembl["gene"]:
-
             narrowed = self.get_active_ranges_of_id[the_id]  # Get the range of main assembly.
             comb_result = self.combined_edges_genes[the_id]  # Get the range of main assembly and also others.
             comb_reduced: Dict[int, set] = dict()  # Create a dict that flattens all ensembl releases on assemblies.
@@ -591,7 +584,7 @@ class TheGraph(nx.MultiDiGraph):
             return self.get_active_ranges_of_id[the_id]
 
         else:
-            raise ValueError(f"Query '{the_id}' isn't '{DB.nts_ensembl['gene']}' or in '{DB.nts_assembly_gene}'.")
+            raise ValueError(f"Query `{the_id}` isn't `{DB.nts_ensembl['gene']}` or in `{DB.nts_assembly_gene}`.")
 
     def get_next_edge_releases(self, from_id: str, reverse: bool) -> list:
         """Retrieves the next edge releases from a node, depending on the directionality of the graph.
@@ -608,7 +601,7 @@ class TheGraph(nx.MultiDiGraph):
             ValueError: If the query ID is not with the node type of graph backbone.
         """
         if self.nodes[from_id][DB.node_type_str] != DB.external_search_settings["nts_backbone"]:
-            raise ValueError(f"The method should be called only for backbone nodes: '{from_id}'.")
+            raise ValueError(f"The method should be called only for backbone nodes: `{from_id}`.")
 
         return list(
             {
@@ -760,7 +753,6 @@ class TheGraph(nx.MultiDiGraph):
         """
         next_index = 0  # Keeps track of the last used index in our result
         for index in range(len(list_of_ranges) - 1):
-
             if list_of_ranges[next_index][1] + 1 >= list_of_ranges[index + 1][0]:
                 list_of_ranges[next_index][1] = list_of_ranges[index + 1][1]
 
@@ -880,9 +872,7 @@ class TheGraph(nx.MultiDiGraph):
             nodes = self.get_external_database_nodes(e)
 
             for node in nodes:
-
                 for nei in self.neighbors(node):
-
                     # Look at the node type of each neighbour
                     nei_nts = self.nodes[nei][DB.node_type_str]
                     # Convert to nts_ensembl if it is nts_assembly, else keep at it is.
@@ -966,7 +956,6 @@ class TheGraph(nx.MultiDiGraph):
         the_key = (database, assembly, release)
         final_list = list()
         for n in self.nodes:
-
             if (
                 self.nodes[n][DB.node_type_str] == DB.nts_ensembl["gene"]
                 and self.nodes[n]["Version"] in DB.alternative_versions
