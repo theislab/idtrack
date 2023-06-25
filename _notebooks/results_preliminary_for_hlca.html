@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HLCA Datasets &mdash; idtrack 0.0.3 documentation</title>
+  <title>Use Case: HLCA Datasets &mdash; idtrack 0.0.4 documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/nbsphinx-code-cells.css" type="text/css" />
       <link rel="stylesheet" href="../_static/custom_cookietemple.css" type="text/css" />
       <link rel="stylesheet" href="../_static/dark_mode_css/general.css" type="text/css" />
       <link rel="stylesheet" href="../_static/dark_mode_css/dark.css" type="text/css" />
@@ -14,10 +15,9 @@
     <script src="../_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
         <script src="../_static/doctools.js"></script>
         <script src="../_static/sphinx_highlight.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
@@ -28,8 +28,8 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Reference" href="../reference.html" />
-    <link rel="prev" title="Initialization" href="initialization.html" /> 
+    <link rel="next" title="Calculations with Random Data" href="random_data.html" />
+    <link rel="prev" title="Initialization and Memory Usage" href="initialization.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -37,12 +37,16 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../index.html" class="icon icon-home"> idtrack
-            <img src="../_static/logo.png" class="logo" alt="Logo"/>
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            idtrack
+              <img src="../_static/logo.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -52,8 +56,11 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../usage.html">Usage</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="initialization.html">Initialization</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">HLCA Datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialization.html">Initialization and Memory Usage</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Use Case: HLCA Datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="random_data.html">Calculations with Random Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Untitled.html">Use Case: HLCA Datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="comparison.html">Comparison with Available Tools</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
@@ -75,9 +82,9 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="../usage.html">Usage</a> &raquo;</li>
-      <li>HLCA Datasets</li>
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../usage.html">Usage</a></li>
+      <li class="breadcrumb-item active">Use Case: HLCA Datasets</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/_notebooks/results_preliminary_for_hlca.ipynb.txt" rel="nofollow"> View page source</a>
       </li>
@@ -87,286 +94,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  
-<style>
-/* CSS for nbsphinx extension */
-
-/* remove conflicting styling from Sphinx themes */
-div.nbinput.container div.prompt *,
-div.nboutput.container div.prompt *,
-div.nbinput.container div.input_area pre,
-div.nboutput.container div.output_area pre,
-div.nbinput.container div.input_area .highlight,
-div.nboutput.container div.output_area .highlight {
-    border: none;
-    padding: 0;
-    margin: 0;
-    box-shadow: none;
-}
-
-div.nbinput.container > div[class*=highlight],
-div.nboutput.container > div[class*=highlight] {
-    margin: 0;
-}
-
-div.nbinput.container div.prompt *,
-div.nboutput.container div.prompt * {
-    background: none;
-}
-
-div.nboutput.container div.output_area .highlight,
-div.nboutput.container div.output_area pre {
-    background: unset;
-}
-
-div.nboutput.container div.output_area div.highlight {
-    color: unset;  /* override Pygments text color */
-}
-
-/* avoid gaps between output lines */
-div.nboutput.container div[class*=highlight] pre {
-    line-height: normal;
-}
-
-/* input/output containers */
-div.nbinput.container,
-div.nboutput.container {
-    display: -webkit-flex;
-    display: flex;
-    align-items: flex-start;
-    margin: 0;
-    width: 100%;
-}
-@media (max-width: 540px) {
-    div.nbinput.container,
-    div.nboutput.container {
-        flex-direction: column;
-    }
-}
-
-/* input container */
-div.nbinput.container {
-    padding-top: 5px;
-}
-
-/* last container */
-div.nblast.container {
-    padding-bottom: 5px;
-}
-
-/* input prompt */
-div.nbinput.container div.prompt pre {
-    color: #307FC1;
-}
-
-/* output prompt */
-div.nboutput.container div.prompt pre {
-    color: #BF5B3D;
-}
-
-/* all prompts */
-div.nbinput.container div.prompt,
-div.nboutput.container div.prompt {
-    width: 4.5ex;
-    padding-top: 5px;
-    position: relative;
-    user-select: none;
-}
-
-div.nbinput.container div.prompt > div,
-div.nboutput.container div.prompt > div {
-    position: absolute;
-    right: 0;
-    margin-right: 0.3ex;
-}
-
-@media (max-width: 540px) {
-    div.nbinput.container div.prompt,
-    div.nboutput.container div.prompt {
-        width: unset;
-        text-align: left;
-        padding: 0.4em;
-    }
-    div.nboutput.container div.prompt.empty {
-        padding: 0;
-    }
-
-    div.nbinput.container div.prompt > div,
-    div.nboutput.container div.prompt > div {
-        position: unset;
-    }
-}
-
-/* disable scrollbars on prompts */
-div.nbinput.container div.prompt pre,
-div.nboutput.container div.prompt pre {
-    overflow: hidden;
-}
-
-/* input/output area */
-div.nbinput.container div.input_area,
-div.nboutput.container div.output_area {
-    -webkit-flex: 1;
-    flex: 1;
-    overflow: auto;
-}
-@media (max-width: 540px) {
-    div.nbinput.container div.input_area,
-    div.nboutput.container div.output_area {
-        width: 100%;
-    }
-}
-
-/* input area */
-div.nbinput.container div.input_area {
-    border: 1px solid #e0e0e0;
-    border-radius: 2px;
-    /*background: #f5f5f5;*/
-}
-
-/* override MathJax center alignment in output cells */
-div.nboutput.container div[class*=MathJax] {
-    text-align: left !important;
-}
-
-/* override sphinx.ext.imgmath center alignment in output cells */
-div.nboutput.container div.math p {
-    text-align: left;
-}
-
-/* standard error */
-div.nboutput.container div.output_area.stderr {
-    background: #fdd;
-}
-
-/* ANSI colors */
-.ansi-black-fg { color: #3E424D; }
-.ansi-black-bg { background-color: #3E424D; }
-.ansi-black-intense-fg { color: #282C36; }
-.ansi-black-intense-bg { background-color: #282C36; }
-.ansi-red-fg { color: #E75C58; }
-.ansi-red-bg { background-color: #E75C58; }
-.ansi-red-intense-fg { color: #B22B31; }
-.ansi-red-intense-bg { background-color: #B22B31; }
-.ansi-green-fg { color: #00A250; }
-.ansi-green-bg { background-color: #00A250; }
-.ansi-green-intense-fg { color: #007427; }
-.ansi-green-intense-bg { background-color: #007427; }
-.ansi-yellow-fg { color: #DDB62B; }
-.ansi-yellow-bg { background-color: #DDB62B; }
-.ansi-yellow-intense-fg { color: #B27D12; }
-.ansi-yellow-intense-bg { background-color: #B27D12; }
-.ansi-blue-fg { color: #208FFB; }
-.ansi-blue-bg { background-color: #208FFB; }
-.ansi-blue-intense-fg { color: #0065CA; }
-.ansi-blue-intense-bg { background-color: #0065CA; }
-.ansi-magenta-fg { color: #D160C4; }
-.ansi-magenta-bg { background-color: #D160C4; }
-.ansi-magenta-intense-fg { color: #A03196; }
-.ansi-magenta-intense-bg { background-color: #A03196; }
-.ansi-cyan-fg { color: #60C6C8; }
-.ansi-cyan-bg { background-color: #60C6C8; }
-.ansi-cyan-intense-fg { color: #258F8F; }
-.ansi-cyan-intense-bg { background-color: #258F8F; }
-.ansi-white-fg { color: #C5C1B4; }
-.ansi-white-bg { background-color: #C5C1B4; }
-.ansi-white-intense-fg { color: #A1A6B2; }
-.ansi-white-intense-bg { background-color: #A1A6B2; }
-
-.ansi-default-inverse-fg { color: #FFFFFF; }
-.ansi-default-inverse-bg { background-color: #000000; }
-
-.ansi-bold { font-weight: bold; }
-.ansi-underline { text-decoration: underline; }
-
-
-div.nbinput.container div.input_area div[class*=highlight] > pre,
-div.nboutput.container div.output_area div[class*=highlight] > pre,
-div.nboutput.container div.output_area div[class*=highlight].math,
-div.nboutput.container div.output_area.rendered_html,
-div.nboutput.container div.output_area > div.output_javascript,
-div.nboutput.container div.output_area:not(.rendered_html) > img{
-    padding: 5px;
-    margin: 0;
-}
-
-/* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
-div.nbinput.container div.input_area > div[class^='highlight'],
-div.nboutput.container div.output_area > div[class^='highlight']{
-    overflow-y: hidden;
-}
-
-/* hide copybtn icon on prompts (needed for 'sphinx_copybutton') */
-.prompt .copybtn {
-    display: none;
-}
-
-/* Some additional styling taken form the Jupyter notebook CSS */
-.jp-RenderedHTMLCommon table,
-div.rendered_html table {
-  border: none;
-  border-collapse: collapse;
-  border-spacing: 0;
-  color: black;
-  font-size: 12px;
-  table-layout: fixed;
-}
-.jp-RenderedHTMLCommon thead,
-div.rendered_html thead {
-  border-bottom: 1px solid black;
-  vertical-align: bottom;
-}
-.jp-RenderedHTMLCommon tr,
-.jp-RenderedHTMLCommon th,
-.jp-RenderedHTMLCommon td,
-div.rendered_html tr,
-div.rendered_html th,
-div.rendered_html td {
-  text-align: right;
-  vertical-align: middle;
-  padding: 0.5em 0.5em;
-  line-height: normal;
-  white-space: normal;
-  max-width: none;
-  border: none;
-}
-.jp-RenderedHTMLCommon th,
-div.rendered_html th {
-  font-weight: bold;
-}
-.jp-RenderedHTMLCommon tbody tr:nth-child(odd),
-div.rendered_html tbody tr:nth-child(odd) {
-  background: #f5f5f5;
-}
-.jp-RenderedHTMLCommon tbody tr:hover,
-div.rendered_html tbody tr:hover {
-  background: rgba(66, 165, 245, 0.2);
-}
-
-/* CSS overrides for sphinx_rtd_theme */
-
-/* 24px margin */
-.nbinput.nblast.container,
-.nboutput.nblast.container {
-    margin-bottom: 19px;  /* padding has already 5px */
-}
-
-/* ... except between code cells! */
-.nblast.container + .nbinput.container {
-    margin-top: -19px;
-}
-
-.admonition > p:before {
-    margin-right: 4px;  /* make room for the exclamation icon */
-}
-
-/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
-.math {
-    text-align: unset;
-}
-</style>
-<section id="HLCA-Datasets">
-<h1>HLCA Datasets<a class="headerlink" href="#HLCA-Datasets" title="Permalink to this heading"></a></h1>
+  <section id="Use-Case:-HLCA-Datasets">
+<h1>Use Case: HLCA Datasets<a class="headerlink" href="#Use-Case:-HLCA-Datasets" title="Permalink to this heading"></a></h1>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
@@ -377,7 +106,7 @@ div.rendered_html tbody tr:hover {
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
@@ -389,7 +118,7 @@ div.rendered_html tbody tr:hover {
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
@@ -414,7 +143,7 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 16:45:08 INFO:graph_maker: The graph is being read.
+2023-01-29 23:26:20 INFO:graph_maker: The graph is being read.
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
@@ -430,16 +159,16 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 16:45:47 INFO:the_graph: Cached properties being calculated: combined_edges
-2022-11-01 16:46:32 INFO:the_graph: Cached properties being calculated: combined_edges_assembly_specific_genes
-2022-11-01 16:46:35 INFO:the_graph: Cached properties being calculated: combined_edges_genes
-2022-11-01 16:46:46 INFO:the_graph: Cached properties being calculated: lower_chars_graph
-2022-11-01 16:46:47 INFO:the_graph: Cached properties being calculated: get_active_ranges_of_id
-2022-11-01 16:47:06 INFO:the_graph: Cached properties being calculated: available_external_databases
-2022-11-01 16:47:07 INFO:the_graph: Cached properties being calculated: external_database_connection_form
-2022-11-01 16:47:40 INFO:the_graph: Cached properties being calculated: available_genome_assemblies
-2022-11-01 16:47:40 INFO:the_graph: Cached properties being calculated: available_external_databases_assembly
-2022-11-01 16:47:41 INFO:the_graph: Cached properties being calculated: node_trios
+2023-01-29 23:27:23 INFO:the_graph: Cached properties being calculated: combined_edges
+2023-01-29 23:28:07 INFO:the_graph: Cached properties being calculated: combined_edges_assembly_specific_genes
+2023-01-29 23:28:11 INFO:the_graph: Cached properties being calculated: combined_edges_genes
+2023-01-29 23:28:24 INFO:the_graph: Cached properties being calculated: lower_chars_graph
+2023-01-29 23:28:25 INFO:the_graph: Cached properties being calculated: get_active_ranges_of_id
+2023-01-29 23:28:48 INFO:the_graph: Cached properties being calculated: available_external_databases
+2023-01-29 23:28:50 INFO:the_graph: Cached properties being calculated: external_database_connection_form
+2023-01-29 23:29:38 INFO:the_graph: Cached properties being calculated: available_genome_assemblies
+2023-01-29 23:29:39 INFO:the_graph: Cached properties being calculated: available_external_databases_assembly
+2023-01-29 23:29:41 INFO:the_graph: Cached properties being calculated: node_trios
 </pre></div></div>
 </div>
 <p>The datasets of HLCA</p>
@@ -520,8 +249,10 @@ div.rendered_html tbody tr:hover {
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "11847d070b2443998685a846df1a9429", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Kaminski_2020: 100%|██████████| 45947/45947 [05:05&lt;00:00, 150.37it/s, ID:ENSG00000280139]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -542,8 +273,10 @@ Source release: (38, 94)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "9b7408901e444b04a5c81c03570992d2", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Meyer_2021: 100%|███████████████████| 20922/20922 [04:38&lt;00:00, 75.08it/s, ID:AC240274.1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -564,15 +297,10 @@ Source release: (38, 84)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "fc1fb4c5762c4955beaef27d07a7c20e", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 17:01:46 WARNING:api: Number of unfound IDs: 27.
+MeyerNikolic_unpubl: 100%|███████| 33582/33582 [04:52&lt;00:00, 114.64it/s, ID:hsa-mir-1253]
+2023-01-29 23:45:46 WARNING:api: Number of unfound IDs: 27.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -594,15 +322,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "3111b1df8a174fd5973838b5337e3a0a", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 17:05:38 WARNING:api: Number of unfound IDs: 1.
+Barbry_unpubl: 100%|██████████████████████| 16859/16859 [04:10&lt;00:00, 67.29it/s, ID:WHRN]
+2023-01-29 23:50:10 WARNING:api: Number of unfound IDs: 1.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -624,15 +347,10 @@ Source release: (38, 98)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "005da307a7b24dacbc9e506e30eaf5f1", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 17:10:14 WARNING:api: Number of unfound IDs: 48.
+Regev_2021: 100%|████████████████████████| 30983/30983 [05:14&lt;00:00, 98.64it/s, ID:ZZEF1]
+2023-01-29 23:55:25 WARNING:api: Number of unfound IDs: 48.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -654,8 +372,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "6084674865b24738ab59f83ae3cb5e11", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Thienpont_2018: 100%|███████████████| 27958/27958 [04:44&lt;00:00, 98.29it/s, ID:AC240274.1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -676,8 +396,10 @@ Source release: (38, 84)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "af611a39d2db4633bc08db52b5bd0d16", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Budinger_2020: 100%|█████████████████████| 26316/26316 [04:39&lt;00:00, 94.27it/s, ID:ZZEF1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -698,15 +420,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "68cb461c488e4f59ba5419da43f40a17", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 17:23:19 WARNING:api: Number of unfound IDs: 1.
+Banovich_Kropski_2020: 100%|██████████| 33694/33694 [04:51&lt;00:00, 115.44it/s, ID:FAM231B]
+2023-01-30 00:09:59 WARNING:api: Number of unfound IDs: 1.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -728,8 +445,10 @@ Source release: (38, 84)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "7314c34b299846e58556425282ccc8d6", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Sheppard_2020: 100%|████████████████| 27147/27147 [04:42&lt;00:00, 96.21it/s, ID:AC240274.1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -750,15 +469,10 @@ Source release: (38, 84)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "5e921956d1c24c0c82f4e037f2b077e5", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 17:32:07 WARNING:api: Number of unfound IDs: 12.
+Wunderink_2021: 100%|████████████████████| 21819/21819 [05:00&lt;00:00, 72.65it/s, ID:ZZEF1]
+2023-01-30 00:19:55 WARNING:api: Number of unfound IDs: 12.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -780,15 +494,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "5c032231e7fb45bca2b048c19dd1ac31", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 17:36:37 WARNING:api: Number of unfound IDs: 1.
+Lambrechts_2021: 100%|████████████████| 33538/33538 [04:50&lt;00:00, 115.40it/s, ID:FAM231C]
+2023-01-30 00:24:48 WARNING:api: Number of unfound IDs: 1.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -810,8 +519,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "d9720438e2954c059d18b74a71f5c6c3", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Zhang_2021: 100%|█████████████████████████| 18474/18474 [04:31&lt;00:00, 68.06it/s, ID:DSG1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -832,8 +543,10 @@ Source release: (38, 87)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "09d94014f1604c68810f0780298eded4", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Duong_lungMAP_unpubl: 100%|██████████████| 27678/27678 [04:37&lt;00:00, 99.63it/s, ID:ZZEF1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -854,15 +567,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "958468d73ccd4cfeb8990bdfef8b611a", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 17:49:35 WARNING:api: Number of unfound IDs: 1.
+Janssen_2020: 100%|███████████████████| 33538/33538 [04:51&lt;00:00, 115.16it/s, ID:FAM231C]
+2023-01-30 00:39:11 WARNING:api: Number of unfound IDs: 1.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -884,8 +592,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "696c18308d9148e2b4f11a351bba4c87", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Sun_2020: 100%|█████████████████████| 26578/26578 [05:10&lt;00:00, 85.62it/s, ID:AP006748.1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -906,15 +616,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "2bf1779f122b415285f756d52a535948", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 17:58:31 WARNING:api: Number of unfound IDs: 187.
+Gomperts_2021: 100%|███████████████████| 31229/31229 [04:57&lt;00:00, 104.83it/s, ID:WFDC11]
+2023-01-30 00:49:23 WARNING:api: Number of unfound IDs: 187.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -936,15 +641,10 @@ Source release: (38, 89)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "8a2b766280f2419797fd5ed78a0407ad", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 18:03:05 WARNING:api: Number of unfound IDs: 7.
+Eils_2020: 100%|███████████████████| 32738/32738 [04:55&lt;00:00, 110.71it/s, ID:AC002321.1]
+2023-01-30 00:54:24 WARNING:api: Number of unfound IDs: 7.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -960,21 +660,16 @@ matching_1_to_0: 612
 matching_1_to_1: 24546
 matching_1_to_n: 17
 input_identifiers: 32738
-Source release: (37, 79)
+Source release: (37, 85)
 </pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "008f46e4106841339a71a90a093a563e", "version_major": 2, "version_minor": 0}</script></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 18:07:29 WARNING:api: Number of unfound IDs: 40.
+Schiller_2020: 100%|█████████████| 32104/32104 [04:49&lt;00:00, 110.80it/s, ID:RP11-205K6.1]
+2023-01-30 00:59:15 WARNING:api: Number of unfound IDs: 40.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -996,8 +691,10 @@ Source release: (38, 89)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "a2e5274c9fe443dfb10729bb5c312a89", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Misharin_Budinger_2018: 100%|███████| 27181/27181 [04:45&lt;00:00, 95.28it/s, ID:AC240274.1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -1018,15 +715,10 @@ Source release: (38, 84)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "5e2e5223e32e4cd6a5e8cd6982c9cfd1", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 18:16:00 WARNING:api: Number of unfound IDs: 22.
+Shalek_2018: 100%|██████████████████████| 25328/25328 [04:40&lt;00:00, 90.33it/s, ID:TTTY10]
+2023-01-30 01:08:47 WARNING:api: Number of unfound IDs: 22.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1042,14 +734,16 @@ matching_1_to_0: 492
 matching_1_to_1: 21154
 matching_1_to_n: 7
 input_identifiers: 25328
-Source release: (37, 79)
+Source release: (37, 85)
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "8b5db330f19c471b9ba8df329bf01f64", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Schiller_2021: 100%|████████████████| 17533/17533 [04:59&lt;00:00, 58.55it/s, ID:AC240274.1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -1070,8 +764,10 @@ Source release: (38, 99)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "1e7401da2b3a42ecb9660089686957d6", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Peer_Massague_2020: 100%|█████████████████| 19222/19222 [04:31&lt;00:00, 70.76it/s, ID:ZZZ3]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -1092,15 +788,10 @@ Source release: (38, 86)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "fd257de91e4443a19367084417791c62", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 18:28:49 WARNING:api: Number of unfound IDs: 1.
+Lafyatis_2019: 100%|████████████████| 22164/22164 [04:42&lt;00:00, 78.39it/s, ID:AC213203.1]
+2023-01-30 01:23:09 WARNING:api: Number of unfound IDs: 1.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1122,15 +813,10 @@ Source release: (38, 84)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "23fa11973588423b9ebd474cc61e48a6", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 18:33:10 WARNING:api: Number of unfound IDs: 1.
+Tata_unpubl: 100%|█████████████████| 31915/31915 [04:45&lt;00:00, 111.79it/s, ID:AC213203.1]
+2023-01-30 01:27:57 WARNING:api: Number of unfound IDs: 1.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1152,15 +838,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "27e686db2ccd483f986d2ccff8794860", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 18:37:43 WARNING:api: Number of unfound IDs: 7.
+Xu_2020: 100%|█████████████████████| 32738/32738 [04:59&lt;00:00, 109.45it/s, ID:AC002321.1]
+2023-01-30 01:32:59 WARNING:api: Number of unfound IDs: 7.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1176,14 +857,16 @@ matching_1_to_0: 612
 matching_1_to_1: 24546
 matching_1_to_n: 17
 input_identifiers: 32738
-Source release: (37, 79)
+Source release: (37, 85)
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "183d0d4b44574bdc90b89d42e14da46e", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Sims_2019: 100%|████████████████| 60725/60725 [08:50&lt;00:00, 114.41it/s, ID:CTD-2062F14.3]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -1205,7 +888,7 @@ input_identifiers: 60725
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 18:45:32 WARNING:api: Number of unfound IDs: 10.
+2023-01-30 01:41:52 WARNING:api: Number of unfound IDs: 10.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1219,8 +902,10 @@ Source release: (38, 83)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "ed799fded826408db2abc9c6dc1da898", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Schultze_unpubl: 100%|██████████████| 24532/24532 [04:33&lt;00:00, 89.73it/s, ID:AP001269.4]
+</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
@@ -1255,7 +940,7 @@ Source release: (38, 91)
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Saved: /lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/results_for_hlca_datasets_HGNC Symbol_20221101-175029.pk
+Saved: /lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/results_for_hlca_datasets_HGNC Symbol_20230130-004722.pk
 </pre></div></div>
 </div>
 <p>Run the ID conversion with Ensembl gene ID</p>
@@ -1284,21 +969,23 @@ Saved: /lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/results_for_hlca_
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "7dd6f11d24a34ef2b4a4c4632c9de016", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Kaminski_2020: 100%|██████████| 45947/45947 [03:58&lt;00:00, 193.04it/s, ID:ENSG00000280139]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-changed_only_1_to_n: 498
-changed_only_1_to_1: 45351
+changed_only_1_to_n: 496
+changed_only_1_to_1: 45353
 alternative_target_1_to_1: 0
 alternative_target_1_to_n: 0
 matching_1_to_0: 98
-matching_1_to_1: 45351
-matching_1_to_n: 498
+matching_1_to_1: 45353
+matching_1_to_n: 496
 input_identifiers: 45947
 Source release: (38, 94)
 </pre></div></div>
@@ -1306,8 +993,10 @@ Source release: (38, 94)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "53225519e3f845e48bb7eaebb13e86b4", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Meyer_2021: 100%|███████████████████| 20922/20922 [03:42&lt;00:00, 94.23it/s, ID:AC240274.1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -1328,15 +1017,10 @@ Source release: (38, 84)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "a42cb90948b54de6958302d2cff60fe2", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 19:00:01 WARNING:api: Number of unfound IDs: 27.
+MeyerNikolic_unpubl: 100%|███████| 33582/33582 [03:20&lt;00:00, 167.62it/s, ID:hsa-mir-1253]
+2023-01-30 01:59:06 WARNING:api: Number of unfound IDs: 27.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1358,15 +1042,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "ad674ae7ef714647bbf54b407627df1d", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 19:02:32 WARNING:api: Number of unfound IDs: 1.
+Barbry_unpubl: 100%|██████████████████████| 16859/16859 [03:21&lt;00:00, 83.67it/s, ID:WHRN]
+2023-01-30 02:02:42 WARNING:api: Number of unfound IDs: 1.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1388,15 +1067,10 @@ Source release: (38, 98)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "3c1c1d4afd484709b2b718017ceafe43", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 19:05:32 WARNING:api: Number of unfound IDs: 48.
+Regev_2021: 100%|███████████████████████| 30983/30983 [03:48&lt;00:00, 135.73it/s, ID:ZZEF1]
+2023-01-30 02:06:31 WARNING:api: Number of unfound IDs: 48.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1418,8 +1092,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "f8725202b97a48ada853b94bd5d59a85", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Thienpont_2018: 100%|██████████████| 27958/27958 [03:45&lt;00:00, 123.97it/s, ID:AC240274.1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -1440,8 +1116,10 @@ Source release: (38, 84)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "12752b95015d4af5947ed2ad19f9e6ae", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Budinger_2020: 100%|████████████████████| 26316/26316 [03:12&lt;00:00, 136.63it/s, ID:ZZEF1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -1462,15 +1140,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "f9334ab3dfd6403883548d3ce6c91d62", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 19:14:30 WARNING:api: Number of unfound IDs: 1.
+Banovich_Kropski_2020: 100%|██████████| 33694/33694 [03:51&lt;00:00, 145.69it/s, ID:FAM231B]
+2023-01-30 02:17:40 WARNING:api: Number of unfound IDs: 1.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1492,8 +1165,10 @@ Source release: (38, 84)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "79a94fa7878141668a9a931884870406", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Sheppard_2020: 100%|███████████████| 27147/27147 [03:43&lt;00:00, 121.66it/s, ID:AC240274.1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -1514,15 +1189,10 @@ Source release: (38, 84)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "e77ee98e87e24ee2a664701ba8327dd6", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 19:20:28 WARNING:api: Number of unfound IDs: 12.
+Wunderink_2021: 100%|███████████████████| 21819/21819 [03:35&lt;00:00, 101.13it/s, ID:ZZEF1]
+2023-01-30 02:25:11 WARNING:api: Number of unfound IDs: 12.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1544,15 +1214,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "200143378fde48e7800a2a5c419c1ff1", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 19:23:33 WARNING:api: Number of unfound IDs: 1.
+Lambrechts_2021: 100%|████████████████| 33538/33538 [03:53&lt;00:00, 143.91it/s, ID:FAM231C]
+2023-01-30 02:29:07 WARNING:api: Number of unfound IDs: 1.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1574,8 +1239,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "bf8a2c8546154edb9b9e721e71cd8c64", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Zhang_2021: 100%|█████████████████████████| 18474/18474 [03:05&lt;00:00, 99.36it/s, ID:DSG1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -1596,8 +1263,10 @@ Source release: (38, 87)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "1be1458b79a14689b8b11d51af8b0f0a", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Duong_lungMAP_unpubl: 100%|█████████████| 27678/27678 [03:40&lt;00:00, 125.62it/s, ID:ZZEF1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -1618,15 +1287,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "e9bd78446e0b4138abb493d93d3dd0ae", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 19:32:22 WARNING:api: Number of unfound IDs: 1.
+Janssen_2020: 100%|███████████████████| 33538/33538 [03:52&lt;00:00, 143.96it/s, ID:FAM231C]
+2023-01-30 02:40:09 WARNING:api: Number of unfound IDs: 1.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1648,8 +1312,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "2a35367482e74c7e9226cd20554f4f8e", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Sun_2020: 100%|████████████████████| 26578/26578 [03:42&lt;00:00, 119.21it/s, ID:AP006748.1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -1670,15 +1336,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "6ee2e6bca8ab49649463ba6acadafeb4", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 19:38:22 WARNING:api: Number of unfound IDs: 187.
+Gomperts_2021: 100%|███████████████████| 31229/31229 [03:23&lt;00:00, 153.75it/s, ID:WFDC11]
+2023-01-30 02:47:20 WARNING:api: Number of unfound IDs: 187.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1700,15 +1361,10 @@ Source release: (38, 89)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "5b7171308ab249cda35c917f7b7a3405", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 19:41:17 WARNING:api: Number of unfound IDs: 7.
+Eils_2020: 100%|███████████████████| 32738/32738 [03:59&lt;00:00, 136.92it/s, ID:AC002321.1]
+2023-01-30 02:51:24 WARNING:api: Number of unfound IDs: 7.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1724,21 +1380,16 @@ matching_1_to_0: 612
 matching_1_to_1: 31842
 matching_1_to_n: 284
 input_identifiers: 32738
-Source release: (37, 79)
+Source release: (37, 85)
 </pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "a84a16c119cd400a8b4df041a3a7f4c6", "version_major": 2, "version_minor": 0}</script></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 19:44:19 WARNING:api: Number of unfound IDs: 40.
+Schiller_2020: 100%|█████████████| 32104/32104 [03:48&lt;00:00, 140.54it/s, ID:RP11-205K6.1]
+2023-01-30 02:55:14 WARNING:api: Number of unfound IDs: 40.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1760,8 +1411,10 @@ Source release: (38, 89)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "161c8636125e4fdc9d5f6159460cf8f8", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Misharin_Budinger_2018: 100%|██████| 27181/27181 [03:44&lt;00:00, 120.93it/s, ID:AC240274.1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -1782,15 +1435,10 @@ Source release: (38, 84)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "3d7eab0338684401b0cfe1f74d926461", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 19:50:15 WARNING:api: Number of unfound IDs: 22.
+Shalek_2018: 100%|█████████████████████| 25328/25328 [03:10&lt;00:00, 133.17it/s, ID:TTTY10]
+2023-01-30 03:02:15 WARNING:api: Number of unfound IDs: 22.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1806,14 +1454,16 @@ matching_1_to_0: 492
 matching_1_to_1: 24638
 matching_1_to_n: 198
 input_identifiers: 25328
-Source release: (37, 79)
+Source release: (37, 85)
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "d282610363964372a04ff4126869002d", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Schiller_2021: 100%|████████████████| 17533/17533 [03:34&lt;00:00, 81.76it/s, ID:AC240274.1]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -1834,8 +1484,10 @@ Source release: (38, 99)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "d549a76987264a419eb818aceff387d7", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Peer_Massague_2020: 100%|█████████████████| 19222/19222 [03:40&lt;00:00, 87.07it/s, ID:ZZZ3]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -1856,15 +1508,10 @@ Source release: (38, 86)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "d2a054f266f04e7e800c76037a62e674", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 19:58:46 WARNING:api: Number of unfound IDs: 1.
+Lafyatis_2019: 100%|███████████████| 22164/22164 [03:13&lt;00:00, 114.67it/s, ID:AC213203.1]
+2023-01-30 03:12:53 WARNING:api: Number of unfound IDs: 1.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1886,15 +1533,10 @@ Source release: (38, 84)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "5b54dc1e04c847118af834826b50cf84", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 20:01:33 WARNING:api: Number of unfound IDs: 1.
+Tata_unpubl: 100%|█████████████████| 31915/31915 [03:47&lt;00:00, 140.47it/s, ID:AC213203.1]
+2023-01-30 03:16:43 WARNING:api: Number of unfound IDs: 1.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1916,15 +1558,10 @@ Source release: (38, 93)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "2ab6cd59bc9146af8b3f923862a2653d", "version_major": 2, "version_minor": 0}</script></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 20:04:44 WARNING:api: Number of unfound IDs: 7.
+Xu_2020: 100%|█████████████████████| 32738/32738 [03:58&lt;00:00, 137.10it/s, ID:AC002321.1]
+2023-01-30 03:20:44 WARNING:api: Number of unfound IDs: 7.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1940,14 +1577,16 @@ matching_1_to_0: 612
 matching_1_to_1: 31842
 matching_1_to_n: 284
 input_identifiers: 32738
-Source release: (37, 79)
+Source release: (37, 85)
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "f85ea4ebb9eb4aa4927998b7bf4d9457", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Sims_2019: 100%|████████████████| 60725/60725 [06:26&lt;00:00, 157.24it/s, ID:CTD-2062F14.3]
+</pre></div></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
@@ -1969,7 +1608,7 @@ input_identifiers: 60725
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2022-11-01 20:09:57 WARNING:api: Number of unfound IDs: 10.
+2023-01-30 03:27:12 WARNING:api: Number of unfound IDs: 10.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -1983,8 +1622,10 @@ Source release: (38, 83)
 <div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area docutils container">
-<script type="application/vnd.jupyter.widget-view+json">{"model_id": "c19ada802d404d89a951a0ba58a47438", "version_major": 2, "version_minor": 0}</script></div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Schultze_unpubl: 100%|█████████████| 24532/24532 [03:36&lt;00:00, 113.41it/s, ID:AP001269.4]
+</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
@@ -2019,8 +1660,902 @@ Source release: (38, 91)
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Saved: /lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/results_for_hlca_datasets_ensembl_gene_20221101-191345.pk
+Saved: /lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/results_for_hlca_datasets_ensembl_gene_20230130-023149.pk
 </pre></div></div>
+</div>
+<p>Print the processor</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="nb">print</span><span class="p">((</span><span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span><span class="s2">&quot;lscpu&quot;</span><span class="p">,</span> <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Architecture:          x86_64
+CPU op-mode(s):        32-bit, 64-bit
+Byte Order:            Little Endian
+CPU(s):                112
+On-line CPU(s) list:   0-111
+Thread(s) per core:    2
+Core(s) per socket:    28
+Socket(s):             2
+NUMA node(s):          2
+Vendor ID:             GenuineIntel
+CPU family:            6
+Model:                 85
+Model name:            Intel(R) Xeon(R) Platinum 8280L CPU @ 2.70GHz
+Stepping:              7
+CPU MHz:               3634.881
+CPU max MHz:           4000.0000
+CPU min MHz:           1000.0000
+BogoMIPS:              5400.00
+Virtualization:        VT-x
+L1d cache:             32K
+L1i cache:             32K
+L2 cache:              1024K
+L3 cache:              39424K
+NUMA node0 CPU(s):     0-27,56-83
+NUMA node1 CPU(s):     28-55,84-111
+Flags:                 fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc aperfmperf eagerfpu pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch epb cat_l3 cdp_l3 invpcid_single intel_ppin intel_pt ssbd mba ibrs ibpb stibp ibrs_enhanced tpr_shadow vnmi flexpriority ept vpid fsgsbase tsc_adjust bmi1 hle avx2 smep bmi2 erms invpcid rtm cqm mpx rdt_a avx512f avx512dq rdseed adx smap clflushopt clwb avx512cd avx512bw avx512vl xsaveopt xsavec xgetbv1 cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local dtherm ida arat pln pts pku ospke avx512_vnni md_clear spec_ctrl intel_stibp flush_l1d arch_capabilities
+</pre></div></div>
+</div>
+<p>Plot/Table</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;../..&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">local_dir</span> <span class="o">=</span> <span class="s2">&quot;/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp&quot;</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>ls<span class="w"> </span>-lh<span class="w"> </span>/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+total 15G
+-rw-rwxr--+ 1 kemal.inecik OG-ICB-User 622M Oct 17 17:18 graph_homo_sapiens_ens107_min79_narrow.pickle
+-rw-rwxr--+ 1 kemal.inecik OG-ICB-User 7.2G Oct 17 15:01 homo_sapiens_assembly-37.h5
+-rw-rwxr--+ 1 kemal.inecik OG-ICB-User 7.0G Oct 31 09:44 homo_sapiens_assembly-38.h5
+-rw-rwxr--+ 1 kemal.inecik OG-ICB-User  45K Aug 12 15:57 homo_sapiens_externals_modified.yml
+-rw-rwxr--+ 1 kemal.inecik OG-ICB-User 2.2M Nov 10 10:48 results_for_hlca_core_only_ensembl_gene_20221110-094821.pk
+-rw-rwxr--+ 1 kemal.inecik OG-ICB-User 2.4M Nov 10 10:43 results_for_hlca_core_only_HGNC Symbol_20221110-094335.pk
+-rw-rwxr--+ 1 kemal.inecik OG-ICB-User  57M Nov  1 20:13 results_for_hlca_datasets_ensembl_gene_20221101-191345.pk
+-rw-r--r--. 1 kemal.inecik OG-ICB-User  57M Jan 30 03:31 results_for_hlca_datasets_ensembl_gene_20230130-023149.pk
+-rw-rwxr--+ 1 kemal.inecik OG-ICB-User  55M Nov  1 18:50 results_for_hlca_datasets_HGNC Symbol_20221101-175029.pk
+-rw-r--r--. 1 kemal.inecik OG-ICB-User  55M Jan 30 01:47 results_for_hlca_datasets_HGNC Symbol_20230130-004722.pk
+-rw-r--r--. 1 kemal.inecik OG-ICB-User 3.1K Jan 30 00:37 results_for_random_external_conversions_1_20230129-233747.pk
+-rw-r--r--. 1 kemal.inecik OG-ICB-User 3.1K Jan 30 04:12 results_for_random_external_conversions_2_20230130-031239.pk
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">local_dir</span> <span class="o">+</span> <span class="s2">&quot;/results_for_hlca_datasets_ensembl_gene_20230130-023149.pk&quot;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_file_1</span><span class="p">:</span>
+    <span class="n">res_ens</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pickle_file_1</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">local_dir</span> <span class="o">+</span> <span class="s2">&quot;/results_for_hlca_datasets_HGNC Symbol_20230130-004722.pk&quot;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_file_2</span><span class="p">:</span>
+    <span class="n">res_hgn</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pickle_file_2</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">res_ens</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+dict_keys([&#39;Kaminski_2020&#39;, &#39;Meyer_2021&#39;, &#39;MeyerNikolic_unpubl&#39;, &#39;Barbry_unpubl&#39;, &#39;Regev_2021&#39;, &#39;Thienpont_2018&#39;, &#39;Budinger_2020&#39;, &#39;Banovich_Kropski_2020&#39;, &#39;Sheppard_2020&#39;, &#39;Wunderink_2021&#39;, &#39;Lambrechts_2021&#39;, &#39;Zhang_2021&#39;, &#39;Duong_lungMAP_unpubl&#39;, &#39;Janssen_2020&#39;, &#39;Sun_2020&#39;, &#39;Gomperts_2021&#39;, &#39;Eils_2020&#39;, &#39;Schiller_2020&#39;, &#39;Misharin_Budinger_2018&#39;, &#39;Shalek_2018&#39;, &#39;Schiller_2021&#39;, &#39;Peer_Massague_2020&#39;, &#39;Lafyatis_2019&#39;, &#39;Tata_unpubl&#39;, &#39;Xu_2020&#39;, &#39;Sims_2019&#39;, &#39;Schultze_unpubl&#39;])
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">res_ens</span><span class="p">[</span><span class="s1">&#39;MeyerNikolic_unpubl&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+dict_keys([&#39;changed_only_1_to_n&#39;, &#39;changed_only_1_to_1&#39;, &#39;alternative_target_1_to_1&#39;, &#39;alternative_target_1_to_n&#39;, &#39;matching_1_to_0&#39;, &#39;matching_1_to_1&#39;, &#39;matching_1_to_n&#39;, &#39;input_identifiers&#39;])
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">r_ens</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">res_ens</span><span class="p">:</span>
+    <span class="n">r_ens</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">res_ens</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+        <span class="n">r_ens</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">res_ens</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">])</span>
+
+<span class="n">r_hgn</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">res_hgn</span><span class="p">:</span>
+    <span class="n">r_hgn</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">res_hgn</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+        <span class="n">r_hgn</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">res_hgn</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[153]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">column_order</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;input_identifiers&quot;</span><span class="p">,</span>
+ <span class="s2">&quot;matching_1_to_1&quot;</span><span class="p">,</span> <span class="s2">&quot;changed_only_1_to_1&quot;</span><span class="p">,</span> <span class="s2">&quot;alternative_target_1_to_1&quot;</span><span class="p">,</span>
+ <span class="s2">&quot;matching_1_to_n&quot;</span><span class="p">,</span> <span class="s2">&quot;changed_only_1_to_n&quot;</span><span class="p">,</span> <span class="s2">&quot;alternative_target_1_to_n&quot;</span><span class="p">,</span>
+ <span class="s2">&quot;matching_1_to_0&quot;</span><span class="p">]</span>
+<span class="n">raname_columns</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;input_identifiers&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+ <span class="s2">&quot;matching_1_to_1&quot;</span><span class="p">:</span> <span class="s2">&quot;TDM&quot;</span><span class="p">,</span> <span class="s2">&quot;changed_only_1_to_1&quot;</span><span class="p">:</span> <span class="s2">&quot;CI&quot;</span><span class="p">,</span> <span class="s2">&quot;alternative_target_1_to_1&quot;</span><span class="p">:</span> <span class="s2">&quot;ATM&quot;</span><span class="p">,</span>  <span class="c1"># TDM: target database matching, ATM: alternative target matching</span>
+ <span class="s2">&quot;matching_1_to_n&quot;</span><span class="p">:</span> <span class="s2">&quot;TDM&quot;</span><span class="p">,</span> <span class="s2">&quot;changed_only_1_to_n&quot;</span><span class="p">:</span> <span class="s2">&quot;CI&quot;</span><span class="p">,</span> <span class="s2">&quot;alternative_target_1_to_n&quot;</span><span class="p">:</span> <span class="s2">&quot;ATM&quot;</span><span class="p">,</span>
+ <span class="s2">&quot;matching_1_to_0&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">}</span>
+<span class="n">higher_columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Input IDs&quot;</span><span class="p">,</span>
+ <span class="s2">&quot;One-to-One&quot;</span><span class="p">,</span> <span class="s2">&quot;One-to-One&quot;</span><span class="p">,</span> <span class="s2">&quot;One-to-One&quot;</span><span class="p">,</span>
+ <span class="s2">&quot;One-to-Many&quot;</span><span class="p">,</span> <span class="s2">&quot;One-to-Many&quot;</span><span class="p">,</span> <span class="s2">&quot;One-to-Many&quot;</span><span class="p">,</span>
+ <span class="s2">&quot;One-to-None&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[154]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df1</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">r_hgn</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">column_order</span><span class="p">]</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">raname_columns</span><span class="p">)</span>
+<span class="n">df1</span><span class="o">.</span><span class="n">columns</span><span class="o">=</span><span class="p">[[</span><span class="s2">&quot;&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;Target HGNC Names&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">6</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">],</span> <span class="n">higher_columns</span><span class="p">,</span> <span class="n">df1</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+<span class="n">df2</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">r_ens</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">column_order</span><span class="p">]</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">raname_columns</span><span class="p">)</span>
+<span class="n">df2</span><span class="o">.</span><span class="n">columns</span><span class="o">=</span><span class="p">[[</span><span class="s2">&quot;&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;Target Ensembl&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">6</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">],</span> <span class="n">higher_columns</span><span class="p">,</span> <span class="n">df2</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[155]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df1</span><span class="p">,</span> <span class="n">df2</span><span class="p">[[</span><span class="s2">&quot;Target Ensembl&quot;</span><span class="p">]]],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[173]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span>
+<span class="p">(</span>                 <span class="s1">&#39;&#39;</span><span class="p">,</span>            <span class="s1">&#39;Input IDs&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;Target HGNC Names&#39;</span><span class="p">,</span>  <span class="s1">&#39;One-to-One&#39;</span><span class="p">,</span>       <span class="s1">&#39;TDM&#39;</span><span class="p">),</span>
+<span class="c1">#(&#39;Target HGNC Names&#39;,  &#39;One-to-One&#39;,        &#39;CI&#39;),</span>
+<span class="p">(</span><span class="s1">&#39;Target HGNC Names&#39;</span><span class="p">,</span>  <span class="s1">&#39;One-to-One&#39;</span><span class="p">,</span>       <span class="s1">&#39;ATM&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;Target HGNC Names&#39;</span><span class="p">,</span> <span class="s1">&#39;One-to-Many&#39;</span><span class="p">,</span>       <span class="s1">&#39;TDM&#39;</span><span class="p">),</span>
+<span class="c1">#(&#39;Target HGNC Names&#39;, &#39;One-to-Many&#39;,        &#39;CI&#39;),</span>
+<span class="p">(</span><span class="s1">&#39;Target HGNC Names&#39;</span><span class="p">,</span> <span class="s1">&#39;One-to-Many&#39;</span><span class="p">,</span>       <span class="s1">&#39;ATM&#39;</span><span class="p">),</span>
+<span class="p">(</span>   <span class="s1">&#39;Target Ensembl&#39;</span><span class="p">,</span>  <span class="s1">&#39;One-to-One&#39;</span><span class="p">,</span>       <span class="s1">&#39;TDM&#39;</span><span class="p">),</span>
+<span class="c1">#(   &#39;Target Ensembl&#39;,  &#39;One-to-One&#39;,        &#39;CI&#39;),</span>
+<span class="c1">#(   &#39;Target Ensembl&#39;,  &#39;One-to-One&#39;,       &#39;ATM&#39;),</span>
+<span class="p">(</span>   <span class="s1">&#39;Target Ensembl&#39;</span><span class="p">,</span> <span class="s1">&#39;One-to-Many&#39;</span><span class="p">,</span>       <span class="s1">&#39;TDM&#39;</span><span class="p">),</span>
+<span class="c1">#(   &#39;Target Ensembl&#39;, &#39;One-to-Many&#39;,        &#39;CI&#39;),</span>
+<span class="c1">#(   &#39;Target Ensembl&#39;, &#39;One-to-Many&#39;,       &#39;ATM&#39;),</span>
+<span class="p">(</span>                 <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;One-to-None&#39;</span><span class="p">,</span>          <span class="s1">&#39;&#39;</span><span class="p">)</span>
+<span class="p">]]</span>
+<span class="n">df</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[173]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead tr th {
+        text-align: left;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th></th>
+      <th colspan="4" halign="left">Target HGNC Names</th>
+      <th colspan="2" halign="left">Target Ensembl</th>
+      <th></th>
+    </tr>
+    <tr>
+      <th></th>
+      <th>Input IDs</th>
+      <th colspan="2" halign="left">One-to-One</th>
+      <th colspan="2" halign="left">One-to-Many</th>
+      <th>One-to-One</th>
+      <th>One-to-Many</th>
+      <th>One-to-None</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th>TDM</th>
+      <th>ATM</th>
+      <th>TDM</th>
+      <th>ATM</th>
+      <th>TDM</th>
+      <th>TDM</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Kaminski_2020</th>
+      <td>45947</td>
+      <td>33446</td>
+      <td>12331</td>
+      <td>59</td>
+      <td>13</td>
+      <td>45353</td>
+      <td>496</td>
+      <td>98</td>
+    </tr>
+    <tr>
+      <th>Meyer_2021</th>
+      <td>20922</td>
+      <td>20532</td>
+      <td>368</td>
+      <td>3</td>
+      <td>2</td>
+      <td>20692</td>
+      <td>213</td>
+      <td>17</td>
+    </tr>
+    <tr>
+      <th>MeyerNikolic_unpubl</th>
+      <td>33582</td>
+      <td>25109</td>
+      <td>8342</td>
+      <td>15</td>
+      <td>10</td>
+      <td>33186</td>
+      <td>290</td>
+      <td>106</td>
+    </tr>
+    <tr>
+      <th>Barbry_unpubl</th>
+      <td>16859</td>
+      <td>15155</td>
+      <td>1679</td>
+      <td>1</td>
+      <td>4</td>
+      <td>16738</td>
+      <td>101</td>
+      <td>20</td>
+    </tr>
+    <tr>
+      <th>Regev_2021</th>
+      <td>30983</td>
+      <td>23466</td>
+      <td>7387</td>
+      <td>8</td>
+      <td>9</td>
+      <td>30648</td>
+      <td>222</td>
+      <td>113</td>
+    </tr>
+    <tr>
+      <th>Thienpont_2018</th>
+      <td>27958</td>
+      <td>22394</td>
+      <td>5342</td>
+      <td>8</td>
+      <td>43</td>
+      <td>27541</td>
+      <td>246</td>
+      <td>171</td>
+    </tr>
+    <tr>
+      <th>Budinger_2020</th>
+      <td>26316</td>
+      <td>21441</td>
+      <td>4807</td>
+      <td>6</td>
+      <td>6</td>
+      <td>26066</td>
+      <td>194</td>
+      <td>56</td>
+    </tr>
+    <tr>
+      <th>Banovich_Kropski_2020</th>
+      <td>33694</td>
+      <td>25229</td>
+      <td>8131</td>
+      <td>15</td>
+      <td>57</td>
+      <td>33096</td>
+      <td>336</td>
+      <td>262</td>
+    </tr>
+    <tr>
+      <th>Sheppard_2020</th>
+      <td>27147</td>
+      <td>21915</td>
+      <td>5020</td>
+      <td>6</td>
+      <td>40</td>
+      <td>26742</td>
+      <td>239</td>
+      <td>166</td>
+    </tr>
+    <tr>
+      <th>Wunderink_2021</th>
+      <td>21819</td>
+      <td>18856</td>
+      <td>2907</td>
+      <td>2</td>
+      <td>1</td>
+      <td>21597</td>
+      <td>169</td>
+      <td>53</td>
+    </tr>
+    <tr>
+      <th>Lambrechts_2021</th>
+      <td>33538</td>
+      <td>25091</td>
+      <td>8342</td>
+      <td>15</td>
+      <td>10</td>
+      <td>33168</td>
+      <td>290</td>
+      <td>80</td>
+    </tr>
+    <tr>
+      <th>Zhang_2021</th>
+      <td>18474</td>
+      <td>18364</td>
+      <td>99</td>
+      <td>1</td>
+      <td>0</td>
+      <td>18305</td>
+      <td>159</td>
+      <td>10</td>
+    </tr>
+    <tr>
+      <th>Duong_lungMAP_unpubl</th>
+      <td>27678</td>
+      <td>21617</td>
+      <td>5994</td>
+      <td>6</td>
+      <td>10</td>
+      <td>27447</td>
+      <td>180</td>
+      <td>51</td>
+    </tr>
+    <tr>
+      <th>Janssen_2020</th>
+      <td>33538</td>
+      <td>25091</td>
+      <td>8342</td>
+      <td>15</td>
+      <td>10</td>
+      <td>33168</td>
+      <td>290</td>
+      <td>80</td>
+    </tr>
+    <tr>
+      <th>Sun_2020</th>
+      <td>26578</td>
+      <td>21097</td>
+      <td>5417</td>
+      <td>6</td>
+      <td>8</td>
+      <td>26367</td>
+      <td>161</td>
+      <td>50</td>
+    </tr>
+    <tr>
+      <th>Gomperts_2021</th>
+      <td>31229</td>
+      <td>24929</td>
+      <td>5910</td>
+      <td>14</td>
+      <td>28</td>
+      <td>30607</td>
+      <td>274</td>
+      <td>348</td>
+    </tr>
+    <tr>
+      <th>Eils_2020</th>
+      <td>32738</td>
+      <td>24546</td>
+      <td>7519</td>
+      <td>17</td>
+      <td>44</td>
+      <td>31842</td>
+      <td>284</td>
+      <td>612</td>
+    </tr>
+    <tr>
+      <th>Schiller_2020</th>
+      <td>32104</td>
+      <td>25106</td>
+      <td>6431</td>
+      <td>8</td>
+      <td>26</td>
+      <td>31308</td>
+      <td>263</td>
+      <td>533</td>
+    </tr>
+    <tr>
+      <th>Misharin_Budinger_2018</th>
+      <td>27181</td>
+      <td>21945</td>
+      <td>5009</td>
+      <td>7</td>
+      <td>43</td>
+      <td>26753</td>
+      <td>251</td>
+      <td>177</td>
+    </tr>
+    <tr>
+      <th>Shalek_2018</th>
+      <td>25328</td>
+      <td>21154</td>
+      <td>3642</td>
+      <td>7</td>
+      <td>33</td>
+      <td>24638</td>
+      <td>198</td>
+      <td>492</td>
+    </tr>
+    <tr>
+      <th>Schiller_2021</th>
+      <td>17533</td>
+      <td>17330</td>
+      <td>193</td>
+      <td>0</td>
+      <td>0</td>
+      <td>17384</td>
+      <td>139</td>
+      <td>10</td>
+    </tr>
+    <tr>
+      <th>Peer_Massague_2020</th>
+      <td>19222</td>
+      <td>17897</td>
+      <td>1247</td>
+      <td>4</td>
+      <td>11</td>
+      <td>19004</td>
+      <td>155</td>
+      <td>63</td>
+    </tr>
+    <tr>
+      <th>Lafyatis_2019</th>
+      <td>22164</td>
+      <td>21693</td>
+      <td>442</td>
+      <td>6</td>
+      <td>2</td>
+      <td>21885</td>
+      <td>258</td>
+      <td>21</td>
+    </tr>
+    <tr>
+      <th>Tata_unpubl</th>
+      <td>31915</td>
+      <td>24230</td>
+      <td>7632</td>
+      <td>11</td>
+      <td>6</td>
+      <td>31599</td>
+      <td>280</td>
+      <td>36</td>
+    </tr>
+    <tr>
+      <th>Xu_2020</th>
+      <td>32738</td>
+      <td>24546</td>
+      <td>7519</td>
+      <td>17</td>
+      <td>44</td>
+      <td>31842</td>
+      <td>284</td>
+      <td>612</td>
+    </tr>
+    <tr>
+      <th>Sims_2019</th>
+      <td>60725</td>
+      <td>41583</td>
+      <td>16431</td>
+      <td>985</td>
+      <td>265</td>
+      <td>57434</td>
+      <td>1830</td>
+      <td>1461</td>
+    </tr>
+    <tr>
+      <th>Schultze_unpubl</th>
+      <td>24532</td>
+      <td>20655</td>
+      <td>3820</td>
+      <td>5</td>
+      <td>6</td>
+      <td>24290</td>
+      <td>196</td>
+      <td>46</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[176]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">res_hgn</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[176]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+dict_keys([&#39;Kaminski_2020&#39;, &#39;Meyer_2021&#39;, &#39;MeyerNikolic_unpubl&#39;, &#39;Barbry_unpubl&#39;, &#39;Regev_2021&#39;, &#39;Thienpont_2018&#39;, &#39;Budinger_2020&#39;, &#39;Banovich_Kropski_2020&#39;, &#39;Sheppard_2020&#39;, &#39;Wunderink_2021&#39;, &#39;Lambrechts_2021&#39;, &#39;Zhang_2021&#39;, &#39;Duong_lungMAP_unpubl&#39;, &#39;Janssen_2020&#39;, &#39;Sun_2020&#39;, &#39;Gomperts_2021&#39;, &#39;Eils_2020&#39;, &#39;Schiller_2020&#39;, &#39;Misharin_Budinger_2018&#39;, &#39;Shalek_2018&#39;, &#39;Schiller_2021&#39;, &#39;Peer_Massague_2020&#39;, &#39;Lafyatis_2019&#39;, &#39;Tata_unpubl&#39;, &#39;Xu_2020&#39;, &#39;Sims_2019&#39;, &#39;Schultze_unpubl&#39;])
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[180]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">res_hgn</span><span class="p">[</span><span class="s2">&quot;Kaminski_2020&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[180]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+dict_keys([&#39;changed_only_1_to_n&#39;, &#39;changed_only_1_to_1&#39;, &#39;alternative_target_1_to_1&#39;, &#39;alternative_target_1_to_n&#39;, &#39;matching_1_to_0&#39;, &#39;matching_1_to_1&#39;, &#39;matching_1_to_n&#39;, &#39;input_identifiers&#39;])
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[234]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">res_hgn</span><span class="p">[</span><span class="s2">&quot;Kaminski_2020&quot;</span><span class="p">][</span><span class="s1">&#39;changed_only_1_to_n&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[234]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+dict_keys([&#39;target_id&#39;, &#39;last_node&#39;, &#39;final_database&#39;, &#39;graph_id&#39;, &#39;query_id&#39;, &#39;no_corresponding&#39;, &#39;no_conversion&#39;, &#39;no_target&#39;])
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[235]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">query_ids</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">res_hgn</span><span class="p">:</span>
+    <span class="n">query_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">res_hgn</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;input_identifiers&quot;</span><span class="p">]:</span>
+        <span class="n">query_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="p">[</span><span class="s2">&quot;query_id&quot;</span><span class="p">])</span>
+
+<span class="n">hgnc_ids</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">res_hgn</span><span class="p">:</span>
+    <span class="n">hgnc_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">res_hgn</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;matching_1_to_1&quot;</span><span class="p">]:</span>
+        <span class="n">hgnc_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">res_hgn</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;alternative_target_1_to_1&quot;</span><span class="p">]:</span>
+        <span class="n">hgnc_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+
+<span class="n">ens_ids</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">res_ens</span><span class="p">:</span>
+    <span class="n">ens_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">res_ens</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;matching_1_to_1&quot;</span><span class="p">]:</span>
+        <span class="n">ens_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[236]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">query_ids</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">query_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="nb">len</span><span class="p">(</span><span class="n">hgnc_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="nb">len</span><span class="p">(</span><span class="n">ens_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+45947 45777 45353
+20922 20900 20692
+33582 33451 33186
+16859 16834 16738
+30983 30853 30648
+27958 27736 27541
+26316 26248 26066
+33694 33360 33096
+27147 26935 26742
+21819 21763 21597
+33538 33433 33168
+18474 18463 18305
+27678 27611 27447
+33538 33433 33168
+26578 26514 26367
+31229 30839 30607
+32738 32065 31842
+32104 31537 31308
+27181 26954 26753
+25328 24796 24638
+17533 17523 17384
+19222 19144 19004
+22164 22135 21885
+31915 31862 31599
+32738 32065 31842
+60725 58014 57434
+24532 24475 24290
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[237]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">a1</span><span class="o">=</span><span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">query_ids</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">v</span><span class="p">]</span>
+<span class="n">a2</span><span class="o">=</span><span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">hgnc_ids</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">v</span><span class="p">]</span>
+<span class="n">a3</span><span class="o">=</span><span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ens_ids</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">v</span><span class="p">]</span>
+<span class="nb">len</span><span class="p">(</span><span class="n">a1</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">a2</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[237]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(782442, 774720, 768700)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[238]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">b1</span><span class="p">,</span><span class="n">b2</span><span class="p">,</span><span class="n">b3</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="n">a1</span><span class="p">),</span><span class="nb">set</span><span class="p">(</span><span class="n">a2</span><span class="p">),</span><span class="nb">set</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>
+<span class="nb">len</span><span class="p">(</span><span class="n">b1</span><span class="p">),</span><span class="nb">len</span><span class="p">(</span><span class="n">b2</span><span class="p">),</span><span class="nb">len</span><span class="p">(</span><span class="n">b3</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[238]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(94538, 56960, 56536)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[272]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="p">[(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">b3</span><span class="o">-</span><span class="nb">set</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="n">b3</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">ens_ids</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[272]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[(&#39;Kaminski_2020&#39;, 11756, 44780, 56536),
+ (&#39;Meyer_2021&#39;, 36051, 20485, 56536),
+ (&#39;MeyerNikolic_unpubl&#39;, 24123, 32413, 56536),
+ (&#39;Barbry_unpubl&#39;, 39911, 16625, 56536),
+ (&#39;Regev_2021&#39;, 26455, 30081, 56536),
+ (&#39;Thienpont_2018&#39;, 29425, 27111, 56536),
+ (&#39;Budinger_2020&#39;, 30876, 25660, 56536),
+ (&#39;Banovich_Kropski_2020&#39;, 24140, 32396, 56536),
+ (&#39;Sheppard_2020&#39;, 30223, 26313, 56536),
+ (&#39;Wunderink_2021&#39;, 35219, 21317, 56536),
+ (&#39;Lambrechts_2021&#39;, 24123, 32413, 56536),
+ (&#39;Zhang_2021&#39;, 38356, 18180, 56536),
+ (&#39;Duong_lungMAP_unpubl&#39;, 29509, 27027, 56536),
+ (&#39;Janssen_2020&#39;, 24123, 32413, 56536),
+ (&#39;Sun_2020&#39;, 30537, 25999, 56536),
+ (&#39;Gomperts_2021&#39;, 30995, 25541, 56536),
+ (&#39;Eils_2020&#39;, 25661, 30875, 56536),
+ (&#39;Schiller_2020&#39;, 28743, 27793, 56536),
+ (&#39;Misharin_Budinger_2018&#39;, 30217, 26319, 56536),
+ (&#39;Shalek_2018&#39;, 32318, 24218, 56536),
+ (&#39;Schiller_2021&#39;, 39277, 17259, 56536),
+ (&#39;Peer_Massague_2020&#39;, 37709, 18827, 56536),
+ (&#39;Lafyatis_2019&#39;, 34924, 21612, 56536),
+ (&#39;Tata_unpubl&#39;, 25403, 31133, 56536),
+ (&#39;Xu_2020&#39;, 25661, 30875, 56536),
+ (&#39;Sims_2019&#39;, 2190, 54346, 56536),
+ (&#39;Schultze_unpubl&#39;, 32530, 24006, 56536)]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[270]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="p">[(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">b2</span><span class="o">-</span><span class="nb">set</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="n">b2</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">hgnc_ids</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[270]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[(&#39;Kaminski_2020&#39;, 11793, 45167, 56960),
+ (&#39;Meyer_2021&#39;, 36154, 20806, 56960),
+ (&#39;MeyerNikolic_unpubl&#39;, 24284, 32676, 56960),
+ (&#39;Barbry_unpubl&#39;, 40223, 16737, 56960),
+ (&#39;Regev_2021&#39;, 26709, 30251, 56960),
+ (&#39;Thienpont_2018&#39;, 29588, 27372, 56960),
+ (&#39;Budinger_2020&#39;, 31120, 25840, 56960),
+ (&#39;Banovich_Kropski_2020&#39;, 24202, 32758, 56960),
+ (&#39;Sheppard_2020&#39;, 30402, 26558, 56960),
+ (&#39;Wunderink_2021&#39;, 35477, 21483, 56960),
+ (&#39;Lambrechts_2021&#39;, 24284, 32676, 56960),
+ (&#39;Zhang_2021&#39;, 38556, 18404, 56960),
+ (&#39;Duong_lungMAP_unpubl&#39;, 29794, 27166, 56960),
+ (&#39;Janssen_2020&#39;, 24284, 32676, 56960),
+ (&#39;Sun_2020&#39;, 30828, 26132, 56960),
+ (&#39;Gomperts_2021&#39;, 31114, 25846, 56960),
+ (&#39;Eils_2020&#39;, 25741, 31219, 56960),
+ (&#39;Schiller_2020&#39;, 28974, 27986, 56960),
+ (&#39;Misharin_Budinger_2018&#39;, 30371, 26589, 56960),
+ (&#39;Shalek_2018&#39;, 32544, 24416, 56960),
+ (&#39;Schiller_2021&#39;, 39511, 17449, 56960),
+ (&#39;Peer_Massague_2020&#39;, 37940, 19020, 56960),
+ (&#39;Lafyatis_2019&#39;, 34941, 22019, 56960),
+ (&#39;Tata_unpubl&#39;, 25483, 31477, 56960),
+ (&#39;Xu_2020&#39;, 25741, 31219, 56960),
+ (&#39;Sims_2019&#39;, 1934, 55026, 56960),
+ (&#39;Schultze_unpubl&#39;, 32772, 24188, 56960)]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[271]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="p">[(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">b1</span><span class="o">-</span><span class="nb">set</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="n">b1</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">query_ids</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[271]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[(&#39;Kaminski_2020&#39;, 48591, 45947, 94538),
+ (&#39;Meyer_2021&#39;, 73616, 20922, 94538),
+ (&#39;MeyerNikolic_unpubl&#39;, 60956, 33582, 94538),
+ (&#39;Barbry_unpubl&#39;, 77679, 16859, 94538),
+ (&#39;Regev_2021&#39;, 63555, 30983, 94538),
+ (&#39;Thienpont_2018&#39;, 66580, 27958, 94538),
+ (&#39;Budinger_2020&#39;, 68222, 26316, 94538),
+ (&#39;Banovich_Kropski_2020&#39;, 60844, 33694, 94538),
+ (&#39;Sheppard_2020&#39;, 67391, 27147, 94538),
+ (&#39;Wunderink_2021&#39;, 72719, 21819, 94538),
+ (&#39;Lambrechts_2021&#39;, 61000, 33538, 94538),
+ (&#39;Zhang_2021&#39;, 76064, 18474, 94538),
+ (&#39;Duong_lungMAP_unpubl&#39;, 66860, 27678, 94538),
+ (&#39;Janssen_2020&#39;, 61000, 33538, 94538),
+ (&#39;Sun_2020&#39;, 67960, 26578, 94538),
+ (&#39;Gomperts_2021&#39;, 63309, 31229, 94538),
+ (&#39;Eils_2020&#39;, 61800, 32738, 94538),
+ (&#39;Schiller_2020&#39;, 62434, 32104, 94538),
+ (&#39;Misharin_Budinger_2018&#39;, 67357, 27181, 94538),
+ (&#39;Shalek_2018&#39;, 69210, 25328, 94538),
+ (&#39;Schiller_2021&#39;, 77005, 17533, 94538),
+ (&#39;Peer_Massague_2020&#39;, 75316, 19222, 94538),
+ (&#39;Lafyatis_2019&#39;, 72374, 22164, 94538),
+ (&#39;Tata_unpubl&#39;, 62623, 31915, 94538),
+ (&#39;Xu_2020&#39;, 61800, 32738, 94538),
+ (&#39;Sims_2019&#39;, 33813, 60725, 94538),
+ (&#39;Schultze_unpubl&#39;, 70006, 24532, 94538)]
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
 </div>
 </section>
 
@@ -2028,8 +2563,8 @@ Saved: /lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/results_for_hlca_
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="initialization.html" class="btn btn-neutral float-left" title="Initialization" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="../reference.html" class="btn btn-neutral float-right" title="Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="initialization.html" class="btn btn-neutral float-left" title="Initialization and Memory Usage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="random_data.html" class="btn btn-neutral float-right" title="Calculations with Random Data" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

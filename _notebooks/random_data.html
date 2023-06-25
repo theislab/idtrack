@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculations with Random Data &mdash; idtrack 0.0.4 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/nbsphinx-code-cells.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom_cookietemple.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/dark_mode_css/general.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/dark_mode_css/dark.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+        <script src="../_static/dark_mode_js/default_light.js"></script>
+        <script src="../_static/dark_mode_js/theme_switcher.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Use Case: HLCA Datasets" href="Untitled.html" />
+    <link rel="prev" title="Use Case: HLCA Datasets" href="results_preliminary_for_hlca.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            idtrack
+              <img src="../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../usage.html">Usage</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="initialization.html">Initialization and Memory Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="results_preliminary_for_hlca.html">Use Case: HLCA Datasets</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Calculations with Random Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Untitled.html">Use Case: HLCA Datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="comparison.html">Comparison with Available Tools</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../usage.html">Usage</a></li>
+      <li class="breadcrumb-item active">Calculations with Random Data</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_notebooks/random_data.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Calculations-with-Random-Data">
+<h1>Calculations with Random Data<a class="headerlink" href="#Calculations-with-Random-Data" title="Permalink to this heading"></a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;../..&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">scanpy</span> <span class="k">as</span> <span class="nn">sc</span>
+<span class="kn">import</span> <span class="nn">idtrack</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">tqdm</span>
+<span class="kn">import</span> <span class="nn">random</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
+<span class="o">%</span><span class="k">autoreload</span> 2
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">local_dir</span> <span class="o">=</span> <span class="s2">&quot;/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp&quot;</span>
+<span class="n">idt</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="n">local_dir</span><span class="p">)</span>
+<span class="n">idt</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
+<span class="n">idt</span><span class="o">.</span><span class="n">initialize_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s1">&#39;homo_sapiens&#39;</span><span class="p">,</span> <span class="n">ensembl_release</span><span class="o">=</span><span class="mi">107</span><span class="p">,</span> <span class="n">return_test</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">idt</span><span class="o">.</span><span class="n">calculate_graph_caches</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">get_matching</span><span class="p">(</span><span class="n">convert_output</span><span class="p">):</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">classify_multiple_conversion</span><span class="p">([</span><span class="n">convert_output</span><span class="p">])</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;matching_1_to_0&quot;</span><span class="p">,</span> <span class="s2">&quot;matching_1_to_1&quot;</span><span class="p">,</span> <span class="s2">&quot;matching_1_to_n&quot;</span><span class="p">]}</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">subset_external</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;assembly_38_ensembl_gene&quot;</span><span class="p">,</span> <span class="s1">&#39;assembly_38_ensembl_transcript&#39;</span><span class="p">,</span>
+                   <span class="s2">&quot;Vega gene&quot;</span><span class="p">,</span> <span class="s2">&quot;RFAM&quot;</span><span class="p">,</span> <span class="s2">&quot;HGNC Symbol&quot;</span><span class="p">,</span> <span class="s2">&quot;NCBI gene&quot;</span><span class="p">,</span>
+                   <span class="s2">&quot;Havana gene&quot;</span><span class="p">,</span> <span class="s2">&quot;CCDS&quot;</span><span class="p">,</span> <span class="s2">&quot;Uniprot/SWISSPROT&quot;</span><span class="p">,</span> <span class="s2">&quot;RefSeq_mRNA&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">iteration</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">101</span><span class="p">,</span> <span class="mi">102</span><span class="p">]:</span>
+
+    <span class="n">identifier_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span>  <span class="p">{</span><span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">node_trios</span><span class="p">[</span><span class="n">n</span><span class="p">]}:</span>
+            <span class="k">if</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">identifier_dict</span><span class="p">:</span>
+                <span class="n">identifier_dict</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">identifier_dict</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">identifier_dict</span><span class="p">):</span>
+        <span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">ind</span> <span class="o">+</span> <span class="n">iteration</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">identifier_dict</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">identifier_dict</span><span class="p">[</span><span class="n">j</span><span class="p">])),</span> <span class="mi">1000</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="c1"># print(j, end=&quot;, &quot;)</span>
+            <span class="n">identifier_dict</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">identifier_dict</span><span class="p">[</span><span class="n">j</span><span class="p">])),</span> <span class="nb">len</span><span class="p">(</span><span class="n">identifier_dict</span><span class="p">[</span><span class="n">j</span><span class="p">]))</span>
+
+    <span class="c1"># Example IDs</span>
+    <span class="c1"># for j in identifier_dict:</span>
+    <span class="c1">#     print(j, end=&quot;: &quot;)</span>
+    <span class="c1">#     print(identifier_dict[j][:10], end=&quot;\n\n&quot;)</span>
+
+    <span class="n">identifier_duos</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">ind1</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">subset_external</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">identifier_duos</span><span class="p">:</span>
+            <span class="n">identifier_duos</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">ind2</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">identifier_dict</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+            <span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">ind1</span> <span class="o">+</span> <span class="n">ind2</span> <span class="o">+</span> <span class="n">iteration</span><span class="p">)</span>
+            <span class="n">trio</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">node_trios</span><span class="p">[</span><span class="n">j</span><span class="p">]))</span>
+            <span class="k">if</span> <span class="n">trio</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">107</span><span class="p">:</span>
+                <span class="n">identifier_duos</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">j</span><span class="p">,</span> <span class="n">trio</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+
+    <span class="n">all_results</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">fer</span> <span class="ow">in</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">]:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;With From Release: </span><span class="si">{</span><span class="n">fer</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">ter</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">107</span><span class="p">,</span> <span class="mi">98</span><span class="p">,</span> <span class="mi">89</span><span class="p">,</span> <span class="mi">80</span><span class="p">]:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;To Ensembl Release: </span><span class="si">{</span><span class="n">ter</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">identifier_duos</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;, &quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+                    <span class="n">results</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;matching_1_to_0&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;matching_1_to_1&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;matching_1_to_n&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+
+                <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">identifier_duos</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                    <span class="n">c</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="n">j</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">from_release</span><span class="o">=</span><span class="n">j</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">fer</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">ter</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s2">&quot;ensembl_gene&quot;</span><span class="p">)</span>
+                    <span class="n">gm</span> <span class="o">=</span> <span class="n">get_matching</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">gm</span><span class="p">:</span>
+                        <span class="n">results</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">k</span><span class="p">]</span> <span class="o">+=</span> <span class="n">gm</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+                <span class="n">t1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+                <span class="n">results</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">t1</span><span class="o">-</span><span class="n">t0</span><span class="p">,</span> <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">identifier_duos</span><span class="p">[</span><span class="n">i</span><span class="p">])})</span>
+            <span class="n">r</span><span class="p">[</span><span class="n">ter</span><span class="p">]</span> <span class="o">=</span> <span class="n">results</span>
+            <span class="nb">print</span><span class="p">()</span>
+        <span class="n">all_results</span><span class="p">[</span><span class="s2">&quot;with_from_release&quot;</span> <span class="k">if</span> <span class="n">fer</span> <span class="k">else</span> <span class="s2">&quot;no_from_release&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span>
+
+    <span class="n">time_suffix</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">-%H%M%S&quot;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">gmtime</span><span class="p">())</span>
+    <span class="n">local_dir</span> <span class="o">=</span> <span class="s2">&quot;/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp&quot;</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">local_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;results_for_random_external_conversions_</span><span class="si">{</span><span class="n">iteration</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">time_suffix</span><span class="si">}</span><span class="s2">.pk&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">all_results</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saved: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># choose an external database, and ensembl gene id</span>
+<span class="c1"># choose random 10000 IDs from random ens releases</span>
+<span class="c1"># convert to ensembl gene id 107</span>
+<span class="c1"># get 1-to-1, 1-to-0, 1-to-n matchings, barplot...</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># choose hgnc, ncbi, uniprot, ensembl gene</span>
+<span class="c1"># make from ensembl release 80 to 105, incrementing 3 or 5</span>
+<span class="c1"># get 1-to-1, 1-to-0, 1-to-n matchings, barplot...</span>
+</pre></div>
+</div>
+</div>
+<p>Print plot</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;../..&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+<span class="kn">import</span> <span class="nn">matplotlib.patches</span> <span class="k">as</span> <span class="nn">mpatches</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="o">%</span><span class="k">config</span> InlineBackend.figure_format=&#39;retina&#39;
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;font.family&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;DeJavu Serif&#39;</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;font.serif&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Times New Roman&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">local_dir</span> <span class="o">=</span> <span class="s2">&quot;/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp&quot;</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>ls<span class="w"> </span>-lh<span class="w"> </span>/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+total 15G
+-rw-r--r--. 1 kemal.inecik OG-ICB-User  18K Feb  2 10:38 figure_across_datasets.pdf
+-rw-r--r--. 1 kemal.inecik OG-ICB-User  16K Feb  2 10:33 figure_across_releases.pdf
+-rw-rwxr--+ 1 kemal.inecik OG-ICB-User 622M Oct 17 17:18 graph_homo_sapiens_ens107_min79_narrow.pickle
+-rw-rwxr--+ 1 kemal.inecik OG-ICB-User 7.2G Oct 17 15:01 homo_sapiens_assembly-37.h5
+-rw-rwxr--+ 1 kemal.inecik OG-ICB-User 7.0G Oct 31 09:44 homo_sapiens_assembly-38.h5
+-rw-rwxr--+ 1 kemal.inecik OG-ICB-User  45K Aug 12 15:57 homo_sapiens_externals_modified.yml
+-rw-rwxr--+ 1 kemal.inecik OG-ICB-User 2.2M Nov 10 10:48 results_for_hlca_core_only_ensembl_gene_20221110-094821.pk
+-rw-rwxr--+ 1 kemal.inecik OG-ICB-User 2.4M Nov 10 10:43 results_for_hlca_core_only_HGNC Symbol_20221110-094335.pk
+-rw-rwxr--+ 1 kemal.inecik OG-ICB-User  57M Nov  1 20:13 results_for_hlca_datasets_ensembl_gene_20221101-191345.pk
+-rw-r--r--. 1 kemal.inecik OG-ICB-User  57M Jan 30 03:31 results_for_hlca_datasets_ensembl_gene_20230130-023149.pk
+-rw-rwxr--+ 1 kemal.inecik OG-ICB-User  55M Nov  1 18:50 results_for_hlca_datasets_HGNC Symbol_20221101-175029.pk
+-rw-r--r--. 1 kemal.inecik OG-ICB-User  55M Jan 30 01:47 results_for_hlca_datasets_HGNC Symbol_20230130-004722.pk
+-rw-r--r--. 1 kemal.inecik OG-ICB-User 3.1K Jan 30 20:48 results_for_random_external_conversions_1001_20230130-194819.pk
+-rw-r--r--. 1 kemal.inecik OG-ICB-User 3.1K Jan 30 20:58 results_for_random_external_conversions_1002_20230130-195844.pk
+-rw-r--r--. 1 kemal.inecik OG-ICB-User 3.1K Jan 30 21:27 results_for_random_external_conversions_1011_20230130-202727.pk
+-rw-r--r--. 1 kemal.inecik OG-ICB-User 3.1K Jan 30 21:41 results_for_random_external_conversions_1012_20230130-204143.pk
+-rw-r--r--. 1 kemal.inecik OG-ICB-User 3.1K Jan 30 22:33 results_for_random_external_conversions_1031_20230130-213318.pk
+-rw-r--r--. 1 kemal.inecik OG-ICB-User 3.1K Jan 30 00:37 results_for_random_external_conversions_1_20230129-233747.pk
+-rw-r--r--. 1 kemal.inecik OG-ICB-User 3.1K Jan 30 04:12 results_for_random_external_conversions_2_20230130-031239.pk
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">local_dir</span> <span class="o">+</span> <span class="s2">&quot;/results_for_random_external_conversions_1_20230129-233747.pk&quot;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_file_1</span><span class="p">:</span>
+    <span class="n">res1</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pickle_file_1</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">local_dir</span> <span class="o">+</span> <span class="s2">&quot;/results_for_random_external_conversions_2_20230130-031239.pk&quot;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_file_2</span><span class="p">:</span>
+    <span class="n">res2</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pickle_file_2</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">local_dir</span> <span class="o">+</span> <span class="s2">&quot;/results_for_random_external_conversions_1001_20230130-194819.pk&quot;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_file_3</span><span class="p">:</span>
+    <span class="n">res3</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pickle_file_3</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">local_dir</span> <span class="o">+</span> <span class="s2">&quot;/results_for_random_external_conversions_1002_20230130-195844.pk&quot;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_file_4</span><span class="p">:</span>
+    <span class="n">res4</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pickle_file_4</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">local_dir</span> <span class="o">+</span> <span class="s2">&quot;/results_for_random_external_conversions_1011_20230130-202727.pk&quot;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_file_5</span><span class="p">:</span>
+    <span class="n">res5</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pickle_file_5</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">local_dir</span> <span class="o">+</span> <span class="s2">&quot;/results_for_random_external_conversions_1012_20230130-204143.pk&quot;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_file_6</span><span class="p">:</span>
+    <span class="n">res6</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pickle_file_6</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">local_dir</span> <span class="o">+</span> <span class="s2">&quot;/results_for_random_external_conversions_1031_20230130-213318.pk&quot;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_file_7</span><span class="p">:</span>
+    <span class="n">res7</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pickle_file_7</span><span class="p">)</span>
+
+<span class="n">res</span> <span class="o">=</span> <span class="p">[</span><span class="n">res1</span><span class="p">,</span> <span class="n">res2</span><span class="p">,</span> <span class="n">res3</span><span class="p">,</span> <span class="n">res4</span><span class="p">,</span> <span class="n">res5</span><span class="p">,</span> <span class="n">res6</span><span class="p">,</span> <span class="n">res7</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">rv</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">res</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">iv</span> <span class="ow">in</span> <span class="n">rv</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">jv</span> <span class="ow">in</span> <span class="n">iv</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">kv</span> <span class="ow">in</span> <span class="n">jv</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">count</span> <span class="o">=</span> <span class="n">kv</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">l</span><span class="p">,</span> <span class="n">lv</span> <span class="ow">in</span> <span class="n">kv</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">l</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;matching_1&quot;</span><span class="p">):</span>
+                        <span class="n">df_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">r</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">lv</span><span class="o">/</span><span class="n">count</span><span class="p">])</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">df_list</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;replicate&quot;</span><span class="p">,</span> <span class="s2">&quot;from_release&quot;</span><span class="p">,</span> <span class="s2">&quot;to_release&quot;</span><span class="p">,</span> <span class="s2">&quot;database&quot;</span><span class="p">,</span> <span class="s2">&quot;metric&quot;</span><span class="p">,</span> <span class="s2">&quot;score&quot;</span><span class="p">])</span>
+<span class="n">df</span><span class="p">[</span><span class="s2">&quot;database&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;database&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">({</span><span class="s1">&#39;assembly_38_ensembl_gene&#39;</span><span class="p">:</span> <span class="s2">&quot;Ensembl gene&quot;</span><span class="p">,</span>
+                                        <span class="s1">&#39;assembly_38_ensembl_transcript&#39;</span><span class="p">:</span> <span class="s2">&quot;Ensembl mRNA&quot;</span><span class="p">,</span>
+                                        <span class="s2">&quot;Uniprot/SWISSPROT&quot;</span><span class="p">:</span> <span class="s2">&quot;UniProt&quot;</span><span class="p">,</span>
+                                        <span class="s2">&quot;RefSeq_mRNA&quot;</span><span class="p">:</span> <span class="s2">&quot;RefSeq mRNA&quot;</span><span class="p">})</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">k__</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+
+    <span class="n">s</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">j</span><span class="p">[</span><span class="s1">&#39;score&#39;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">ind</span> <span class="o">%</span> <span class="mi">3</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">total</span> <span class="o">=</span> <span class="n">s</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">total</span> <span class="o">+=</span> <span class="n">s</span>
+        <span class="n">j</span><span class="p">[</span><span class="s1">&#39;score&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total</span>
+    <span class="n">k__</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+<span class="n">df_cum</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">k__</span><span class="p">)</span>
+<span class="n">df_cum</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>replicate</th>
+      <th>from_release</th>
+      <th>to_release</th>
+      <th>database</th>
+      <th>metric</th>
+      <th>score</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>no_from_release</td>
+      <td>107</td>
+      <td>Ensembl gene</td>
+      <td>matching_1_to_0</td>
+      <td>0.040</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>no_from_release</td>
+      <td>107</td>
+      <td>Ensembl gene</td>
+      <td>matching_1_to_1</td>
+      <td>0.999</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1</td>
+      <td>no_from_release</td>
+      <td>107</td>
+      <td>Ensembl gene</td>
+      <td>matching_1_to_n</td>
+      <td>1.000</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1</td>
+      <td>no_from_release</td>
+      <td>107</td>
+      <td>Ensembl mRNA</td>
+      <td>matching_1_to_0</td>
+      <td>0.005</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>1</td>
+      <td>no_from_release</td>
+      <td>107</td>
+      <td>Ensembl mRNA</td>
+      <td>matching_1_to_1</td>
+      <td>0.985</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>1675</th>
+      <td>7</td>
+      <td>with_from_release</td>
+      <td>80</td>
+      <td>UniProt</td>
+      <td>matching_1_to_1</td>
+      <td>0.996</td>
+    </tr>
+    <tr>
+      <th>1676</th>
+      <td>7</td>
+      <td>with_from_release</td>
+      <td>80</td>
+      <td>UniProt</td>
+      <td>matching_1_to_n</td>
+      <td>1.000</td>
+    </tr>
+    <tr>
+      <th>1677</th>
+      <td>7</td>
+      <td>with_from_release</td>
+      <td>80</td>
+      <td>RefSeq mRNA</td>
+      <td>matching_1_to_0</td>
+      <td>0.001</td>
+    </tr>
+    <tr>
+      <th>1678</th>
+      <td>7</td>
+      <td>with_from_release</td>
+      <td>80</td>
+      <td>RefSeq mRNA</td>
+      <td>matching_1_to_1</td>
+      <td>0.993</td>
+    </tr>
+    <tr>
+      <th>1679</th>
+      <td>7</td>
+      <td>with_from_release</td>
+      <td>80</td>
+      <td>RefSeq mRNA</td>
+      <td>matching_1_to_n</td>
+      <td>1.000</td>
+    </tr>
+  </tbody>
+</table>
+<p>1680 rows × 6 columns</p>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mf">3.5</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">barplot</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">df_cum</span><span class="p">[(</span><span class="n">df_cum</span><span class="p">[</span><span class="s2">&quot;metric&quot;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;matching_1_to_n&quot;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df_cum</span><span class="p">[</span><span class="s2">&quot;to_release&quot;</span><span class="p">]</span><span class="o">==</span><span class="mi">107</span><span class="p">)],</span>
+            <span class="n">y</span><span class="o">=</span><span class="s2">&quot;database&quot;</span><span class="p">,</span>
+            <span class="n">hue</span><span class="o">=</span><span class="s2">&quot;from_release&quot;</span><span class="p">,</span> <span class="n">errwidth</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span>
+            <span class="n">x</span><span class="o">=</span><span class="s2">&quot;score&quot;</span><span class="p">,</span>
+            <span class="n">palette</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;darkgray&#39;</span><span class="p">,</span> <span class="s1">&#39;darkgray&#39;</span><span class="p">],</span> <span class="n">errcolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span>
+           <span class="p">)</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">barplot</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">df_cum</span><span class="p">[(</span><span class="n">df_cum</span><span class="p">[</span><span class="s2">&quot;metric&quot;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;matching_1_to_1&quot;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df_cum</span><span class="p">[</span><span class="s2">&quot;to_release&quot;</span><span class="p">]</span><span class="o">==</span><span class="mi">107</span><span class="p">)],</span>
+            <span class="n">y</span><span class="o">=</span><span class="s2">&quot;database&quot;</span><span class="p">,</span>
+            <span class="n">hue</span><span class="o">=</span><span class="s2">&quot;from_release&quot;</span><span class="p">,</span> <span class="n">errwidth</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span>
+            <span class="n">x</span><span class="o">=</span><span class="s2">&quot;score&quot;</span><span class="p">,</span>
+            <span class="n">palette</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lightgray&#39;</span><span class="p">,</span> <span class="s1">&#39;lightgray&#39;</span><span class="p">],</span> <span class="n">errcolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span>
+           <span class="p">)</span>
+<span class="n">m</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">barplot</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">df_cum</span><span class="p">[(</span><span class="n">df_cum</span><span class="p">[</span><span class="s2">&quot;metric&quot;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;matching_1_to_0&quot;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df_cum</span><span class="p">[</span><span class="s2">&quot;to_release&quot;</span><span class="p">]</span><span class="o">==</span><span class="mi">107</span><span class="p">)],</span>
+            <span class="n">y</span><span class="o">=</span><span class="s2">&quot;database&quot;</span><span class="p">,</span>
+            <span class="n">hue</span><span class="o">=</span><span class="s2">&quot;from_release&quot;</span><span class="p">,</span> <span class="n">errwidth</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span>
+            <span class="n">x</span><span class="o">=</span><span class="s2">&quot;score&quot;</span><span class="p">,</span>
+            <span class="n">palette</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;silver&#39;</span><span class="p">,</span> <span class="s1">&#39;silver&#39;</span><span class="p">],</span> <span class="n">errcolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span>
+           <span class="p">)</span>
+
+
+
+<span class="n">darkgray_patch</span> <span class="o">=</span> <span class="n">mpatches</span><span class="o">.</span><span class="n">Patch</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s1">&#39;darkgray&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;1 to n&#39;</span><span class="p">)</span>
+<span class="n">lightgray_patch</span> <span class="o">=</span> <span class="n">mpatches</span><span class="o">.</span><span class="n">Patch</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s1">&#39;lightgray&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;1 to 1&#39;</span><span class="p">)</span>
+<span class="n">silver_patch</span> <span class="o">=</span> <span class="n">mpatches</span><span class="o">.</span><span class="n">Patch</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s1">&#39;silver&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;1 to 0&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">handles</span><span class="o">=</span><span class="p">[</span><span class="n">darkgray_patch</span><span class="p">,</span> <span class="n">lightgray_patch</span><span class="p">,</span> <span class="n">silver_patch</span><span class="p">],</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;lower left&#39;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Matchings&quot;</span><span class="p">)</span>
+
+<span class="n">sns</span><span class="o">.</span><span class="n">despine</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Frequency&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Databases&quot;</span><span class="p">)</span>
+<span class="c1">#plt.gca().legend().set_visible(False)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">,</span><span class="n">length</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">local_dir</span> <span class="o">+</span> <span class="s2">&quot;/figure_across_datasets.pdf&quot;</span><span class="p">)</span>
+<br/><br/><br/></pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/_notebooks_random_data_20_0.png" class="no-scaled-link" src="../_images/_notebooks_random_data_20_0.png" style="width: 243px; height: 353px;" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mf">3.5</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+<span class="n">df2</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;database&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s2">&quot;Ensembl gene&quot;</span><span class="p">,</span> <span class="s2">&quot;HGNC Symbol&quot;</span><span class="p">,</span> <span class="s2">&quot;UniProt&quot;</span><span class="p">,</span> <span class="s2">&quot;Vega gene&quot;</span><span class="p">,</span> <span class="s2">&quot;NCBI gene&quot;</span><span class="p">])]</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">barplot</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">df2</span><span class="p">[(</span><span class="n">df2</span><span class="p">[</span><span class="s2">&quot;metric&quot;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;matching_1_to_1&quot;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df2</span><span class="p">[</span><span class="s2">&quot;from_release&quot;</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;with_from_release&quot;</span><span class="p">)],</span>
+            <span class="n">y</span><span class="o">=</span><span class="s2">&quot;database&quot;</span><span class="p">,</span>
+            <span class="n">hue</span><span class="o">=</span><span class="s2">&quot;to_release&quot;</span><span class="p">,</span> <span class="n">errwidth</span><span class="o">=</span><span class="mf">0.75</span><span class="p">,</span>
+            <span class="n">x</span><span class="o">=</span><span class="s2">&quot;score&quot;</span><span class="p">,</span>
+            <span class="n">palette</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;gainsboro&#39;</span><span class="p">,</span> <span class="s1">&#39;lightgray&#39;</span><span class="p">,</span> <span class="s1">&#39;silver&#39;</span><span class="p">,</span> <span class="s1">&#39;darkgray&#39;</span><span class="p">],</span> <span class="n">errcolor</span><span class="o">=</span><span class="s1">&#39;black&#39;</span>
+           <span class="p">)</span>
+
+<span class="n">sns</span><span class="o">.</span><span class="n">despine</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Frequency&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">((</span><span class="mf">0.85</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">&#39;lower left&#39;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Target ER&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">,</span><span class="n">length</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">local_dir</span> <span class="o">+</span> <span class="s2">&quot;/figure_across_releases.pdf&quot;</span><span class="p">)</span>
+<br/><br/></pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/_notebooks_random_data_21_0.png" class="no-scaled-link" src="../_images/_notebooks_random_data_21_0.png" style="width: 239px; height: 353px;" />
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># time and boxplot for</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="results_preliminary_for_hlca.html" class="btn btn-neutral float-left" title="Use Case: HLCA Datasets" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="Untitled.html" class="btn btn-neutral float-right" title="Use Case: HLCA Datasets" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

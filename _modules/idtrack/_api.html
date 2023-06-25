@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>idtrack._api &mdash; idtrack 0.0.3 documentation</title>
+  <title>idtrack._api &mdash; idtrack 0.0.4 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/custom_cookietemple.css" type="text/css" />
@@ -13,10 +13,9 @@
     <script src="../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
         <script src="../../_static/jquery.js"></script>
-        <script src="../../_static/underscore.js"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
         <script src="../../_static/doctools.js"></script>
         <script src="../../_static/sphinx_highlight.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
@@ -32,12 +31,16 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../../index.html" class="icon icon-home"> idtrack
-            <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../_static/logo.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -66,9 +69,9 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="../index.html">Module code</a> &raquo;</li>
-      <li>idtrack._api</li>
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack._api</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -90,7 +93,7 @@
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Set</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">tqdm.auto</span> <span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
 
 <span class="kn">from</span> <span class="nn">._database_manager</span> <span class="kn">import</span> <span class="n">DatabaseManager</span>
 <span class="kn">from</span> <span class="nn">._db</span> <span class="kn">import</span> <span class="n">DB</span>
@@ -100,10 +103,10 @@
 
 
 <div class="viewcode-block" id="API"><a class="viewcode-back" href="../../reference.html#idtrack._api.API">[docs]</a><span class="k">class</span> <span class="nc">API</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Application programming interface for simple operations using ``idtrack`` package.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Application programming interface for simple operations using ``idtrack`` package.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">local_repository</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Class initialization.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Class initialization.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            local_repository: An absolute path in local machine to store downloaded and preprocessed content.</span>
@@ -114,11 +117,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">local_repository</span> <span class="o">=</span> <span class="n">local_repository</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">track</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Track</span><span class="p">,</span> <span class="n">TrackTests</span><span class="p">]</span>
 
-<div class="viewcode-block" id="API.configure_logger"><a class="viewcode-back" href="../../reference.html#idtrack._api.API.configure_logger">[docs]</a>    <span class="k">def</span> <span class="nf">configure_logger</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Configure logger in a way that shows the logs in a specified format.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="API.configure_logger"><a class="viewcode-back" href="../../reference.html#idtrack._api.API.configure_logger">[docs]</a>    <span class="k">def</span> <span class="nf">configure_logger</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Configure logger in a way that shows the logs in a specified format.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">logger_configured</span><span class="p">:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span>
-                <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
+                <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span> <span class="k">if</span> <span class="n">level</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">level</span><span class="p">,</span>
                 <span class="n">datefmt</span><span class="o">=</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">,</span>
                 <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%(asctime)s</span><span class="s2"> </span><span class="si">%(levelname)s</span><span class="s2">:</span><span class="si">%(name)s</span><span class="s2">: </span><span class="si">%(message)s</span><span class="s2">&quot;</span><span class="p">,</span>
             <span class="p">)</span>
@@ -127,11 +130,11 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;The logger is already configured.&quot;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="API.calculate_graph_caches"><a class="viewcode-back" href="../../reference.html#idtrack._api.API.calculate_graph_caches">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_graph_caches</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Calculate cached variables of the graph object using only one method.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate cached variables of the graph object using only one method.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">calculate_caches</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="API.get_ensembl_organism"><a class="viewcode-back" href="../../reference.html#idtrack._api.API.get_ensembl_organism">[docs]</a>    <span class="k">def</span> <span class="nf">get_ensembl_organism</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tentative_organism_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;Make sure the user enters correct organism name and retrieves latest Ensembl release with ease.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Make sure the user enters correct organism name and retrieves latest Ensembl release with ease.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            tentative_organism_name: Organism of interest.</span>
@@ -147,7 +150,7 @@
         <span class="k">return</span> <span class="n">formal_name</span><span class="p">,</span> <span class="n">latest_release</span></div>
 
 <div class="viewcode-block" id="API.initialize_graph"><a class="viewcode-back" href="../../reference.html#idtrack._api.API.initialize_graph">[docs]</a>    <span class="k">def</span> <span class="nf">initialize_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">organism_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ensembl_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">return_test</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Creates a graph and initializes pathfinder class.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates a graph and initializes pathfinder class.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            organism_name: Formal organism name as an output of ``get_ensembl_organism`` method.</span>
@@ -174,7 +177,7 @@
         <span class="n">prioritize_to_one_filter</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">return_path</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Finds corresponding identifier in specified target using the constructed graph and pathfinder algorithm.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Finds corresponding identifier in specified target using the constructed graph and pathfinder algorithm.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            identifier: Query ID.</span>
@@ -273,7 +276,7 @@
 <div class="viewcode-block" id="API.convert_identifier_multiple"><a class="viewcode-back" href="../../reference.html#idtrack._api.API.convert_identifier_multiple">[docs]</a>    <span class="k">def</span> <span class="nf">convert_identifier_multiple</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">identifier_list</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">pbar_prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-        <span class="sd">&quot;&quot;&quot;Basically ``convert_identifier`` method for multiple conversion procedure with progress bar.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Basically ``convert_identifier`` method for multiple conversion procedure with progress bar.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            identifier_list: List of query IDs to feed the ``convert_identifier`` method.</span>
@@ -293,7 +296,7 @@
         <span class="k">return</span> <span class="n">result</span></div>
 
 <div class="viewcode-block" id="API.classify_multiple_conversion"><a class="viewcode-back" href="../../reference.html#idtrack._api.API.classify_multiple_conversion">[docs]</a>    <span class="k">def</span> <span class="nf">classify_multiple_conversion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">matchings</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]]:</span>
-        <span class="sd">&quot;&quot;&quot;Create a dictionary by classifying the results into different bins.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a dictionary by classifying the results into different bins.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            matchings: The output of ``convert_identifier_multiple`` method.</span>
@@ -316,7 +319,6 @@
         <span class="p">}</span>
 
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">matchings</span><span class="p">:</span>
-
             <span class="n">r</span><span class="p">[</span><span class="s2">&quot;input_identifiers&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">i</span><span class="p">[</span><span class="s2">&quot;no_corresponding&quot;</span><span class="p">]:</span>
@@ -331,14 +333,12 @@
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unexpected error.&quot;</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">i</span><span class="p">[</span><span class="s2">&quot;no_target&quot;</span><span class="p">]:</span>
-
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="n">r</span><span class="p">[</span><span class="s2">&quot;alternative_target_1_to_1&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">r</span><span class="p">[</span><span class="s2">&quot;alternative_target_1_to_n&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
 
             <span class="k">else</span><span class="p">:</span>
-
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">i</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">i</span><span class="p">[</span><span class="s2">&quot;query_id&quot;</span><span class="p">]:</span>
                     <span class="n">r</span><span class="p">[</span><span class="s2">&quot;changed_only_1_to_1&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
 
@@ -354,7 +354,7 @@
         <span class="k">return</span> <span class="n">r</span></div>
 
 <div class="viewcode-block" id="API.print_binned_conversion"><a class="viewcode-back" href="../../reference.html#idtrack._api.API.print_binned_conversion">[docs]</a>    <span class="k">def</span> <span class="nf">print_binned_conversion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">binned_conversion</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Print the output of ``classify_multiple_conversion`` method.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Print the output of ``classify_multiple_conversion`` method.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            binned_conversion: The output of ``classify_multiple_conversion`` method.</span>
@@ -364,7 +364,7 @@
 <div class="viewcode-block" id="API.infer_identifier_source"><a class="viewcode-back" href="../../reference.html#idtrack._api.API.infer_identifier_source">[docs]</a>    <span class="k">def</span> <span class="nf">infer_identifier_source</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">id_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;assembly_ensembl_release&quot;</span><span class="p">,</span> <span class="n">report_only_winner</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Infer the source of given set of IDs, by comparing which source covers most of the query IDs.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Infer the source of given set of IDs, by comparing which source covers most of the query IDs.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            id_list: List of query IDs.</span>
@@ -396,7 +396,15 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">report_only_winner</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">identification</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">identification</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span></div></div>
+            <span class="k">return</span> <span class="n">identification</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="API.available_organisms"><a class="viewcode-back" href="../../reference.html#idtrack._api.API.available_organisms">[docs]</a>    <span class="k">def</span> <span class="nf">available_organisms</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Show which organisms are available to be used in the scope of this package.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Set of strings saying which external databases are present in the graph.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">available_external_databases</span></div></div>
 </pre></div>
 
            </div>

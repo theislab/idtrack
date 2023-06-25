@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>idtrack._external_databases &mdash; idtrack 0.0.3 documentation</title>
+  <title>idtrack._external_databases &mdash; idtrack 0.0.4 documentation</title>
       <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../../_static/custom_cookietemple.css" type="text/css" />
@@ -13,10 +13,9 @@
     <script src="../../_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
         <script src="../../_static/jquery.js"></script>
-        <script src="../../_static/underscore.js"></script>
         <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
         <script src="../../_static/doctools.js"></script>
         <script src="../../_static/sphinx_highlight.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
@@ -32,12 +31,16 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../../index.html" class="icon icon-home"> idtrack
-            <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../_static/logo.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -66,9 +69,9 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="../index.html">Module code</a> &raquo;</li>
-      <li>idtrack._external_databases</li>
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack._external_databases</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -93,7 +96,7 @@
 
 
 <div class="viewcode-block" id="ExternalDatabases"><a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases">[docs]</a><span class="k">class</span> <span class="nc">ExternalDatabases</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Creates and manages external database `yaml` file.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates and manages external database `yaml` file.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -103,7 +106,7 @@
         <span class="n">local_repository</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">genome_assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Class initialization.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Class initialization.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            organism: Refer to :py:attr:`DatabaseManager.__init__.organism`.</span>
@@ -123,7 +126,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span> <span class="o">=</span> <span class="n">genome_assembly</span>
 
 <div class="viewcode-block" id="ExternalDatabases.create_template_yaml"><a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.create_template_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">create_template_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Creates the templete `yaml` file, indicating each external database possible.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates the templete `yaml` file, indicating each external database possible.</span>
 
 <span class="sd">        Example output file will start as following, of course, with much more database under `gene`.</span>
 
@@ -211,7 +214,7 @@
         <span class="p">)</span></div>
 
 <div class="viewcode-block" id="ExternalDatabases.file_name_template_yaml"><a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.file_name_template_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">file_name_template_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;File name creator, intended to be used only :py:meth:`ExternalDatabases.create_template_yaml`.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;File name creator, intended to be used only :py:meth:`ExternalDatabases.create_template_yaml`.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Absolute path for the template yaml file.</span>
@@ -219,7 +222,7 @@
         <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">local_repository</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">_externals_template.yml&quot;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="ExternalDatabases.file_name_modified_yaml"><a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.file_name_modified_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">file_name_modified_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;File name creator, intended to be used only :py:meth:`ExternalDatabases.load_modified_yaml`.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;File name creator, intended to be used only :py:meth:`ExternalDatabases.load_modified_yaml`.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            mode: Decide to retrieve whether the `default` yaml file for the given organism</span>
@@ -242,7 +245,7 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown value for &#39;mode&#39;: </span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="ExternalDatabases.load_modified_yaml"><a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.load_modified_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">load_modified_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Reads the modified `yaml` file if created by the user, else read the default for the given organism.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reads the modified `yaml` file if created by the user, else read the default for the given organism.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Loaded yaml file as the dictionary</span>
@@ -252,14 +255,14 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">file_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name_modified_yaml</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;configured&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;External database config is not found in provided temp directory: &#39;</span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;External database config is not found in provided temp directory: `</span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">`.&quot;</span><span class="p">)</span>
 
             <span class="n">file_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name_modified_yaml</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">)</span>  <span class="c1"># Look at the alternative</span>
             <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The package uses the default config file for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;No default config file for &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">&#39; distributed with the package: &#39;</span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">&#39;. &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;No default config file for `</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">` distributed with the package: `</span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">`. &quot;</span>
                     <span class="sa">f</span><span class="s2">&quot;Please see `create_template_yaml&#39; method description &quot;</span>
                     <span class="sa">f</span><span class="s2">&quot;to learn how to create an external &#39;yaml&#39; file.&quot;</span>
                 <span class="p">)</span>
@@ -268,7 +271,7 @@
             <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">yaml_file</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="ExternalDatabases.give_list_for_case"><a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.give_list_for_case">[docs]</a>    <span class="k">def</span> <span class="nf">give_list_for_case</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">give_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;Retrieve some simple information from `yaml` file.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve some simple information from `yaml` file.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            give_type: Either ``&#39;db&#39;`` or ``&#39;assembly&#39;``.</span>
@@ -290,13 +293,11 @@
 
         <span class="n">result</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">db_name</span> <span class="ow">in</span> <span class="n">the_dict</span><span class="p">:</span>
-
             <span class="k">for</span> <span class="n">asm</span> <span class="ow">in</span> <span class="n">the_dict</span><span class="p">[</span><span class="n">db_name</span><span class="p">][</span><span class="s2">&quot;Assembly&quot;</span><span class="p">]:</span>
                 <span class="n">item</span> <span class="o">=</span> <span class="n">the_dict</span><span class="p">[</span><span class="n">db_name</span><span class="p">][</span><span class="s2">&quot;Assembly&quot;</span><span class="p">][</span><span class="n">asm</span><span class="p">]</span>
                 <span class="n">res_ens</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;Ensembl release&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">))</span>
 
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span> <span class="ow">in</span> <span class="n">res_ens</span> <span class="ow">and</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;Include&quot;</span><span class="p">]:</span>
-
                     <span class="k">if</span> <span class="n">give_type</span> <span class="o">==</span> <span class="s2">&quot;db&quot;</span> <span class="ow">and</span> <span class="nb">int</span><span class="p">(</span><span class="n">asm</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">:</span>
                         <span class="n">result</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">db_name</span><span class="p">)</span>
 
