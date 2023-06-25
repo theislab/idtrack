@@ -10,11 +10,11 @@ import random
 import time
 from abc import ABC
 from math import ceil
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 import networkx as nx
 import numpy as np
-from tqdm.auto import tqdm
+from tqdm import tqdm
 
 from ._db import DB
 from ._track import Track
@@ -52,7 +52,7 @@ class TrackTests(Track, ABC):
                 ids_from_graph = set(self.graph.get_id_list(DB.nts_assembly[assembly]["gene"], assembly, ens_rel))
                 if ids_from != ids_from_graph:
                     switch = False
-                    self.log.warning(f"Inconsistent results for ID list functions (ensembl), at release '{ens_rel}'.")
+                    self.log.warning(f"Inconsistent results for ID list functions (ensembl), at release `{ens_rel}`.")
 
         return switch
 
@@ -88,7 +88,7 @@ class TrackTests(Track, ABC):
                 ]
 
                 if data1 != data2:
-                    self.log.warning(f"Inconsistency between ID range functions: '{ti, data1, data2, data1_raw}'.")
+                    self.log.warning(f"Inconsistency between ID range functions: `{ti, data1, data2, data1_raw}`.")
                     return False
 
         return True
@@ -209,14 +209,12 @@ class TrackTests(Track, ABC):
         misplace_entries = self.graph.graph["misplaced_external_entry"]
 
         for assembly in self.graph.available_genome_assemblies:
-
             with tqdm(
                 self.graph.graph["confident_for_release"],
                 mininterval=0.25,
                 desc=f"Assembly {assembly}",
                 disable=not verbose,
             ) as loop_obj:
-
                 for release in loop_obj:
                     loop_obj.set_postfix_str(f"Item:{release}", refresh=False)
 
@@ -227,7 +225,6 @@ class TrackTests(Track, ABC):
                     }
 
                     for database in self.graph.available_external_databases_assembly[assembly]:
-
                         form = self.graph.external_database_connection_form[database]
                         ex_rel = ex_rel_d[form]
 
@@ -414,7 +411,6 @@ class TrackTests(Track, ABC):
                         metrics["lost_item_but_the_same_id_exists"].append(the_id)
                     metrics["lost_item"].append(the_id)
                 else:
-
                     covr = {j for i in converted_item for j in converted_item[i]["final_conversion"]["final_elements"]}
                     metrics["conversion"][the_id] = list(covr)
                     if len(covr) == 1:
@@ -571,7 +567,7 @@ class TrackTests(Track, ABC):
             for from_id in converts:
                 if set(converts[from_id]) != base_dict[from_id]:
                     self.log.warning(
-                        f"Inconsistent external conversion for '{(database, asym, ens_rel)}':\n"
+                        f"Inconsistent external conversion for `{(database, asym, ens_rel)}`:\n"
                         f"ID: {from_id},\n"
                         f"Converted: {converts[from_id]},\n"
                         f"Base expectation: {base_dict[from_id]}"
@@ -580,7 +576,11 @@ class TrackTests(Track, ABC):
         return True
 
     def random_dataset_source_generator(
-        self, assembly: int, include_ensembl: bool, release_lower_limit: int = None, form: str = None
+        self,
+        assembly: int,
+        include_ensembl: bool,
+        release_lower_limit: Optional[int] = None,
+        form: Optional[str] = None,
     ):
         """Todo.
 
@@ -630,22 +630,19 @@ class TrackTests(Track, ABC):
             Todo.
         """
         with tqdm(self.graph.nodes, mininterval=0.25, disable=not verbose) as loop_obj:
-
             for i in loop_obj:
-
                 for j in self.graph.neighbors(i):
-
                     ni = self.graph.nodes[i][DB.node_type_str]
                     nj = self.graph.nodes[j][DB.node_type_str]
 
                     if ni == nj and ni != DB.nts_ensembl["gene"]:
                         if verbose:
-                            self.log.warning(f"Neighbor nodes (not backbone) has similar node type: '{i}', '{j}'")
+                            self.log.warning(f"Neighbor nodes (not backbone) has similar node type: `{i}`, `{j}`")
                         return False
 
                     elif ni != nj and len(self.graph[i][j]) != 1:
                         if verbose:
-                            self.log.warning(f"Multiple edges between '{i, ni}' and '{j, nj}'")
+                            self.log.warning(f"Multiple edges between `{i, ni}` and `{j, nj}`")
                         return False
 
         return True

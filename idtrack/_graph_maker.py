@@ -7,6 +7,7 @@ import copy
 import itertools
 import logging
 import os
+import pickle
 import string
 from typing import Optional, Union
 
@@ -74,7 +75,7 @@ class GraphMaker:
     def construct_graph(
         self,
         narrow: bool = False,
-        form_list: list = None,
+        form_list: Optional[list] = None,
         narrow_external: bool = True,
     ) -> TheGraph:
         """Main method to construct the graph.
@@ -182,10 +183,8 @@ class GraphMaker:
             rc = db_manager.get_db("relationcurrent", save_after_calculation=db_manager.store_raw_always)
 
             for _ind, entry in rc.iterrows():
-
                 # To make the edge direction from transcript to gene, translation to transcript
                 for e1_str, e2_str in (("transcript", "gene"), ("translation", "transcript")):
-
                     e1 = entry[e1_str]
                     e2 = entry[e2_str]
 
@@ -207,7 +206,6 @@ class GraphMaker:
         min_ens_release = dict()
         added_assemblies = set()
         for f in form_list:
-
             self.log.info(f"Edges between external IDs to Ensembl IDs is being added for '{f}'.")
             nodes_from_previous_release = 0
             for ens_rel in sorted(self.db_manager.available_releases):
@@ -228,7 +226,6 @@ class GraphMaker:
                         raise ValueError
 
                     if e1 and e2 and er and edb and sly:
-
                         if e1 not in graph_nodes_before_external:
                             # Here, Only add the node once and retire. For Homo sapiens these nodes are added at
                             # previous assemblies, but retired before the last assembly and the Ensembl MySQL server,
@@ -250,7 +247,6 @@ class GraphMaker:
                                 raise ValueError("Node should have been already added by a higher priority assembly.")
 
                             elif e1 not in graph_nodes_added_assembly[sly]:
-
                                 if sly not in min_ens_release:
                                     min_ens_release[sly] = ens_rel
                                 elif ens_rel != min_ens_release[sly]:
@@ -302,7 +298,6 @@ class GraphMaker:
             self.log.warning(f"Misplaced external entry: {len(misplaced_external_entry)}.")
 
         if len(establish_form_connection) > 0:
-
             added_edge = 0
             self.log.info("Different forms of assembly-Ensembl-nodes are being connecting.")
             new_nodes = pd.DataFrame(establish_form_connection, columns=["node", "form", "assembly"])
@@ -326,7 +321,6 @@ class GraphMaker:
                     df_aa = df_aa[bool_filter]
 
                     for _, item in df_aa.iterrows():
-
                         for f in form_list:
                             anid = item[f]
 
@@ -339,7 +333,6 @@ class GraphMaker:
                                 g.add_node(anid, **node_attributes_4)
 
                         for e1_str, e2_str in (("transcript", "gene"), ("translation", "transcript")):
-
                             new1, new2 = item[e1_str], item[e2_str]
                             if new1 and new2:
                                 if not g.has_edge(new1, new2):
@@ -361,14 +354,12 @@ class GraphMaker:
                     # transcript and translation does not have base.
                     # It causes the tracking algorithm unnecessarily process too many possibilities.
                     for er in self.db_manager.change_assembly(aa).available_releases:
-
                         db_manager = self.db_manager.change_form(f).change_assembly(aa).change_release(er)
 
                         ids_db = db_manager.get_db("ids")
                         ids = db_manager.id_ver_from_df(ids_db)
 
                         for n in ids:
-
                             if n not in g.nodes and aa == self.db_manager.genome_assembly:
                                 raise ValueError(aa, er, n)
                             elif n not in g.nodes:
@@ -420,7 +411,6 @@ class GraphMaker:
         return g
 
     def _merge_nodes_with_the_same_in_lower_case(self, g: TheGraph):
-
         self.log.info("Synonymous external nodes are being merged into one.")
         before_node_count = len(g.nodes)
         # Get the problematic nodes
@@ -437,7 +427,6 @@ class GraphMaker:
         reverse_g = g.reverse(copy=False)
 
         for _lower_name, merge_list in merge_dict.items():
-
             if any([g.nodes[m][DB.node_type_str] != DB.nts_external for m in merge_list]):
                 raise NotImplementedError("The method is only for 'external' nodes.")
 
@@ -459,7 +448,6 @@ class GraphMaker:
                     distiled_out[target_node] = edge_data
                 else:
                     for i in distiled_out[target_node]:  # Go over attributes to update
-
                         if i != DB.connection_dict:
                             raise NotImplementedError(f"The method is only for certain edge attributes'{i}'.")
 
@@ -991,7 +979,7 @@ class GraphMaker:
             raise ValueError
 
     @staticmethod
-    def remove_non_gene_trees(graph: TheGraph, forms_remove: list = None) -> TheGraph:
+    def remove_non_gene_trees(graph: TheGraph, forms_remove: Optional[list] = None) -> TheGraph:
         """Removes the edges between the nodes with the same `node type` and removes abstract nodes (Void and Retired).
 
         The nodes between two the same :py:attr:`DB.node_type_str` will be removed. Also, the nodes with versions
@@ -1013,12 +1001,10 @@ class GraphMaker:
         edge_to_remove = list()
 
         for n in graph.nodes:  # Iterate through all nodes.
-
             the_node = graph.nodes[n]
             nt = the_node[DB.node_type_str]  # Get the node type
 
             if nt in forms_remove:
-
                 if the_node["Version"] in DB.alternative_versions:
                     node_to_remove.append(n)  # We only remove Void or retired
 
@@ -1093,7 +1079,8 @@ class GraphMaker:
         if not os.access(file_path, os.R_OK):
             raise FileNotFoundError
 
-        return nx.read_gpickle(file_path)
+        with open(file_path, "rb") as handle:
+            return pickle.load(handle)
 
     def create_file_name(self, narrow: bool) -> str:
         """File name creator which includes some information regarding the construction process.
@@ -1122,4 +1109,5 @@ class GraphMaker:
         """
         if not os.access(file_path, os.R_OK) or overwrite:
             self.log.info(f"The graph is being exported as '{file_path}'.")
-            nx.write_gpickle(g, file_path)
+            with open(file_path, "wb") as handle:
+                pickle.dump(g, handle)

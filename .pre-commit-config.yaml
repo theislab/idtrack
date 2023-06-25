@@ -1,5 +1,9 @@
-exclude: "^docs/_logo"
+# exclude: "^docs/_logo"
 repos:
+    - repo: https://github.com/asottile/seed-isort-config
+      rev: v2.2.0
+      hooks:
+          - id: seed-isort-config
     - repo: local
       hooks:
           - id: black
@@ -8,6 +12,20 @@ repos:
             language: system
             types: [python]
             require_serial: true
+          - id: isort
+            name: isort (python)
+            entry: isort
+            language: system
+          # - id: isort
+          #   name: isort (cython)
+          #   types: [cython]
+          #   entry: isort
+          #   language: system
+          - id: isort
+            name: isort (pyi)
+            types: [pyi]
+            entry: isort
+            language: system
           - id: check-added-large-files
             name: Check for added large files
             entry: check-added-large-files
@@ -52,14 +70,3 @@ repos:
       rev: v2.5.1
       hooks:
           - id: prettier
-    - repo: https://github.com/pycqa/isort
-      rev: 5.8.0
-      hooks:
-          - id: isort
-            name: isort (python)
-          - id: isort
-            name: isort (cython)
-            types: [cython]
-          - id: isort
-            name: isort (pyi)
-            types: [pyi]
