@@ -8,6 +8,7 @@
 
 import os
 
+
 def main() -> None:
     """idtrack."""
     print(
@@ -15,6 +16,7 @@ def main() -> None:
         f"Author: `Kemal Inecik <k.inecik@gmail.com>`{os.linesep}"
         f"Documentation: `https://idtrack.readthedocs.io/en/latest/`"
     )
+
 
 if __name__ == "__main__":
     main()  # pragma: no cover

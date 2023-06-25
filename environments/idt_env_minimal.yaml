@@ -1,4 +1,4 @@
-# IDTrack Development and Reproducibility Environment 
+# IDTrack Development and Reproducibility Environment
 
 ### Silicon Mac [necessary to run beforehand]:
 # brew install openblas
@@ -11,111 +11,110 @@
 # jupyter nbextension enable --py widgetsnbextension
 # jupyter lab build --debug
 
-
 name: idt_m_env
 
 channels:
-  - conda-forge
-  - r
-  - bioconda
+    - conda-forge
+    - r
+    - bioconda
 
 dependencies:
-  - python=3.8
-  - jupyterlab
-  - pip
-  - wget
-  - pandas>=0.20.2,<2.0
-  - numpy>=1.9.2
-  - tqdm
-  - scipy>=1.0.1
-  - networkx
-  - matplotlib<3.7
-  - mscorefonts
-  - seaborn
-  - plotly
-  - dill
-  - memory_profiler
-  - scikit-learn>=0.16.0,<=0.24
-  - scikit-sparse
-  - scikit-plot
-  - adjustText
-  - requests
-  - pymysql
-  - pytables
-  - pyyaml
-  - ipython
-  - hdf5
-  - h5py
-  - nbconvert
-  - pandoc
-  - future>=0.16.0
-  - ipywidgets
-  - poetry
-  - pre_commit
-  - click
-  - rich
-  - pytest
-  - coverage
-  - safety
-  - typeguard
-  - cryptography<37.0.0
-  - cookiecutter
-  - xdoctest
-  - sphinx
-  - sphinx-autobuild
-  - flake8
-  - flake8-bugbear
-  - flake8-docstrings
-  - flake8-rst-docstrings
-  - pep8-naming
-  - darglint
-  - pre-commit-hooks
-  - sphinx-rtd-theme
-  - sphinx-click
-  - pygments
-  - types-pkg_resources
-  - types-requests
-  - types-pymysql
-  - types-pyyaml
-  - flake8-builtins
-  - flake8-colors
-  - nbsphinx
-  - bandit
-  - jinja2
-  - mypy
-  - bioconda::gget
-  - bioconda::pybiomart
-  - bioconda::mygene
-  - bioconda::gprofiler-official
-  - scanpy
-  - anndata
-  - mudata
-  - jupyterlab-system-monitor # lsp
-  - jupyterlab-lsp # lsp
-  - jupyterlab_widgets # lsp
-  - jedi-language-server # lsp
-  - nodejs # lsp
-  - python-lsp-server # lsp
-  - libcurl # lsp
-  - openssl # lsp
-  - libxml2 # lsp
-  - jupyterlab-spellchecker # lsp
-  - jupyterlab-drawio # lsp
-  - jupyterlab_code_formatter=1.5.3 # lsp
-  - arrow # lsp
-  - webcolors # lsp
-  - isort # lsp
-  - black # lsp
-  - pyupgrade
-  - pre-commit-hooks
-  - jupyterlab-variableinspector
-  - python-levenshtein
-  - bokeh::bokeh
-  - bokeh::jupyter_bokeh
-  - bokeh::ipywidgets_bokeh
-  - xgboost=1.7.1
-  - pip:
-    - cookietemple
-    - flake8-bandit
-    - sphinx-rtd-dark-mode
-    - types-attrs
+    - python=3.8
+    - jupyterlab
+    - pip
+    - wget
+    - pandas>=0.20.2,<2.0
+    - numpy>=1.9.2
+    - tqdm
+    - scipy>=1.0.1
+    - networkx
+    - matplotlib<3.7
+    - mscorefonts
+    - seaborn
+    - plotly
+    - dill
+    - memory_profiler
+    - scikit-learn>=0.16.0,<=0.24
+    - scikit-sparse
+    - scikit-plot
+    - adjustText
+    - requests
+    - pymysql
+    - pytables
+    - pyyaml
+    - ipython
+    - hdf5
+    - h5py
+    - nbconvert
+    - pandoc
+    - future>=0.16.0
+    - ipywidgets
+    - poetry
+    - pre_commit
+    - click
+    - rich
+    - pytest
+    - coverage
+    - safety
+    - typeguard
+    - cryptography<37.0.0
+    - cookiecutter
+    - xdoctest
+    - sphinx
+    - sphinx-autobuild
+    - flake8
+    - flake8-bugbear
+    - flake8-docstrings
+    - flake8-rst-docstrings
+    - pep8-naming
+    - darglint
+    - pre-commit-hooks
+    - sphinx-rtd-theme
+    - sphinx-click
+    - pygments
+    - types-pkg_resources
+    - types-requests
+    - types-pymysql
+    - types-pyyaml
+    - flake8-builtins
+    - flake8-colors
+    - nbsphinx
+    - bandit
+    - jinja2
+    - mypy
+    - bioconda::gget
+    - bioconda::pybiomart
+    - bioconda::mygene
+    - bioconda::gprofiler-official
+    - scanpy
+    - anndata
+    - mudata
+    - jupyterlab-system-monitor # lsp
+    - jupyterlab-lsp # lsp
+    - jupyterlab_widgets # lsp
+    - jedi-language-server # lsp
+    - nodejs # lsp
+    - python-lsp-server # lsp
+    - libcurl # lsp
+    - openssl # lsp
+    - libxml2 # lsp
+    - jupyterlab-spellchecker # lsp
+    - jupyterlab-drawio # lsp
+    - jupyterlab_code_formatter=1.5.3 # lsp
+    - arrow # lsp
+    - webcolors # lsp
+    - isort # lsp
+    - black # lsp
+    - pyupgrade
+    - pre-commit-hooks
+    - jupyterlab-variableinspector
+    - python-levenshtein
+    - bokeh::bokeh
+    - bokeh::jupyter_bokeh
+    - bokeh::ipywidgets_bokeh
+    - xgboost=1.7.1
+    - pip:
+          - cookietemple
+          - flake8-bandit
+          - sphinx-rtd-dark-mode
+          - types-attrs

@@ -3,14 +3,14 @@
 Environment guide.
 
 1. Clone the repo.
-    
+
     ```bash
     git clone https://github.com/theislab/idtrack
     ```
 
 2. Install the environment, set up base mamba environment.
-    
-    `mamba` is strongly recommended over `conda`. 
+
+    `mamba` is strongly recommended over `conda`.
 
     ```bash
     curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh"
