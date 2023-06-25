@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "idtrack"
 version = "0.0.3"  # <<COOKIETEMPLE_FORCE_BUMP>>
-description = "ID mapping between different times, databases, genome assemblies."
+description = "Cross-Temporal and Cross-Database Biological Identifier Mapping."
 authors = ["Kemal Inecik <k.inecik@gmail.com>"]
 license = "BSD-3-Clause"
 readme = "README.rst"
@@ -28,19 +28,20 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.8,<4.0"
-click = ">=8.0.0"
-rich = ">=10.3.0"
-PyYAML = ">=5.4.1"
-h5py = "^3.7.0"
-tables = "^3.7.0"
-pandas = "^1.4.3"
-numpy = "^1.23.1"
-networkx = "^2.8.5"
-requests = "^2.28.1"
-PyMySQL = "^1.0.2"
-tqdm = "^4.64.1"
+# dependencies are versioned based on their version on 19 October 2019, when Python 3.8 was released.
+PyYAML = ">=5.2"
+h5py = ">=2.10.0"
+tables = ">=2.6.1"
+pandas = ">=0.25.3,<2.0.0"
+numpy = ">=1.17.4"
+networkx = ">=2.4"
+requests = ">=2.22.0"
+PyMySQL = ">=0.9.3"
+tqdm = ">=4.37.0"
 
 [tool.poetry.dev-dependencies]
+click = ">=8.0.0"
+rich = ">=10.3.0"
 pytest = ">=6.2.3"
 coverage = {extras = ["toml"], version = ">=5.3"}
 safety = ">=1.9.0"
@@ -69,13 +70,13 @@ Jinja2 = ">=3.0.1"
 mypy = ">=0.910"
 pyupgrade = ">=2.31.0"
 bandit = "^1.7.4"
-types-PyMySQL = "^1.0.19"
 flake8-builtins = "^1.5.3"
 flake8-colors = "^0.1.9"
 nbsphinx = "^0.8.9"
+types-PyMySQL = "^1.0.19"
 types-PyYAML = "^6.0.11"
-pandoc = "^2.2"
 ipython = "^8.4.0"
+isort = "^5.12.0"
 
 [tool.poetry.scripts]
 idtrack = "idtrack.__main__:main"
@@ -90,13 +91,6 @@ show_column_numbers = true
 show_error_codes = true
 show_error_context = true
 ignore_missing_imports = true
-
-[tool.isort]
-multi_line_output=3
-include_trailing_comma=true
-balanced_wrapping=true
-line_length=120
-profile = "black"
 
 [tool.coverage.paths]
 source = ["idtrack", "*/site-packages"]

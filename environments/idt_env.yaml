@@ -1,23 +1,43 @@
 # IDTrack Development and Reproducibility Environment 
 
+### Silicon Mac [necessary to run beforehand]:
+# brew install openblas
+# brew install pyenv --head
+# export PKG_CONFIG_PATH="/opt/homebrew/opt/openblas/lib/pkgconfig"
+# export LDFLAGS="-L/opt/homebrew/opt/openblas/lib"
+# export CPPFLAGS="-I/opt/homebrew/opt/openblas/include"
+
+### After installation:
+# jupyter nbextension enable --py widgetsnbextension
+# jupyter lab build --debug
+
+
 name: idt_env
 
 channels:
   - conda-forge
+  - r
+  - bioconda
 
 dependencies:
   - python=3.8
   - jupyterlab
   - pip
   - wget
-  - pandas
-  - numpy
+  - pandas>=0.20.2,<2.0
+  - numpy>=1.9.2
   - tqdm
-  - scipy
+  - scipy>=1.0.1
   - networkx
-  - matplotlib
+  - matplotlib<3.7
+  - mscorefonts
   - seaborn
+  - plotly
+  - dill
   - memory_profiler
+  - scikit-learn>=0.16.0,<=0.24
+  - scikit-sparse
+  - scikit-plot
   - adjustText
   - requests
   - pymysql
@@ -28,6 +48,7 @@ dependencies:
   - h5py
   - nbconvert
   - pandoc
+  - future>=0.16.0
   - ipywidgets
   - poetry
   - pre_commit
@@ -132,42 +153,53 @@ dependencies:
   - r-dynutils
   - r-rdpack
   - r-mlpack 
-  - bioconda::bioconductor-biomart
-  - bioconda::bioconductor-mygene
-  - bioconda::bioconductor-basilisk
-  - bioconda::bioconductor-scRNAseq
-  - bioconda::bioconductor-zellkonverter
-  - bioconda::bioconductor-biobase
-  - bioconda::bioconductor-annotationdbi
-  - bioconda::bioconductor-keggrest
-  - bioconda::bioconductor-ensembldb
-  - bioconda::bioconductor-mudata
-  - bioconda::bioconductor-singlecellexperiment
-  - bioconda::r-anndata
-  - bioconda::anndata2ri
-  - bioconda::gget
-  - bioconda::pybiomart
-  - bioconda::mygene
-  - bioconda::gprofiler-official
-  - bioconda::cellxgene
+  # bioconda
+  - bioconductor-biomart
+  - bioconductor-mygene
+  - bioconductor-basilisk
+  - bioconductor-scRNAseq
+  - bioconductor-zellkonverter
+  - bioconductor-biobase
+  - bioconductor-annotationdbi
+  - bioconductor-keggrest
+  - bioconductor-ensembldb
+  - bioconductor-mudata
+  - bioconductor-singlecellexperiment
+  - r-anndata
+  - anndata2ri
+  - gget
+  - pybiomart
+  - mygene
+  - gprofiler-official
+  - cellxgene
+  # general
   - scanpy
   - anndata
   - mudata
-  - jupyterlab-system-monitor
-  - jupyterlab-lsp  # lsp
-  - jedi-language-server  # lsp
-  - nodejs  # lsp
-  - python-lsp-server  # lsp
-  - r-languageserver  # lsp
-  - libcurl  # lsp
-  - openssl  # lsp
-  - libxml2  # lsp
-  - jupyterlab-spellchecker
-  - jupyterlab-drawio
-  - jupyterlab_code_formatter
-  - isort
-  - black
+  - jupyterlab-system-monitor # lsp
+  - jupyterlab-lsp # lsp
+  - jupyterlab_widgets # lsp
+  - jedi-language-server # lsp
+  - nodejs # lsp
+  - python-lsp-server # lsp
+  - libcurl # lsp
+  - openssl # lsp
+  - libxml2 # lsp
+  - jupyterlab-spellchecker # lsp
+  - jupyterlab-drawio # lsp
+  - jupyterlab_code_formatter=1.5.3 # lsp
+  - arrow # lsp
+  - webcolors # lsp
+  - isort # lsp
+  - black # lsp
+  - pyupgrade
+  - pre-commit-hooks
   - jupyterlab-variableinspector
+  - python-levenshtein
+  - bokeh::bokeh
+  - bokeh::jupyter_bokeh
+  - bokeh::ipywidgets_bokeh
+  - xgboost=1.7.1
   - pip:
     - cookietemple
     - flake8-bandit
