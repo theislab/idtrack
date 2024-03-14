@@ -32,7 +32,11 @@ fi
 source "/Users/kemalinecik/Documents/Helmholtz/password.sh"
 
 REMOTE_USER="kemal.inecik"
+<<<<<<< Updated upstream
 REMOTE_HOST="hpc-submit03gui"
+=======
+REMOTE_HOST="hpc-build01"
+>>>>>>> Stashed changes
 LOCAL_PORT="10101"
 
 # Build the SSH command

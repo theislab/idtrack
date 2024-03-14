@@ -46,13 +46,20 @@ class TrackTests(Track, ABC):
             for ens_rel in loop_obj:
                 loop_obj.set_postfix_str(f"Item:{ens_rel}", refresh=False)
 
-                db_from = self.db_manager.change_release(ens_rel).change_assembly(assembly)
-                ids_from = set(db_from.id_ver_from_df(db_from.get_db("ids", save_after_calculation=False)))
+                if self.db_manager.check_if_change_assembly_works(
+                    db_manager=self.db_manager.change_release(ens_rel), 
+                    target_assembly=assembly
+                ):
+                
+                    db_from = self.db_manager.change_release(ens_rel).change_assembly(assembly)
+                    ids_from = set(db_from.id_ver_from_df(db_from.get_db("ids", save_after_calculation=False)))
 
-                ids_from_graph = set(self.graph.get_id_list(DB.nts_assembly[assembly]["gene"], assembly, ens_rel))
-                if ids_from != ids_from_graph:
-                    switch = False
-                    self.log.warning(f"Inconsistent results for ID list functions (ensembl), at release `{ens_rel}`.")
+                    ids_from_graph = set(self.graph.get_id_list(DB.nts_assembly[assembly]["gene"], assembly, ens_rel))
+                    if ids_from != ids_from_graph:
+                        switch = False
+                        self.log.warning(
+                            f"Inconsistent results for ID list functions (ensembl), at release `{ens_rel}`."
+                        )
 
         return switch
 
@@ -218,29 +225,34 @@ class TrackTests(Track, ABC):
                 for release in loop_obj:
                     loop_obj.set_postfix_str(f"Item:{release}", refresh=False)
 
-                    dm = self.db_manager.change_release(release).change_assembly(assembly)
-                    ex_rel_d = {
-                        f: dm.change_form(f).get_db("external_relevant" if narrow_external else "external")
-                        for f in self.graph.available_forms
-                    }
+                    if self.db_manager.check_if_change_assembly_works(
+                        db_manager=self.db_manager.change_release(release), 
+                        target_assembly=assembly
+                    ):
 
-                    for database in self.graph.available_external_databases_assembly[assembly]:
-                        form = self.graph.external_database_connection_form[database]
-                        ex_rel = ex_rel_d[form]
+                        dm = self.db_manager.change_release(release).change_assembly(assembly)
+                        ex_rel_d = {
+                            f: dm.change_form(f).get_db("external_relevant" if narrow_external else "external")
+                            for f in self.graph.available_forms
+                        }
 
-                        from_dm_ = set(ex_rel["id_db"][ex_rel["name_db"] == database])
-                        from_dm = set()
-                        for nd in from_dm_:
-                            l1, l2 = self.graph.node_name_alternatives(nd)
-                            from_dm.add(l1 if l2 else nd)
-                        from_gr = set(self.graph.get_id_list(database, assembly, release))
+                        for database in self.graph.available_external_databases_assembly[assembly]:
+                            form = self.graph.external_database_connection_form[database]
+                            ex_rel = ex_rel_d[form]
 
-                        if from_gr != from_dm and not all([i in misplace_entries for i in (from_dm - from_gr)]):
-                            self.log.warning(
-                                f"Inconsistent results for ID list functions (external) "
-                                f"for: database, assembl, ensembl release: {(database, assembly, release)}"
-                            )
-                            return False
+                            from_dm_ = set(ex_rel["id_db"][ex_rel["name_db"] == database])
+                            from_dm = set()
+                            for nd in from_dm_:
+                                l1, l2 = self.graph.node_name_alternatives(nd)
+                                from_dm.add(l1 if l2 else nd)
+                            from_gr = set(self.graph.get_id_list(database, assembly, release))
+
+                            if from_gr != from_dm and not all([i in misplace_entries for i in (from_dm - from_gr)]):
+                                self.log.warning(
+                                    f"Inconsistent results for ID list functions (external) "
+                                    f"for: database, assembl, ensembl release: {(database, assembly, release)}"
+                                )
+                                return False
 
         return True
 
@@ -538,41 +550,47 @@ class TrackTests(Track, ABC):
             database, _, ens_rel = self.random_dataset_source_generator(
                 assembly=asym, form=DB.backbone_form, include_ensembl=False
             )
-            dm = self.db_manager.change_assembly(asym).change_release(ens_rel)
+            
+            if self.db_manager.check_if_change_assembly_works(
+                db_manager=self.db_manager.change_release(ens_rel), 
+                target_assembly=asym
+            ):
+            
+                dm = self.db_manager.change_release(ens_rel).change_assembly(asym)
 
-            df = dm.get_db("external_relevant")
-            df = df[df["name_db"] == database]
-            base_dict: Dict[str, set] = dict()
-            for _, item in df.iterrows():
-                if item["graph_id"] not in base_dict:
-                    base_dict[item["graph_id"]] = set()
-                base_dict[item["graph_id"]].add(item["id_db"])
+                df = dm.get_db("external_relevant")
+                df = df[df["name_db"] == database]
+                base_dict: Dict[str, set] = dict()
+                for _, item in df.iterrows():
+                    if item["graph_id"] not in base_dict:
+                        base_dict[item["graph_id"]] = set()
+                    base_dict[item["graph_id"]].add(item["id_db"])
 
-            if verbose:
-                print(f"Assembly: {asym}, Database: {database}, Release: {ens_rel}")
+                if verbose:
+                    print(f"Assembly: {asym}, Database: {database}, Release: {ens_rel}")
 
-            res = self.history_travel_testing(
-                from_release=ens_rel,
-                from_assembly=asym,
-                from_database=DB.nts_assembly[asym][DB.backbone_form],
-                to_release=ens_rel,
-                to_database=database,
-                go_external=True,
-                prioritize_to_one_filter=True,
-                convert_using_release=convert_using_release,
-                verbose=verbose,
-                verbose_detailed=False,
-            )
-            converts = res["conversion"]
-            for from_id in converts:
-                if set(converts[from_id]) != base_dict[from_id]:
-                    self.log.warning(
-                        f"Inconsistent external conversion for `{(database, asym, ens_rel)}`:\n"
-                        f"ID: {from_id},\n"
-                        f"Converted: {converts[from_id]},\n"
-                        f"Base expectation: {base_dict[from_id]}"
-                    )
-                    return False
+                res = self.history_travel_testing(
+                    from_release=ens_rel,
+                    from_assembly=asym,
+                    from_database=DB.nts_assembly[asym][DB.backbone_form],
+                    to_release=ens_rel,
+                    to_database=database,
+                    go_external=True,
+                    prioritize_to_one_filter=True,
+                    convert_using_release=convert_using_release,
+                    verbose=verbose,
+                    verbose_detailed=False,
+                )
+                converts = res["conversion"]
+                for from_id in converts:
+                    if set(converts[from_id]) != base_dict[from_id]:
+                        self.log.warning(
+                            f"Inconsistent external conversion for `{(database, asym, ens_rel)}`:\n"
+                            f"ID: {from_id},\n"
+                            f"Converted: {converts[from_id]},\n"
+                            f"Base expectation: {base_dict[from_id]}"
+                        )
+                        return False
         return True
 
     def random_dataset_source_generator(

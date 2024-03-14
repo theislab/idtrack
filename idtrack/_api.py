@@ -66,7 +66,16 @@ class API:
         latest_release = vdf.get_latest_release()
         return formal_name, latest_release
 
-    def initialize_graph(self, organism_name: str, ensembl_release: int, return_test: bool = False):
+    def get_database_manager(self, organism_name: str, last_ensembl_release: int):
+        return DatabaseManager(
+            organism=organism_name, 
+            ensembl_release=None, 
+            ignore_after=last_ensembl_release,
+            form=copy.deepcopy(DB.backbone_form), 
+            local_repository=self.local_repository
+        )
+
+    def initialize_graph(self, organism_name: str, last_ensembl_release: int, return_test: bool = False):
         """Creates a graph and initializes pathfinder class.
 
         Args:
@@ -77,8 +86,7 @@ class API:
             return_test: If ``True``, return the ``TrackTest`` object instead, which has some functions to test the
                 pathfinder performance and graph integrity.
         """
-        backbone_form = copy.deepcopy(DB.backbone_form)
-        dm = DatabaseManager(organism_name, ensembl_release, backbone_form, self.local_repository)
+        dm = self.get_database_manager(organism_name=organism_name, last_ensembl_release=last_ensembl_release)
 
         if return_test:
             self.track = TrackTests(dm)
@@ -315,7 +323,7 @@ class API:
         else:
             return identification[0][0]
 
-    def available_organisms(self) -> Set[str]:
+    def available_available_external_databases(self) -> Set[str]:
         """Show which organisms are available to be used in the scope of this package.
 
         Returns:

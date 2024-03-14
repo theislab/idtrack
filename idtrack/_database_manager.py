@@ -26,9 +26,9 @@ class DatabaseManager:
     def __init__(
         self,
         organism: str,
-        ensembl_release: int,
         form: str,
         local_repository: str,
+        ensembl_release: Optional[int] = None,
         ignore_before: Optional[int] = None,
         ignore_after: Optional[Union[int, float]] = None,
         compress: bool = True,
@@ -59,9 +59,9 @@ class DatabaseManager:
             ValueError: When the input parameters are not in the specified format.
             NotImplementedError: Currently only supports 'homo_sapiens' as the organism name.
         """
-        if organism != "homo_sapiens":
+        if organism not in ["homo_sapiens", "mus_musculus"]:
             raise NotImplementedError(
-                "Organisms other than human is not implemented. In theory, it should work but "
+                "Organisms other than human and mouse is not implemented. In theory, it should work but "
                 "no tests have been conducted yet. In the next version of the package, other "
                 "organisms will be available. Please note that adding new organisms necessitates "
                 "to determine which external databases to include using ExternalDatabase class."
@@ -90,7 +90,6 @@ class DatabaseManager:
 
         # Instance attributes
         self.local_repository = local_repository
-        self.ensembl_release = int(ensembl_release)
         self.organism = organism
         self.form = form
         self.compress = compress
@@ -107,6 +106,11 @@ class DatabaseManager:
         self._comp_hdf5 = {"complevel": 9, "complib": "blosc:zlib"} if self.compress else dict()
         self._column_sep = "_COL_"
         self._identifiers = [f"{self.form}_stable_id", f"{self.form}_version"]
+
+        if ensembl_release is None:  # Set last possible Ensembl release for given genome assembly.
+            self.ensembl_release = 0  # placeholder value for for file naming method, it is not gonna be saved anyway.
+            ensembl_release = sorted(self.available_releases_no_save)[-1]
+        self.ensembl_release = int(ensembl_release)
 
         # Check if it seems ok.
         checkers = (
@@ -161,6 +165,13 @@ class DatabaseManager:
 
     @cached_property
     def available_releases(self) -> List[int]:
+        return self.available_releases_versions()
+    
+    @cached_property
+    def available_releases_no_save(self) -> List[int]:
+        return self.available_releases_versions(save_after_calculation=False)
+    
+    def available_releases_versions(self, **kwargs) -> List[int]:
         """Define available Ensembl releases for the DatabaseManager instance to work on.
 
         It looks on the MySQL server results to determine which Ensembl releases are available. The method does not
@@ -174,7 +185,7 @@ class DatabaseManager:
             ValueError: Unexpected error in regex functions.
         """
         # Get all possible ensembl releases for a given organism
-        dbs = self.get_db("availabledatabases")  # Obtain the databases dataframe
+        dbs = self.get_db("availabledatabases", **kwargs)  # Obtain the databases dataframe
 
         pattern = re.compile(f"^{self.organism}_core_([0-9]+)_.+$")
         # Search organism name in a specified format. Extract ensembl release number
@@ -279,7 +290,7 @@ class DatabaseManager:
             genome_assembly=self.genome_assembly,
         )
 
-    def change_assembly(self, genome_assembly: int) -> "DatabaseManager":
+    def change_assembly(self, genome_assembly: int, last_possible_ensembl_release: bool = False) -> "DatabaseManager":
         """Changes the genome assembly of DatabaseManager instance with passing all other variables unchanged.
 
         Args:
@@ -291,7 +302,7 @@ class DatabaseManager:
         """
         return DatabaseManager(
             organism=self.organism,
-            ensembl_release=self.ensembl_release,
+            ensembl_release=self.ensembl_release if not last_possible_ensembl_release else None,
             form=self.form,
             local_repository=self.local_repository,
             ignore_before=self.ignore_before,
@@ -924,7 +935,7 @@ class DatabaseManager:
         else:
             raise ValueError
 
-    def create_database_content(self) -> pd.DataFrame:
+    def create_database_content(self, just_download: bool = False) -> pd.DataFrame:
         """Retrives all External database information from the server to feed the ``ExternalDatabase`` class.
 
         It is quite costly operation, potentially takes time to be completed. It helps ``ExternalDatabase`` class to
@@ -937,20 +948,25 @@ class DatabaseManager:
         """
         df = pd.DataFrame()
         for k in DB.assembly_mysqlport_priority.keys():  # For all assemblies possible.
-            for j in self.available_form_of_interests:  # For all assemblies possible.
-                for i in self.available_releases:
+            dm_assembly = self.change_assembly(k, last_possible_ensembl_release=True)
+            for j in dm_assembly.available_form_of_interests:  # For all assemblies possible.
+                for i in dm_assembly.available_releases:
                     self.log.info(
                         f"Database content is being created for "
                         f"`{self.organism}`, assembly `{k}`, form `{j}`, ensembl release `{i}`"
                     )
-                    df_temp = self.change_assembly(k).change_release(i).change_form(j).get_db("external_database")
+                    df_temp = dm_assembly.change_release(i).change_form(j).get_db("external_database")
                     df_temp["assembly"] = k
                     df_temp["release"] = i
                     df_temp["form"] = j
-                    df = pd.concat([df, df_temp], axis=0)
-        df["organism"] = self.organism
-        df.reset_index(inplace=True, drop=True)
-        return df
+                    if not just_download:
+                        df = pd.concat([df, df_temp], axis=0)
+        if not just_download:                
+            df["organism"] = self.organism
+            df.reset_index(inplace=True, drop=True)
+            return df
+        else:
+            return df
 
     def create_release_id(self) -> pd.DataFrame:
         """Retrieves the Ensembl IDs and applies `version_fix` method to refine it.
@@ -977,6 +993,13 @@ class DatabaseManager:
         dbm_the_ids.drop_duplicates(inplace=True)
         return dbm_the_ids
 
+    def check_if_change_assembly_works(self, db_manager, target_assembly):
+        try:
+            db_manager.change_assembly(target_assembly)
+            return True
+        except ValueError:
+            return False
+
     def create_external_all(self, return_mode: str) -> pd.DataFrame:
         """Download external databases for all assemblies.
 
@@ -1000,10 +1023,11 @@ class DatabaseManager:
         assembly_priority = [DB.assembly_mysqlport_priority[i]["Priority"] for i in ass]
 
         for i in [x for _, x in sorted(zip(assembly_priority, ass))]:  # sort according to priority
-            dm = self.change_assembly(i)
-            df_temp = dm.get_db("external_relevant")
-            df_temp["assembly"] = i
-            df = pd.concat([df, df_temp])
+            if self.check_if_change_assembly_works(db_manager=self, target_assembly=i):
+                dm = self.change_assembly(i)
+                df_temp = dm.get_db("external_relevant")
+                df_temp["assembly"] = i
+                df = pd.concat([df, df_temp])
         df.reset_index(drop=True, inplace=True)
 
         compare_columns = [
@@ -1116,11 +1140,11 @@ class DatabaseManager:
                 if _arl != _keep_rel:
                     _hi, _fi = self.file_name(_df_type, _df_indicator, ensembl_release=_arl)
                     with pd.HDFStore(_fi, mode="a") as f:
+                        f.remove(_hi)
                         self.log.info(
                             f"Following file is being removed: `{os.path.basename(_fi)}` with key `{_hi}`. "
                             f"This could cause hdf5 file to not reclaim the emptied disk space."
                         )
-                        f.remove(_hi)
 
         # Split the df_indicator with "_", to get the extra parameters.
         # Main point of naming and df_indicator is to include the paramters in the file_names

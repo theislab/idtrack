@@ -82,7 +82,7 @@ class ExternalDatabases:
         database.
 
         Args:
-            df: The output of following operation ``db_manager.get_db("externalcontent")``.
+            df: The output of following operation ``db_manager.create_database_content()``.
 
         Raises:
             ValueError: Unexpected error.
