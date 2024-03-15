@@ -12,19 +12,11 @@ set -e
 source "/Users/kemalinecik/Documents/Helmholtz/password.sh"
 
 # Define constants
-<<<<<<< Updated upstream
-LOCAL_PATH="/Users/kemalinecik/Documents/Helmholtz/git.nosync"
-SERVER_PATH="/home/icb/kemal.inecik/work/codes"
-PROJECT_NAME="idtrack"
-REMOTE_USER="kemal.inecik"
-REMOTE_HOST="hpc-submit03gui"
-=======
 LOCAL_PATH="/Users/kemalinecik/git_nosync"
 SERVER_PATH="/home/icb/kemal.inecik/work/codes"
 PROJECT_NAME="idtrack"
 REMOTE_USER="kemal.inecik"
 REMOTE_HOST="hpc-build01"
->>>>>>> Stashed changes
 REMOTE_PATH="$SERVER_PATH/$PROJECT_NAME"
 
 EXCLUSIONS=("__pycache__" "*.DS_Store" ".idea" ".mypy_cache" "*.ipynb_checkpoints" ".git" "*_build")
