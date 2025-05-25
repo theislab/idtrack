@@ -87,32 +87,6 @@ idtrack = "idtrack.__main__:main"
 [tool.black]
 line-length = 120
 
-[tool.isort]
-known_third_party = ["GPUtil", "h5py", "networkx", "nox", "numpy", "pandas", "psutil", "pymysql", "pytest", "requests", "rich", "torch", "tqdm", "yaml"]
-multi_line_output = 3
-include_trailing_comma = true
-balanced_wrapping = true
-line_length = 120
-profile = "black"
-
-[tool.bandit]
-# (optional) list included tests here:
-tests = []
-# (optional) list skipped tests here:
-skips = ["B403", "B404", "B603", "B607"]
-
-[tool.flake8]
-select = ["B", "B9", "C", "D", "DAR", "E", "F", "N", "RST", "S", "W"]
-ignore = ["E203", "E501", "RST201", "RST203", "RST301", "W503", "D100", "B905"]
-max-line-length = 120
-max-complexity = 50
-docstring-convention = "google"
-per-file-ignores = ["tests/*:S101"]
-rst-roles = ["py:attr", "py:meth", "py:class"]
-
-[tool.darglint]
-strictness = "short"
-
 [tool.mypy]
 strict = false
 pretty = true
