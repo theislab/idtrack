@@ -27,7 +27,7 @@ SSH_OPTIONS="ssh -t -o LogLevel=error"
 RSYNC_OPTIONS="-avh --delete"
 
 # Auto-sync Sleep
-SLEEP_TIME=10
+SLEEP_TIME=9
 
 ############################## END EDITABLE AREA ##############################
 
@@ -67,7 +67,7 @@ print_rsync_output() {
 sync_dir() {
     local dir=$1
     log "Initiating synchronization for directory: '$dir'"
-    
+
     # Get the parent directory of the target directory
     local parent_dir=$(dirname "$dir")
 
@@ -215,16 +215,16 @@ function handle_sigterm() {
 
 while true; do
     echo ''
-    log "Please select an option:"
+    log "Please select an option for IDTrack package sync:"
     echo "1 - Send local codes"
     echo "2 - Send local codes and synchronize selected directories"
     echo "3 - Continuously monitor files for changes, synchronize if necessary"
     echo "4 - Send everything to the server"
     echo "5 - Get everything from the server"
-    echo "q - Quit the script"
+    echo "q - Quit"
 
     # Prompt the user for input
-    read -r -p "$(date +'%Y-%m-%d %H:%M:%S') - Enter your choice [1/2/3/4/5/q]: " option
+    read -r -p "$(date +'%Y-%m-%d %H:%M:%S') - Enter [1/2/3/4/5/q]: " option
     case $option in
         1)
             send_local_codes

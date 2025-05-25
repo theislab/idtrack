@@ -16,26 +16,82 @@ import networkx as nx
 import numpy as np
 from tqdm import tqdm
 
-from ._db import DB
-from ._track import Track
+from idtrack._db import DB
+from idtrack._track import Track
 
 
 class TrackTests(Track, ABC):
-    """Tests for its parent class."""
+    """Developer-facing integrity-test harness for :class:`~idtrack.Track`.
+
+    This module defines :class:`TrackTests`, a mix-in that adds an extensive
+    white-box test suite to a populated :class:`idtrack.Track` instance.  The
+    class is **for developers only**; it should never be used in production
+    pipelines.  Every public method beginning with ``is_`` returns a boolean
+    that tells whether a specific invariant holds.  Methods beginning with
+    ``history_`` execute heavier, end-to-end conversions and collect rich
+    statistics. The class is intended to be *mixin-ed* into a concrete Track
+    subclass—or instantiated standalone—**after** the underlying graph and
+    lookup tables have been fully built.  It performs purely read-only
+    operations and therefore imposes no risk of mutating state.
+
+    All test methods share the following contract:
+
+    * They never raise on failure—*return-value only*—so they can be run in
+      bulk without interrupting your session.
+    * A return value of ``True`` means the invariant holds; ``False`` means
+      a violation was detected.
+    * Where useful, a *verbose* flag gives a tqdm progress bar so long-
+      running checks remain user-friendly.
+
+    Typical use::
+
+        tests = TrackTests(...)
+        tests.is_id_functions_consistent_ensembl()  # Raises if inconsistent.
+
+    Note:
+        The class is *not* designed for production; instantiate it only in test
+        suites or interactive debugging sessions.
+    """
 
     def __init__(self, *args, **kwargs):
-        """Todo."""
-        super().__init__(*args, **kwargs)  # SubClass initialization
+        """Initialize the test harness.
+
+        All positional and keyword arguments are forwarded verbatim to
+        :class:`~idtrack.Track.__init__`.  Besides constructing the underlying
+        graph, the initializer sets up a dedicated :pydata:`logging.Logger`
+        named ``"track_tests"`` so individual test routines can emit structured
+        diagnostics without polluting the main application log.
+
+        Args:
+            *args: Positional arguments accepted by
+                :class:`~idtrack.Track.__init__`.
+            **kwargs: Keyword arguments accepted by
+                :class:`~idtrack.Track.__init__`.
+        """
+        super().__init__(*args, **kwargs)  # Sub-class initialization
         self.log = logging.getLogger("track_tests")
 
     def is_id_functions_consistent_ensembl(self, verbose: bool = True):
-        """Todo.
+        """Ensure Ensembl ID-list helpers agree with the SQL back-end.
+
+        For every release listed in ``graph.graph["confident_for_release"]``
+        the test compares two independent sources of Ensembl-gene IDs for the
+        *current genome assembly*:
+
+        1. IDs retrieved directly from MySQL via
+           :pyclass:`~idtrack.DatabaseManager`.
+        2. IDs returned by :pymeth:`idtrack.Track.get_id_list` from the graph.
+
+        A mismatch means either the graph was built incompletely or the
+        helper functions drift out of sync with the database schema.
 
         Args:
-            verbose: Todo.
+            verbose: If ``True`` (default) show a tqdm progress-bar while
+                iterating through the releases.
 
         Returns:
-            Todo.
+            bool: ``True`` when **all** releases produce identical sets; else
+            ``False`` (a descriptive warning is logged).
         """
         assembly = self.graph.graph["genome_assembly"]
         # Others should not have consistent as only the main assembly is added fully.
@@ -47,10 +103,9 @@ class TrackTests(Track, ABC):
                 loop_obj.set_postfix_str(f"Item:{ens_rel}", refresh=False)
 
                 if self.db_manager.check_if_change_assembly_works(
-                    db_manager=self.db_manager.change_release(ens_rel), 
-                    target_assembly=assembly
+                    db_manager=self.db_manager.change_release(ens_rel), target_assembly=assembly
                 ):
-                
+
                     db_from = self.db_manager.change_release(ens_rel).change_assembly(assembly)
                     ids_from = set(db_from.id_ver_from_df(db_from.get_db("ids", save_after_calculation=False)))
 
@@ -64,13 +119,27 @@ class TrackTests(Track, ABC):
         return switch
 
     def is_id_functions_consistent_ensembl_2(self, verbose: bool = True):
-        """Todo.
+        """Cross-check Ensembl ID *range* helpers against raw edge data.
+
+        For every **backbone** Ensembl-gene node the routine computes the list
+        of active release ranges in two distinct ways:
+
+        1. **Raw computation** - by flattening
+           ``graph.combined_edges_genes`` and compacting the releases with
+           :py:meth:`idtrack.Track.list_to_ranges`.
+        2. **Cached lookup** - via the lazily built dictionary
+           ``graph.get_active_ranges_of_id``.
+
+        The two lists must match exactly.  A divergence would indicate that
+        the cached helper is out of sync with the authoritative edge
+        structure.
 
         Args:
-            verbose: Todo.
+            verbose: If ``True`` (default) wrap the iteration in a tqdm bar.
 
         Returns:
-            Todo.
+            bool: ``True`` if *all* gene nodes pass; ``False`` after the first
+            failure (a warning is emitted).
         """
         the_ids = list()
         for i in self.graph.nodes:
@@ -84,11 +153,11 @@ class TrackTests(Track, ABC):
         with tqdm(the_ids, mininterval=0.25, disable=not verbose) as loop_obj:
             for ti in loop_obj:
                 loop_obj.set_postfix_str(f"Item:{ti}", refresh=False)
-
+                # (1) raw recomputation
                 data1_raw = self.graph.combined_edges_genes[ti]
                 data1_ = sorted({k for i in data1_raw for j in data1_raw[i] for k in data1_raw[i][j] if j == assembly})
                 data1 = self.graph.list_to_ranges(data1_)
-
+                # (2) cached view
                 data2 = [
                     [i, j if not np.isinf(j) else max(self.graph.graph["confident_for_release"])]
                     for i, j in self.graph.get_active_ranges_of_id[ti]
@@ -101,13 +170,22 @@ class TrackTests(Track, ABC):
         return True
 
     def is_range_functions_robust(self, verbose: bool = True):
-        """Todo.
+        """Detect overlapping release ranges among sibling Ensembl IDs.
+
+        A *base* Ensembl-gene ID is the stable identifier that groups multiple
+        versioned Ensembl-gene records (siblings).  The gene-history model
+        requires that the release ranges of sibling IDs **never overlap** -
+        each release must be covered by *exactly one* child stable ID.
+
+        This method traverses every base-gene node and checks that condition.
 
         Args:
-            verbose: Todo.
+            verbose: If ``True`` (default) display a tqdm progress-bar.
 
         Returns:
-            Todo.
+            bool: ``True`` when no overlaps are found; ``False`` otherwise.
+            Each offending base ID triggers a warning with the conflicting
+            ranges.
         """
         base_ids = set()
         for i in self.graph.nodes:
@@ -130,15 +208,33 @@ class TrackTests(Track, ABC):
         return switch
 
     def is_base_is_range_correct(self, verbose: bool = True):
-        """Todo.
+        """Verify consistency of *base-gene* active-range calculations.
+
+        Each "base Ensembl gene" node (``node_type == 'base_ensembl_gene'``)
+        has an *active release range*—the list of Ensembl releases during
+        which descendants of the gene were present.  There are two
+        independent ways to obtain this information:
+
+        1. **High-level helper**
+           ``graph.get_active_ranges_of_base_id_alternative`` - a cached
+           convenience wrapper.
+        2. **Low-level reconstruction** by aggregating the *combined_edges*
+           table and converting the set of releases into compact
+           ``[start, end]`` slices via ``graph.list_to_ranges``.
+
+        This test iterates through **all** base-gene nodes and asserts that
+        the two methods deliver byte-identical results.
 
         Args:
-            verbose: Todo.
+            verbose (bool, optional): If *True* (default) show a tqdm progress
+                bar that updates with the current node under inspection.
 
         Returns:
-            Todo.
+            bool: ``True`` if *every* base-gene has matching ranges; ``False``
+            as soon as a single mismatch is encountered.
         """
         base_ids = set()
+        # Gather all base-gene identifiers up-front to avoid repeated lookups.
         for i in self.graph.nodes:
             if self.graph.nodes[i]["node_type"] == "base_ensembl_gene":
                 base_ids.add(i)
@@ -148,11 +244,14 @@ class TrackTests(Track, ABC):
             for bi in loop_obj:
                 loop_obj.set_postfix_str(f"Item:{bi}", refresh=False)
 
-                # get_base_id_range form function
+                # 1. High-level cached helper. get_base_id_range form function
                 bi_fun = self.graph.get_active_ranges_of_base_id_alternative(bi)
-                # get range directly from graph
+                # 2. Low-level reconstruction from edge metadata. get range directly from graph
                 rd = self.graph.combined_edges[bi]
                 bi_dir = self.graph.list_to_ranges(sorted({s for p in rd for r in rd[p] for s in rd[p][r]}))
+                # Replace "inf" sentinel with highest known release.  The
+                # helper already performs this normalisation so we mimic it
+                # here for a fair comparison.
                 bi_fun = [
                     [i, j if not np.isinf(j) else max(self.graph.graph["confident_for_release"])] for i, j in bi_fun
                 ]
@@ -163,20 +262,43 @@ class TrackTests(Track, ABC):
         return switch
 
     def is_combined_edges_dicts_overlapping_and_complete(self):
-        """Todo.
+        """Check edge-dictionary partitioning invariants.
+
+        The Track graph materialises three *edge caches*—``combined_edges``
+        and its two specialised siblings—each storing adjacency and release
+        metadata for a different subset of nodes:
+
+        * ``combined_edges`` - all nodes, including backbone genes.
+        * ``combined_edges_genes`` - stable Ensembl genes (non-assembly-specific).
+        * ``combined_edges_assembly_specific_genes`` - genes that exist only
+          on a single assembly.
+
+        The design contract says:
+
+        1. **Disjointness** - No node key may appear in more than one
+           dictionary.
+        2. **Completeness** - The *union* of the dictionaries must cover all
+           graph nodes **except** those that represent *alternative database
+           versions* (e.g. "EnsemblMetazoa") which are intentionally kept
+           separate.
+
+        This routine enforces both rules.
 
         Returns:
-            Todo.
+            bool: ``True`` if the dictionaries are pair-wise disjoint **and**
+            collectively cover every eligible node; ``False`` otherwise.
         """
         the_dicts = [
             self.graph.combined_edges,
             self.graph.combined_edges_genes,
             self.graph.combined_edges_assembly_specific_genes,
         ]
+        # 1. Disjointness - if any intersection is non-empty the invariant is violated.
         for d1, d2 in itertools.permutations(iterable=the_dicts, r=2):
             if len(d1.keys() & d2.keys()) != 0:
                 return False  # There are some overlapping identifiers.
 
+        # 2. Completeness - every node (minus alternative DB versions) must be represented in exactly one cache.
         covered_nodes = set.union(*map(set, the_dicts))
         uncovered_nodes = self.graph.nodes - covered_nodes
         for un in uncovered_nodes:
@@ -187,10 +309,16 @@ class TrackTests(Track, ABC):
         return True
 
     def is_edge_with_same_nts_only_at_backbone_nodes(self):
-        """Todo.
+        """Assert *same-node-type* edges exist **only** between backbone genes.
+
+        The graph is a *multilayer* network where nodes of different
+
+        This method traverses every base-gene node and checks that condition.
 
         Returns:
-            Todo.
+            bool: ``True`` when no overlaps are found; ``False`` otherwise.
+            Each offending base ID triggers a warning with the conflicting
+            ranges.
         """
         for n1 in self.graph.nodes:
             nts1 = self.graph.nodes[n1][DB.node_type_str]
@@ -204,13 +332,34 @@ class TrackTests(Track, ABC):
         return True
 
     def is_id_functions_consistent_external(self, verbose: bool = True):
-        """Todo.
+        """Check external-ID list helpers against the raw MySQL tables.
+
+        For **every** combination of *assembly*, *Ensembl release* (limited to
+        :pyattr:`graph.graph["confident_for_release"]`) and *external
+        database* this test performs the following steps:
+
+        1. Query the authoritative list of external IDs directly from the
+           MySQL snapshot via :class:`~idtrack.database_manager.DatabaseManager`.
+        2. Ask the in-memory graph for the same list via
+           :py:meth:`idtrack.Track.get_id_list`.
+        3. Normalise node names through
+           :py:meth:`idtrack.Track.node_name_alternatives` to cope with the
+           occasional “_1” suffix.
+        4. Compare the two sets.  A mismatch is logged and the method returns
+           ``False`` immediately.
+
+        The exhaustive traversal is expensive (minutes for large genomes) but
+        ensures the graph`s indexing helpers never drift from the actual
+        database content.
 
         Args:
-            verbose: Todo.
+            verbose: If *True* (default) display a tqdm progress bar and emit
+                log messages at INFO level.  When *False* the method runs
+                silently.
 
         Returns:
-            Todo.
+            bool: *True* when every single comparison matched, *False* as soon
+            as an inconsistency is encountered.
         """
         narrow_external = self.graph.graph["narrow_external"]
         misplace_entries = self.graph.graph["misplaced_external_entry"]
@@ -226,8 +375,7 @@ class TrackTests(Track, ABC):
                     loop_obj.set_postfix_str(f"Item:{release}", refresh=False)
 
                     if self.db_manager.check_if_change_assembly_works(
-                        db_manager=self.db_manager.change_release(release), 
-                        target_assembly=assembly
+                        db_manager=self.db_manager.change_release(release), target_assembly=assembly
                     ):
 
                         dm = self.db_manager.change_release(release).change_assembly(assembly)
@@ -259,17 +407,31 @@ class TrackTests(Track, ABC):
     def how_many_corresponding_path_ensembl(
         self, from_release: int, from_assembly: int, to_release: int, go_external: bool, verbose: bool = True
     ):
-        """Todo.
+        """Count history paths between two Ensembl releases.
+
+        The method iterates over **all** Ensembl-gene stable IDs that exist in
+        *from_release*/*from_assembly*.  For every ID that is present in the
+        graph it calls :py:meth:`idtrack.Track.get_possible_paths` and records
+        how many distinct paths the searcher finds to *to_release*.
+
+        The routine is **non-destructive**; it merely provides a quick way to
+        gauge the `density` of the history graph or to spot releases where
+        path-finding was unexpectedly difficult.
 
         Args:
-            from_release: Todo.
-            from_assembly: Todo.
-            to_release: Todo.
-            go_external: Todo.
-            verbose: Todo.
+            from_release: Source Ensembl release number.
+            from_assembly: Source genome assembly code.
+            to_release: Target Ensembl release number.
+            go_external: If *True* history paths are allowed to temporarily
+                leave the Ensembl lineage via external databases.
+            verbose: Show a tqdm progress bar (default *True*).
 
         Returns:
-            Todo.
+            list[list[Union[str, int, None]]]: A list of two-element sub-lists
+            ``[stable_id, n_paths]`` where ``n_paths`` is
+
+                *   an *int* ≥ 0 when the ID was in the graph, or
+                *   *None* when the source ID was absent.
         """
         db_from = self.db_manager.change_release(from_release).change_assembly(from_assembly)
         ids_from = sorted(set(db_from.id_ver_from_df(db_from.get_db("ids", save_after_calculation=False))))
@@ -307,27 +469,52 @@ class TrackTests(Track, ABC):
         verbose_detailed: bool = False,
         return_ensembl_alternative: bool = False,
     ):
-        """Todo.
+        """End-to-end conversion regression test.
+
+        This is the *work-horse* diagnostic routine: it converts a (possibly
+        random) subset of source IDs to *to_database*/*to_release* using the
+        full path-finder and records detailed metrics along the way.
+
+        The function is intentionally permissive - it never aborts on a single
+        failed conversion but rather builds up a comprehensive *metrics*
+        dictionary for post-mortem analysis.
 
         Args:
-            from_release: Todo.
-            from_assembly: Todo.
-            from_database: Todo.
-            to_release: Todo.
-            to_database: Todo.
-            go_external: Todo.
-            prioritize_to_one_filter: Todo.
-            convert_using_release: Todo.
-            from_fraction: Todo.
-            verbose: Todo.
-            verbose_detailed: Todo.
-            return_ensembl_alternative: Todo
+            from_release: Source Ensembl release.
+            from_assembly: Source genome assembly.
+            from_database: Name of the starting database (Ensembl backbone or
+                external).
+            to_release: Destination Ensembl release.
+            to_database: Name of the destination database.
+            go_external: Allow the path-finder to leave the Ensembl lineage at
+                intermediate steps (recommended *True* unless you explicitly
+                want a pure Ensembl mapping).
+            prioritize_to_one_filter: When *True* the converter ranks 1→1 paths
+                above many→many alternatives.  This mimics the behaviour of the
+                public conversion API.
+            convert_using_release: If *True* the source release is passed to
+                :py:meth:`idtrack.Track.convert` so the path-finder need not
+                `guess` the starting point.
+            from_fraction: Fraction (0.0 - 1.0] of *ids_from* to sample.  Use
+                < 1.0 for a quicker, stochastic smoke test.
+            verbose: Show coarse progress information via tqdm.
+            verbose_detailed: Include additional per-ID counters in the tqdm
+                suffix to watch the metrics grow in real time.
+            return_ensembl_alternative: Forwarded to
+                :py:meth:`idtrack.Track.convert`; when *True* the converter also
+                reports Ensembl gene alternatives that would lead to the same
+                final IDs.
 
         Raises:
-            ValueError: Todo.
+            ValueError: *from_database* or *to_database* is an Ensembl
+                node-type that should be addressed through the backbone helper
+                or *from_fraction* is outside (0.0, 1.0].
 
         Returns:
-            Todo.
+            dict: A nested dictionary with keys ``parameters``, ``time`` and
+            multiple sub-sections such as ``lost_item``, ``one_to_one_ids``,
+            ``one_to_multiple_ids``, ``conversion`` as described in the source
+            code.
         """
         if from_database in DB.nts_ensembl or to_database in DB.nts_ensembl:
             raise ValueError
@@ -336,6 +523,7 @@ class TrackTests(Track, ABC):
         ids_to = set(self.graph.get_id_list(to_database, self.graph.graph["genome_assembly"], to_release))
         ids_to_s = {self.graph.nodes[i]["ID"] for i in ids_to} if to_database in DB.nts_assembly_reverse else set()
 
+        # Input sampling
         if from_fraction == 1.0:
             pass
         elif 0.0 < from_fraction < 1.0:
@@ -344,7 +532,8 @@ class TrackTests(Track, ABC):
         else:
             raise ValueError
 
-        parameters: Dict[str, Union[bool, str, int, float]] = {
+        # Metric scaffold
+        parameters: dict[str, Union[bool, str, int, float]] = {
             "from_release": from_release,
             "from_assembly": from_assembly,
             "from_database": from_database,
@@ -355,7 +544,7 @@ class TrackTests(Track, ABC):
             "prioritize_to_one_filter": prioritize_to_one_filter,
         }
 
-        metrics: Dict[str, Any] = {
+        metrics: dict[str, Any] = {
             "parameters": parameters,
             "ids": {"from": ids_from, "to": ids_to},
             "lost_item": [],
@@ -388,6 +577,7 @@ class TrackTests(Track, ABC):
                     )
                     loop_obj.set_postfix_str(suffix, refresh=False)
 
+                # Conversion attempt
                 try:
                     if convert_using_release:
                         converted_item = self.convert(
@@ -418,6 +608,7 @@ class TrackTests(Track, ABC):
                     metrics["history_voyage_failed"].append((the_id, err))
                     continue
 
+                # Metrics aggregation
                 if converted_item is None:
                     if to_database == from_database == "ensembl_gene" and self.graph.nodes[the_id]["ID"] in ids_to_s:
                         metrics["lost_item_but_the_same_id_exists"].append(the_id)
@@ -447,6 +638,7 @@ class TrackTests(Track, ABC):
                                 metrics["found_ids_not_accurate"][the_id] = list()
                             metrics["found_ids_not_accurate"][the_id].append(c)
 
+        # Clash statistics
         clash_multi_multi: int = 0
         clash_multi_one: int = 0
         clash_one_one: int = 0
@@ -471,13 +663,20 @@ class TrackTests(Track, ABC):
         return metrics
 
     def history_travel_testing_random_arguments_generator(self, strict_forward: bool):
-        """Todo.
+        """Generate a plausible random parameter set for :py:meth:`history_travel_testing`.
+
+        The helper picks **compatible** source/target assemblies, releases and
+        databases so the subsequent conversion test has a realistic chance to
+        succeed.  When *strict_forward* is *True* the target release is
+        guaranteed to be **≥** the source release (no time-travel back).
 
         Args:
-            strict_forward: Todo.
+            strict_forward: Enforce a non-decreasing release direction.
 
         Returns:
-            Todo.
+            dict: Keys ``from_assembly``, ``from_release``, ``to_release``,
+            ``from_database``, ``to_database`` ready to be splatted into
+            :py:meth:`history_travel_testing`.
         """
         from_assembly = random.choice(list(DB.assembly_mysqlport_priority.keys()))
         # as the final release should be always the main assembly
@@ -509,18 +708,27 @@ class TrackTests(Track, ABC):
         verbose: bool,
         verbose_detailed: bool,
     ):
-        """Todo.
+        """Convenience wrapper around :py:meth:`history_travel_testing`.
+
+        The routine generates a *random* but internally consistent test case
+        via :py:meth:`history_travel_testing_random_arguments_generator`, logs
+        the chosen parameters (unless *verbose* is *False*) and delegates the
+        heavy lifting to :py:meth:`history_travel_testing`.
 
         Args:
-            from_fraction: Todo.
-            strict_forward: Todo.
-            convert_using_release: Todo.
-            prioritize_to_one_filter: Todo.
-            verbose: Todo.
-            verbose_detailed: Todo.
+            from_fraction: Fraction of IDs to sample from the source set.
+            strict_forward: Forwarded to the argument generator.
+            convert_using_release: Forwarded to
+                :py:meth:`history_travel_testing`.
+            prioritize_to_one_filter: Forwarded to
+                :py:meth:`history_travel_testing`.
+            verbose: Show coarse progress information.
+            verbose_detailed: Include extended per-ID counters in the progress
+                bar.
 
         Returns:
-            Todo.
+            dict: The *metrics* dictionary returned by
+            :py:meth:`history_travel_testing`.
         """
         parameters = self.history_travel_testing_random_arguments_generator(strict_forward=strict_forward)
         if verbose:
@@ -537,30 +745,37 @@ class TrackTests(Track, ABC):
         )
 
     def is_external_conversion_robust(self, convert_using_release: bool, verbose: bool = True):
-        """Todo.
+        """Validate Ensembl→external conversion against MySQL ground truth.
+
+        A random external database is chosen for **every** genome assembly. For
+        the selected combination the method grabs the authoritative mapping
+        table (graph-ID → external ID set) from MySQL and converts the same
+        graph-IDs with :py:meth:`idtrack.Track.convert`.
 
         Args:
-            convert_using_release: Todo.
-            verbose: Todo.
+            convert_using_release: Whether to pin the *from_release* when
+                calling the converter.  Keeping this *True* usually speeds up
+                the search and mimics user-facing behaviour.
+            verbose: Print the current assembly/database/release being tested.
 
         Returns:
-            Todo.
+            bool: *True* if every converted set equals the MySQL reference,
+            *False* upon the first deviation.
         """
         for asym in DB.assembly_mysqlport_priority:
             database, _, ens_rel = self.random_dataset_source_generator(
                 assembly=asym, form=DB.backbone_form, include_ensembl=False
             )
-            
+
             if self.db_manager.check_if_change_assembly_works(
-                db_manager=self.db_manager.change_release(ens_rel), 
-                target_assembly=asym
+                db_manager=self.db_manager.change_release(ens_rel), target_assembly=asym
             ):
-            
+
                 dm = self.db_manager.change_release(ens_rel).change_assembly(asym)
 
                 df = dm.get_db("external_relevant")
                 df = df[df["name_db"] == database]
-                base_dict: Dict[str, set] = dict()
+                base_dict: dict[str, set] = dict()
                 for _, item in df.iterrows():
                     if item["graph_id"] not in base_dict:
                         base_dict[item["graph_id"]] = set()
@@ -600,16 +815,24 @@ class TrackTests(Track, ABC):
         release_lower_limit: Optional[int] = None,
         form: Optional[str] = None,
     ):
-        """Todo.
+        """Pick a random (<database>, <assembly>, <release>) tuple.
+
+        The function guarantees that the triple actually exists in the graph
+        and - if *release_lower_limit* is provided - honours the minimum
+        release constraint.
 
         Args:
-            assembly: Todo.
-            include_ensembl: Todo.
-            release_lower_limit: Todo.
-            form: Todo.
+            assembly: NCBI assembly code (integer).
+            include_ensembl: Whether Ensembl backbone databases may be returned
+                as *database*.
+            release_lower_limit: Smallest permissible Ensembl release number
+                for the returned triple.  *None* disables the filter.
+            form: Restrict the draw to a particular connection *form*
+                (protein/coding/gene).  *None* means no restriction.
 
         Returns:
-            Todo.
+            tuple | None: ``(<database>, <assembly>, <release>)`` or *None* when
+            no matching release exists.
         """
         all_possible_sources = copy.deepcopy(list(self.graph.available_external_databases_assembly[assembly]))
         if form is not None:
@@ -639,13 +862,20 @@ class TrackTests(Track, ABC):
             return None
 
     def is_node_consistency_robust(self, verbose: bool = True):
-        """Todo.
+        """Check for illegal neighbour relationships and multi-edges.
+
+        The graph may contain **exactly one** edge between nodes of *different*
+        node-types.  Nodes of the *same* node-type are only allowed when that
+        type is the Ensembl backbone (``ensembl_gene``).  Any deviation - a
+        lateral same-type connection or >1 multi-edge - is logged and aborts
+        the test.
 
         Args:
-            verbose: Todo.
+            verbose: Print offending nodes when a violation is detected.
 
         Returns:
-            Todo.
+            bool: *True* when the graph satisfies the topology rules, *False*
+            otherwise.
         """
         with tqdm(self.graph.nodes, mininterval=0.25, disable=not verbose) as loop_obj:
             for i in loop_obj:

@@ -91,7 +91,7 @@ class ExternalDatabases:
         def list_to_str(iterable):
             return ",".join(map(str, iterable))
 
-        r: Dict[str, dict] = dict()
+        r: dict[str, dict] = dict()
         database_id = {item: i for i, item in enumerate(sorted(np.unique(df["name_db"])))}
         for a1 in sorted(np.unique(df["organism"])):
             df_a1 = df[df["organism"] == a1]

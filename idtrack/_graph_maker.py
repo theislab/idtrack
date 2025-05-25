@@ -15,9 +15,9 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-from ._database_manager import DatabaseManager
-from ._db import DB
-from ._the_graph import TheGraph
+from idtrack._database_manager import DatabaseManager
+from idtrack._db import DB
+from idtrack._the_graph import TheGraph
 
 
 class GraphMaker:
@@ -353,8 +353,14 @@ class GraphMaker:
                 for f in ["gene"]:
                     # transcript and translation does not have base.
                     # It causes the tracking algorithm unnecessarily process too many possibilities.
-                    for er in self.db_manager.change_assembly(aa, last_possible_ensembl_release=True).available_releases:
-                        db_manager = self.db_manager.change_form(f).change_assembly(aa, last_possible_ensembl_release=True).change_release(er)
+                    for er in self.db_manager.change_assembly(
+                        aa, last_possible_ensembl_release=True
+                    ).available_releases:
+                        db_manager = (
+                            self.db_manager.change_form(f)
+                            .change_assembly(aa, last_possible_ensembl_release=True)
+                            .change_release(er)
+                        )
 
                         ids_db = db_manager.get_db("ids")
                         ids = db_manager.id_ver_from_df(ids_db)

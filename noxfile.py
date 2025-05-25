@@ -1,4 +1,5 @@
 """Nox sessions."""
+
 import os
 import shlex
 import shutil
@@ -17,7 +18,7 @@ except ImportError:
     sys.exit(1)
 
 package = "idtrack"
-python_versions = ["3.8", "3.9"]
+python_versions = ["3.9", "3.10", "3.11", "3.12"]
 nox.options.sessions = (
     "pre-commit",
     "safety",
@@ -137,7 +138,15 @@ def mypy(session: Session) -> None:
     args = session.posargs or ["idtrack", "tests", "docs/conf.py"]
     session.install(".")
     session.install(
-        "mypy", "pytest", "types-pkg-resources", "types-requests", "types-attrs", "types-PyMySQL", "types-PyYAML"
+        # types-pkg-resources, which was unceremoniously disappeared from the
+        # Python supply chain. instead `types-setuptools`
+        "mypy",
+        "pytest",
+        "types-setuptools",
+        "types-requests",
+        "types-attrs",
+        "types-PyMySQL",
+        "types-PyYAML",
     )
     session.run("mypy", *args)
 

@@ -89,7 +89,7 @@ class DB:
     conn_dict_str_ensembl_base = "ensembl_base"  # as a database in connection_dict
 
     # PathFinder Settings
-    external_search_settings: Dict[str, Any] = {
+    external_search_settings: dict[str, Any] = {
         "jump_limit": 2,
         "synonymous_max_depth": 2,
         "nts_backbone": nts_ensembl[backbone_form],

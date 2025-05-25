@@ -33,7 +33,18 @@ source "/Users/kemalinecik/Documents/Helmholtz/password.sh"
 
 REMOTE_USER="kemal.inecik"
 REMOTE_HOST="hpc-build01"
-LOCAL_PORT="10101"
+LOCAL_PORT="10121"
+
+# Function to check if the port is in use and increment if necessary
+function check_port {
+    while lsof -i :$LOCAL_PORT &>/dev/null; do
+        log "Port $LOCAL_PORT is in use, trying next one."
+        ((LOCAL_PORT++))
+    done
+}
+
+# Check and adjust the local port if necessary
+check_port
 
 # Build the SSH command
 sshpass_command="sshpass -p '$password_icb'"

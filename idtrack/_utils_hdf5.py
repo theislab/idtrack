@@ -5,17 +5,16 @@
 
 
 import os
-import shutil
 import tempfile
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import h5py
-import numpy as np
 import pandas as pd
 
+
 class HDFStore:
-    """
-    Context-manager replacement for pandas.HDFStore using h5py.
+    """Context-manager replacement for pandas.HDFStore using h5py.
+
     Supports .keys() and .remove(key), and exposes the raw File as `.f`.
     """
 
@@ -34,33 +33,38 @@ class HDFStore:
         if self.f is not None:
             self.f.flush()
             self.f.close()
-    
-    def __contains__(self, key: str) -> bool:       
+
+    def __contains__(self, key: str) -> bool:
         return key.lstrip("/") in self.f
 
-    def __iter__(self):                             
+    def __iter__(self):
         yield from self.keys()
 
-    def keys(self) -> List[str]:
-        """List top-level group names, prefixed with '/'. Matches pd.HDFStore.keys()."""
+    def keys(self) -> list[str]:
+        """List top-level group names, prefixed with '/'.
+
+        Matches pd.HDFStore.keys().
+        """
         return [f"/{name}" for name in self.f.keys()]
 
     def remove(self, key: str) -> None:
-        """
-        Remove a dataset or group at `key`. Matches pd.HDFStore.remove().
+        """Remove a dataset or group at `key`.
+
+        Matches pd.HDFStore.remove().
         """
         name = key.lstrip("/")  # drop leading slash if present
         if name not in self.f:
             raise KeyError(f"No such key in HDF5 file: {key}")
         del self.f[name]
-        
+
+
 def read_hdf(
     path: str,
     key: str,
     mode: str = "r",
 ) -> Union[pd.DataFrame, pd.Series]:
-    """
-    Read a pandas object previously written with to_hdf.
+    """Read a pandas object previously written with to_hdf.
+
     Mirrors pd.read_hdf(path, key=key, mode=mode).
     """
     grp_name = key.lstrip("/")
@@ -73,10 +77,14 @@ def read_hdf(
         # reconstruct index
         idx = grp["index"][()]  # numpy array
         idx_names = grp.attrs.get("index_names", [None])
-        index = pd.Index(idx, name=idx_names[0]) if len(idx_names) == 1 else pd.MultiIndex.from_arrays([idx], names=idx_names)
+        index = (
+            pd.Index(idx, name=idx_names[0])
+            if len(idx_names) == 1
+            else pd.MultiIndex.from_arrays([idx], names=idx_names)
+        )
 
         # get column list
-        cols: List[str] = grp.attrs["columns"]
+        cols: list[str] = grp.attrs["columns"]
         data = {}
         for col in cols:
             arr = grp[f"col__{col}"][()]
@@ -88,6 +96,7 @@ def read_hdf(
         else:
             return pd.DataFrame(data, index=index)
 
+
 def to_hdf(
     path: str,
     key: str,
@@ -97,8 +106,8 @@ def to_hdf(
     compression_opts: int = 4,
     shuffle: bool = True,
 ) -> None:
-    """
-    Write a pandas object into HDF5 under group `key` using h5py.
+    """Write a pandas object into HDF5 under group `key` using h5py.
+
     Mirrors df.to_hdf(path, key=key, mode=mode).
     """
     grp_name = key.lstrip("/")
@@ -141,6 +150,7 @@ def to_hdf(
                 shuffle=shuffle,
             )
 
+
 def check_h5_key(file_path: str, key: str) -> bool:
     """Check whether the given key is in the h5 file.
 
@@ -155,13 +165,11 @@ def check_h5_key(file_path: str, key: str) -> bool:
         return False
     with HDFStore(file_path, mode="r") as f:
         return key in f
-    
+
 
 def repack_hdf5(path: str) -> None:
-    """
-    Repack the HDF5 file at `path` to reclaim fragmented space.
-    Copies all root-level groups & attributes into a new file using h5py.File.copy,
-    then atomically replaces the original file.
+    """Repack the HDF5 file at `path` to reclaim fragmented space. Copies all root-level groups & attributes into a new
+    file using h5py.File.copy, then atomically replaces the original file.
 
     assumes no nested structures.
 
@@ -226,7 +234,8 @@ def export_disk(df: Union[pd.DataFrame, pd.Series], hierarchy: str, file_path: s
         # Then save the dataframe under the root.
         logger.info(f"Exporting to the following file `{base_file_path}` with key `{hierarchy}`")
         to_hdf(df=df, path=file_path, key=hierarchy, mode="a")
-        
+
+
 def read_exported(hierarchy: str, file_path: str) -> Union[pd.DataFrame, pd.Series]:
     """Read the data souces saved previously given h5 file path and the 'h5 key'.
 
