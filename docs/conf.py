@@ -34,7 +34,7 @@ extensions = [
 
 # If this option is true (the default option), users will start in dark mode when first visiting the site.
 # If this option is false, users will start in light mode when they first visit the site.
-default_dark_mode = False  #
+default_dark_mode = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

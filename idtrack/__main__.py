@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-"""
-Module Description:
+"""Module Description:
     main.py - A command-line interface for the idtrack package.
 
 Author:

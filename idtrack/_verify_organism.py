@@ -4,7 +4,6 @@
 # k.inecik@gmail.com
 
 import logging
-from typing import Tuple
 
 import pandas as pd
 import requests

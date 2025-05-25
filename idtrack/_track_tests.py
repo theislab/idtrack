@@ -10,7 +10,7 @@ import random
 import time
 from abc import ABC
 from math import ceil
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 import networkx as nx
 import numpy as np
@@ -105,7 +105,6 @@ class TrackTests(Track, ABC):
                 if self.db_manager.check_if_change_assembly_works(
                     db_manager=self.db_manager.change_release(ens_rel), target_assembly=assembly
                 ):
-
                     db_from = self.db_manager.change_release(ens_rel).change_assembly(assembly)
                     ids_from = set(db_from.id_ver_from_df(db_from.get_db("ids", save_after_calculation=False)))
 
@@ -377,7 +376,6 @@ class TrackTests(Track, ABC):
                     if self.db_manager.check_if_change_assembly_works(
                         db_manager=self.db_manager.change_release(release), target_assembly=assembly
                     ):
-
                         dm = self.db_manager.change_release(release).change_assembly(assembly)
                         ex_rel_d = {
                             f: dm.change_form(f).get_db("external_relevant" if narrow_external else "external")
@@ -770,7 +768,6 @@ class TrackTests(Track, ABC):
             if self.db_manager.check_if_change_assembly_works(
                 db_manager=self.db_manager.change_release(ens_rel), target_assembly=asym
             ):
-
                 dm = self.db_manager.change_release(ens_rel).change_assembly(asym)
 
                 df = dm.get_db("external_relevant")

@@ -4,7 +4,7 @@
 # k.inecik@gmail.com
 
 
-from typing import Any, Dict
+from typing import Any
 
 
 class DB:

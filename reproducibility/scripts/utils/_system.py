@@ -50,7 +50,8 @@ def print_header(title, sep="="):
 
 def display_device_and_gpu_info():
     """Display overall device information, including Torch version, CUDA availability, and the primary device (CPU or
-    GPU)."""
+    GPU).
+    """
     print_header("DEVICE INFORMATION", "-")
     torch_version = torch.__version__
     cuda_available = torch.cuda.is_available()
@@ -141,12 +142,11 @@ def display_boot_time():
 
 
 def display_cpu_info():
-    """
-    Display detailed CPU information including:
-      - Core counts and frequency details
-      - Overall CPU times and per-core usage percentages
-      - CPU statistics (context switches, interrupts, etc.)
-      - Load averages (if available)
+    """Display detailed CPU information including:
+    - Core counts and frequency details
+    - Overall CPU times and per-core usage percentages
+    - CPU statistics (context switches, interrupts, etc.)
+    - Load averages (if available)
     """
     print_header("CPU INFORMATION", "=")
     physical_cores = psutil.cpu_count(logical=False)

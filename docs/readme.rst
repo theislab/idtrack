@@ -1,7 +1,7 @@
 **idtrack**
 ===========
 
-|PyPI| |PyPIDownloads| |Python Version| |License| |Read the Docs| |Build| |Tests| 
+|PyPI| |PyPIDownloads| |Python Version| |License| |Read the Docs| |Build| |Tests|
 .. |PyPI| image:: https://img.shields.io/pypi/v/idtrack.svg
    :target: https://pypi.org/project/idtrack/
    :alt: PyPI
