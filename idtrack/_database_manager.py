@@ -181,12 +181,15 @@ class DatabaseManager:
             ValueError: Unexpected error in regex functions.
         """
         # Get all possible ensembl releases for a given organism
-        dbs = self.get_db("availabledatabases", **kwargs)  # Obtain the databases dataframe
-
+        dbs = self.get_db("availabledatabases", **kwargs)["available_databases"]  # Obtain the databases dataframe
+        # print()
+        # print("##########################################")
+        # print(dbs)
         pattern = re.compile(f"^{self.organism}_core_([0-9]+)_.+$")
         # Search organism name in a specified format. Extract ensembl release number
         releases = list()
         for dbs_i in dbs:
+            # print(dbs_i)
             if pattern.match(dbs_i):
                 dbs_ps = pattern.search(dbs_i)
                 if not dbs_ps:
@@ -228,7 +231,7 @@ class DatabaseManager:
         Raises:
             ValueError: If there is more than one such match.
         """
-        dbs = self.get_db("availabledatabases")  # Obtain the databases dataframe
+        dbs = self.get_db("availabledatabases")["available_databases"]  # Obtain the databases dataframe
 
         pattern = re.compile(f"^{self.organism}_core_{int(self.ensembl_release)}_.+$")
         located = [i for i in dbs if pattern.match(i)]
@@ -334,7 +337,7 @@ class DatabaseManager:
 
         pattern = re.compile(f"^{self.organism}_core_[0-9]+_.+$")
         accepted_databases = sorted(i for i in results_query if pattern.match(i))
-        results = pd.Series(accepted_databases)
+        results = pd.DataFrame(accepted_databases, columns=["available_databases"])
 
         return results
 
@@ -444,7 +447,7 @@ class DatabaseManager:
             # Create a dataframe using the columns fetched.
             df = pd.DataFrame(results_content, columns=column_names if usecols is None else usecols)
             # Make sure the content does not contain any bytes object.
-            if np.any(df.applymap(lambda x: isinstance(x, bytes))):
+            if np.any(df.map(lambda x: isinstance(x, bytes))):
                 raise ValueError
 
             info_usecols = " for following columns: " + ", ".join(usecols) + "." if usecols else "."
