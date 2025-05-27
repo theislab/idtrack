@@ -108,6 +108,7 @@ class DatabaseManager:
             self.ensembl_release = 0  # placeholder value for for file naming method, it is not gonna be saved anyway.
             ensembl_release = sorted(self.available_releases_no_save)[-1]
         self.ensembl_release = int(ensembl_release)
+        # _ = self.external_inst.load_modified_yaml()
 
         # Check if it seems ok.
         checkers = (
@@ -663,6 +664,8 @@ class DatabaseManager:
         # Get the tables from the server
         s = self.get_table("stable_id_event", usecols=None, save_after_calculation=self.store_raw_always)
         m = self.get_table("mapping_session", usecols=None, save_after_calculation=self.store_raw_always)
+        # print(s)
+        # print(m)
 
         # Combine them into one and filter only the form of interest.
         sm = pd.merge(s, m, how="outer", on="mapping_session_id")
@@ -684,6 +687,7 @@ class DatabaseManager:
             )
 
         # Correct the version based on version_info for each old_stable_id and new_stable_id columns.
+        # print(sm)
         sm = self.version_fix_incomplete(
             self.version_fix_incomplete(sm, "old_stable_id", "old_version"), "new_stable_id", "new_version"
         )

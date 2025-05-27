@@ -184,7 +184,27 @@ class ExternalDatabases:
                 )
 
         with open(file_name) as yaml_file:
-            return yaml.safe_load(yaml_file)
+            y = yaml.safe_load(yaml_file)
+        self.validate_yaml_file_up_to_date(y)
+        return y
+
+    def validate_yaml_file_up_to_date(self, y):
+        ensembl_releases = {
+            int(e)
+            for _, j1 in y.items()
+            for _, j2 in j1.items()
+            for _, j3 in j2.items()
+            for _, j4 in j3["Assembly"].items()
+            for e in j4["Ensembl release"].split(",")
+        }
+        if self.ensembl_release not in ensembl_releases:
+            raise ValueError(
+                f"The ensembl release of DatabaseManager ({self.ensembl_release}) is not included in ensembl releases "
+                "in ExternalDatabase config yaml file. The YAML file needs to be updated with never version. "
+                f"If you use the default config, please create graph (or track object) with '{max(ensembl_releases)}', "
+                "which should solve the issue. Let us know this also on GitHub issues so that we can update the "
+                "default config file."
+            )
 
     def give_list_for_case(self, give_type: str) -> list:
         """Retrieve some simple information from `yaml` file.
