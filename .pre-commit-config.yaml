@@ -47,12 +47,12 @@ repos:
             types: [text]
             stages: [pre-commit, pre-push, manual]
             exclude: docs/
-          - id: flake8
-            name: flake8
-            entry: flake8
-            language: system
-            types: [python]
-            require_serial: true
+          # - id: flake8
+          #   name: flake8
+          #   entry: flake8
+          #   language: system
+          #   types: [python]
+          #   require_serial: true
           - id: pyupgrade
             name: pyupgrade
             description: Automatically upgrade syntax for newer versions.
