@@ -13,57 +13,57 @@ jobs:
             matrix:
                 include:
                     - {
-                          python-version: 3.9,
+                          python-version: "3.9",
                           os: ubuntu-latest,
                           session: "pre-commit",
                       }
                     - {
-                          python-version: 3.9,
+                          python-version: "3.9",
                           os: macos-latest,
                           session: "safety",
                       }
                     - {
-                          python-version: 3.10,
+                          python-version: "3.10",
                           os: macos-latest,
                           session: "safety",
                       }
                     - {
-                          python-version: 3.11,
+                          python-version: "3.11",
                           os: macos-latest,
                           session: "safety",
                       }
                     - {
-                          python-version: 3.9,
+                          python-version: "3.9",
                           os: ubuntu-latest,
                           session: "mypy",
                       }
                     - {
-                          python-version: 3.9,
+                          python-version: "3.9",
                           os: ubuntu-latest,
                           session: "tests",
                       }
                     - {
-                          python-version: 3.9,
+                          python-version: "3.9",
                           os: windows-latest,
                           session: "tests",
                       }
                     - {
-                          python-version: 3.9,
+                          python-version: "3.9",
                           os: macos-latest,
                           session: "tests",
                       }
                     - {
-                          python-version: 3.9,
+                          python-version: "3.9",
                           os: ubuntu-latest,
                           session: "typeguard",
                       }
                     - {
-                          python-version: 3.9,
+                          python-version: "3.9",
                           os: ubuntu-latest,
                           session: "xdoctest",
                       }
                     - {
-                          python-version: 3.9,
+                          python-version: "3.9",
                           os: ubuntu-latest,
                           session: "docs-build",
                       }
@@ -97,16 +97,21 @@ jobs:
               if: matrix.session == 'pre-commit'
               id: pre-commit-cache
               shell: python
+              env: # pass runner.os into Python
+                  RUNNER_OS: ${{ runner.os }}
               run: |
                   import hashlib
+                  import os
                   import sys
 
-                  python = "py{}.{}".format(*sys.version_info[:2])
+                  python_ver = f"py{sys.version_info[0]}.{sys.version_info[1]}"
                   payload = sys.version.encode() + sys.executable.encode()
                   digest = hashlib.sha256(payload).hexdigest()
-                  result = "${{ runner.os }}-{}-{}-pre-commit".format(python, digest[:8])
+                  result = f"{os.environ['RUNNER_OS']}-{python_ver}-{digest[:8]}-pre-commit"
 
-                  print("::set-output name=result::{}".format(result))
+                  # write the output for downstream steps
+                  with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+                      fh.write(f"result={result}\n")
 
             - name: Restore pre-commit cache
               uses: actions/cache@v4
@@ -164,7 +169,7 @@ jobs:
             - name: Set up Python 3.9
               uses: actions/setup-python@v3
               with:
-                  python-version: 3.9
+                  python-version: "3.9"
 
             - name: Install Poetry
               run: |
