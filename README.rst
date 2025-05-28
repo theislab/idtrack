@@ -43,4 +43,4 @@ Please see the `Documentation <Documentation_>`_ for details.
 
 .. _PyPI: https://pypi.org/
 .. _pip: https://pip.pypa.io/
-.. _Documentation: https://idtrack.readthedocs.io/en/latest/index.html
+.. _Documentation: https://idtrack.readthedocs.io/

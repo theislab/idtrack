@@ -89,7 +89,7 @@ def _print_banner() -> None:
         f"Python Package : idtrack{os.linesep}"
         f"Version        : {_resolve_version()}{os.linesep}"
         f"Author         : Kemal Inecik <k.inecik@gmail.com>{os.linesep}"
-        f"Docs           : https://idtrack.readthedocs.io/en/latest/"
+        f"Docs           : https://idtrack.readthedocs.io/"
     )
 
 
