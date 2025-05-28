@@ -6,7 +6,6 @@ name: idtrack_dev_env
 
 channels:
     - conda-forge
-    - pyg # for pyg::pyg
     - bioconda
 
 dependencies:
@@ -75,7 +74,6 @@ dependencies:
     - cellxgene-census
 
     # 6) GRAPH, TOPOLOGY & RELATED LIBRARIES
-    - pyg::pyg
     - pygraphviz
     - graphviz
     - colorcet

@@ -19,6 +19,8 @@ try:
 except ImportError:
 
     class DummyColor:
+        """Dummy colors."""
+
         RESET = ""
         BRIGHT = ""
         CYAN = ""
@@ -49,8 +51,9 @@ def print_header(title, sep="="):
 
 
 def display_device_and_gpu_info():
-    """Display overall device information, including Torch version, CUDA availability, and the primary device (CPU or
-    GPU).
+    """Display overall device information.
+
+    It includes Torch version, CUDA availability, and the primary device (CPU or GPU).
     """
     print_header("DEVICE INFORMATION", "-")
     torch_version = torch.__version__
@@ -137,12 +140,15 @@ def display_boot_time():
     hours, remainder = divmod(remainder, 3600)
     minutes, seconds = divmod(remainder, 60)
     print(
-        f"{Fore.GREEN}Uptime    :{Style.RESET_ALL} {int(days)} days, {int(hours)} hours, {int(minutes)} minutes, {int(seconds)} seconds"
+        f"{Fore.GREEN}Uptime    :{Style.RESET_ALL} {int(days)} days, {int(hours)} hours, "
+        f"{int(minutes)} minutes, {int(seconds)} seconds"
     )
 
 
 def display_cpu_info():
-    """Display detailed CPU information including:
+    """Display detailed CPU information.
+
+    This includes:
     - Core counts and frequency details
     - Overall CPU times and per-core usage percentages
     - CPU statistics (context switches, interrupts, etc.)

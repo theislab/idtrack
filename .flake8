@@ -5,4 +5,4 @@ max-line-length = 120
 max-complexity = 50
 docstring-convention = google
 per-file-ignores = tests/*:S101
-rst-roles = py:attr, py:meth, py:class
+rst-roles = py:attr, py:meth, py:class, py:data, py:func

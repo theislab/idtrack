@@ -4,8 +4,10 @@
 # k.inecik@gmail.com
 
 
+import logging
 import os
 import tempfile
+from collections.abc import Iterator
 from typing import Optional, Union
 
 import h5py
@@ -20,24 +22,16 @@ UTF8_STR = h5py.string_dtype(encoding=UTF8)
 
 
 def to_hdf(path: str, key: str, df: pd.DataFrame, mode: str = "a", compression=9):
-    """
-    Write a DataFrame to an HDF5 file under the group `key`.
+    """Write a DataFrame to an HDF5 file under the group `key`.
 
-    Parameters
-    ----------
-    path : str
-        Path to HDF5 file.
-    key : str
-        Group name under which to store the DataFrame.
-    df : pd.DataFrame
-        DataFrame to store.
-    mode : {'a','w','r+'}, default 'a'
-        File mode.
-    compression : None or str
-        Compression to use for datasets.
+    Args:
+        path: Path to HDF5 file.
+        key: Group name under which to store the DataFrame.
+        df: DataFrame to store.
+        mode: File mode.  {'a','w','r+'}, default 'a'.
+        compression: Compression to use for datasets. None or str
     """
-    # Validate DataFrame structure
-    _validate_dataframe(df)
+    _validate_dataframe(df)  # Validate DataFrame structure
 
     with HDFStore(path, mode=mode) as store:
         if key in store:
@@ -58,26 +52,23 @@ def to_hdf(path: str, key: str, df: pd.DataFrame, mode: str = "a", compression=9
 
 
 def read_hdf(path: str, key: str, mode: str = "r") -> pd.DataFrame:
-    """
-    Read a DataFrame stored with `to_hdf`.
+    """Read a DataFrame stored with `to_hdf`.
 
-    Parameters
-    ----------
-    path : str
-        Path to HDF5 file.
-    key : str
-        Group name under which DataFrame is stored.
-    mode : str, default 'r'
-        File mode.
+    Args:
+        path : Path to HDF5 file.
+        key: Group name under which DataFrame is stored.
+        mode: File mode.
 
-    Returns
-    -------
-    pd.DataFrame
+    Returns:
+        A pandas dataframe object.
+
+    Raises:
+        KeyError: When key is not found in the hdf5 file.
     """
     with HDFStore(path, mode=mode) as store:
         clean_key = key.lstrip("/")
         if clean_key not in store.f:
-            raise KeyError(f"Key '{key}' not found in HDF5 file")
+            raise KeyError(f"Key {key!r} not found in HDF5 file")
 
         grp = store.f[clean_key]
 
@@ -138,7 +129,7 @@ def _validate_dataframe(df: pd.DataFrame):
             categories = df[col].cat.categories
             bad = [cat for cat in categories if not (pd.isna(cat) or isinstance(cat, str))]
             if bad:
-                raise ValueError(f"Categorical column '{col}' has non-string categories: {bad}")
+                raise ValueError(f"Categorical column {col!r} has non-string categories: {bad}")
             # Values in categorical are backed by codes, categories check is sufficient
 
         # Special handling for object dtype: only allow strings or NA
@@ -147,14 +138,14 @@ def _validate_dataframe(df: pd.DataFrame):
             mask = col_series.apply(lambda x: pd.isna(x) or isinstance(x, str))
             if not mask.all():
                 bad = col_series[~mask].unique()
-                raise ValueError(f"Object column '{col}' contains non-string non-NA values: {bad}")
+                raise ValueError(f"Object column {col!r} contains non-string non-NA values: {bad}")
         else:
-            raise ValueError(f"Unsupported dtype '{dtype}' for column '{col}'")
+            raise ValueError(f"Unsupported dtype {dtype!r} for column {col!r}")
 
     # Check index dtype
     index_dtype = str(df.index.dtype)
     if not (df.index.dtype.kind in ["i", "u", "f", "M"] or index_dtype == "string"):
-        raise ValueError(f"Unsupported index dtype '{df.index.dtype}'")
+        raise ValueError(f"Unsupported index dtype {df.index.dtype!r}")
 
     # Check column names
     for col_name in df.columns:
@@ -351,44 +342,90 @@ def _load_column_data(grp: h5py.Group, columns, dtypes):
 class HDFStore:
     """Context-manager replacement for pandas.HDFStore using h5py.
 
-    Supports .keys() and .remove(key), and exposes the raw File as `.f`.
+    This class provides a context manager API for reading and writing HDF5 files
+    via h5py, mimicking pandas.HDFStore. It supports listing keys, removing
+    groups or datasets by key, and gives direct access to the underlying
+    h5py.File via the `.f` attribute.
     """
 
+    path: str
+    mode: str
+    f: h5py.File
+
     def __init__(self, path: str, mode: str = "r"):
-        # mode: one of 'r','r+','w','x','a'
+        """Initialize an HDFStore.
+
+        Args:
+            path (str): Path to the HDF5 file.
+            mode (str): File mode, one of:
+                - 'r'  : Readonly, file must exist.
+                - 'r+' : Read/write, file must exist.
+                - 'w'  : Create file, truncate if exists.
+                - 'x'  : Create file, fail if exists.
+                - 'a'  : Read/write if exists, create otherwise.
+        """
         self.path = path
         self.mode = mode
         self.f: Optional[h5py.File] = None
 
-    def __enter__(self):
-        # libver='latest' enables the newest features & better performance on big files
+    def __enter__(self) -> "HDFStore":
+        """Open the HDF5 file and return this HDFStore instance.
+
+        Returns:
+            HDFStore: This instance with an open `h5py.File` in `.f`.
+        """
         self.f = h5py.File(self.path, self.mode, libver="latest")
         return self
 
-    def __exit__(self, exc_type, exc, tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Flush and close the underlying HDF5 file on exiting the context.
+
+        Args:
+            exc_type (type): Exception type if raised within the context.
+            exc_val (Exception): Exception instance if raised.
+            exc_tb (traceback): Traceback object if an exception occurred.
+        """
         if self.f is not None:
             self.f.flush()
             self.f.close()
 
     def __contains__(self, key: str) -> bool:
+        """Check for the existence of a key (group or dataset) in the store.
+
+        Args:
+            key (str): The key to test for. May be prefixed with '/'.
+
+        Returns:
+            bool: True if the key exists in the file, False otherwise.
+        """
         return key.lstrip("/") in self.f
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
+        """Return an iterator over all keys in the store.
+
+        Yields:
+            str: Next key name, always prefixed with '/'.
+        """
         yield from self.keys()
 
     def keys(self) -> list[str]:
-        """List top-level group names, prefixed with '/'.
+        """List all top-level group or dataset names in the file.
 
-        Matches pd.HDFStore.keys().
+        Returns:
+            List[str]: List of keys, each starting with '/'.
         """
         return [f"/{name}" for name in self.f.keys()]
 
     def remove(self, key: str) -> None:
-        """Remove a dataset or group at `key`.
+        """Remove a group or dataset at the given key from the file.
 
-        Matches pd.HDFStore.remove().
+        Args:
+            key (str): The key to remove, may be prefixed with '/'.
+
+        Raises:
+            KeyError: If the specified key does not exist in the file.
         """
-        name = key.lstrip("/")  # drop leading slash if present
+        name = key.lstrip("/")
         if name not in self.f:
             raise KeyError(f"No such key in HDF5 file: {key}")
         del self.f[name]
@@ -411,32 +448,36 @@ def check_h5_key(file_path: str, key: str) -> bool:
 
 
 def repack_hdf5(path: str) -> None:
-    """Repack the HDF5 file at `path` to reclaim fragmented space. Copies all root-level groups & attributes into a new
-    file using h5py.File.copy, then atomically replaces the original file.
+    """Repack the HDF5 file.
 
-    assumes no nested structures.
+    Repack the HDF5 file at `path` to reclaim fragmented space by copying
+    all groups/datasets (including nested ones) into a new file, then
+    atomically replacing the original.
 
-    Parameters
-    ----------
-    path
-        Path to the existing .h5 file. Must be writable.
+    Args:
+        path: Path to the existing .h5 file. Must be writable.
     """
-    # Prepare a temp file in the same directory for atomic replacement
     base_dir, base_name = os.path.split(path)
     fd, tmp_path = tempfile.mkstemp(prefix=base_name, suffix=".repack.h5", dir=base_dir)
     os.close(fd)
 
     try:
-        # Open source as read-only, target as write (latest libver for best performance)
         with h5py.File(path, "r") as src, h5py.File(tmp_path, "w", libver="latest") as dst:
-            # Copy root-level attributes
+            # Copy all root-level attributes
             for attr_name, attr_val in src.attrs.items():
                 dst.attrs[attr_name] = attr_val
 
-            # Copy each top-level group/dataset verbatim
+            # Recursively copy all objects in the file (groups, datasets, references, etc.)
             for name in src:
-                # this preserves dataset creation properties (compression, chunks, etc.)
-                src.copy(name, dst, name)
+                src.copy(
+                    source=name,
+                    dest=dst,
+                    name=name,
+                    shallow=False,
+                    expand_soft=True,
+                    expand_external=True,
+                    expand_refs=True,
+                )
 
             dst.flush()
 
@@ -444,12 +485,14 @@ def repack_hdf5(path: str) -> None:
         os.replace(tmp_path, path)
 
     finally:
-        # Clean up stray temp file on error
+        # Clean up temp file on error
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
 
-def export_disk(df: Union[pd.DataFrame, pd.Series], hierarchy: str, file_path: str, overwrite: bool, logger):
+def export_disk(
+    df: Union[pd.DataFrame, pd.Series], hierarchy: str, file_path: str, overwrite: bool, logger: logging.Logger
+):
     """Stored the pandas object into the given h5 file with specified key.
 
     The method is not expected to be used by the user.
@@ -460,6 +503,7 @@ def export_disk(df: Union[pd.DataFrame, pd.Series], hierarchy: str, file_path: s
         file_path: Absolute path for h5 file.
         overwrite: If ``True``, regardless of whether it is already saved in the disk, the program
             re-saves removing the previous table with the same name.
+        logger: A logger instance used for recording file operations and warnings.
     """
     base_file_path = os.path.basename(file_path)
 

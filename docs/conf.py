@@ -28,13 +28,13 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinx_click",
-    "sphinx_rtd_dark_mode",
+    # "sphinx_rtd_dark_mode",
     "nbsphinx",
 ]
 
 # If this option is true (the default option), users will start in dark mode when first visiting the site.
 # If this option is false, users will start in light mode when they first visit the site.
-default_dark_mode = False
+# default_dark_mode = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -87,7 +87,6 @@ html_theme = "sphinx_rtd_theme"
 html_logo = "_logo/logo.png"
 html_theme_options = {
     "logo_only": False,
-    "display_version": False,
 }
 
 # Theme options are theme-specific and customize the look and feel of a
@@ -168,13 +167,13 @@ texinfo_documents = [
         "idtrack Documentation",
         author,
         "idtrack",
-        "One line description of project.",
+        "Cross-Temporal and Cross-Database Biological Identifier Mapping.",
         "Miscellaneous",
     ),
 ]
 
 html_css_files = [
-    "custom_cookietemple.css",
+    "custom_settings.css",
 ]
 
 autoclass_content = "both"  # add init into the file class description

@@ -9,7 +9,7 @@ import logging
 import re
 from collections import Counter
 from functools import cached_property
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Optional, Union
 
 import networkx as nx
 import numpy as np
@@ -715,7 +715,14 @@ class TheGraph(nx.MultiDiGraph):
             if not 0 < l1 <= l2:
                 raise ValueError
 
-            return range(l1, (l2 if not np.isinf(l2) else max(self.graph["confident_for_release"])) + 1)
+            if not np.isinf(l2) and isinstance(l2, int):
+                right_l2 = l2
+            elif not np.isinf(l2):
+                raise ValueError(f"Unexpected error: {l2!r} should be either np.inf or integer.")
+            else:
+                right_l2 = max(self.graph["confident_for_release"])
+
+            return range(l1, right_l2 + 1)
 
         # Use associated function to create the ranges of a node.
         the_node_type = self.nodes[the_id][DB.node_type_str]

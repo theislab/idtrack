@@ -188,10 +188,20 @@ class ExternalDatabases:
         self.validate_yaml_file_up_to_date(y)
         return y
 
-    def validate_yaml_file_up_to_date(self, y):
+    def validate_yaml_file_up_to_date(self, read_yaml_file):
+        """Validates that the current Ensembl release is present in the YAML configuration file.
+
+        Args:
+            read_yaml_file (dict): read_yaml_file (dict): YAML file loaded as a dictionary,
+                typically from :py:meth:`ExternalDatabases.load_modified_yaml`.
+
+
+        Raises:
+            ValueError: If the current Ensembl release is not found in the YAML configuration.
+        """
         ensembl_releases = {
             int(e)
-            for _, j1 in y.items()
+            for _, j1 in read_yaml_file.items()
             for _, j2 in j1.items()
             for _, j3 in j2.items()
             for _, j4 in j3["Assembly"].items()
@@ -199,11 +209,10 @@ class ExternalDatabases:
         }
         if self.ensembl_release not in ensembl_releases:
             raise ValueError(
-                f"The ensembl release of DatabaseManager ({self.ensembl_release}) is not included in ensembl releases "
-                "in ExternalDatabase config yaml file. The YAML file needs to be updated with never version. "
-                f"If you use the default config, please create graph (or track object) with '{max(ensembl_releases)}', "
-                "which should solve the issue. Let us know this also on GitHub issues so that we can update the "
-                "default config file."
+                f"The Ensembl release {self.ensembl_release} is not included in any entry of the YAML config file.\n"
+                f"Please update the configuration to include this release, or create the graph/track object using a "
+                f"supported release (e.g., {max(ensembl_releases)}).\n"
+                "You may also report this issue on GitHub so the default configuration can be updated."
             )
 
     def give_list_for_case(self, give_type: str) -> list:

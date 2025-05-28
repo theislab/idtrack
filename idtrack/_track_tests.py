@@ -21,10 +21,10 @@ from idtrack._track import Track
 
 
 class TrackTests(Track, ABC):
-    """Developer-facing integrity-test harness for :class:`~idtrack.Track`.
+    """Developer-facing integrity-test harness for :py:class:`~idtrack.Track`.
 
-    This module defines :class:`TrackTests`, a mix-in that adds an extensive
-    white-box test suite to a populated :class:`idtrack.Track` instance.  The
+    This module defines :py:class:`TrackTests`, a mix-in that adds an extensive
+    white-box test suite to a populated :py:class:`idtrack.Track` instance.  The
     class is **for developers only**; it should never be used in production
     pipelines.  Every public method beginning with ``is_`` returns a boolean
     that tells whether a specific invariant holds.  Methods beginning with
@@ -57,16 +57,14 @@ class TrackTests(Track, ABC):
         """Initialize the test harness.
 
         All positional and keyword arguments are forwarded verbatim to
-        :class:`~idtrack.Track.__init__`.  Besides constructing the underlying
-        graph, the initializer sets up a dedicated :pydata:`logging.Logger`
+        :py:class:`~idtrack.Track.__init__`.  Besides constructing the underlying
+        graph, the initializer sets up a dedicated :py:data:`logging.Logger`
         named ``"track_tests"`` so individual test routines can emit structured
         diagnostics without polluting the main application log.
 
         Args:
-            *args: Positional arguments accepted by
-                :class:`~idtrack.Track.__init__`.
-            **kwargs: Keyword arguments accepted by
-                :class:`~idtrack.Track.__init__`.
+            args: Positional arguments accepted by :py:class:`~idtrack.Track.__init__`.
+            kwargs: Keyword arguments accepted by :py:class:`~idtrack.Track.__init__`.
         """
         super().__init__(*args, **kwargs)  # Sub-class initialization
         self.log = logging.getLogger("track_tests")
@@ -79,8 +77,8 @@ class TrackTests(Track, ABC):
         *current genome assembly*:
 
         1. IDs retrieved directly from MySQL via
-           :pyclass:`~idtrack.DatabaseManager`.
-        2. IDs returned by :pymeth:`idtrack.Track.get_id_list` from the graph.
+           :py:class:`~idtrack.DatabaseManager`.
+        2. IDs returned by :py:meth:`idtrack.Track.get_id_list` from the graph.
 
         A mismatch means either the graph was built incompletely or the
         helper functions drift out of sync with the database schema.
@@ -225,7 +223,7 @@ class TrackTests(Track, ABC):
         the two methods deliver byte-identical results.
 
         Args:
-            verbose (bool, optional): If *True* (default) show a tqdm progress
+            verbose (bool): If *True* (default) show a tqdm progress
                 bar that updates with the current node under inspection.
 
         Returns:
@@ -334,11 +332,11 @@ class TrackTests(Track, ABC):
         """Check external-ID list helpers against the raw MySQL tables.
 
         For **every** combination of *assembly*, *Ensembl release* (limited to
-        :pyattr:`graph.graph["confident_for_release"]`) and *external
+        :py:attr:`graph.graph["confident_for_release"]`) and *external
         database* this test performs the following steps:
 
         1. Query the authoritative list of external IDs directly from the
-           MySQL snapshot via :class:`~idtrack.database_manager.DatabaseManager`.
+           MySQL snapshot via :py:class:`~idtrack.database_manager.DatabaseManager`.
         2. Ask the in-memory graph for the same list via
            :py:meth:`idtrack.Track.get_id_list`.
         3. Normalise node names through

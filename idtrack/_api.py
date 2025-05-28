@@ -67,6 +67,19 @@ class API:
         return formal_name, latest_release
 
     def get_database_manager(self, organism_name: str, last_ensembl_release: int):
+        """Instantiate and return a DatabaseManager object for a specified organism and Ensembl release.
+
+        This method sets up a DatabaseManager configured to ignore data after a given Ensembl release.
+        It uses a deep copy of the default database backbone form and stores data in the local repository
+        specified during API initialization.
+
+        Args:
+            organism_name: The formal name of the organism (e.g., 'homo_sapiens').
+            last_ensembl_release: The most recent Ensembl release to include. Data after this release will be ignored.
+
+        Returns:
+            An instance of the DatabaseManager class configured with the provided organism and release settings.
+        """
         return DatabaseManager(
             organism=organism_name,
             ensembl_release=None,
@@ -80,8 +93,8 @@ class API:
 
         Args:
             organism_name: Formal organism name as an output of ``get_ensembl_organism`` method.
-            ensembl_release: Ensembl release of interest. The object will work on only given Ensembl release, but some
-                methods does not care which form the DatabaseManager is defined to.
+            last_ensembl_release: Ensembl release of interest. The object will work on only given Ensembl release,
+                but some methods does not care which form the DatabaseManager is defined to.
                 The latest possible Ensembl release is the best choice for graph building with no drawbacks.
             return_test: If ``True``, return the ``TrackTest`` object instead, which has some functions to test the
                 pathfinder performance and graph integrity.

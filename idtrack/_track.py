@@ -11,7 +11,7 @@ import warnings
 from collections import Counter
 from collections.abc import Iterable
 from functools import cached_property
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 import networkx as nx
 import numpy as np
@@ -34,7 +34,7 @@ class Track:
 
     1. **Normalises** the source to an Ensembl *gene* node when necessary.
     2. **Time-travels** through historical edges—forward or backward—until it
-       reaches the requested release, optionally “beaming-up” through external
+       reaches the requested release, optionally "beaming-up" through external
        IDs when the backbone is disconnected.
     3. **Converts** the resolved Ensembl gene into the requested external
        database (or returns the gene itself) while annotating the result with
@@ -45,13 +45,13 @@ class Track:
 
     * `_recursive_function`   — depth-first search along temporal edges.
     * `_recursive_synonymous` — search for synonymous nodes at a single
-      release to enable the external “beam-up”.
+      release to enable the external "beam-up".
 
     Attributes
     ----------
     graph : networkx.MultiDiGraph
         The pre-computed bio-ID graph produced by
-        :class:`_graph_maker.GraphMaker`.
+        :py:class:`_graph_maker.GraphMaker`.
     version_info : dict
         Metadata about the graph build (Ensembl releases included, build date,
         Git commit, etc.).
@@ -66,24 +66,14 @@ class Track:
     def __init__(self, db_manager: DatabaseManager, **kwargs):
         """Create a `Track` resolver and load (or build) its graph.
 
-        Parameters
-        ----------
-        db_manager : DatabaseManager
-            Connection manager that knows how to fetch Ensembl and
-            cross-reference tables from a local cache or a live MySQL mirror.
-            The same instance is forwarded to :class:`_graph_maker.GraphMaker`.
-        **kwargs
-            Additional keyword arguments forwarded verbatim to
-            :py:meth:`_graph_maker.GraphMaker.get_graph`.  Common flags include
-            ``force_rebuild`` (recompute the graph from scratch), ``species``
-            (restrict to one taxon), and ``cache_dir`` (override on-disk cache
-            location).
-
-        Raises
-        ------
-        RuntimeError
-            If the graph cannot be loaded from cache and building it from
-            scratch fails.
+        Args:
+            db_manager (DatabaseManager): Connection manager that knows how to fetch Ensembl and
+                cross-reference tables from a local cache or a live MySQL mirror.
+                The same instance is forwarded to :py:class:`_graph_maker.GraphMaker`.
+            kwargs: Additional keyword arguments forwarded verbatim to
+                :py:meth:`_graph_maker.GraphMaker.get_graph`.  Common flags include
+                `force_rebuild` (recompute the graph from scratch), `species`
+                (restrict to one taxon), and `cache_dir` (override on-disk cache location).
         """
         self.log = logging.getLogger("track")
         self.db_manager = db_manager
@@ -100,7 +90,7 @@ class Track:
         _the_id: str,
         synonymous_ones: list,
         synonymous_ones_db: list,
-        filter_node_type: set,
+        filter_node_type: set[str],
         the_path: Optional[list] = None,
         the_path_db: Optional[list] = None,
         depth_max: int = 0,
@@ -110,52 +100,47 @@ class Track:
         """Helper method to be used in :py:meth:`_graph.Track.synonymous_nodes`.
 
         Recursively explore the bio-ID graph to collect **synonymous paths**
-        starting at ``_the_id`` and ending on a node whose *type* is a member of
-        ``filter_node_type``.
+        starting at `_the_id` and ending on a node whose *type* is a member of `filter_node_type`.
 
         A *path* is a list of node identifiers (`_the_path`) together with a
         parallel list of their node-type strings (`_the_path_db`).
         The search is **breadth-limited**: the *depth* of a path is defined as
         the **maximum count of any single node-type** it contains
-        (e.g. a path with three ``external`` nodes has depth 3).  Recursion
-        stops when that depth would exceed ``depth_max``.
+        (e.g. a path with three `external` nodes has depth 3).  Recursion
+        stops when that depth would exceed `depth_max`.
 
-        Additional pruning rules
-        ------------------------
-        * The walk never visits the same node twice (no cycles).
-        * It never traverses two consecutive edges whose source and target
-          share the **same node-type**—this prevents “time-travel” within the
-          Ensembl history backbone.
-        * When ``ensembl_backbone_shallow_search`` is *True*, the search is
-          restricted to the **reverse** direction except for node-types listed
-          in :pydataattr:`DB.nts_bidirectional_synonymous_search`.
+        Additional pruning rules:
+
+        - The walk never visits the same node twice (no cycles).
+        - It never traverses two consecutive edges whose source and target
+            share the **same node-type**—this prevents "time-travel" within the
+            Ensembl history backbone.
+        - When `ensembl_backbone_shallow_search` is *True*, the search is
+            restricted to the **reverse** direction except for node-types listed
+            in :py:attr:`DB.nts_bidirectional_synonymous_search`.
 
         On reaching a terminating node the method *appends* the discovered
-        paths to ``synonymous_ones`` and ``synonymous_ones_db``; it does **not**
-        return anything.
+        paths to `synonymous_ones` and `synonymous_ones_db`. It does not
+        return anything. Results are accumulated in `synonymous_ones` and `synonymous_ones_db`.
 
         Args:
             _the_id (str): Identifier of the starting node (Ensembl or
                 external).
-            synonymous_ones (list[list[str]]): Mutable list that will receive
+            synonymous_ones (list): Mutable list that will receive
                 each successful identifier path.
-            synonymous_ones_db (list[list[str]]): Mutable list that will receive
+            synonymous_ones_db (list): Mutable list that will receive
                 the corresponding node-type paths.
             filter_node_type (set[str]): Allowed node-types for the **final**
-                node of a path (e.g. ``{'ensembl_gene'}``).
-            the_path (list[str] | None, optional): Current path leading to
-                ``_the_id``; *None* for the root invocation.
-            the_path_db (list[str] | None, optional): Node-type counterpart of
-                ``the_path``; *None* for the root invocation.
-            depth_max (int, optional): Maximum allowed depth as defined above.
-            from_release (int | None, optional): If given, only keep terminal
+                node of a path (e.g. `{'ensembl_gene'}`).
+            the_path (list | None): Current path leading to
+                `_the_id`; *None* for the root invocation.
+            the_path_db (list | None): Node-type counterpart of
+                `the_path`; *None* for the root invocation.
+            depth_max (int): Maximum allowed depth as defined above.
+            from_release (int | None): If given, only keep terminal
                 nodes that are *active* in this Ensembl release.
-            ensembl_backbone_shallow_search (bool, optional): Activate the
+            ensembl_backbone_shallow_search (bool): Activate the
                 shallow, mostly-reverse search mode described above.
-
-        Returns:
-            None.  Results are accumulated in ``synonymous_ones`` and
-            ``synonymous_ones_db``.
         """
 
         def decide_terminate_externals():
@@ -256,17 +241,17 @@ class Track:
         self,
         the_id: str,
         depth_max: int,
-        filter_node_type: set,
+        filter_node_type: set[str],
         from_release: Optional[int] = None,
         ensembl_backbone_shallow_search: bool = False,
     ):
-        """Public wrapper around :meth:`_recursive_synonymous`.
+        """Public wrapper around :py:meth:`_recursive_synonymous`.
 
-        The method returns **all minimal-length synonym paths** emanating from ``the_id``.
+        The method returns **all minimal-length synonym paths** emanating from `the_id`.
 
         The function first runs a *default* depth search determined by
-        ``DB.external_search_settings['synonymous_max_depth']``.
-        If no synonym is found and ``depth_max`` is greater than that default,
+        `DB.external_search_settings['synonymous_max_depth']`.
+        If no synonym is found and `depth_max` is greater than that default,
         a second, deeper search is attempted.
 
         For every distinct *target* node the shortest path is kept; longer
@@ -274,26 +259,21 @@ class Track:
 
         Args:
             the_id (str): Source identifier.
-            depth_max (int): Maximum search depth to try if the default search
-                fails.
+            depth_max (int): Maximum search depth to try if the default search fails.
             filter_node_type (set[str]): Node-types that are acceptable for the
-                **target** node(s).  Must *not* include the generic
-                ``'external'`` type—specify the concrete external DB instead.
-            from_release (int | None, optional): Constrain targets to those
-                active in this Ensembl release.
-            ensembl_backbone_shallow_search (bool, optional): If *True*,
-                restricts the graph traversal as explained in
-                :meth:`_recursive_synonymous`.
+                *target* node(s).  Must *not* include the generic
+                `'external'` type—specify the concrete external DB instead.
+            from_release (int | None): Constrain targets to those active in this Ensembl release.
+            ensembl_backbone_shallow_search (bool): If *True*,
+                restricts the graph traversal as explained in :py:meth:`_recursive_synonymous`.
 
         Returns:
-            list[list[list[str]]]: A list whose elements are
-            ``[identifier_path, node_type_path]`` pairs, each representing the
-            minimal route to one synonymous node.
+            list[list[list[str]]]: A list whose elements are `[identifier_path, node_type_path]` pairs,
+                each representing the minimal route to one synonymous node.
 
         Raises:
-            ValueError: If ``filter_node_type`` improperly contains the generic
-                external type, or if ``depth_max`` is incompatible with
-                ``ensembl_backbone_shallow_search``.
+            ValueError: If `filter_node_type` improperly contains the generic
+                external type, or if `depth_max` is incompatible with `ensembl_backbone_shallow_search`.
         """
         if DB.nts_external in filter_node_type:
             raise ValueError(f"Define which external database: `{filter_node_type}`.")
@@ -355,38 +335,38 @@ class Track:
 
     @staticmethod
     def get_from_release_and_reverse_vars(lor: list, p: int, mode: str):
-        """Derive a list of ``(release, reverse)`` tuples.
+        """Derive a list of `(release, reverse)` tuples.
 
-        Derive a list of ``(release, reverse)`` tuples that indicate *which*
+        Derive a list of `(release, reverse)` tuples that indicate *which*
         Ensembl release to start the graph walk from and *whether* that walk
         should move **backwards in time**.
 
-        Given a collection of active-range intervals ``lor`` and a pivot
-        release ``p``, the algorithm selects one or two release points per
-        interval depending on ``mode``:
+        Given a collection of active-range intervals `lor` and a pivot
+        release `p`, the algorithm selects one or two release points per
+        interval depending on `mode`:
 
-        * ``'closest'`` - choose the release **nearest** to ``p`` within or at
-          the ends of the interval.
-        * ``'distant'`` - choose the release **farthest** from ``p`` within the
-          interval.
+        * 'closest' - choose the release **nearest** to `p` within or at
+            the ends of the interval.
+        * 'distant' - choose the release **farthest** from `p` within the
+            interval.
 
         The boolean in each tuple is *True* when the walk should start **after**
-        the selected release and move backwards (i.e. “reverse mode”), and
+        the selected release and move backwards (i.e. "reverse mode"), and
         *False* when it should move forwards.
 
         Args:
-            lor (list[tuple[int, int]]): List of inclusive
-                ``(first_release, last_release)`` intervals in ascending order.
-            p (int): Pivot release around which “closest” or “distant” is
+            lor (list): List of inclusive
+                `(first_release, last_release)` intervals in ascending order.
+            p (int): Pivot release around which "closest" or "distant" is
                 evaluated.
-            mode (str): Either ``'closest'`` or ``'distant'``.
+            mode (str): Either `'closest'` or `'distant'`.
 
         Returns:
             list[tuple[int, bool]]: Release / reverse-flag pairs, ordered in
             the sequence they should be tried by the path-finder.
 
         Raises:
-            ValueError: If an interval in ``lor`` is malformed, ``mode`` is
+            ValueError: If an interval in `lor` is malformed, `mode` is
                 not recognised, or internal consistency checks fail.
         """
         result = list()
@@ -429,9 +409,9 @@ class Track:
     ):
         """Select the **most temporally relevant** synonym(s) for an Ensembl gene-ID family.
 
-        The method evaluates each candidate in ``synonym_ids`` against the
-        *target* release ``to_release`` and, when applicable, the *source*
-        release ``from_release``.  Its job is to decide **where** the path
+        The method evaluates each candidate in `synonym_ids` against the
+        *target* release `to_release` and, when applicable, the *source*
+        release `from_release`.  Its job is to decide **where** the path
         should *enter* the Ensembl backbone and **whether** the remainder of
         the traversal must run in *reverse* (new → old) order.
 
@@ -442,7 +422,7 @@ class Track:
            release and the correct *reverse* flag is derived trivially.
         2. **Non-backbone start** - When the starting node is not an
            Ensembl-gene backbone ID, the synonym whose **active range edge** is
-           *closest* (or *farthest*, per ``mode``) to ``to_release`` is chosen.
+           *closest* (or *farthest*, per `mode`) to `to_release` is chosen.
         3. **Backbone start** - If the query is itself an Ensembl-gene, the
            algorithm first looks for *overlapping* ranges between the query
            and each synonym; if none overlap, it falls back to the distance
@@ -451,29 +431,29 @@ class Track:
         Args:
             from_id (str): Identifier from which the path search will start.
             synonym_ids (Sequence[str]): Ensembl IDs considered synonyms of
-                ``from_id`` (typically the *same* gene with different version
+                `from_id` (typically the *same* gene with different version
                 numbers).
             to_release (int): Target Ensembl release that the overall conversion
                 aims for.
-            from_release (int | None): Release in which ``from_id`` is known to
+            from_release (int | None): Release in which `from_id` is known to
                 be active.  If *None*, the method infers a suitable release for
                 each candidate.
-            mode (str): Either ``'closest'`` or ``'distant'``—controls whether
+            mode (str): Either `'closest'` or `'distant'`—controls whether
                 the synonym chosen should minimise or maximise its distance to
-                ``to_release``.
+                `to_release`.
 
         Returns:
             list[list[Union[str, int, bool]]]: One or more triplets of the form
-            ``[synonym_id, entry_release, reverse]`` where:
+            `[synonym_id, entry_release, reverse]` where:
 
-            * ``synonym_id`` - the chosen synonym,
-            * ``entry_release`` - release at which to join the backbone, and
-            * ``reverse`` - *True* if the subsequent history walk must run
+            * `synonym_id` - the chosen synonym,
+            * `entry_release` - release at which to join the backbone, and
+            * `reverse` - *True* if the subsequent history walk must run
               backwards in time.
 
         Raises:
             ValueError: If no synonym satisfies the distance/overlap criteria
-                or if ``mode`` is invalid.
+                or if `mode` is invalid.
         """
         distance_to_target = list()
         candidate_ranges = list()
@@ -551,7 +531,7 @@ class Track:
         # given from release
 
     def choose_relevant_synonym(
-        self, the_id: str, depth_max: int, to_release: int, filter_node_type: set, from_release: Optional[int]
+        self, the_id: str, depth_max: int, to_release: int, filter_node_type: set[str], from_release: Optional[int]
     ):
         """Wrapper that **discovers, clusters, and ranks** synonymous Ensembl candidates for a given identifier.
 
@@ -561,28 +541,28 @@ class Track:
            biological identity (`synonymous_nodes`).
         2. **Cluster** those paths by **gene ID** (ignoring version).
         3. **Rank** each cluster with
-           :meth:`_choose_relevant_synonym_helper`, selecting the entry release
-           (and direction) that best suits ``to_release``.
+           :py:meth:`_choose_relevant_synonym_helper`, selecting the entry release
+           (and direction) that best suits `to_release`.
 
         Args:
             the_id (str): Source identifier (Ensembl or external).
             depth_max (int): Maximum depth passed to
-                :meth:`synonymous_nodes`; governs how far the synonym search is
+                :py:meth:`synonymous_nodes`; governs how far the synonym search is
                 allowed to roam through external nodes.
             to_release (int): Target Ensembl release required by the overall
                 conversion.
             filter_node_type (set[str]): Node-types that the synonym search
-                must terminate on (usually ``{'ensembl_gene'}``).
-            from_release (int | None): Known active release of ``the_id``.  If
+                must terminate on (usually `{'ensembl_gene'}`).
+            from_release (int | None): Known active release of `the_id`.  If
                 *None*, the helper will infer one.
 
         Returns:
             list[list[Any]]: A list whose elements are
 
-            ``[synonym_id, entry_release, reverse, identifier_path, node_type_path]``
+            `[synonym_id, entry_release, reverse, identifier_path, node_type_path]`
 
             where the last two items reproduce the path returned by
-            :meth:`synonymous_nodes`.
+            :py:meth:`synonymous_nodes`.
 
         Notes:
             *The method purposefully keeps **all** equally-ranked candidates;
@@ -625,10 +605,10 @@ class Track:
     def get_next_edges(self, from_id: str, from_release: int, reverse: bool, debugging: bool = False):
         """Enumerate **chronologically admissible** history edges from a node.
 
-        Starting at ``from_id`` and release ``from_release``, the method scans
-        outgoing (or incoming, when ``reverse`` is *True*) edges whose
+        Starting at `from_id` and release `from_release`, the method scans
+        outgoing (or incoming, when `reverse` is *True*) edges whose
         timestamps allow the path to **advance** in the desired temporal
-        direction.  It collapses duplicate “same-ID” transitions and flags
+        direction.  It collapses duplicate "same-ID" transitions and flags
         self-loops so that later heuristics can treat branch points and tips
         differently.
 
@@ -638,14 +618,14 @@ class Track:
                 exist.
             reverse (bool): *False* to walk **forward** in history
                 (old → new), *True* to walk **backward** (new → old).
-            debugging (bool, optional): If set, disables the duplicate-edge
+            debugging (bool): If set, disables the duplicate-edge
                 collapse so that unit tests can inspect the raw edge set.
 
         Returns:
             list[list[Union[int, bool, str, int]]]: Sorted list of edge
             descriptors, each of which is
 
-            ``[edge_release, is_self_loop, src_node, dst_node, multiedge_key]``.
+            `[edge_release, is_self_loop, src_node, dst_node, multiedge_key]`.
 
         Raises:
             ValueError: If inconsistent multi-edges (same nodes, same release)
@@ -712,7 +692,7 @@ class Track:
 
         The decision is based on the *closest* boundary of every active
         interval returned by
-        :meth:`Track.get_from_release_and_reverse_vars` (``mode='closest'``).
+        :py:meth:`Track.get_from_release_and_reverse_vars` (`mode='closest'`).
 
         Args:
             from_id (str): The starting identifier (Ensembl gene, transcript,
@@ -723,20 +703,20 @@ class Track:
         Returns:
             tuple[str, Union[int, tuple[int, int]]]:
 
-                * ``'forward'`` - walk old → new, starting at the **earliest**
-                release in which *from_id* is active
-                &nbsp;&nbsp;&nbsp;→ return ``('forward', start_release)``
-                * ``'reverse'`` - walk new → old, starting at the **latest**
-                active release
-                &nbsp;&nbsp;&nbsp;→ return ``('reverse', start_release)``
-                * ``'both'`` - split search: one forward walk and one reverse
-                walk
-                &nbsp;&nbsp;&nbsp;→ return ``('both', (forward_start,
-                reverse_start))``
+                * `'forward'` - walk old → new, starting at the **earliest**
+                    release in which *from_id* is active
+                    &nbsp;&nbsp;&nbsp;→ return `('forward', start_release)`
+                * `'reverse'` - walk new → old, starting at the **latest**
+                    active release
+                    &nbsp;&nbsp;&nbsp;→ return `('reverse', start_release)`
+                * `'both'` - split search: one forward walk and one reverse
+                    walk
+                    &nbsp;&nbsp;&nbsp;→ return `('both', (forward_start,
+                    reverse_start))`
 
         Raises:
             ValueError: If *from_id* is never active in or around
-                ``to_release`` (i.e. no viable starting release can be found).
+                `to_release` (i.e. no viable starting release can be found).
         """
         n = self.graph.get_active_ranges_of_id[from_id]  # calculates ensembl_gene nodes and also any other node.
         m = Track.get_from_release_and_reverse_vars(n, to_release, mode="closest")
@@ -770,20 +750,20 @@ class Track:
 
         The algorithm performs a depth-first traversal of the Ensembl history
         edges.  Whenever it becomes stranded on a non-backbone node it may
-        “beam-up” via a *synonym path* through an external database, subject to
-        the constraints in ``external_settings``:
+        "beam-up" via a *synonym path* through an external database, subject to
+        the constraints in `external_settings`:
 
-        * ``synonymous_max_depth`` - maximum depth of a synonym search.
-        * ``jump_limit`` - maximum number of external “beam-up” jumps allowed.
-        * ``nts_backbone`` - canonical node-type of the Ensembl backbone.
+        * `synonymous_max_depth` - maximum depth of a synonym search.
+        * `jump_limit` - maximum number of external "beam-up" jumps allowed.
+        * `nts_backbone` - canonical node-type of the Ensembl backbone.
 
         Additional flags control the initial conditions:
 
-        * Setting ``external_jump`` to *np.inf* **disables** external jumps.
-        Setting it to *None* **enables** them with the counter reset to ``0``.
-        * ``multiple_ensembl_transition`` allows the algorithm to time-travel to
-        a *different* release while still on an external node; this is useful
-        when *from_release* was inferred and might not actually connect.
+        * Setting `external_jump` to *np.inf* **disables** external jumps.
+            Setting it to *None* **enables** them with the counter reset to `0`.
+        * `multiple_ensembl_transition` allows the algorithm to time-travel to
+            a *different* release while still on an external node; this is useful
+            when *from_release* was inferred and might not actually connect.
 
         Args:
             from_id (str): Identifier to start the search from.
@@ -793,19 +773,19 @@ class Track:
             reverse (bool): If *True*, traverse the graph **backwards** in time;
                 otherwise forwards.
             external_settings (dict): Copy of
-                :pydataattr:`DB.external_search_settings` that governs depth,
+                :py:attr:`DB.external_search_settings` that governs depth,
                 jump limits, and backbone node-type.
-            external_jump (float | None, optional): Current external-jump count
+            external_jump (float | None): Current external-jump count
                 (*None* starts from zero, *np.inf* forbids any jump).
-            multiple_ensembl_transition (bool, optional): Permit the synonym
+            multiple_ensembl_transition (bool): Permit the synonym
                 engine to select a *different* release for an external node when
                 no path exists at *from_release*.
 
         Returns:
             set[tuple[tuple[str, str, int]]]:
                 A set of **edge-lists**.  Each edge is stored as
-                ``(src, dst, key)``; an empty walk that terminates immediately
-                is represented by ``((None, from_id, None),)``.
+                `(src, dst, key)`; an empty walk that terminates immediately
+                is represented by `((None, from_id, None),)`.
 
         Notes:
             *The method is intentionally side-effect free; it constructs all
@@ -1017,21 +997,21 @@ class Track:
         increase_jump_until: int = 0,
         from_release_inferred: bool = False,
     ) -> tuple:
-        """Run :meth:`path_search` under **progressively relaxed settings**.
+        """Run :py:meth:`path_search` under **progressively relaxed settings**.
 
-        Run :meth:`path_search` under **progressively relaxed settings** until at
+        Run :py:meth:`path_search` under **progressively relaxed settings** until at
         least one viable path is found—or every relaxation level is exhausted.
 
         Four search stages are attempted in order:
 
         1. **Backbone-only** - external jumps disabled.
         2. **External enabled** - allow external jumps; increment synonym depth
-        and jump limit after each failure up to
-        ``increase_depth_until``/``increase_jump_until``.
+            and jump limit after each failure up to
+            `increase_depth_until`/`increase_jump_until`.
         3. **Backbone with multiple-Ensembl transition** - external disabled but
-        permit starting release to shift on external nodes.
+            permit starting release to shift on external nodes.
         4. **External + multiple-transition** - most permissive search, with
-        iterative depth/jump relaxation as in stage 2.
+            iterative depth/jump relaxation as in stage 2.
 
         Args:
             from_id (str): Identifier to convert.
@@ -1039,13 +1019,13 @@ class Track:
             to_release (int): Desired target release.
             reverse (bool): Traverse the Ensembl history backwards if *True*,
                 forwards otherwise.
-            go_external (bool, optional): If *False*, skip any stage that
+            go_external (bool): If *False*, skip any stage that
                 requires external jumps.
-            increase_depth_until (int, optional): Additional synonym-search
+            increase_depth_until (int): Additional synonym-search
                 depth to allow beyond the default.
-            increase_jump_until (int, optional): Additional external-jump count
+            increase_jump_until (int): Additional external-jump count
                 to allow beyond the default.
-            from_release_inferred (bool, optional): *Reserved for future use.*
+            from_release_inferred (bool): *Reserved for future use.*
                 Indicates that *from_release* was chosen automatically rather
                 than provided by the user.
 
@@ -1056,7 +1036,7 @@ class Track:
 
         Notes:
             The function copies and mutates
-            :pydataattr:`DB.external_search_settings` internally; the caller’s
+            :py:attr:`DB.external_search_settings` internally; the caller’s
             copy is not modified.
         """
         es: dict = copy.deepcopy(DB.external_search_settings)
@@ -1135,21 +1115,18 @@ class Track:
         The property constructs two complementary data structures:
 
         * **filter_set** - the union of
-        * every external-database node-type present in the graph, and
-        * every Ensembl-specific node-type (gene, transcript, translation, …)
-            across *all* assemblies.
-        This set can therefore be passed unmodified to
-        :py:meth:`synonymous_nodes` to ask for “*anything that is not an
-        assembly-less backbone gene*”.
-
+            (1) every external-database node-type present in the graph, and (2) every Ensembl-specific
+            node-type (gene, transcript, translation, …) across *all* assemblies.
+            This set can therefore be passed unmodified to
+            :py:meth:`synonymous_nodes` to ask for "anything that is not an assembly-less backbone gene".
         * **ensembl_include** - a mapping
-        ``{form → set(node_type_str)}`` where each value lists the node-types
-        that should be considered equivalent to that *form* (e.g. *gene*,
-        *transcript*, *translation*) when computing richness metrics.
+            `{form → set(node_type_str)}` where each value lists the node-types
+            that should be considered equivalent to that *form* (e.g. *gene*, *transcript*, *translation*) when
+            computing richness metrics.
 
         Returns:
             tuple[set[str], dict[str, set[str]]]:
-                ``(filter_set, ensembl_include)`` exactly as described above.
+                `(filter_set, ensembl_include)` exactly as described above.
         """
         form_list = [i for i in self.graph.available_forms if i != DB.backbone_form]
         ensembl_include = dict()
@@ -1161,7 +1138,7 @@ class Track:
         return filter_set, ensembl_include
 
     def calculate_node_scores(self, the_id, ens_release) -> list:
-        """Rank competing Ensembl targets by the “richness” of their synonyms.
+        """Rank competing Ensembl targets by the "richness" of their synonyms.
 
         The method counts, within a radius of *two* synonym hops, how many unique
         identifiers of various categories point to each candidate and returns the
@@ -1174,12 +1151,10 @@ class Track:
                 release are considered.
 
         Returns:
-            list[int]: ``[-ext, -form₁, -form₂]`` where
-                * ``ext``  - number of distinct **external-database** synonyms.
-                * ``form₁`` - number of distinct synonyms of the most important
-                Ensembl form (typically *gene*).
-                * ``form₂`` - number of distinct synonyms of the second form
-                (typically *transcript* or *translation*).
+            list: `[-ext, -form₁, -form₂]` where
+                * `ext`  - number of distinct **external-database** synonyms.
+                * `form₁` - number of distinct synonyms of the most important Ensembl form (typically *gene*).
+                * `form₂` - number of distinct synonyms of the second form (typically *transcript* or *translation*).
 
         Raises:
             ValueError: If the graph does not expose exactly the two expected
@@ -1223,7 +1198,7 @@ class Track:
         all_possible_paths: tuple,
         reduction: Callable,
         remove_na: str,
-        from_releases: Iterable,
+        from_releases: Iterable[int],
         to_release: int,
         score_of_the_queried_item: float,
         return_path: bool,
@@ -1233,44 +1208,44 @@ class Track:
 
         For each path produced by the search engine the function:
 
-        1. Computes an **edge-score aggregate** using ``reduction`` while handling
-        missing values as directed by ``remove_na``.
+        1. Computes an **edge-score aggregate** using `reduction` while handling
+        missing values as directed by `remove_na`.
         2. Tallies *external* statistics (steps, jumps, initial conversion
         confidence) and *assembly* statistics (number of priority drops, final
         priority).
         3. Packs all metrics into a dictionary and stores it under the key of the
         path's final destination node.
-        4. Keeps only the lexicographically “smallest” dictionary per destination
+        4. Keeps only the lexicographically "smallest" dictionary per destination
         via :py:meth:`_path_score_sorter_single_target`.
 
         Args:
-            all_possible_paths (tuple[tuple]): Sequence of edge-lists representing
+            all_possible_paths (tuple): Sequence of edge-lists representing
                 every admissible walk returned by the path-finder.
-            reduction (Callable[[Iterable[float]], float]): Function such as
-                ``np.mean`` or ``sum`` used to collapse edge weights into one number.
+            reduction (Callable): Function such as
+                `np.mean` or `sum` used to collapse edge weights into one number.
             remove_na (str): How to treat *NaN* edge weights - one of
-                ``'omit'``, ``'to_1'``, ``'to_0'``.
+                `'omit'`, `'to_1'`, `'to_0'`.
             from_releases (Iterable[int]): Release that each path starts from;
-                must align with ``all_possible_paths``.
+                must align with `all_possible_paths`.
             to_release (int): Target release - needed to know whether an edge is
                 traversed forward or reverse.
             score_of_the_queried_item (float): Fallback weight for the implicit edge
                 that represents the *query ID* itself.
             return_path (bool): If *True*, embed the full edge-list inside each
-                score dict under the key ``'the_path'``.
+                score dict under the key `'the_path'`.
             from_id (str): Original identifier being converted - echoed back in the
                 score dict for traceability.
 
         Returns:
-            dict[str, dict]: Mapping
-            ``{destination_id → best_score_dict}``.
+            dict: Mapping
+            `{destination_id → best_score_dict}`.
             Each *score dict* contains (inter alia)
-            ``assembly_jump``, ``external_jump``, ``external_step``,
-            ``edge_scores_reduced``, and ``ensembl_step``.
+            `assembly_jump`, `external_jump`, `external_step`,
+            `edge_scores_reduced`, and `ensembl_step`.
 
         Raises:
             ValueError: If an unexpected edge encoding is encountered, if an edge
-                score is invalid/∞, or if ``remove_na`` is set to an unknown mode.
+                score is invalid/∞, or if `remove_na` is set to an unknown mode.
         """
 
         def er_maker_for_initial_conversion(n1, n2, n3, n4):
@@ -1378,18 +1353,18 @@ class Track:
         """Return the stored orientation of a multigraph edge.
 
         For multigraphs every logical edge is stored *once*, but the caller may
-        hold ``(u, v, k)`` or ``(v, u, k)``.
+        hold `(u, v, k)` or `(v, u, k)`.
         This helper resolves the ambiguity so that subsequent attribute look-ups
         succeed.
 
         Args:
             n1 (str): One endpoint of the edge.
             n2 (str): The other endpoint.
-            n3 (int): Edge key (index) within the ``networkx`` multi-edge.
+            n3 (int): Edge key (index) within the `networkx` multi-edge.
 
         Returns:
             tuple[str, str, int]: A triple that is guaranteed to exist as written
-            in ``self.graph``.
+            in `self.graph`.
 
         Raises:
             AssertionError: If neither orientation is present in the graph.
@@ -1405,16 +1380,14 @@ class Track:
     def path_step_possible_assembly_jumps(self, n1, n2, n3, n4=None):
         """Return the genome assemblies that can legally be used for a single edge.
 
-        The helper inspects the edge that connects ``n1`` → ``n2`` and filters the
-        assemblies recorded on that edge against the *release* constraint ``n4``:
+        The helper inspects the edge that connects `n1` → `n2` and filters the
+        assemblies recorded on that edge against the *release* constraint `n4`:
 
         * **None** - the edge is treated as backbone history; the result is the
-        graph-wide default assembly (usually the build on which the backbone was
-        constructed).
-        * **int** - keep only assemblies whose *release set* contains that single
-        release.
-        * **set[int]** - keep assemblies whose release set intersects the provided
-        set.
+            graph-wide default assembly (usually the build on which the backbone was
+            constructed).
+        * **int** - keep only assemblies whose *release set* contains that single release.
+        * **set[int]** - keep assemblies whose release set intersects the provided set.
 
         Args:
             n1 (str): Source node identifier.
@@ -1423,10 +1396,10 @@ class Track:
             n4 (int | set[int] | None, optional): Release filter as described above.
 
         Returns:
-            list[str]: Sorted list of assembly names (e.g. ``["GRCh37", "GRCh38"]``).
+            list[str]: Sorted list of assembly names (e.g. `["GRCh37", "GRCh38"]`).
 
         Raises:
-            ValueError: If ``n4`` is of an unsupported type.
+            ValueError: If `n4` is of an unsupported type.
         """
         edge_key = self.edge_key_orientor(n1, n2, n3)
         if n4 is None:
@@ -1441,28 +1414,28 @@ class Track:
             raise ValueError
 
     def minimum_assembly_jumps(self, the_path, step_pri=None, current_priority=None) -> tuple:
-        """Compute the *penalty* incurred by assembly downgrades along a path.
+        """Compute the penalty incurred by assembly downgrades along a path.
 
         Each path step may be annotated with one or more candidate assemblies.
-        These are translated into *priority values* via
-        ``DB.assembly_mysqlport_priority``.  The algorithm walks the path,
-        tracking the current priority and counting how many times it must **drop**
-        to a *lower* priority value—each drop constitutes an “assembly jump”
+        These are translated into priority values via
+        `DB.assembly_mysqlport_priority`.  The algorithm walks the path,
+        tracking the current priority and counting how many times it must drop
+        to a lower priority value—each drop constitutes an "assembly jump"
         penalty.
 
         Args:
             the_path (Iterable[tuple]): Sequence of edge descriptors; each element is
-                either ``(n1, n2, k)`` or ``(n1, n2, k, release)``.
+                either `(n1, n2, k)` or `(n1, n2, k, release)`.
             step_pri (list[int] | None, optional): Priority list for the first edge.
-                If *None*, it is derived from ``the_path``.
-            current_priority (int | None, optional): Starting priority.  If *None*,
-                initialised to ``max(step_pri)``.
+                If None, it is derived from `the_path`.
+            current_priority (int | None, optional): Starting priority.  If None,
+                initialised to `max(step_pri)`.
 
         Returns:
             tuple[int, list[int], int]:
-                * ``assembly_jump`` - total number of priority drops.
-                * ``step_pri`` - priority list of the *last* processed edge.
-                * ``current_priority`` - priority value after the final edge.
+                - `assembly_jump` - total number of priority drops.
+                - `step_pri` - priority list of the last processed edge.
+                - `current_priority` - priority value after the final edge.
         """
         assemblies = [self.path_step_possible_assembly_jumps(*i) for i in the_path]
         # should be sorted for bisect function to work properly in '_minimum_assembly_jumps_helper'
@@ -1529,15 +1502,15 @@ class Track:
         return penalty, step_pri, current_priority
 
     @staticmethod
-    def _path_score_sorter_single_target(lst_of_dict: list) -> dict:
+    def _path_score_sorter_single_target(lst_of_dict: list[dict]) -> dict:
         """Select the best score dictionary for *one* conversion target.
 
         The input is a list of dictionaries produced by
         :py:meth:`calculate_score_and_select`.  Each dictionary is converted into a
         tuple according to the *lexicographic importance order*
 
-        ``("assembly_jump", "external_jump", "external_step",
-        "edge_scores_reduced", "ensembl_step")``
+        `("assembly_jump", "external_jump", "external_step",
+        "edge_scores_reduced", "ensembl_step")`
 
         and the dictionary with the **smallest** tuple is returned.
 
@@ -1545,7 +1518,7 @@ class Track:
             lst_of_dict (list[dict]): Candidate score dictionaries for this target.
 
         Returns:
-            dict: The chosen “winner” score dictionary.
+            dict: The chosen "winner" score dictionary.
 
         Raises:
             ValueError: If the input list is empty.
@@ -1575,36 +1548,31 @@ class Track:
         The method linearises several per-path metrics into an *importance
         order* (see the tuple at the top of the function), then:
 
-        1. Computes that ordered score for **each** pair
-           ``(ensembl_gene, final_target)``.
+        1. Computes that ordered score for **each** pair `(ensembl_gene, final_target)`.
         2. Finds the global minimum; if multiple pairs tie:
-           * Prefer the target whose identifier is identical to
-             ``from_id``.
-           * If more than one Ensembl gene still tie, fall back on
-             :meth:`calculate_node_scores` to favour the “richer” node.
-        3. Returns a *pruned* copy of ``dict_of_dict`` that contains only the
-           surviving Ensembl genes, each with only the winning
-           ``final_elements`` entry.  Additional provenance is written to
-           ``filter_scores``.
+            * Prefer the target whose identifier is identical to `from_id`.
+            * If more than one Ensembl gene still tie, fall back on
+                :py:meth:`calculate_node_scores` to favour the "richer" node.
+        3. Returns a *pruned* copy of `dict_of_dict` that contains only the
+           surviving Ensembl genes, each with only the winning `final_elements` entry.
+           Additional provenance is written to `filter_scores`.
 
         Args:
             dict_of_dict (dict): Nested result of
-                :meth:`calculate_score_and_select`.  Keys are candidate
+                :py:meth:`calculate_score_and_select`.  Keys are candidate
                 Ensembl genes; values are dictionaries that already contain
                 *one* best path per final target.
             from_id (str): Original query identifier; used to break ties in
-                favour of “same as input”.
+                favour of "same as input".
             to_release (int): Target Ensembl release; forwarded to
-                :meth:`calculate_node_scores` during tie-breaking.
+                :py:meth:`calculate_node_scores` during tie-breaking.
 
         Returns:
-            dict: A reduced version of ``dict_of_dict`` holding only the
-            winner(s) and enriched with a
-            ``final_elements[*]['filter_scores']`` sub-dict that records the
-            filters applied.
+            dict: A reduced version of `dict_of_dict` holding only the winner(s) and enriched with a
+                `final_elements[*]['filter_scores']` sub-dict that records the filters applied.
 
         Raises:
-            ValueError: If ``dict_of_dict`` is empty.
+            ValueError: If `dict_of_dict` is empty.
         """
         importance_order = (
             # the variables from to_add in 'calculate_score_and_select'.
@@ -1701,46 +1669,46 @@ class Track:
     ):
         """End-to-end ID conversion workflow.
 
-        Starting from ``from_id`` the routine
+        Starting from `from_id` the routine
 
         1. Determines the correct **time-travel direction** if
-           ``from_release`` is unspecified.
+           `from_release` is unspecified.
         2. Enumerates *all* admissible paths with
-           :meth:`get_possible_paths` (forward and/or reverse).
-        3. Collapses those paths with :meth:`calculate_score_and_select`.
+           :py:meth:`get_possible_paths` (forward and/or reverse).
+        3. Collapses those paths with :py:meth:`calculate_score_and_select`.
         4. Optionally converts the surviving Ensembl gene(s) into
-           ``final_database`` via :meth:`_final_conversion`.
+           `final_database` via :py:meth:`_final_conversion`.
         5. Optionally applies a final global selection with
-           :meth:`_path_score_sorter_all_targets`.
+           :py:meth:`_path_score_sorter_all_targets`.
 
         The output structure mirrors this decision tree and, when
-        ``return_path`` is *True*, embeds the full edge list so that callers
+        `return_path` is *True*, embeds the full edge list so that callers
         can audit every hop.
 
         Args:
             from_id (str): Source identifier (Ensembl, UniProt, RefSeq, …).
-            from_release (int | None, optional): Starting Ensembl release.
+            from_release (int | None): Starting Ensembl release.
                 *None* → infer from the graph.
-            to_release (int | None, optional): Target Ensembl release.
+            to_release (int | None): Target Ensembl release.
                 Defaults to the newest release contained in the graph.
-            final_database (str | None, optional): External database to
+            final_database (str | None): External database to
                 convert into.  *None* → stay on the Ensembl gene.
-            reduction (Callable, optional): Function (e.g. ``numpy.mean``)
+            reduction (Callable): Function (e.g. `numpy.mean`)
                 used to collapse per-edge weights.  Must accept an iterable of
                 floats and return a float.
-            remove_na (str, optional): Strategy for *NaN* edge weights -
-                ``'omit'``, ``'to_1'``, or ``'to_0'``.
-            score_of_the_queried_item (float, optional): Weight assigned to
-                the implicit edge that represents ``from_id`` itself.
-            go_external (bool, optional): Allow jumps through external
+            remove_na (str): Strategy for *NaN* edge weights -
+                `'omit'`, `'to_1'`, or `'to_0'`.
+            score_of_the_queried_item (float): Weight assigned to
+                the implicit edge that represents `from_id` itself.
+            go_external (bool): Allow jumps through external
                 databases when the backbone is disconnected.
-            prioritize_to_one_filter (bool, optional): After all scoring,
+            prioritize_to_one_filter (bool): After all scoring,
                 keep only the single globally best target.
-            return_path (bool, optional): Embed the full edge list(s) in the
+            return_path (bool): Embed the full edge list(s) in the
                 returned dictionary.
-            deprioritize_lrg_genes (bool, optional): If *True* and other
+            deprioritize_lrg_genes (bool): If *True* and other
                 results exist, drop LRG_* genomic regions from the final set.
-            return_ensembl_alternative (bool, optional): When converting to an
+            return_ensembl_alternative (bool): When converting to an
                 external database, also return the Ensembl gene as a fallback.
 
         Returns:
@@ -1749,8 +1717,8 @@ class Track:
                 * **None** - No admissible path was found.
 
         Raises:
-            ValueError: For non-callable ``reduction``, unsupported
-                ``remove_na`` modes, unknown ``final_database`` values, or
+            ValueError: For non-callable `reduction`, unsupported
+                `remove_na` modes, unknown `final_database` values, or
                 logical inconsistencies detected during processing.
         """
         if not callable(reduction):
@@ -1855,10 +1823,10 @@ class Track:
                 return self._path_score_sorter_all_targets(converted, from_id, to_release)
 
     def _create_priority_list_ensembl(self, from_id: str, to_release: int):
-        """Build a priority list of assemblies in which ``from_id`` is active.
+        """Build a priority list of assemblies in which `from_id` is active.
 
         The priorities are the numeric **assembly rankings** defined in
-        :pydataattr:`DB.assembly_mysqlport_priority` (smaller numbers mean
+        :py:attr:`DB.assembly_mysqlport_priority` (smaller numbers mean
         higher priority).
 
         Args:
@@ -1871,7 +1839,7 @@ class Track:
 
         Raises:
             ValueError: If the gene is not active in *any* assembly at
-                ``to_release``.
+                `to_release`.
         """
         ceg = self.graph.combined_edges_genes[from_id]
         ceg_assembly_list = sorted({j for i in ceg for j in ceg[i] if to_release in ceg[i][j]})
@@ -1889,34 +1857,34 @@ class Track:
         add_ass_jump_list: list,
         final_database: str,
     ):
-        """Assemble the *final-conversion* section that will be attached to a candidate path.
+        """Assemble the final-conversion section that will be attached to a candidate path.
 
-        The section contains a global **conversion-confidence** flag plus one
+        The section contains a global conversion-confidence flag plus one
         entry per synonym that survived the path-finding stage.  When
-        ``paths`` is *None* the structure is identical but omits the
-        ``'the_path'`` member to save memory.
+        `paths` is None the structure is identical but omits the
+        `'the_path'` member to save memory.
 
         Args:
             confidence (int | float): Heuristic confidence for the *whole*
-                conversion step - ``0`` for “perfect”, larger values for
-                fallback scenarios, ``np.inf`` when no conversion was
+                conversion step - `0` for "perfect", larger values for
+                fallback scenarios, `np.inf` when no conversion was
                 possible.
-            sysns (list[str]): List of synonym identifiers *in the same order*
+            sysns (list): List of synonym identifiers *in the same order*
                 as the metric lists below.
             paths (list[list] | None): One walk (edge list) per synonym, or
                 *None* if the caller does not want to expose paths.
-            min_priority_list (list[int]): Minimum assembly priority reached
+            min_priority_list (list): Minimum assembly priority reached
                 by each walk.
-            len_priority_list (list[int]): Number of distinct assembly
+            len_priority_list (list): Number of distinct assembly
                 priorities encountered by each walk.
-            add_ass_jump_list (list[int]): Additional assembly-jump penalty
+            add_ass_jump_list (list): Additional assembly-jump penalty
                 incurred during the synonym hop itself.
             final_database (str): Name of the database these synonyms belong
-                to (e.g. ``'uniprot'`` or ``DB.nts_ensembl["gene"]``).
+                to (e.g. `'uniprot'` or `DB.nts_ensembl["gene"]`).
 
         Returns:
             dict: Nested dictionary ready to be stored under the key
-            ``'final_conversion'``.
+            `'final_conversion'`.
         """
         if paths is not None:
             return {
@@ -1955,36 +1923,36 @@ class Track:
         return_path: bool,
         return_ensembl_alternative: bool,
     ):
-        """Convert an Ensembl *gene* node to the requested external database.
+        """Convert an Ensembl gene node to the requested external database.
 
-        Convert an Ensembl *gene* node to the requested external database and
-        merge the result back into ``converted``.
+        Convert an Ensembl gene node to the requested external database and
+        merge the result back into `converted`.
 
         The routine:
 
-        1. Builds every legal **synonym path** from ``cnvt`` to
-           ``final_database`` that is active in ``ens_release`` (or in *any*
+        1. Builds every legal synonym path from `cnvt` to
+           `final_database` that is active in `ens_release` (or in any
            release as a fallback).
         2. Computes assembly-jump penalties for each path.
-        3. Calls :meth:`_final_conversion_dict_prepare` to create the
+        3. Calls :py:meth:`_final_conversion_dict_prepare` to create the
            conversion sub-dict.
         4. Optionally falls back to returning the Ensembl gene itself when no
-           synonym exists and ``return_ensembl_alternative`` is *True*.
+           synonym exists and `return_ensembl_alternative` is True.
 
         Args:
             converted (dict): The current accumulator being built by
-                :meth:`convert`.
+                :py:meth:`convert`.
             cnvt (str): Ensembl gene identifier that is undergoing final
                 conversion.
             final_database (str): Target external database.
             ens_release (int): Target Ensembl release.
-            return_path (bool): If *True*, embed the path(s) that lead to each
+            return_path (bool): If True, embed the path(s) that lead to each
                 synonym.
             return_ensembl_alternative (bool): When no synonym can be found,
                 add a fallback entry that keeps the Ensembl gene.
 
         Returns:
-            dict: The *same* ``converted`` dict, updated in place (and also
+            dict: The same `converted` dict, updated in place (and also
             returned for convenience).
         """
 
@@ -1992,9 +1960,9 @@ class Track:
             """Produce every synonym path from an Ensembl gene to *one* external database.
 
             The search is attempted twice:
-            1. **Release-restricted** - only synonyms active in
-               ``from_release``; confidence = 0.
-            2. **Release-agnostic** - synonyms active in *any* release;
+            1. Release-restricted - only synonyms active in
+               `from_release`; confidence = 0.
+            2. Release-agnostic - synonyms active in any release;
                confidence = 1.
 
             Args:
@@ -2005,8 +1973,8 @@ class Track:
 
             Returns:
                 tuple[list[list], int]:
-                    * ``syn_ids_path`` - list of edge-lists, one per synonym.
-                    * ``confidence``   - 0 for strict, 1 for fallback search.
+                    - `syn_ids_path` - list of edge-lists, one per synonym.
+                    - `confidence`   - 0 for strict, 1 for fallback search.
             """
 
             def _final_conversion_path_helper(res_syn_mth, er: Optional[int]):
@@ -2053,18 +2021,18 @@ class Track:
                 confidence = 1
                 return the_paths_no_ens_rel, confidence
 
-        def _final_conversion_helper(conv_dict, conv_dict_key, a_path):
-            """Re-compute assembly-jump metrics **after** appending the external conversion path.
+        def _final_conversion_helper(conv_dict: dict, conv_dict_key: str, a_path: list):
+            """Re-compute assembly-jump metrics after appending the external conversion path.
 
             Args:
-                conv_dict (dict): Parent entry in ``converted`` holding the
+                conv_dict (dict): Parent entry in `converted` holding the
                     pre-conversion metrics.
                 conv_dict_key (str): Key of that entry (the Ensembl gene).
                 a_path (list): Edge list representing one complete walk
                     (history + synonym hop).
 
             Returns:
-                list[int | float]: ``[assembly_jump, min_priority, n_priorities]``.
+                list[int | float]: `[assembly_jump, min_priority, n_priorities]`.
             """
             # the path will continue with final conversion so assembly penalty should be calculated again.
             _s1, _s2 = conv_dict[conv_dict_key]["final_assembly_priority"]
@@ -2104,26 +2072,26 @@ class Track:
 
         return converted
 
-    def identify_source(self, dataset_ids: list, mode: str):
-        """Infer the most likely **origin** (assembly and/or Ensembl release) of a heterogeneous identifier list.
+    def identify_source(self, dataset_ids: list[str], mode: str):
+        """Infer the most likely origin (assembly and/or Ensembl release) of a heterogeneous identifier list.
 
-        The function tallies how often each *origin triple* appears among
-        ``dataset_ids`` and returns the counts sorted in descending order.
+        The function tallies how often each origin triple appears among
+        `dataset_ids` and returns the counts sorted in descending order.
 
         Args:
             dataset_ids (list[str]): Collection of identifiers to analyse.
             mode (str): Granularity of the origin to extract - one of
-                * ``'complete'``                → *(assembly, db, release)*
-                * ``'ensembl_release'``         → *release* only
-                * ``'assembly'``                → *assembly* only
-                * ``'assembly_ensembl_release'``→ *(assembly, release)*
+                - 'complete'                  → (assembly, db, release)
+                - 'ensembl_release'           → release only
+                - 'assembly'                  → assembly only
+                - 'assembly_ensembl_release'  → (assembly, release)
 
         Returns:
-            list[tuple[Any, int]]: Pairs ``(origin, count)`` sorted by
+            list[tuple[Any, int]]: Pairs `(origin, count)` sorted by
             frequency.
 
         Raises:
-            ValueError: If ``mode`` is not one of the recognised values.
+            ValueError: If `mode` is not one of the recognised values.
         """
         possible_trios: list[Any] = list()
         for di in dataset_ids:
@@ -2149,7 +2117,6 @@ class Track:
         duplicate loci) are minimised.
 
         Raises:
-            NotImplementedError: Always - the optimisation strategy is not yet
-            implemented.
+            NotImplementedError: Always - the optimisation strategy is not yet implemented.
         """
         raise NotImplementedError  # TODO

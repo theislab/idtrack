@@ -10,7 +10,7 @@ import re
 from collections import Counter
 from functools import cached_property
 from itertools import repeat
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -162,18 +162,45 @@ class DatabaseManager:
 
     @cached_property
     def available_releases(self) -> list[int]:
+        """List Ensembl releases that can be queried **and** meet the ignore-window constraints.
+
+        The list is computed once (via :py:meth`available_releases_versions`) and then cached for the rest of
+        the session.
+
+        Returns:
+            list[int]: Sorted list of integer release numbers.
+        """
         return self.available_releases_versions()
 
     @cached_property
     def available_releases_no_save(self) -> list[int]:
+        """List Ensembl releases reachable on the remote MySQL server.
+
+        Unlike :py:attr:`available_releases`, this helper never writes the
+        discovered list to disk; it simply caches the value in memory for the
+        lifetime of the current :py:class:`DatabaseManager` instance.
+
+        Returns:
+            list[int]: Sorted list of release numbers that
+                * match the organism and genome assembly tied to the instance,
+                * fall within the ``ignore_before`` / ``ignore_after`` window.
+        """
         return self.available_releases_versions(save_after_calculation=False)
 
     def available_releases_versions(self, **kwargs) -> list[int]:
         """Define available Ensembl releases for the DatabaseManager instance to work on.
 
+        Discover which releases exist on the configured MySQL mirror.
         It looks on the MySQL server results to determine which Ensembl releases are available. The method does not
         return directly the Ensembl releases defined by 'ignore_after' and 'ignore_before' parameters, and looks on the
         server as a verification.
+
+        A ``SHOW DATABASES`` query is issued, the result is filtered with a
+        regex of the form ``^{organism}_core_<release>_.*$``, and the surviving
+        release numbers are cleaned and range-checked.
+
+        Args:
+            kwargs: Passed straight through to :py:meth:`DatabaseManager.get_db`.
 
         Returns:
             List of integers indicating which Ensembl releases are available.
@@ -183,14 +210,10 @@ class DatabaseManager:
         """
         # Get all possible ensembl releases for a given organism
         dbs = self.get_db("availabledatabases", **kwargs)["available_databases"]  # Obtain the databases dataframe
-        # print()
-        # print("##########################################")
-        # print(dbs)
         pattern = re.compile(f"^{self.organism}_core_([0-9]+)_.+$")
         # Search organism name in a specified format. Extract ensembl release number
         releases = list()
         for dbs_i in dbs:
-            # print(dbs_i)
             if pattern.match(dbs_i):
                 dbs_ps = pattern.search(dbs_i)
                 if not dbs_ps:
@@ -289,14 +312,19 @@ class DatabaseManager:
         )
 
     def change_assembly(self, genome_assembly: int, last_possible_ensembl_release: bool = False) -> "DatabaseManager":
-        """Changes the genome assembly of DatabaseManager instance with passing all other variables unchanged.
+        """Clone the manager while targeting a new genome assembly.
 
         Args:
-            genome_assembly: New genome assembly of interest.
-                Refer to :py:attr:`DatabaseManager.__init__.genome_assembly`
+            genome_assembly (int): Key from :py:data:`DB.assembly_mysqlport_priority` (e.g. ``38`` for *GRCh38*).
+            last_possible_ensembl_release (bool): If ``True``, the new instance automatically picks the
+                newest Ensembl release available for *genome_assembly* instead of
+                re-using ``self.ensembl_release``. Defaults to ``False``.
 
         Returns:
-            New instance of DatabaseManager with only 'genome_assembly' is changed.
+            DatabaseManager: Independent manager configured for the requested assembly.
+
+        Note:
+            The original object remains unchanged; remember to switch your variable reference to the returned instance.
         """
         return DatabaseManager(
             organism=self.organism,
@@ -664,8 +692,6 @@ class DatabaseManager:
         # Get the tables from the server
         s = self.get_table("stable_id_event", usecols=None, save_after_calculation=self.store_raw_always)
         m = self.get_table("mapping_session", usecols=None, save_after_calculation=self.store_raw_always)
-        # print(s)
-        # print(m)
 
         # Combine them into one and filter only the form of interest.
         sm = pd.merge(s, m, how="outer", on="mapping_session_id")
@@ -687,7 +713,6 @@ class DatabaseManager:
             )
 
         # Correct the version based on version_info for each old_stable_id and new_stable_id columns.
-        # print(sm)
         sm = self.version_fix_incomplete(
             self.version_fix_incomplete(sm, "old_stable_id", "old_version"), "new_stable_id", "new_version"
         )
@@ -952,6 +977,13 @@ class DatabaseManager:
         create the ``yaml`` file mentioned. It downloads for all assemblies, all Ensembl releases and all forms
         available.
 
+        Args:
+            just_download (bool):
+                * ``False`` (default) - concatenate all intermediate results
+                  into one DataFrame and return it.
+                * ``True`` - perform the downloads so they are cached on disk
+                  but return an **empty** DataFrame.
+
         Returns:
             The output of ``create_external_db`` when `filter_mode` `relevant-database`. Adds `assembly`, `release`,
             and `form` columns to the resulting dataframe.
@@ -1003,7 +1035,17 @@ class DatabaseManager:
         dbm_the_ids.drop_duplicates(inplace=True)
         return dbm_the_ids
 
-    def check_if_change_assembly_works(self, db_manager, target_assembly):
+    def check_if_change_assembly_works(self, db_manager, target_assembly: int):
+        """Test whether ``change_assembly`` succeeds for *target_assembly*.
+
+        Args:
+            db_manager (DatabaseManager): A working manager to clone.
+            target_assembly (int): Assembly code to probe.
+
+        Returns:
+            bool: ``True`` if the new manager could be instantiated without
+            raising ``ValueError``; ``False`` otherwise.
+        """
         try:
             db_manager.change_assembly(target_assembly)
             return True
