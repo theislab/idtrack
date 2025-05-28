@@ -1,35 +1,31 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Comparison with Available Tools &mdash; idtrack 0.0.4 documentation</title>
-      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/nbsphinx-code-cells.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/custom_cookietemple.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/dark_mode_css/general.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/dark_mode_css/dark.css" type="text/css" />
-  <!--[if lt IE 9]>
-    <script src="../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=15bcc2cf" />
+
   
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-        <script src="../_static/doctools.js"></script>
-        <script src="../_static/sphinx_highlight.js"></script>
-        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-        <script src="../_static/dark_mode_js/default_light.js"></script>
-        <script src="../_static/dark_mode_js/theme_switcher.js"></script>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Reference" href="../reference.html" />
-    <link rel="prev" title="Use Case: HLCA Datasets" href="Untitled.html" /> 
+    <link rel="prev" title="Calculations with Random Data" href="random_data.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -56,10 +52,11 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../usage.html">Usage</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="initialization.html">Initialization and Memory Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prepare_new_external_yaml.html">External Database Description Initialization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialization_graph.html">Initialize Graph Object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialization_test.html">Initialization and Tests</a></li>
 <li class="toctree-l2"><a class="reference internal" href="results_preliminary_for_hlca.html">Use Case: HLCA Datasets</a></li>
 <li class="toctree-l2"><a class="reference internal" href="random_data.html">Calculations with Random Data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Untitled.html">Use Case: HLCA Datasets</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Comparison with Available Tools</a></li>
 </ul>
 </li>
@@ -95,7 +92,7 @@
            <div itemprop="articleBody">
              
   <section id="Comparison-with-Available-Tools">
-<h1>Comparison with Available Tools<a class="headerlink" href="#Comparison-with-Available-Tools" title="Permalink to this heading"></a></h1>
+<h1>Comparison with Available Tools<a class="headerlink" href="#Comparison-with-Available-Tools" title="Link to this heading"></a></h1>
 <p>Environment installation</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">foo@bar:~$ </span>conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>r_idtdev<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.8<span class="w"> </span>hdf5<span class="w"> </span>h5py<span class="w"> </span>jupyterlab<span class="w"> </span>pip<span class="w"> </span>wget<span class="w"> </span>pandas<span class="w"> </span>numpy<span class="w"> </span>tqdm<span class="w"> </span>scipy<span class="w"> </span>networkx<span class="w"> </span>matplotlib<span class="w"> </span>seaborn<span class="w"> </span>scikit-learn<span class="w"> </span>requests<span class="w"> </span>pymysql<span class="w"> </span>poetry<span class="w"> </span>pytables<span class="w"> </span>pyyaml<span class="w"> </span>nbconvert<span class="w"> </span>pandoc<span class="w"> </span>ipywidgets<span class="w"> </span>anndata<span class="w"> </span>rpy2<span class="w"> </span>r-base<span class="w"> </span>r-essentials<span class="w"> </span>r-recommended<span class="w"> </span>r-devtools<span class="w"> </span>r-irkernel<span class="w"> </span>r-dplyr<span class="w"> </span>r-biocmanager<span class="w"> </span>r-visnetwork<span class="w"> </span>r-readr<span class="w"> </span>r-shiny<span class="w"> </span>r-stringr<span class="w"> </span>r-dt<span class="w"> </span>r-rstudioapi<span class="w"> </span>r-miniui<span class="w"> </span>r-rcpp<span class="w"> </span>r-png<span class="w"> </span>r-plogr<span class="w"> </span>r-rcppeigen<span class="w"> </span>r-bh<span class="w"> </span>r-jpeg<span class="w"> </span>r-lambda.r<span class="w"> </span>r-futile.options<span class="w"> </span>r-matrixstats<span class="w"> </span>r-reticulate<span class="w"> </span>r-futile.logger<span class="w"> </span>r-snow<span class="w"> </span>r-rjson<span class="w"> </span>r-deldir<span class="w"> </span>r-xml<span class="w"> </span>r-rcurl<span class="w"> </span>r-chron<span class="w"> </span>r-proto<span class="w"> </span>r-rsqlite<span class="w"> </span>r-gprofiler<span class="w"> </span>r-gprofiler2<span class="w"> </span>r-gridextra<span class="w"> </span>r-interp<span class="w"> </span>r-latticeextra<span class="w"> </span>r-formula<span class="w"> </span>r-checkmate<span class="w"> </span>r-callr<span class="w"> </span>r-testthat<span class="w"> </span>r-knitr<span class="w"> </span>r-rmarkdown<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>-y
 <span class="gp">foo@bar:~$ </span>conda<span class="w"> </span>activate<span class="w"> </span>r_idtdev
@@ -110,7 +107,7 @@
 <div class="highlight-r notranslate"><div class="highlight"><pre><span></span><span class="c1"># In R console:</span>
 <span class="n">list.of.packages</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s">&quot;neo2R&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;utils&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;BED&quot;</span><span class="p">)</span>
 <span class="n">new.packages</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">list.of.packages</span><span class="p">[</span><span class="o">!</span><span class="p">(</span><span class="n">list.of.packages</span><span class="w"> </span><span class="o">%in%</span><span class="w"> </span><span class="nf">installed.packages</span><span class="p">()[,</span><span class="s">&quot;Package&quot;</span><span class="p">])]</span>
-<span class="nf">if</span><span class="p">(</span><span class="nf">length</span><span class="p">(</span><span class="n">new.packages</span><span class="p">))</span><span class="w"> </span><span class="nf">install.packages</span><span class="p">(</span><span class="n">new.packages</span><span class="p">)</span>
+<span class="kr">if</span><span class="p">(</span><span class="nf">length</span><span class="p">(</span><span class="n">new.packages</span><span class="p">))</span><span class="w"> </span><span class="nf">install.packages</span><span class="p">(</span><span class="n">new.packages</span><span class="p">)</span>
 <span class="nf">library</span><span class="p">(</span><span class="n">BED</span><span class="p">)</span>
 <span class="nf">connectToBed</span><span class="p">(</span><span class="s">&quot;http://icbedb1:5454&quot;</span><span class="p">)</span>
 <span class="n">BiocManager</span><span class="o">::</span><span class="nf">install</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="s">&quot;biomaRt&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;mygene&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;basilisk&quot;</span><span class="p">),</span><span class="w"> </span><span class="n">update</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">)</span>
@@ -119,14 +116,25 @@
 <span class="nf">library</span><span class="p">(</span><span class="n">basilisk</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Also, see the <em>‘r_idtdev_environment.yml’</em> file under *’docs/_notebooks’<a href="#id1"><span class="problematic" id="id2">*</span></a>.</p>
-<p>Summary installed tools: - Python: <code class="docutils literal notranslate"><span class="pre">idtrack</span></code> requirements - Python: <code class="docutils literal notranslate"><span class="pre">biomart</span></code> - Python: <code class="docutils literal notranslate"><span class="pre">mygene</span></code> - Python: <code class="docutils literal notranslate"><span class="pre">gprofiler</span></code> - Python: <code class="docutils literal notranslate"><span class="pre">gget</span></code> - R: <code class="docutils literal notranslate"><span class="pre">BED</span></code> - R: <code class="docutils literal notranslate"><span class="pre">biomart</span></code> - R: <code class="docutils literal notranslate"><span class="pre">mygene</span></code> - R: <code class="docutils literal notranslate"><span class="pre">gprofiler</span></code></p>
+<p>Also, see the <em>‘r_idtdev_environment.yml’</em> file under *’docs/_notebooks’*.</p>
+<p>Summary installed tools:</p>
+<ul class="simple">
+<li><p>Python: <code class="docutils literal notranslate"><span class="pre">idtrack</span></code> requirements</p></li>
+<li><p>Python: <code class="docutils literal notranslate"><span class="pre">biomart</span></code></p></li>
+<li><p>Python: <code class="docutils literal notranslate"><span class="pre">mygene</span></code></p></li>
+<li><p>Python: <code class="docutils literal notranslate"><span class="pre">gprofiler</span></code></p></li>
+<li><p>Python: <code class="docutils literal notranslate"><span class="pre">gget</span></code></p></li>
+<li><p>R: <code class="docutils literal notranslate"><span class="pre">BED</span></code></p></li>
+<li><p>R: <code class="docutils literal notranslate"><span class="pre">biomart</span></code></p></li>
+<li><p>R: <code class="docutils literal notranslate"><span class="pre">mygene</span></code></p></li>
+<li><p>R: <code class="docutils literal notranslate"><span class="pre">gprofiler</span></code></p></li>
+</ul>
 <p>Initialize the environments</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;../..&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -135,18 +143,18 @@
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">time</span>
-<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="kn">import</span> <span class="nn">anndata</span> <span class="k">as</span> <span class="nn">ad</span>
-<span class="kn">import</span> <span class="nn">tqdm</span>
-<span class="kn">import</span> <span class="nn">pickle</span>
-<span class="kn">import</span> <span class="nn">copy</span>
-<span class="kn">import</span> <span class="nn">random</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
-<span class="kn">import</span> <span class="nn">matplotlib.patches</span> <span class="k">as</span> <span class="nn">mpatches</span>
-<span class="kn">import</span> <span class="nn">idtrack</span><span class="o">,</span> <span class="nn">mygene</span><span class="o">,</span> <span class="nn">gget</span><span class="o">,</span> <span class="nn">mygene</span><span class="o">,</span> <span class="nn">pybiomart</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">anndata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ad</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tqdm</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">seaborn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sns</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.patches</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mpatches</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span><span class="o">,</span><span class="w"> </span><span class="nn">mygene</span><span class="o">,</span><span class="w"> </span><span class="nn">gget</span><span class="o">,</span><span class="w"> </span><span class="nn">mygene</span><span class="o">,</span><span class="w"> </span><span class="nn">pybiomart</span>
 </pre></div>
 </div>
 </div>
@@ -353,14 +361,14 @@ Sun 19 Feb 2023 03:24:20 PM CET WARNING R[write to console]: Cache ON
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="Untitled.html" class="btn btn-neutral float-left" title="Use Case: HLCA Datasets" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="random_data.html" class="btn btn-neutral float-left" title="Calculations with Random Data" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="../reference.html" class="btn btn-neutral float-right" title="Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022, Kemal Inecik.</p>
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

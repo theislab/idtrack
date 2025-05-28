@@ -1,26 +1,22 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../../">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>idtrack._verify_organism &mdash; idtrack 0.0.4 documentation</title>
-      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/custom_cookietemple.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/dark_mode_css/general.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/dark_mode_css/dark.css" type="text/css" />
-  <!--[if lt IE 9]>
-    <script src="../../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=15bcc2cf" />
+
   
-        <script src="../../_static/jquery.js"></script>
-        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-        <script src="../../_static/doctools.js"></script>
-        <script src="../../_static/sphinx_highlight.js"></script>
-        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-        <script src="../../_static/dark_mode_js/default_light.js"></script>
-        <script src="../../_static/dark_mode_js/theme_switcher.js"></script>
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" /> 
@@ -86,25 +82,26 @@
 <span class="c1"># Kemal Inecik</span>
 <span class="c1"># k.inecik@gmail.com</span>
 
-<span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 
-<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
 
-<span class="kn">from</span> <span class="nn">._db</span> <span class="kn">import</span> <span class="n">DB</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
 
 
-<div class="viewcode-block" id="VerifyOrganism"><a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism">[docs]</a><span class="k">class</span> <span class="nc">VerifyOrganism</span><span class="p">:</span>
+<div class="viewcode-block" id="VerifyOrganism">
+<a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">VerifyOrganism</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Finds the formal organism name and associated latest Ensembl release given a tentative organism name.</span>
 
-<span class="sd">    This class is designed to aid the user regarding the organism name accepted by the program and latest</span>
-<span class="sd">    Ensembl release possible without manually looking online resources. Every time of use, the class uses Ensembl</span>
-<span class="sd">    REST API to get the information regarding the organisms and associated Ensembl releases, so the class</span>
-<span class="sd">    requires an active Internet connection.</span>
+<span class="sd">    This class is designed to aid the user regarding the organism name accepted by the program and latest Ensembl</span>
+<span class="sd">    release possible without manually looking online resources. Every time of use, the class uses Ensembl REST API to</span>
+<span class="sd">    get the information regarding the organisms and associated Ensembl releases, so the class requires an active</span>
+<span class="sd">    Internet connection.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">organism_query</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">organism_query</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Class initialization.</span>
 
 <span class="sd">        Args:</span>
@@ -121,7 +118,9 @@
             <span class="n">DB</span><span class="o">.</span><span class="n">connection_timeout</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">reading_timeout</span>
         <span class="p">)</span>
 
-<div class="viewcode-block" id="VerifyOrganism.get_latest_release"><a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism.get_latest_release">[docs]</a>    <span class="k">def</span> <span class="nf">get_latest_release</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<div class="viewcode-block" id="VerifyOrganism.get_latest_release">
+<a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism.get_latest_release">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_latest_release</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Using the API response and queried organism name, find the latest Ensembl release to be used for the program.</span>
 
 <span class="sd">        Returns:</span>
@@ -130,7 +129,10 @@
         <span class="n">formal_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_formal_name</span><span class="p">()</span>
         <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release_dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">formal_name</span><span class="p">][</span><span class="s2">&quot;ensembl_release&quot;</span><span class="p">])</span></div>
 
-<div class="viewcode-block" id="VerifyOrganism.get_formal_name"><a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism.get_formal_name">[docs]</a>    <span class="k">def</span> <span class="nf">get_formal_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+
+<div class="viewcode-block" id="VerifyOrganism.get_formal_name">
+<a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism.get_formal_name">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_formal_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Using the API response and queried organism name, find the formal organism name to be used for the program.</span>
 
 <span class="sd">        Returns:</span>
@@ -154,9 +156,12 @@
                 <span class="s2">&quot;formal_name&quot;</span>
             <span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
 
-<div class="viewcode-block" id="VerifyOrganism.fetch_organism_and_latest_release"><a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism.fetch_organism_and_latest_release">[docs]</a>    <span class="k">def</span> <span class="nf">fetch_organism_and_latest_release</span><span class="p">(</span>
+
+<div class="viewcode-block" id="VerifyOrganism.fetch_organism_and_latest_release">
+<a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism.fetch_organism_and_latest_release">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_organism_and_latest_release</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">connect_timeout</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">read_timeout</span><span class="p">:</span> <span class="nb">int</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates a query and process the data to construct two dataframes for Ensembl release and organism names.</span>
 
 <span class="sd">        The query to get the name of the organisms defined in the database, but also to get the latest</span>
@@ -190,7 +195,7 @@
 
         <span class="k">except</span> <span class="p">(</span><span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ReadTimeout</span><span class="p">,</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ConnectTimeout</span><span class="p">)</span> <span class="k">as</span> <span class="n">esc</span><span class="p">:</span>
             <span class="c1"># Raise an exception if it takes too long to get the data from Ensembl REST API.</span>
-            <span class="k">raise</span> <span class="ne">TimeoutError</span><span class="p">(</span><span class="s2">&quot;Internet connection is slow or server does not respond!&quot;</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">esc</span>
+            <span class="k">raise</span> <span class="ne">TimeoutError</span><span class="p">(</span><span class="s2">&quot;Internet connection is slow or server does not respond!&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">esc</span>
 
         <span class="c1"># Process the resulting response.</span>
         <span class="n">name_synonyms</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[]</span>
@@ -237,7 +242,9 @@
             <span class="n">latest_ensembl_releases</span><span class="p">,</span> <span class="n">orient</span><span class="o">=</span><span class="s2">&quot;index&quot;</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ensembl_release&quot;</span><span class="p">]</span>
         <span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">name_synonyms_df</span><span class="p">,</span> <span class="n">latest_ensembl_releases_df</span></div></div>
+        <span class="k">return</span> <span class="n">name_synonyms_df</span><span class="p">,</span> <span class="n">latest_ensembl_releases_df</span></div>
+</div>
+
 </pre></div>
 
            </div>
@@ -247,7 +254,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022, Kemal Inecik.</p>
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

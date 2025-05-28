@@ -40,7 +40,7 @@ You should the ``Pandoc`` installation already to include tutorial Jupter notebo
     $ sudo apt-get install -y pandoc  # Ubuntu
     $ choco install pandoc  # Windows
 
-You need Python 3.8+ and the following tools:
+You need Python 3.9+ and the following tools:
 
 - Poetry_
 - Nox_
@@ -50,7 +50,7 @@ You can install them with:
 
 .. code:: console
 
-    $ pip install poetry nox nox-poetry
+    $ pip install poetry poetry-plugin-export nox nox-poetry
 
 Install the package with development requirements:
 

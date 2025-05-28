@@ -1,26 +1,22 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../../">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>idtrack._track &mdash; idtrack 0.0.4 documentation</title>
-      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/custom_cookietemple.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/dark_mode_css/general.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/dark_mode_css/dark.css" type="text/css" />
-  <!--[if lt IE 9]>
-    <script src="../../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=15bcc2cf" />
+
   
-        <script src="../../_static/jquery.js"></script>
-        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-        <script src="../../_static/doctools.js"></script>
-        <script src="../../_static/sphinx_highlight.js"></script>
-        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-        <script src="../../_static/dark_mode_js/default_light.js"></script>
-        <script src="../../_static/dark_mode_js/theme_switcher.js"></script>
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" /> 
@@ -86,42 +82,79 @@
 <span class="c1"># Kemal Inecik</span>
 <span class="c1"># k.inecik@gmail.com</span>
 
-<span class="kn">import</span> <span class="nn">bisect</span>
-<span class="kn">import</span> <span class="nn">copy</span>
-<span class="kn">import</span> <span class="nn">itertools</span>
-<span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">import</span> <span class="nn">warnings</span>
-<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
-<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">cached_property</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">bisect</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">Counter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">cached_property</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
-<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">networkx</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nx</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
-<span class="kn">from</span> <span class="nn">._database_manager</span> <span class="kn">import</span> <span class="n">DatabaseManager</span>
-<span class="kn">from</span> <span class="nn">._db</span> <span class="kn">import</span> <span class="n">DB</span>
-<span class="kn">from</span> <span class="nn">._graph_maker</span> <span class="kn">import</span> <span class="n">GraphMaker</span>
-<span class="kn">from</span> <span class="nn">._the_graph</span> <span class="kn">import</span> <span class="n">TheGraph</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._database_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">DatabaseManager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._graph_maker</span><span class="w"> </span><span class="kn">import</span> <span class="n">GraphMaker</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._the_graph</span><span class="w"> </span><span class="kn">import</span> <span class="n">TheGraph</span>
 
 
-<div class="viewcode-block" id="Track"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track">[docs]</a><span class="k">class</span> <span class="nc">Track</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Pathfinding algorithm in prepared bio-ID graph.</span>
+<div class="viewcode-block" id="Track">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Track</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Bidirectional path-finding resolver for biological identifiers.</span>
 
-<span class="sd">    Uses :py:class:`_the_graph.TheGraph` in order to calculate the matching ID in queried Ensembl release and queried</span>
-<span class="sd">    database. It calculates the corresponding IDs from a given ID, by first converting into Ensembl gene ID, then time</span>
-<span class="sd">    travelling via connected nodes until requested Ensembl release, finally converting into the requested database.</span>
-<span class="sd">    The class uses two important recursive path finding functions: the one is for time travelling and the other is</span>
-<span class="sd">    finding the synonymous nodes.</span>
+<span class="sd">    `Track` builds and queries a *bio-ID* multigraph that stitches together</span>
+<span class="sd">    Ensembl history edges (genes, transcripts, proteins) and cross-reference</span>
+<span class="sd">    edges to external databases (UniProt, RefSeq, …).  Given a **source</span>
+<span class="sd">    identifier**, a **target Ensembl release**, and/or a **target database**,</span>
+<span class="sd">    the class:</span>
+
+<span class="sd">    1. **Normalises** the source to an Ensembl *gene* node when necessary.</span>
+<span class="sd">    2. **Time-travels** through historical edges—forward or backward—until it</span>
+<span class="sd">       reaches the requested release, optionally &quot;beaming-up&quot; through external</span>
+<span class="sd">       IDs when the backbone is disconnected.</span>
+<span class="sd">    3. **Converts** the resolved Ensembl gene into the requested external</span>
+<span class="sd">       database (or returns the gene itself) while annotating the result with</span>
+<span class="sd">       confidence scores and the full traversal path.</span>
+
+
+<span class="sd">    Two mutually-recursive engines power the search:</span>
+
+<span class="sd">    * `_recursive_function`   — depth-first search along temporal edges.</span>
+<span class="sd">    * `_recursive_synonymous` — search for synonymous nodes at a single</span>
+<span class="sd">      release to enable the external &quot;beam-up&quot;.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    graph : networkx.MultiDiGraph</span>
+<span class="sd">        The pre-computed bio-ID graph produced by</span>
+<span class="sd">        :py:class:`_graph_maker.GraphMaker`.</span>
+<span class="sd">    version_info : dict</span>
+<span class="sd">        Metadata about the graph build (Ensembl releases included, build date,</span>
+<span class="sd">        Git commit, etc.).</span>
+<span class="sd">    _external_entrance_placeholder : dict[bool, int]</span>
+<span class="sd">        Sentinel node IDs that mark artificial edges used when an external ID</span>
+<span class="sd">        is pulled onto the Ensembl backbone (`False → -1`, `True → 10001`).</span>
+<span class="sd">    _external_entrance_placeholders : list[int]</span>
+<span class="sd">        Sorted list of the sentinel values above.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># ENSG00000263464</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_manager</span><span class="p">:</span> <span class="n">DatabaseManager</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Class initialization.</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_manager</span><span class="p">:</span> <span class="n">DatabaseManager</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a `Track` resolver and load (or build) its graph.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            db_manager: See parameter in :py:attr:`_graph.Graph.__init__.db_manager`.</span>
-<span class="sd">            kwargs: Keyword arguments to be passed to :py:attr:`_the_graph.GraphMaker.get_graph`.</span>
+<span class="sd">            db_manager (DatabaseManager): Connection manager that knows how to fetch Ensembl and</span>
+<span class="sd">                cross-reference tables from a local cache or a live MySQL mirror.</span>
+<span class="sd">                The same instance is forwarded to :py:class:`_graph_maker.GraphMaker`.</span>
+<span class="sd">            kwargs: Additional keyword arguments forwarded verbatim to</span>
+<span class="sd">                :py:meth:`_graph_maker.GraphMaker.get_graph`.  Common flags include</span>
+<span class="sd">                `force_rebuild` (recompute the graph from scratch), `species`</span>
+<span class="sd">                (restrict to one taxon), and `cache_dir` (override on-disk cache location).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;track&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span> <span class="o">=</span> <span class="n">db_manager</span>
@@ -133,12 +166,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_external_entrance_placeholder</span> <span class="o">=</span> <span class="p">{</span><span class="kc">False</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kc">True</span><span class="p">:</span> <span class="mi">10001</span><span class="p">}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_external_entrance_placeholders</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_external_entrance_placeholder</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
 
-<div class="viewcode-block" id="Track._recursive_synonymous"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track._recursive_synonymous">[docs]</a>    <span class="k">def</span> <span class="nf">_recursive_synonymous</span><span class="p">(</span>
+<div class="viewcode-block" id="Track._recursive_synonymous">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track._recursive_synonymous">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_recursive_synonymous</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">_the_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">synonymous_ones</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
         <span class="n">synonymous_ones_db</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
-        <span class="n">filter_node_type</span><span class="p">:</span> <span class="nb">set</span><span class="p">,</span>
+        <span class="n">filter_node_type</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
         <span class="n">the_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">the_path_db</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">depth_max</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
@@ -147,24 +182,51 @@
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Helper method to be used in :py:meth:`_graph.Track.synonymous_nodes`.</span>
 
-<span class="sd">        It recursively looks at the graphs and returns a synonymous IDs under two main constrains: the depth</span>
-<span class="sd">        and the final node type. The depth is simply defined as the total max number of certain database jump to</span>
-<span class="sd">        be included in the final path. The recursive search does not walk across two nodes that has the same node type</span>
-<span class="sd">        to prevent this method to travel through time.</span>
+<span class="sd">        Recursively explore the bio-ID graph to collect **synonymous paths**</span>
+<span class="sd">        starting at `_the_id` and ending on a node whose *type* is a member of `filter_node_type`.</span>
+
+<span class="sd">        A *path* is a list of node identifiers (`_the_path`) together with a</span>
+<span class="sd">        parallel list of their node-type strings (`_the_path_db`).</span>
+<span class="sd">        The search is **breadth-limited**: the *depth* of a path is defined as</span>
+<span class="sd">        the **maximum count of any single node-type** it contains</span>
+<span class="sd">        (e.g. a path with three `external` nodes has depth 3).  Recursion</span>
+<span class="sd">        stops when that depth would exceed `depth_max`.</span>
+
+<span class="sd">        Additional pruning rules:</span>
+
+<span class="sd">        - The walk never visits the same node twice (no cycles).</span>
+<span class="sd">        - It never traverses two consecutive edges whose source and target</span>
+<span class="sd">            share the **same node-type**—this prevents &quot;time-travel&quot; within the</span>
+<span class="sd">            Ensembl history backbone.</span>
+<span class="sd">        - When `ensembl_backbone_shallow_search` is *True*, the search is</span>
+<span class="sd">            restricted to the **reverse** direction except for node-types listed</span>
+<span class="sd">            in :py:attr:`DB.nts_bidirectional_synonymous_search`.</span>
+
+<span class="sd">        On reaching a terminating node the method *appends* the discovered</span>
+<span class="sd">        paths to `synonymous_ones` and `synonymous_ones_db`. It does not</span>
+<span class="sd">        return anything. Results are accumulated in `synonymous_ones` and `synonymous_ones_db`.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            _the_id: The name of the node such as Ensembl ID or external ID.</span>
-<span class="sd">            synonymous_ones: Todo.</span>
-<span class="sd">            synonymous_ones_db: Todo.</span>
-<span class="sd">            the_path: Todo.</span>
-<span class="sd">            the_path_db: Todo.</span>
-<span class="sd">            depth_max: Todo.</span>
-<span class="sd">            filter_node_type: Todo.</span>
-<span class="sd">            from_release: Todo.</span>
-<span class="sd">            ensembl_backbone_shallow_search: Todo</span>
+<span class="sd">            _the_id (str): Identifier of the starting node (Ensembl or</span>
+<span class="sd">                external).</span>
+<span class="sd">            synonymous_ones (list): Mutable list that will receive</span>
+<span class="sd">                each successful identifier path.</span>
+<span class="sd">            synonymous_ones_db (list): Mutable list that will receive</span>
+<span class="sd">                the corresponding node-type paths.</span>
+<span class="sd">            filter_node_type (set[str]): Allowed node-types for the **final**</span>
+<span class="sd">                node of a path (e.g. `{&#39;ensembl_gene&#39;}`).</span>
+<span class="sd">            the_path (list | None): Current path leading to</span>
+<span class="sd">                `_the_id`; *None* for the root invocation.</span>
+<span class="sd">            the_path_db (list | None): Node-type counterpart of</span>
+<span class="sd">                `the_path`; *None* for the root invocation.</span>
+<span class="sd">            depth_max (int): Maximum allowed depth as defined above.</span>
+<span class="sd">            from_release (int | None): If given, only keep terminal</span>
+<span class="sd">                nodes that are *active* in this Ensembl release.</span>
+<span class="sd">            ensembl_backbone_shallow_search (bool): Activate the</span>
+<span class="sd">                shallow, mostly-reverse search mode described above.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="k">def</span> <span class="nf">decide_terminate_externals</span><span class="p">():</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">decide_terminate_externals</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">input_node_type</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_external</span><span class="p">:</span>  <span class="c1"># last node nts in the path</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">_the_path</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="n">edge_key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge_key_orientor</span><span class="p">(</span><span class="o">*</span><span class="n">_the_path</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:],</span> <span class="mi">0</span><span class="p">)</span>
@@ -180,7 +242,7 @@
 
             <span class="k">return</span> <span class="kc">False</span>
 
-        <span class="k">def</span> <span class="nf">decide_terminate_others</span><span class="p">():</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">decide_terminate_others</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">input_node_type</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_external</span><span class="p">:</span>  <span class="c1"># last node nts in the path</span>
                 <span class="k">if</span> <span class="n">input_node_type</span> <span class="ow">in</span> <span class="n">filter_node_type</span> <span class="ow">and</span> <span class="p">(</span>
                     <span class="n">from_release</span> <span class="ow">is</span> <span class="kc">None</span>
@@ -258,28 +320,46 @@
                         <span class="n">ensembl_backbone_shallow_search</span><span class="o">=</span><span class="n">ensembl_backbone_shallow_search</span><span class="p">,</span>
                     <span class="p">)</span></div>
 
-<div class="viewcode-block" id="Track.synonymous_nodes"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track.synonymous_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">synonymous_nodes</span><span class="p">(</span>
+
+<div class="viewcode-block" id="Track.synonymous_nodes">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track.synonymous_nodes">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">synonymous_nodes</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">the_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">depth_max</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-        <span class="n">filter_node_type</span><span class="p">:</span> <span class="nb">set</span><span class="p">,</span>
+        <span class="n">filter_node_type</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
         <span class="n">from_release</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">ensembl_backbone_shallow_search</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Public wrapper around :py:meth:`_recursive_synonymous`.</span>
+
+<span class="sd">        The method returns **all minimal-length synonym paths** emanating from `the_id`.</span>
+
+<span class="sd">        The function first runs a *default* depth search determined by</span>
+<span class="sd">        `DB.external_search_settings[&#39;synonymous_max_depth&#39;]`.</span>
+<span class="sd">        If no synonym is found and `depth_max` is greater than that default,</span>
+<span class="sd">        a second, deeper search is attempted.</span>
+
+<span class="sd">        For every distinct *target* node the shortest path is kept; longer</span>
+<span class="sd">        paths to the same target are discarded.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            the_id: Todo.</span>
-<span class="sd">            depth_max: Todo.</span>
-<span class="sd">            filter_node_type: Todo.</span>
-<span class="sd">            from_release: Todo.</span>
-<span class="sd">            ensembl_backbone_shallow_search: Todo. assemly bridge&#39;i bozar cunku direction iki tarafli olmali</span>
+<span class="sd">            the_id (str): Source identifier.</span>
+<span class="sd">            depth_max (int): Maximum search depth to try if the default search fails.</span>
+<span class="sd">            filter_node_type (set[str]): Node-types that are acceptable for the</span>
+<span class="sd">                *target* node(s).  Must *not* include the generic</span>
+<span class="sd">                `&#39;external&#39;` type—specify the concrete external DB instead.</span>
+<span class="sd">            from_release (int | None): Constrain targets to those active in this Ensembl release.</span>
+<span class="sd">            ensembl_backbone_shallow_search (bool): If *True*,</span>
+<span class="sd">                restricts the graph traversal as explained in :py:meth:`_recursive_synonymous`.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            list[list[list[str]]]: A list whose elements are `[identifier_path, node_type_path]` pairs,</span>
+<span class="sd">                each representing the minimal route to one synonymous node.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Todo.</span>
+<span class="sd">            ValueError: If `filter_node_type` improperly contains the generic</span>
+<span class="sd">                external type, or if `depth_max` is incompatible with `ensembl_backbone_shallow_search`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_external</span> <span class="ow">in</span> <span class="n">filter_node_type</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Define which external database: `</span><span class="si">{</span><span class="n">filter_node_type</span><span class="si">}</span><span class="s2">`.&quot;</span><span class="p">)</span>
@@ -339,20 +419,44 @@
             <span class="k">if</span> <span class="n">ind</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">remove_set</span>
         <span class="p">]</span></div>
 
-<div class="viewcode-block" id="Track.get_from_release_and_reverse_vars"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track.get_from_release_and_reverse_vars">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_from_release_and_reverse_vars</span><span class="p">(</span><span class="n">lor</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">p</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+
+<div class="viewcode-block" id="Track.get_from_release_and_reverse_vars">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track.get_from_release_and_reverse_vars">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_from_release_and_reverse_vars</span><span class="p">(</span><span class="n">lor</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">p</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Derive a list of `(release, reverse)` tuples.</span>
+
+<span class="sd">        Derive a list of `(release, reverse)` tuples that indicate *which*</span>
+<span class="sd">        Ensembl release to start the graph walk from and *whether* that walk</span>
+<span class="sd">        should move **backwards in time**.</span>
+
+<span class="sd">        Given a collection of active-range intervals `lor` and a pivot</span>
+<span class="sd">        release `p`, the algorithm selects one or two release points per</span>
+<span class="sd">        interval depending on `mode`:</span>
+
+<span class="sd">        * &#39;closest&#39; - choose the release **nearest** to `p` within or at</span>
+<span class="sd">            the ends of the interval.</span>
+<span class="sd">        * &#39;distant&#39; - choose the release **farthest** from `p` within the</span>
+<span class="sd">            interval.</span>
+
+<span class="sd">        The boolean in each tuple is *True* when the walk should start **after**</span>
+<span class="sd">        the selected release and move backwards (i.e. &quot;reverse mode&quot;), and</span>
+<span class="sd">        *False* when it should move forwards.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            lor: Todo.</span>
-<span class="sd">            p: Todo.</span>
-<span class="sd">            mode: Todo.</span>
+<span class="sd">            lor (list): List of inclusive</span>
+<span class="sd">                `(first_release, last_release)` intervals in ascending order.</span>
+<span class="sd">            p (int): Pivot release around which &quot;closest&quot; or &quot;distant&quot; is</span>
+<span class="sd">                evaluated.</span>
+<span class="sd">            mode (str): Either `&#39;closest&#39;` or `&#39;distant&#39;`.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            list[tuple[int, bool]]: Release / reverse-flag pairs, ordered in</span>
+<span class="sd">            the sequence they should be tried by the path-finder.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Todo.</span>
+<span class="sd">            ValueError: If an interval in `lor` is malformed, `mode` is</span>
+<span class="sd">                not recognised, or internal consistency checks fail.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">result</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
         <span class="c1"># Note that there is no need to consider assembly here because always this function is used in the context of</span>
@@ -389,27 +493,63 @@
 
         <span class="k">return</span> <span class="n">result</span></div>
 
-<div class="viewcode-block" id="Track._choose_relevant_synonym_helper"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track._choose_relevant_synonym_helper">[docs]</a>    <span class="k">def</span> <span class="nf">_choose_relevant_synonym_helper</span><span class="p">(</span>
+
+<div class="viewcode-block" id="Track._choose_relevant_synonym_helper">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track._choose_relevant_synonym_helper">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_choose_relevant_synonym_helper</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">from_id</span><span class="p">,</span> <span class="n">synonym_ids</span><span class="p">,</span> <span class="n">to_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">from_release</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Select the **most temporally relevant** synonym(s) for an Ensembl gene-ID family.</span>
+
+<span class="sd">        The method evaluates each candidate in `synonym_ids` against the</span>
+<span class="sd">        *target* release `to_release` and, when applicable, the *source*</span>
+<span class="sd">        release `from_release`.  Its job is to decide **where** the path</span>
+<span class="sd">        should *enter* the Ensembl backbone and **whether** the remainder of</span>
+<span class="sd">        the traversal must run in *reverse* (new → old) order.</span>
+
+<span class="sd">        Selection strategy</span>
+<span class="sd">        ------------------</span>
+<span class="sd">        1. **Fixed `from_release`** - If the caller already knows the release</span>
+<span class="sd">           of the starting node, every candidate is paired with that same</span>
+<span class="sd">           release and the correct *reverse* flag is derived trivially.</span>
+<span class="sd">        2. **Non-backbone start** - When the starting node is not an</span>
+<span class="sd">           Ensembl-gene backbone ID, the synonym whose **active range edge** is</span>
+<span class="sd">           *closest* (or *farthest*, per `mode`) to `to_release` is chosen.</span>
+<span class="sd">        3. **Backbone start** - If the query is itself an Ensembl-gene, the</span>
+<span class="sd">           algorithm first looks for *overlapping* ranges between the query</span>
+<span class="sd">           and each synonym; if none overlap, it falls back to the distance</span>
+<span class="sd">           rule described in step 2.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            from_id: Todo.</span>
-<span class="sd">            synonym_ids: Todo.</span>
-<span class="sd">            to_release: Todo.</span>
-<span class="sd">            from_release: Todo.</span>
-<span class="sd">            mode: Todo.</span>
+<span class="sd">            from_id (str): Identifier from which the path search will start.</span>
+<span class="sd">            synonym_ids (Sequence[str]): Ensembl IDs considered synonyms of</span>
+<span class="sd">                `from_id` (typically the *same* gene with different version</span>
+<span class="sd">                numbers).</span>
+<span class="sd">            to_release (int): Target Ensembl release that the overall conversion</span>
+<span class="sd">                aims for.</span>
+<span class="sd">            from_release (int | None): Release in which `from_id` is known to</span>
+<span class="sd">                be active.  If *None*, the method infers a suitable release for</span>
+<span class="sd">                each candidate.</span>
+<span class="sd">            mode (str): Either `&#39;closest&#39;` or `&#39;distant&#39;`—controls whether</span>
+<span class="sd">                the synonym chosen should minimise or maximise its distance to</span>
+<span class="sd">                `to_release`.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            list[list[Union[str, int, bool]]]: One or more triplets of the form</span>
+<span class="sd">            `[synonym_id, entry_release, reverse]` where:</span>
+
+<span class="sd">            * `synonym_id` - the chosen synonym,</span>
+<span class="sd">            * `entry_release` - release at which to join the backbone, and</span>
+<span class="sd">            * `reverse` - *True* if the subsequent history walk must run</span>
+<span class="sd">              backwards in time.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Todo.</span>
+<span class="sd">            ValueError: If no synonym satisfies the distance/overlap criteria</span>
+<span class="sd">                or if `mode` is invalid.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># synonym_ids should be ensembl of the same id (different versions)</span>
         <span class="n">distance_to_target</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
         <span class="n">candidate_ranges</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="c1"># synonym_ids should be ensembl of the same id (different versions)</span>
 
         <span class="k">if</span> <span class="n">from_release</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">candidate_ranges</span><span class="o">.</span><span class="n">extend</span><span class="p">([[</span><span class="n">i</span><span class="p">,</span> <span class="n">from_release</span><span class="p">,</span> <span class="n">from_release</span> <span class="o">&gt;</span> <span class="n">to_release</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">synonym_ids</span><span class="p">])</span>
@@ -478,29 +618,54 @@
 
         <span class="k">return</span> <span class="n">result</span>  <span class="c1"># [[id, new_from_id, new_reverse], [id, new_from_id, new_reverse], ]</span></div>
 
+
         <span class="c1"># a-&gt;x-&gt;z3,6,9 ise</span>
         <span class="c1"># given final release</span>
         <span class="c1"># given from release</span>
 
-<div class="viewcode-block" id="Track.choose_relevant_synonym"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track.choose_relevant_synonym">[docs]</a>    <span class="k">def</span> <span class="nf">choose_relevant_synonym</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">the_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">depth_max</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">to_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">filter_node_type</span><span class="p">:</span> <span class="nb">set</span><span class="p">,</span> <span class="n">from_release</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+<div class="viewcode-block" id="Track.choose_relevant_synonym">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track.choose_relevant_synonym">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">choose_relevant_synonym</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">the_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">depth_max</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">to_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">filter_node_type</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">from_release</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Wrapper that **discovers, clusters, and ranks** synonymous Ensembl candidates for a given identifier.</span>
+
+<span class="sd">        The function performs three steps:</span>
+
+<span class="sd">        1. **Discover** paths to *all* Ensembl-gene nodes that share the same</span>
+<span class="sd">           biological identity (`synonymous_nodes`).</span>
+<span class="sd">        2. **Cluster** those paths by **gene ID** (ignoring version).</span>
+<span class="sd">        3. **Rank** each cluster with</span>
+<span class="sd">           :py:meth:`_choose_relevant_synonym_helper`, selecting the entry release</span>
+<span class="sd">           (and direction) that best suits `to_release`.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            the_id: Todo.</span>
-<span class="sd">            depth_max: Todo.</span>
-<span class="sd">            to_release: Todo.</span>
-<span class="sd">            filter_node_type: Todo.</span>
-<span class="sd">            from_release: Todo</span>
+<span class="sd">            the_id (str): Source identifier (Ensembl or external).</span>
+<span class="sd">            depth_max (int): Maximum depth passed to</span>
+<span class="sd">                :py:meth:`synonymous_nodes`; governs how far the synonym search is</span>
+<span class="sd">                allowed to roam through external nodes.</span>
+<span class="sd">            to_release (int): Target Ensembl release required by the overall</span>
+<span class="sd">                conversion.</span>
+<span class="sd">            filter_node_type (set[str]): Node-types that the synonym search</span>
+<span class="sd">                must terminate on (usually `{&#39;ensembl_gene&#39;}`).</span>
+<span class="sd">            from_release (int | None): Known active release of `the_id`.  If</span>
+<span class="sd">                *None*, the helper will infer one.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># help to choose z for a-&gt;x-&gt;z3,6,9</span>
+<span class="sd">            list[list[Any]]: A list whose elements are</span>
 
-        <span class="c1"># filter_node_type == &#39;ensembl_gene&#39;</span>
+<span class="sd">            `[synonym_id, entry_release, reverse, identifier_path, node_type_path]`</span>
+
+<span class="sd">            where the last two items reproduce the path returned by</span>
+<span class="sd">            :py:meth:`synonymous_nodes`.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            *The method purposefully keeps **all** equally-ranked candidates;</span>
+<span class="sd">            further tie-breaking is deferred to the main path-scoring routine.*</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">syn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">synonymous_nodes</span><span class="p">(</span><span class="n">the_id</span><span class="p">,</span> <span class="n">depth_max</span><span class="p">,</span> <span class="n">filter_node_type</span><span class="p">,</span> <span class="n">from_release</span><span class="o">=</span><span class="n">from_release</span><span class="p">)</span>
+        <span class="c1"># help to choose z for a-&gt;x-&gt;z3,6,9</span>
+        <span class="c1"># filter_node_type == &#39;ensembl_gene&#39;</span>
         <span class="c1"># it also returns itself, which is important</span>
 
         <span class="n">syn_ids</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
@@ -532,20 +697,37 @@
 
         <span class="k">return</span> <span class="n">result</span>  <span class="c1"># new_from_id, new_from_rel, new_reverse, path, path_db</span></div>
 
-<div class="viewcode-block" id="Track.get_next_edges"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track.get_next_edges">[docs]</a>    <span class="k">def</span> <span class="nf">get_next_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">from_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">reverse</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">debugging</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+
+<div class="viewcode-block" id="Track.get_next_edges">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track.get_next_edges">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_next_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">from_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">reverse</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">debugging</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Enumerate **chronologically admissible** history edges from a node.</span>
+
+<span class="sd">        Starting at `from_id` and release `from_release`, the method scans</span>
+<span class="sd">        outgoing (or incoming, when `reverse` is *True*) edges whose</span>
+<span class="sd">        timestamps allow the path to **advance** in the desired temporal</span>
+<span class="sd">        direction.  It collapses duplicate &quot;same-ID&quot; transitions and flags</span>
+<span class="sd">        self-loops so that later heuristics can treat branch points and tips</span>
+<span class="sd">        differently.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            from_id: Todo.</span>
-<span class="sd">            from_release: Todo.</span>
-<span class="sd">            reverse: Todo.</span>
-<span class="sd">            debugging: Todo.</span>
+<span class="sd">            from_id (str): Current node from which the search will step.</span>
+<span class="sd">            from_release (int): Release at which the current node is known to</span>
+<span class="sd">                exist.</span>
+<span class="sd">            reverse (bool): *False* to walk **forward** in history</span>
+<span class="sd">                (old → new), *True* to walk **backward** (new → old).</span>
+<span class="sd">            debugging (bool): If set, disables the duplicate-edge</span>
+<span class="sd">                collapse so that unit tests can inspect the raw edge set.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            list[list[Union[int, bool, str, int]]]: Sorted list of edge</span>
+<span class="sd">            descriptors, each of which is</span>
+
+<span class="sd">            `[edge_release, is_self_loop, src_node, dst_node, multiedge_key]`.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Todo.</span>
+<span class="sd">            ValueError: If inconsistent multi-edges (same nodes, same release)</span>
+<span class="sd">                are detected—this signals a corrupted graph build.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">edges</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
         <span class="n">more_than_one_edges</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
@@ -598,18 +780,44 @@
 
         <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">edges</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="n">reverse</span><span class="p">)</span>  <span class="c1"># sort based on history</span></div>
 
-<div class="viewcode-block" id="Track.should_graph_reversed"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track.should_graph_reversed">[docs]</a>    <span class="k">def</span> <span class="nf">should_graph_reversed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_id</span><span class="p">,</span> <span class="n">to_release</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+
+<div class="viewcode-block" id="Track.should_graph_reversed">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track.should_graph_reversed">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">should_graph_reversed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_id</span><span class="p">,</span> <span class="n">to_release</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Determine the **temporal orientation** of the graph walk.</span>
+
+<span class="sd">        Given an identifier that is active in one or more release intervals,</span>
+<span class="sd">        the routine decides whether the subsequent path-finder must move</span>
+<span class="sd">        **forward in time**, **backward in time**, or explore *both* directions</span>
+<span class="sd">        in parallel in order to reach the target release.</span>
+
+<span class="sd">        The decision is based on the *closest* boundary of every active</span>
+<span class="sd">        interval returned by</span>
+<span class="sd">        :py:meth:`Track.get_from_release_and_reverse_vars` (`mode=&#39;closest&#39;`).</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            from_id: Todo.</span>
-<span class="sd">            to_release: Todo.</span>
+<span class="sd">            from_id (str): The starting identifier (Ensembl gene, transcript,</span>
+<span class="sd">                protein, or external ID).</span>
+<span class="sd">            to_release (int): The Ensembl release the user wishes to convert</span>
+<span class="sd">                *to*.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            tuple[str, Union[int, tuple[int, int]]]:</span>
+
+<span class="sd">                * `&#39;forward&#39;` - walk old → new, starting at the **earliest**</span>
+<span class="sd">                    release in which *from_id* is active</span>
+<span class="sd">                    &amp;nbsp;&amp;nbsp;&amp;nbsp;→ return `(&#39;forward&#39;, start_release)`</span>
+<span class="sd">                * `&#39;reverse&#39;` - walk new → old, starting at the **latest**</span>
+<span class="sd">                    active release</span>
+<span class="sd">                    &amp;nbsp;&amp;nbsp;&amp;nbsp;→ return `(&#39;reverse&#39;, start_release)`</span>
+<span class="sd">                * `&#39;both&#39;` - split search: one forward walk and one reverse</span>
+<span class="sd">                    walk</span>
+<span class="sd">                    &amp;nbsp;&amp;nbsp;&amp;nbsp;→ return `(&#39;both&#39;, (forward_start,</span>
+<span class="sd">                    reverse_start))`</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Todo.</span>
+<span class="sd">            ValueError: If *from_id* is never active in or around</span>
+<span class="sd">                `to_release` (i.e. no viable starting release can be found).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get_active_ranges_of_id</span><span class="p">[</span><span class="n">from_id</span><span class="p">]</span>  <span class="c1"># calculates ensembl_gene nodes and also any other node.</span>
         <span class="n">m</span> <span class="o">=</span> <span class="n">Track</span><span class="o">.</span><span class="n">get_from_release_and_reverse_vars</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">to_release</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;closest&quot;</span><span class="p">)</span>
@@ -629,7 +837,10 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span></div>
 
-<div class="viewcode-block" id="Track.path_search"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track.path_search">[docs]</a>    <span class="k">def</span> <span class="nf">path_search</span><span class="p">(</span>
+
+<div class="viewcode-block" id="Track.path_search">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track.path_search">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">path_search</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">from_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">from_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -639,22 +850,53 @@
         <span class="n">external_jump</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">multiple_ensembl_transition</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Enumerate every admissible **history path** from *from_id* at *from_release* to *to_release*.</span>
+
+<span class="sd">        The algorithm performs a depth-first traversal of the Ensembl history</span>
+<span class="sd">        edges.  Whenever it becomes stranded on a non-backbone node it may</span>
+<span class="sd">        &quot;beam-up&quot; via a *synonym path* through an external database, subject to</span>
+<span class="sd">        the constraints in `external_settings`:</span>
+
+<span class="sd">        * `synonymous_max_depth` - maximum depth of a synonym search.</span>
+<span class="sd">        * `jump_limit` - maximum number of external &quot;beam-up&quot; jumps allowed.</span>
+<span class="sd">        * `nts_backbone` - canonical node-type of the Ensembl backbone.</span>
+
+<span class="sd">        Additional flags control the initial conditions:</span>
+
+<span class="sd">        * Setting `external_jump` to *np.inf* **disables** external jumps.</span>
+<span class="sd">            Setting it to *None* **enables** them with the counter reset to `0`.</span>
+<span class="sd">        * `multiple_ensembl_transition` allows the algorithm to time-travel to</span>
+<span class="sd">            a *different* release while still on an external node; this is useful</span>
+<span class="sd">            when *from_release* was inferred and might not actually connect.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            from_id: Todo.</span>
-<span class="sd">            from_release: Todo.</span>
-<span class="sd">            to_release: Todo.</span>
-<span class="sd">            reverse: Todo.</span>
-<span class="sd">            external_settings: Todo.</span>
-<span class="sd">            external_jump: Todo.</span>
-<span class="sd">            multiple_ensembl_transition: Todo.</span>
+<span class="sd">            from_id (str): Identifier to start the search from.</span>
+<span class="sd">            from_release (int): Release number where *from_id* is considered</span>
+<span class="sd">                active.</span>
+<span class="sd">            to_release (int): Target Ensembl release.</span>
+<span class="sd">            reverse (bool): If *True*, traverse the graph **backwards** in time;</span>
+<span class="sd">                otherwise forwards.</span>
+<span class="sd">            external_settings (dict): Copy of</span>
+<span class="sd">                :py:attr:`DB.external_search_settings` that governs depth,</span>
+<span class="sd">                jump limits, and backbone node-type.</span>
+<span class="sd">            external_jump (float | None): Current external-jump count</span>
+<span class="sd">                (*None* starts from zero, *np.inf* forbids any jump).</span>
+<span class="sd">            multiple_ensembl_transition (bool): Permit the synonym</span>
+<span class="sd">                engine to select a *different* release for an external node when</span>
+<span class="sd">                no path exists at *from_release*.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            _description_</span>
+<span class="sd">            set[tuple[tuple[str, str, int]]]:</span>
+<span class="sd">                A set of **edge-lists**.  Each edge is stored as</span>
+<span class="sd">                `(src, dst, key)`; an empty walk that terminates immediately</span>
+<span class="sd">                is represented by `((None, from_id, None),)`.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            *The method is intentionally side-effect free; it constructs all</span>
+<span class="sd">            intermediate data on the stack and returns a fresh set.*</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="k">def</span> <span class="nf">_recursive_function</span><span class="p">(</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">_recursive_function</span><span class="p">(</span>
             <span class="n">__from_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
             <span class="n">__from_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
             <span class="n">__reverse</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
@@ -663,7 +905,7 @@
             <span class="n">__edge_hist</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">],</span>
             <span class="n">__edge_hist_non_backbone</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">set</span><span class="p">],</span>
         <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">def</span> <span class="nf">_external_path_maker</span><span class="p">(</span><span class="n">a_from_id</span><span class="p">,</span> <span class="n">a_ens_rel</span><span class="p">,</span> <span class="n">a_syn_pth</span><span class="p">,</span> <span class="n">free_from_release</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">reverse</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">_external_path_maker</span><span class="p">(</span><span class="n">a_from_id</span><span class="p">,</span> <span class="n">a_ens_rel</span><span class="p">,</span> <span class="n">a_syn_pth</span><span class="p">,</span> <span class="n">free_from_release</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">reverse</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
                 <span class="n">a_edge_hist_alt</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
                 <span class="n">a_from_id_ext_path</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">a_from_id</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">a_path_ind</span><span class="p">,</span> <span class="n">a_next_node</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">a_syn_pth</span><span class="p">):</span>
@@ -681,14 +923,14 @@
                     <span class="n">a_from_id_ext_path</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">a_next_node</span><span class="p">)</span>
                 <span class="k">return</span> <span class="n">a_edge_hist_alt</span>
 
-            <span class="k">def</span> <span class="nf">_non_backbone_finder</span><span class="p">(</span><span class="n">_syn_path_</span><span class="p">):</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">_non_backbone_finder</span><span class="p">(</span><span class="n">_syn_path_</span><span class="p">):</span>
                 <span class="k">return</span> <span class="p">{</span>
                     <span class="n">i</span>
                     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">_syn_path_</span>
                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">external_search_settings</span><span class="p">[</span><span class="s2">&quot;nts_backbone&quot;</span><span class="p">]</span>
                 <span class="p">}</span>
 
-            <span class="k">def</span> <span class="nf">_recurring_element</span><span class="p">(</span><span class="n">_syn_path_</span><span class="p">):</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">_recurring_element</span><span class="p">(</span><span class="n">_syn_path_</span><span class="p">):</span>
                 <span class="k">for</span> <span class="n">_syn_path_i</span> <span class="ow">in</span> <span class="n">_syn_path_</span><span class="p">:</span>
                     <span class="k">if</span> <span class="n">_syn_path_i</span> <span class="ow">in</span> <span class="n">_edge_hist_non_backbone</span><span class="p">:</span>
                         <span class="k">return</span> <span class="kc">False</span>
@@ -848,7 +1090,10 @@
 
         <span class="k">return</span> <span class="n">all_paths</span></div>
 
-<div class="viewcode-block" id="Track.get_possible_paths"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track.get_possible_paths">[docs]</a>    <span class="k">def</span> <span class="nf">get_possible_paths</span><span class="p">(</span>
+
+<div class="viewcode-block" id="Track.get_possible_paths">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track.get_possible_paths">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_possible_paths</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">from_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">from_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -859,20 +1104,47 @@
         <span class="n">increase_jump_until</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
         <span class="n">from_release_inferred</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run :py:meth:`path_search` under **progressively relaxed settings**.</span>
+
+<span class="sd">        Run :py:meth:`path_search` under **progressively relaxed settings** until at</span>
+<span class="sd">        least one viable path is found—or every relaxation level is exhausted.</span>
+
+<span class="sd">        Four search stages are attempted in order:</span>
+
+<span class="sd">        1. **Backbone-only** - external jumps disabled.</span>
+<span class="sd">        2. **External enabled** - allow external jumps; increment synonym depth</span>
+<span class="sd">            and jump limit after each failure up to</span>
+<span class="sd">            `increase_depth_until`/`increase_jump_until`.</span>
+<span class="sd">        3. **Backbone with multiple-Ensembl transition** - external disabled but</span>
+<span class="sd">            permit starting release to shift on external nodes.</span>
+<span class="sd">        4. **External + multiple-transition** - most permissive search, with</span>
+<span class="sd">            iterative depth/jump relaxation as in stage 2.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            from_id: Todo.</span>
-<span class="sd">            from_release: Todo.</span>
-<span class="sd">            to_release: Todo.</span>
-<span class="sd">            reverse: Todo.</span>
-<span class="sd">            go_external: Todo.</span>
-<span class="sd">            increase_depth_until: Todo.</span>
-<span class="sd">            increase_jump_until: Todo.</span>
-<span class="sd">            from_release_inferred: Todo.</span>
+<span class="sd">            from_id (str): Identifier to convert.</span>
+<span class="sd">            from_release (int): Release at which the search begins.</span>
+<span class="sd">            to_release (int): Desired target release.</span>
+<span class="sd">            reverse (bool): Traverse the Ensembl history backwards if *True*,</span>
+<span class="sd">                forwards otherwise.</span>
+<span class="sd">            go_external (bool): If *False*, skip any stage that</span>
+<span class="sd">                requires external jumps.</span>
+<span class="sd">            increase_depth_until (int): Additional synonym-search</span>
+<span class="sd">                depth to allow beyond the default.</span>
+<span class="sd">            increase_jump_until (int): Additional external-jump count</span>
+<span class="sd">                to allow beyond the default.</span>
+<span class="sd">            from_release_inferred (bool): *Reserved for future use.*</span>
+<span class="sd">                Indicates that *from_release* was chosen automatically rather</span>
+<span class="sd">                than provided by the user.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            tuple[tuple[tuple[str, str, int]]]:</span>
+<span class="sd">                All paths discovered by the most restrictive stage that yielded</span>
+<span class="sd">                **at least one** result, returned as an immutable tuple.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            The function copies and mutates</span>
+<span class="sd">            :py:attr:`DB.external_search_settings` internally; the caller’s</span>
+<span class="sd">            copy is not modified.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">es</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">external_search_settings</span><span class="p">)</span>
         <span class="n">idu</span> <span class="o">=</span> <span class="n">increase_depth_until</span> <span class="o">+</span> <span class="n">es</span><span class="p">[</span><span class="s2">&quot;synonymous_max_depth&quot;</span><span class="p">]</span>
@@ -943,8 +1215,27 @@
 
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">all_paths</span><span class="p">)</span></div>
 
+
     <span class="nd">@cached_property</span>
-    <span class="k">def</span> <span class="nf">_calculate_node_scores_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_calculate_node_scores_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build and cache helper look-ups for node-scoring.</span>
+
+<span class="sd">        The property constructs two complementary data structures:</span>
+
+<span class="sd">        * **filter_set** - the union of</span>
+<span class="sd">            (1) every external-database node-type present in the graph, and (2) every Ensembl-specific</span>
+<span class="sd">            node-type (gene, transcript, translation, …) across *all* assemblies.</span>
+<span class="sd">            This set can therefore be passed unmodified to</span>
+<span class="sd">            :py:meth:`synonymous_nodes` to ask for &quot;anything that is not an assembly-less backbone gene&quot;.</span>
+<span class="sd">        * **ensembl_include** - a mapping</span>
+<span class="sd">            `{form → set(node_type_str)}` where each value lists the node-types</span>
+<span class="sd">            that should be considered equivalent to that *form* (e.g. *gene*, *transcript*, *translation*) when</span>
+<span class="sd">            computing richness metrics.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple[set[str], dict[str, set[str]]]:</span>
+<span class="sd">                `(filter_set, ensembl_include)` exactly as described above.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">form_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">available_forms</span> <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">]</span>
         <span class="n">ensembl_include</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="n">filter_set</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">available_external_databases</span><span class="p">)</span>
@@ -954,18 +1245,31 @@
             <span class="n">filter_set</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">ensembl_include_form</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">filter_set</span><span class="p">,</span> <span class="n">ensembl_include</span>
 
-<div class="viewcode-block" id="Track.calculate_node_scores"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track.calculate_node_scores">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_node_scores</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">the_id</span><span class="p">,</span> <span class="n">ens_release</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;A metric to choose from multiple targets.</span>
+<div class="viewcode-block" id="Track.calculate_node_scores">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track.calculate_node_scores">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_node_scores</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">the_id</span><span class="p">,</span> <span class="n">ens_release</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Rank competing Ensembl targets by the &quot;richness&quot; of their synonyms.</span>
+
+<span class="sd">        The method counts, within a radius of *two* synonym hops, how many unique</span>
+<span class="sd">        identifiers of various categories point to each candidate and returns the</span>
+<span class="sd">        counts as **negative integers** so that *smaller* is *better* for the</span>
+<span class="sd">        up-stream sorter.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            the_id: Todo.</span>
-<span class="sd">            ens_release: Todo.</span>
+<span class="sd">            the_id (str): Identifier that is being converted.</span>
+<span class="sd">            ens_release (int): Target Ensembl release; only synonyms active in this</span>
+<span class="sd">                release are considered.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            list: `[-ext, -form₁, -form₂]` where</span>
+<span class="sd">                * `ext`  - number of distinct **external-database** synonyms.</span>
+<span class="sd">                * `form₁` - number of distinct synonyms of the most important Ensembl form (typically *gene*).</span>
+<span class="sd">                * `form₂` - number of distinct synonyms of the second form (typically *transcript* or *translation*).</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Todo.</span>
+<span class="sd">            ValueError: If the graph does not expose exactly the two expected</span>
+<span class="sd">                non-backbone forms, or if a synonym node&#39;s type cannot be mapped to</span>
+<span class="sd">                *external*, *form₁*, or *form₂*.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">form_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">available_forms</span> <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">]</span>
         <span class="n">form_importance_order</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span> <span class="s2">&quot;transcript&quot;</span><span class="p">,</span> <span class="s2">&quot;translation&quot;</span><span class="p">]</span>
@@ -999,37 +1303,65 @@
         <span class="c1"># Importance order is as following</span>
         <span class="k">return</span> <span class="p">[</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">imp1</span><span class="p">),</span> <span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">imp2</span><span class="p">),</span> <span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">imp3</span><span class="p">)]</span>  <span class="c1"># minus is added to minimize in the method used.</span></div>
 
-<div class="viewcode-block" id="Track.calculate_score_and_select"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track.calculate_score_and_select">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_score_and_select</span><span class="p">(</span>
+
+<div class="viewcode-block" id="Track.calculate_score_and_select">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track.calculate_score_and_select">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_score_and_select</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">all_possible_paths</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span>
         <span class="n">reduction</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
         <span class="n">remove_na</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-        <span class="n">from_releases</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">,</span>
+        <span class="n">from_releases</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
         <span class="n">to_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">score_of_the_queried_item</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
         <span class="n">return_path</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
         <span class="n">from_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Collapse a set of candidate paths into the single best path per target.</span>
+
+<span class="sd">        For each path produced by the search engine the function:</span>
+
+<span class="sd">        1. Computes an **edge-score aggregate** using `reduction` while handling</span>
+<span class="sd">        missing values as directed by `remove_na`.</span>
+<span class="sd">        2. Tallies *external* statistics (steps, jumps, initial conversion</span>
+<span class="sd">        confidence) and *assembly* statistics (number of priority drops, final</span>
+<span class="sd">        priority).</span>
+<span class="sd">        3. Packs all metrics into a dictionary and stores it under the key of the</span>
+<span class="sd">        path&#39;s final destination node.</span>
+<span class="sd">        4. Keeps only the lexicographically &quot;smallest&quot; dictionary per destination</span>
+<span class="sd">        via :py:meth:`_path_score_sorter_single_target`.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            all_possible_paths: Todo.</span>
-<span class="sd">            reduction: Todo.</span>
-<span class="sd">            remove_na: Todo.</span>
-<span class="sd">            from_releases: Todo.</span>
-<span class="sd">            to_release: Todo.</span>
-<span class="sd">            score_of_the_queried_item: Todo.</span>
-<span class="sd">            return_path: Todo.</span>
-<span class="sd">            from_id: Todo.</span>
+<span class="sd">            all_possible_paths (tuple): Sequence of edge-lists representing</span>
+<span class="sd">                every admissible walk returned by the path-finder.</span>
+<span class="sd">            reduction (Callable): Function such as</span>
+<span class="sd">                `np.mean` or `sum` used to collapse edge weights into one number.</span>
+<span class="sd">            remove_na (str): How to treat *NaN* edge weights - one of</span>
+<span class="sd">                `&#39;omit&#39;`, `&#39;to_1&#39;`, `&#39;to_0&#39;`.</span>
+<span class="sd">            from_releases (Iterable[int]): Release that each path starts from;</span>
+<span class="sd">                must align with `all_possible_paths`.</span>
+<span class="sd">            to_release (int): Target release - needed to know whether an edge is</span>
+<span class="sd">                traversed forward or reverse.</span>
+<span class="sd">            score_of_the_queried_item (float): Fallback weight for the implicit edge</span>
+<span class="sd">                that represents the *query ID* itself.</span>
+<span class="sd">            return_path (bool): If *True*, embed the full edge-list inside each</span>
+<span class="sd">                score dict under the key `&#39;the_path&#39;`.</span>
+<span class="sd">            from_id (str): Original identifier being converted - echoed back in the</span>
+<span class="sd">                score dict for traceability.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            dict: Mapping</span>
+<span class="sd">            `{destination_id → best_score_dict}`.</span>
+<span class="sd">            Each *score dict* contains (inter alia)</span>
+<span class="sd">            `assembly_jump`, `external_jump`, `external_step`,</span>
+<span class="sd">            `edge_scores_reduced`, and `ensembl_step`.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Todo.</span>
+<span class="sd">            ValueError: If an unexpected edge encoding is encountered, if an edge</span>
+<span class="sd">                score is invalid/∞, or if `remove_na` is set to an unknown mode.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="k">def</span> <span class="nf">er_maker_for_initial_conversion</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">n3</span><span class="p">,</span> <span class="n">n4</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">er_maker_for_initial_conversion</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">n3</span><span class="p">,</span> <span class="n">n4</span><span class="p">):</span>
             <span class="n">edge_key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge_key_orientor</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">n3</span><span class="p">)</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="o">*</span><span class="n">edge_key</span><span class="p">)[</span><span class="s2">&quot;available_releases&quot;</span><span class="p">]</span>
 
@@ -1100,10 +1432,12 @@
                 <span class="n">assembly_jump</span><span class="p">,</span> <span class="n">current_priority</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">step_pri</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">the_path</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
-                    <span class="nb">tuple</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">the_step</span><span class="p">[:</span><span class="mi">3</span><span class="p">])</span> <span class="o">+</span> <span class="p">[</span><span class="n">er_maker_for_initial_conversion</span><span class="p">(</span><span class="o">*</span><span class="n">the_step</span><span class="p">)])</span>
-                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">the_step</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span> <span class="ow">and</span> <span class="n">the_step</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_external_entrance_placeholders</span>
-                    <span class="c1"># -1, 10001 is when you have external to graph conversion and from_release is None.</span>
-                    <span class="k">else</span> <span class="n">the_step</span>
+                    <span class="p">(</span>
+                        <span class="nb">tuple</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">the_step</span><span class="p">[:</span><span class="mi">3</span><span class="p">])</span> <span class="o">+</span> <span class="p">[</span><span class="n">er_maker_for_initial_conversion</span><span class="p">(</span><span class="o">*</span><span class="n">the_step</span><span class="p">)])</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">the_step</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span> <span class="ow">and</span> <span class="n">the_step</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_external_entrance_placeholders</span>
+                        <span class="c1"># -1, 10001 is when you have external to graph conversion and from_release is None.</span>
+                        <span class="k">else</span> <span class="n">the_step</span>
+                    <span class="p">)</span>
                     <span class="k">for</span> <span class="n">the_step</span> <span class="ow">in</span> <span class="n">the_path</span>
                 <span class="p">)</span>
                 <span class="n">assembly_jump</span><span class="p">,</span> <span class="n">step_pri</span><span class="p">,</span> <span class="n">current_priority</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">minimum_assembly_jumps</span><span class="p">(</span><span class="n">the_path</span><span class="p">)</span>
@@ -1128,16 +1462,28 @@
 
         <span class="k">return</span> <span class="n">max_score</span>  <span class="c1"># dict of dict</span></div>
 
-<div class="viewcode-block" id="Track.edge_key_orientor"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track.edge_key_orientor">[docs]</a>    <span class="k">def</span> <span class="nf">edge_key_orientor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">n2</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">n3</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+
+<div class="viewcode-block" id="Track.edge_key_orientor">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track.edge_key_orientor">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">edge_key_orientor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">n2</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">n3</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the stored orientation of a multigraph edge.</span>
+
+<span class="sd">        For multigraphs every logical edge is stored *once*, but the caller may</span>
+<span class="sd">        hold `(u, v, k)` or `(v, u, k)`.</span>
+<span class="sd">        This helper resolves the ambiguity so that subsequent attribute look-ups</span>
+<span class="sd">        succeed.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            n1: Todo.</span>
-<span class="sd">            n2: Todo.</span>
-<span class="sd">            n3: Todo.</span>
+<span class="sd">            n1 (str): One endpoint of the edge.</span>
+<span class="sd">            n2 (str): The other endpoint.</span>
+<span class="sd">            n3 (int): Edge key (index) within the `networkx` multi-edge.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            tuple[str, str, int]: A triple that is guaranteed to exist as written</span>
+<span class="sd">            in `self.graph`.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            AssertionError: If neither orientation is present in the graph.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">has_edge</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">n3</span><span class="p">):</span>
             <span class="n">edge_key</span> <span class="o">=</span> <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">n3</span><span class="p">)</span>
@@ -1147,20 +1493,32 @@
 
         <span class="k">return</span> <span class="n">edge_key</span></div>
 
-<div class="viewcode-block" id="Track.path_step_possible_assembly_jumps"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track.path_step_possible_assembly_jumps">[docs]</a>    <span class="k">def</span> <span class="nf">path_step_possible_assembly_jumps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">n3</span><span class="p">,</span> <span class="n">n4</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+
+<div class="viewcode-block" id="Track.path_step_possible_assembly_jumps">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track.path_step_possible_assembly_jumps">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">path_step_possible_assembly_jumps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">n3</span><span class="p">,</span> <span class="n">n4</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the genome assemblies that can legally be used for a single edge.</span>
+
+<span class="sd">        The helper inspects the edge that connects `n1` → `n2` and filters the</span>
+<span class="sd">        assemblies recorded on that edge against the *release* constraint `n4`:</span>
+
+<span class="sd">        * **None** - the edge is treated as backbone history; the result is the</span>
+<span class="sd">            graph-wide default assembly (usually the build on which the backbone was</span>
+<span class="sd">            constructed).</span>
+<span class="sd">        * **int** - keep only assemblies whose *release set* contains that single release.</span>
+<span class="sd">        * **set[int]** - keep assemblies whose release set intersects the provided set.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            n1: Todo.</span>
-<span class="sd">            n2: Todo.</span>
-<span class="sd">            n3: Todo.</span>
-<span class="sd">            n4: Todo.</span>
-
-<span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Todo.</span>
+<span class="sd">            n1 (str): Source node identifier.</span>
+<span class="sd">            n2 (str): Destination node identifier.</span>
+<span class="sd">            n3 (int): Edge key within the NetworkX multigraph.</span>
+<span class="sd">            n4 (int | set[int] | None, optional): Release filter as described above.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            list[str]: Sorted list of assembly names (e.g. `[&quot;GRCh37&quot;, &quot;GRCh38&quot;]`).</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If `n4` is of an unsupported type.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">edge_key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge_key_orientor</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">n3</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">n4</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -1174,16 +1532,32 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span></div>
 
-<div class="viewcode-block" id="Track.minimum_assembly_jumps"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track.minimum_assembly_jumps">[docs]</a>    <span class="k">def</span> <span class="nf">minimum_assembly_jumps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">the_path</span><span class="p">,</span> <span class="n">step_pri</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">current_priority</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+
+<div class="viewcode-block" id="Track.minimum_assembly_jumps">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track.minimum_assembly_jumps">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">minimum_assembly_jumps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">the_path</span><span class="p">,</span> <span class="n">step_pri</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">current_priority</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the penalty incurred by assembly downgrades along a path.</span>
+
+<span class="sd">        Each path step may be annotated with one or more candidate assemblies.</span>
+<span class="sd">        These are translated into priority values via</span>
+<span class="sd">        `DB.assembly_mysqlport_priority`.  The algorithm walks the path,</span>
+<span class="sd">        tracking the current priority and counting how many times it must drop</span>
+<span class="sd">        to a lower priority value—each drop constitutes an &quot;assembly jump&quot;</span>
+<span class="sd">        penalty.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            the_path: Todo.</span>
-<span class="sd">            step_pri: Todo.</span>
-<span class="sd">            current_priority: Todo.</span>
+<span class="sd">            the_path (Iterable[tuple]): Sequence of edge descriptors; each element is</span>
+<span class="sd">                either `(n1, n2, k)` or `(n1, n2, k, release)`.</span>
+<span class="sd">            step_pri (list[int] | None, optional): Priority list for the first edge.</span>
+<span class="sd">                If None, it is derived from `the_path`.</span>
+<span class="sd">            current_priority (int | None, optional): Starting priority.  If None,</span>
+<span class="sd">                initialised to `max(step_pri)`.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            tuple[int, list[int], int]:</span>
+<span class="sd">                - `assembly_jump` - total number of priority drops.</span>
+<span class="sd">                - `step_pri` - priority list of the last processed edge.</span>
+<span class="sd">                - `current_priority` - priority value after the final edge.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">assemblies</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">path_step_possible_assembly_jumps</span><span class="p">(</span><span class="o">*</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">the_path</span><span class="p">]</span>
         <span class="c1"># should be sorted for bisect function to work properly in &#39;_minimum_assembly_jumps_helper&#39;</span>
@@ -1198,28 +1572,38 @@
             <span class="n">step_pri</span><span class="o">=</span><span class="n">step_pri</span><span class="p">,</span> <span class="n">current_priority</span><span class="o">=</span><span class="n">current_priority</span><span class="p">,</span> <span class="n">priorities</span><span class="o">=</span><span class="n">priorities</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="Track._minimum_assembly_jumps_helper"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track._minimum_assembly_jumps_helper">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_minimum_assembly_jumps_helper</span><span class="p">(</span><span class="n">step_pri</span><span class="p">,</span> <span class="n">current_priority</span><span class="p">,</span> <span class="n">priorities</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+
+<div class="viewcode-block" id="Track._minimum_assembly_jumps_helper">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track._minimum_assembly_jumps_helper">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_minimum_assembly_jumps_helper</span><span class="p">(</span><span class="n">step_pri</span><span class="p">,</span> <span class="n">current_priority</span><span class="p">,</span> <span class="n">priorities</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Internal worker for :py:meth:`minimum_assembly_jumps`.</span>
+
+<span class="sd">        Given the priority sets for the remaining edges, iterate until all have</span>
+<span class="sd">        been consumed while updating the *current* assembly priority and counting</span>
+<span class="sd">        how often it must drop.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            step_pri: Todo.</span>
-<span class="sd">            current_priority: Todo.</span>
-<span class="sd">            priorities: Todo.</span>
-
-<span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Todo.</span>
+<span class="sd">            step_pri (list[int]): Priority values of the edge currently under</span>
+<span class="sd">                consideration.</span>
+<span class="sd">            current_priority (int): Priority value inherited from previous steps.</span>
+<span class="sd">            priorities (list[list[int]]): Priority lists for the *rest* of the path,</span>
+<span class="sd">                **already sorted** for correct bisecting.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            tuple[int, list[int], int]: Same three-tuple as documented in</span>
+<span class="sd">            :py:meth:`minimum_assembly_jumps`.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If the priority lattice enters an impossible state.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="k">def</span> <span class="nf">next_priority</span><span class="p">(</span><span class="n">p</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">next_priority</span><span class="p">(</span><span class="n">p</span><span class="p">):</span>
             <span class="n">p_ind</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_priority</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
             <span class="c1"># cannot return boundaries due to where the function is called.</span>
             <span class="k">return</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_priority</span><span class="p">[</span><span class="n">p_ind</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
 
-        <span class="k">def</span> <span class="nf">next_priority_2</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">p_list</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">next_priority_2</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">p_list</span><span class="p">):</span>
             <span class="n">p_ind</span> <span class="o">=</span> <span class="n">bisect</span><span class="o">.</span><span class="n">bisect</span><span class="p">(</span><span class="n">p_list</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
             <span class="c1"># bisect cannot return boundaries due to where the function is called.</span>
             <span class="k">return</span> <span class="n">p_list</span><span class="p">[</span><span class="n">p_ind</span><span class="p">]</span>
@@ -1242,18 +1626,30 @@
 
         <span class="k">return</span> <span class="n">penalty</span><span class="p">,</span> <span class="n">step_pri</span><span class="p">,</span> <span class="n">current_priority</span></div>
 
-<div class="viewcode-block" id="Track._path_score_sorter_single_target"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track._path_score_sorter_single_target">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_path_score_sorter_single_target</span><span class="p">(</span><span class="n">lst_of_dict</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+
+<div class="viewcode-block" id="Track._path_score_sorter_single_target">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track._path_score_sorter_single_target">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_path_score_sorter_single_target</span><span class="p">(</span><span class="n">lst_of_dict</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Select the best score dictionary for *one* conversion target.</span>
+
+<span class="sd">        The input is a list of dictionaries produced by</span>
+<span class="sd">        :py:meth:`calculate_score_and_select`.  Each dictionary is converted into a</span>
+<span class="sd">        tuple according to the *lexicographic importance order*</span>
+
+<span class="sd">        `(&quot;assembly_jump&quot;, &quot;external_jump&quot;, &quot;external_step&quot;,</span>
+<span class="sd">        &quot;edge_scores_reduced&quot;, &quot;ensembl_step&quot;)`</span>
+
+<span class="sd">        and the dictionary with the **smallest** tuple is returned.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            lst_of_dict: Todo.</span>
-
-<span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Todo.</span>
+<span class="sd">            lst_of_dict (list[dict]): Candidate score dictionaries for this target.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            dict: The chosen &quot;winner&quot; score dictionary.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If the input list is empty.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">importance_order</span> <span class="o">=</span> <span class="p">(</span>  <span class="c1"># the variables from to_add in &#39;calculate_score_and_select&#39;.</span>
             <span class="s2">&quot;assembly_jump&quot;</span><span class="p">,</span>
@@ -1271,19 +1667,43 @@
         <span class="n">best_score_index</span> <span class="o">=</span> <span class="n">minimum_scores</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">lst_of_dict</span><span class="p">[</span><span class="n">best_score_index</span><span class="p">]</span>  <span class="c1"># choose the best &amp; shortest</span></div>
 
-<div class="viewcode-block" id="Track._path_score_sorter_all_targets"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track._path_score_sorter_all_targets">[docs]</a>    <span class="k">def</span> <span class="nf">_path_score_sorter_all_targets</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dict_of_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">from_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">to_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+
+<div class="viewcode-block" id="Track._path_score_sorter_all_targets">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track._path_score_sorter_all_targets">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_path_score_sorter_all_targets</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dict_of_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">from_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">to_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Select the overall best target(s).</span>
+
+<span class="sd">        Select the **overall best target(s)** once every candidate Ensembl node</span>
+<span class="sd">        has itself been reduced to its single best path.</span>
+
+<span class="sd">        The method linearises several per-path metrics into an *importance</span>
+<span class="sd">        order* (see the tuple at the top of the function), then:</span>
+
+<span class="sd">        1. Computes that ordered score for **each** pair `(ensembl_gene, final_target)`.</span>
+<span class="sd">        2. Finds the global minimum; if multiple pairs tie:</span>
+<span class="sd">            * Prefer the target whose identifier is identical to `from_id`.</span>
+<span class="sd">            * If more than one Ensembl gene still tie, fall back on</span>
+<span class="sd">                :py:meth:`calculate_node_scores` to favour the &quot;richer&quot; node.</span>
+<span class="sd">        3. Returns a *pruned* copy of `dict_of_dict` that contains only the</span>
+<span class="sd">           surviving Ensembl genes, each with only the winning `final_elements` entry.</span>
+<span class="sd">           Additional provenance is written to `filter_scores`.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            dict_of_dict: Todo.</span>
-<span class="sd">            from_id: Todo.</span>
-<span class="sd">            to_release: Todo.</span>
-
-<span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Todo.</span>
+<span class="sd">            dict_of_dict (dict): Nested result of</span>
+<span class="sd">                :py:meth:`calculate_score_and_select`.  Keys are candidate</span>
+<span class="sd">                Ensembl genes; values are dictionaries that already contain</span>
+<span class="sd">                *one* best path per final target.</span>
+<span class="sd">            from_id (str): Original query identifier; used to break ties in</span>
+<span class="sd">                favour of &quot;same as input&quot;.</span>
+<span class="sd">            to_release (int): Target Ensembl release; forwarded to</span>
+<span class="sd">                :py:meth:`calculate_node_scores` during tie-breaking.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            dict: A reduced version of `dict_of_dict` holding only the winner(s) and enriched with a</span>
+<span class="sd">                `final_elements[*][&#39;filter_scores&#39;]` sub-dict that records the filters applied.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If `dict_of_dict` is empty.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">importance_order</span> <span class="o">=</span> <span class="p">(</span>
             <span class="c1"># the variables from to_add in &#39;calculate_score_and_select&#39;.</span>
@@ -1306,7 +1726,7 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">dict_of_dict</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span>
 
-        <span class="n">minimum_scores</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">minimum_scores</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 
         <span class="k">for</span> <span class="n">dct</span> <span class="ow">in</span> <span class="n">dict_of_dict</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">dict_of_dict</span><span class="p">[</span><span class="n">dct</span><span class="p">][</span><span class="s2">&quot;final_conversion&quot;</span><span class="p">][</span><span class="s2">&quot;final_elements&quot;</span><span class="p">]:</span>
@@ -1363,7 +1783,10 @@
 
         <span class="k">return</span> <span class="n">output</span>  <span class="c1"># choose the best &amp; shortest</span></div>
 
-<div class="viewcode-block" id="Track.convert"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track.convert">[docs]</a>    <span class="k">def</span> <span class="nf">convert</span><span class="p">(</span>
+
+<div class="viewcode-block" id="Track.convert">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track.convert">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">convert</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">from_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">from_release</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1378,27 +1801,59 @@
         <span class="n">deprioritize_lrg_genes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">return_ensembl_alternative</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;End-to-end ID conversion workflow.</span>
+
+<span class="sd">        Starting from `from_id` the routine</span>
+
+<span class="sd">        1. Determines the correct **time-travel direction** if</span>
+<span class="sd">           `from_release` is unspecified.</span>
+<span class="sd">        2. Enumerates *all* admissible paths with</span>
+<span class="sd">           :py:meth:`get_possible_paths` (forward and/or reverse).</span>
+<span class="sd">        3. Collapses those paths with :py:meth:`calculate_score_and_select`.</span>
+<span class="sd">        4. Optionally converts the surviving Ensembl gene(s) into</span>
+<span class="sd">           `final_database` via :py:meth:`_final_conversion`.</span>
+<span class="sd">        5. Optionally applies a final global selection with</span>
+<span class="sd">           :py:meth:`_path_score_sorter_all_targets`.</span>
+
+<span class="sd">        The output structure mirrors this decision tree and, when</span>
+<span class="sd">        `return_path` is *True*, embeds the full edge list so that callers</span>
+<span class="sd">        can audit every hop.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            from_id: Todo.</span>
-<span class="sd">            from_release: Todo.</span>
-<span class="sd">            to_release: Todo.</span>
-<span class="sd">            final_database: Todo.</span>
-<span class="sd">            reduction: Todo.</span>
-<span class="sd">            remove_na: Todo.</span>
-<span class="sd">            score_of_the_queried_item: Todo.</span>
-<span class="sd">            go_external: Todo.</span>
-<span class="sd">            prioritize_to_one_filter: Todo.</span>
-<span class="sd">            return_path: Todo.</span>
-<span class="sd">            deprioritize_lrg_genes: Todo.</span>
-<span class="sd">            return_ensembl_alternative: Todo.</span>
+<span class="sd">            from_id (str): Source identifier (Ensembl, UniProt, RefSeq, …).</span>
+<span class="sd">            from_release (int | None): Starting Ensembl release.</span>
+<span class="sd">                *None* → infer from the graph.</span>
+<span class="sd">            to_release (int | None): Target Ensembl release.</span>
+<span class="sd">                Defaults to the newest release contained in the graph.</span>
+<span class="sd">            final_database (str | None): External database to</span>
+<span class="sd">                convert into.  *None* → stay on the Ensembl gene.</span>
+<span class="sd">            reduction (Callable): Function (e.g. `numpy.mean`)</span>
+<span class="sd">                used to collapse per-edge weights.  Must accept an iterable of</span>
+<span class="sd">                floats and return a float.</span>
+<span class="sd">            remove_na (str): Strategy for *NaN* edge weights -</span>
+<span class="sd">                `&#39;omit&#39;`, `&#39;to_1&#39;`, or `&#39;to_0&#39;`.</span>
+<span class="sd">            score_of_the_queried_item (float): Weight assigned to</span>
+<span class="sd">                the implicit edge that represents `from_id` itself.</span>
+<span class="sd">            go_external (bool): Allow jumps through external</span>
+<span class="sd">                databases when the backbone is disconnected.</span>
+<span class="sd">            prioritize_to_one_filter (bool): After all scoring,</span>
+<span class="sd">                keep only the single globally best target.</span>
+<span class="sd">            return_path (bool): Embed the full edge list(s) in the</span>
+<span class="sd">                returned dictionary.</span>
+<span class="sd">            deprioritize_lrg_genes (bool): If *True* and other</span>
+<span class="sd">                results exist, drop LRG_* genomic regions from the final set.</span>
+<span class="sd">            return_ensembl_alternative (bool): When converting to an</span>
+<span class="sd">                external database, also return the Ensembl gene as a fallback.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            dict | None:</span>
+<span class="sd">                * **dict** - Structured result as described above.</span>
+<span class="sd">                * **None** - No admissible path was found.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Todo.</span>
+<span class="sd">            ValueError: For non-callable `reduction`, unsupported</span>
+<span class="sd">                `remove_na` modes, unknown `final_database` values, or</span>
+<span class="sd">                logical inconsistencies detected during processing.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">reduction</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span>
@@ -1501,36 +1956,75 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path_score_sorter_all_targets</span><span class="p">(</span><span class="n">converted</span><span class="p">,</span> <span class="n">from_id</span><span class="p">,</span> <span class="n">to_release</span><span class="p">)</span></div>
 
-    <span class="k">def</span> <span class="nf">_create_priority_list_ensembl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">to_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+
+<div class="viewcode-block" id="Track._create_priority_list_ensembl">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track._create_priority_list_ensembl">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_priority_list_ensembl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">to_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build a priority list of assemblies in which `from_id` is active.</span>
+
+<span class="sd">        The priorities are the numeric **assembly rankings** defined in</span>
+<span class="sd">        :py:attr:`DB.assembly_mysqlport_priority` (smaller numbers mean</span>
+<span class="sd">        higher priority).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            from_id (str): Ensembl gene identifier.</span>
+<span class="sd">            to_release (int): Target Ensembl release; only assemblies that</span>
+<span class="sd">                contain this release are considered.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[int]: Sorted list of priority values (ascending).</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If the gene is not active in *any* assembly at</span>
+<span class="sd">                `to_release`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">ceg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">combined_edges_genes</span><span class="p">[</span><span class="n">from_id</span><span class="p">]</span>
         <span class="n">ceg_assembly_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">j</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ceg</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">ceg</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="n">to_release</span> <span class="ow">in</span> <span class="n">ceg</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]})</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ceg_assembly_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;Priority&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ceg_assembly_list</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;Priority&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ceg_assembly_list</span><span class="p">]</span></div>
 
-<div class="viewcode-block" id="Track._final_conversion_dict_prepare"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track._final_conversion_dict_prepare">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_final_conversion_dict_prepare</span><span class="p">(</span>
+
+<div class="viewcode-block" id="Track._final_conversion_dict_prepare">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track._final_conversion_dict_prepare">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_final_conversion_dict_prepare</span><span class="p">(</span>
         <span class="n">confidence</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
         <span class="n">sysns</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
-        <span class="n">paths</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">]],</span>
+        <span class="n">paths</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">]],</span>
         <span class="n">min_priority_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
         <span class="n">len_priority_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
         <span class="n">add_ass_jump_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
         <span class="n">final_database</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Assemble the final-conversion section that will be attached to a candidate path.</span>
+
+<span class="sd">        The section contains a global conversion-confidence flag plus one</span>
+<span class="sd">        entry per synonym that survived the path-finding stage.  When</span>
+<span class="sd">        `paths` is None the structure is identical but omits the</span>
+<span class="sd">        `&#39;the_path&#39;` member to save memory.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            confidence: Todo.</span>
-<span class="sd">            sysns: Todo.</span>
-<span class="sd">            paths: Todo.</span>
-<span class="sd">            min_priority_list: Todo.</span>
-<span class="sd">            len_priority_list: Todo</span>
-<span class="sd">            add_ass_jump_list: Todo.</span>
-<span class="sd">            final_database: Todo.</span>
+<span class="sd">            confidence (int | float): Heuristic confidence for the *whole*</span>
+<span class="sd">                conversion step - `0` for &quot;perfect&quot;, larger values for</span>
+<span class="sd">                fallback scenarios, `np.inf` when no conversion was</span>
+<span class="sd">                possible.</span>
+<span class="sd">            sysns (list): List of synonym identifiers *in the same order*</span>
+<span class="sd">                as the metric lists below.</span>
+<span class="sd">            paths (list[list] | None): One walk (edge list) per synonym, or</span>
+<span class="sd">                *None* if the caller does not want to expose paths.</span>
+<span class="sd">            min_priority_list (list): Minimum assembly priority reached</span>
+<span class="sd">                by each walk.</span>
+<span class="sd">            len_priority_list (list): Number of distinct assembly</span>
+<span class="sd">                priorities encountered by each walk.</span>
+<span class="sd">            add_ass_jump_list (list): Additional assembly-jump penalty</span>
+<span class="sd">                incurred during the synonym hop itself.</span>
+<span class="sd">            final_database (str): Name of the database these synonyms belong</span>
+<span class="sd">                to (e.g. `&#39;uniprot&#39;` or `DB.nts_ensembl[&quot;gene&quot;]`).</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            dict: Nested dictionary ready to be stored under the key</span>
+<span class="sd">            `&#39;final_conversion&#39;`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">paths</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">{</span>
@@ -1560,7 +2054,10 @@
                 <span class="p">},</span>
             <span class="p">}</span></div>
 
-<div class="viewcode-block" id="Track._final_conversion"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track._final_conversion">[docs]</a>    <span class="k">def</span> <span class="nf">_final_conversion</span><span class="p">(</span>
+
+<div class="viewcode-block" id="Track._final_conversion">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track._final_conversion">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_final_conversion</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">converted</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
         <span class="n">cnvt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -1569,37 +2066,65 @@
         <span class="n">return_path</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
         <span class="n">return_ensembl_alternative</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert an Ensembl gene node to the requested external database.</span>
+
+<span class="sd">        Convert an Ensembl gene node to the requested external database and</span>
+<span class="sd">        merge the result back into `converted`.</span>
+
+<span class="sd">        The routine:</span>
+
+<span class="sd">        1. Builds every legal synonym path from `cnvt` to</span>
+<span class="sd">           `final_database` that is active in `ens_release` (or in any</span>
+<span class="sd">           release as a fallback).</span>
+<span class="sd">        2. Computes assembly-jump penalties for each path.</span>
+<span class="sd">        3. Calls :py:meth:`_final_conversion_dict_prepare` to create the</span>
+<span class="sd">           conversion sub-dict.</span>
+<span class="sd">        4. Optionally falls back to returning the Ensembl gene itself when no</span>
+<span class="sd">           synonym exists and `return_ensembl_alternative` is True.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            converted: Todo.</span>
-<span class="sd">            cnvt: Todo.</span>
-<span class="sd">            final_database: Todo.</span>
-<span class="sd">            ens_release: Todo.</span>
-<span class="sd">            return_path: Todo.</span>
-<span class="sd">            return_ensembl_alternative: Todo.</span>
+<span class="sd">            converted (dict): The current accumulator being built by</span>
+<span class="sd">                :py:meth:`convert`.</span>
+<span class="sd">            cnvt (str): Ensembl gene identifier that is undergoing final</span>
+<span class="sd">                conversion.</span>
+<span class="sd">            final_database (str): Target external database.</span>
+<span class="sd">            ens_release (int): Target Ensembl release.</span>
+<span class="sd">            return_path (bool): If True, embed the path(s) that lead to each</span>
+<span class="sd">                synonym.</span>
+<span class="sd">            return_ensembl_alternative (bool): When no synonym can be found,</span>
+<span class="sd">                add a fallback entry that keeps the Ensembl gene.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            dict: The same `converted` dict, updated in place (and also</span>
+<span class="sd">            returned for convenience).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="k">def</span> <span class="nf">_final_conversion_path</span><span class="p">(</span><span class="n">gene_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">target_db</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">from_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-<span class="w">            </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">_final_conversion_path</span><span class="p">(</span><span class="n">gene_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">target_db</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">from_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;Produce every synonym path from an Ensembl gene to *one* external database.</span>
+
+<span class="sd">            The search is attempted twice:</span>
+<span class="sd">            1. Release-restricted - only synonyms active in</span>
+<span class="sd">               `from_release`; confidence = 0.</span>
+<span class="sd">            2. Release-agnostic - synonyms active in any release;</span>
+<span class="sd">               confidence = 1.</span>
 
 <span class="sd">            Args:</span>
-<span class="sd">                gene_id: Todo.</span>
-<span class="sd">                target_db: Todo.</span>
-<span class="sd">                from_release: Todo.</span>
+<span class="sd">                gene_id (str): Ensembl gene identifier acting as the source.</span>
+<span class="sd">                target_db (str): Desired external database.</span>
+<span class="sd">                from_release (int): Ensembl release that paths must reach</span>
+<span class="sd">                    (first attempt).</span>
 
 <span class="sd">            Returns:</span>
-<span class="sd">                Todo.</span>
+<span class="sd">                tuple[list[list], int]:</span>
+<span class="sd">                    - `syn_ids_path` - list of edge-lists, one per synonym.</span>
+<span class="sd">                    - `confidence`   - 0 for strict, 1 for fallback search.</span>
 <span class="sd">            &quot;&quot;&quot;</span>
 
-            <span class="k">def</span> <span class="nf">_final_conversion_path_helper</span><span class="p">(</span><span class="n">res_syn_mth</span><span class="p">,</span> <span class="n">er</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]):</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">_final_conversion_path_helper</span><span class="p">(</span><span class="n">res_syn_mth</span><span class="p">,</span> <span class="n">er</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]):</span>
                 <span class="n">add_to_step</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">er</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">er</span><span class="p">]</span>
                 <span class="k">return</span> <span class="p">[[</span><span class="nb">list</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">+</span> <span class="n">add_to_step</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">m1</span><span class="p">,</span> <span class="n">m1</span><span class="p">[</span><span class="mi">1</span><span class="p">:])]</span> <span class="k">for</span> <span class="n">m1</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">res_syn_mth</span><span class="p">]</span>
 
-            <span class="k">def</span> <span class="nf">_final_conversion_path_helper_2</span><span class="p">(</span><span class="n">one_path</span><span class="p">):</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">_final_conversion_path_helper_2</span><span class="p">(</span><span class="n">one_path</span><span class="p">):</span>
                 <span class="n">result</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
                 <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">one_path</span><span class="p">:</span>
                     <span class="n">edge_key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge_key_orientor</span><span class="p">(</span><span class="o">*</span><span class="n">k</span><span class="p">)</span>
@@ -1639,16 +2164,18 @@
                 <span class="n">confidence</span> <span class="o">=</span> <span class="mi">1</span>
                 <span class="k">return</span> <span class="n">the_paths_no_ens_rel</span><span class="p">,</span> <span class="n">confidence</span>
 
-        <span class="k">def</span> <span class="nf">_final_conversion_helper</span><span class="p">(</span><span class="n">conv_dict</span><span class="p">,</span> <span class="n">conv_dict_key</span><span class="p">,</span> <span class="n">a_path</span><span class="p">):</span>
-<span class="w">            </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">_final_conversion_helper</span><span class="p">(</span><span class="n">conv_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">conv_dict_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">a_path</span><span class="p">:</span> <span class="nb">list</span><span class="p">):</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;Re-compute assembly-jump metrics after appending the external conversion path.</span>
 
 <span class="sd">            Args:</span>
-<span class="sd">                conv_dict: Todo.</span>
-<span class="sd">                conv_dict_key: Todo.</span>
-<span class="sd">                a_path: Todo.</span>
+<span class="sd">                conv_dict (dict): Parent entry in `converted` holding the</span>
+<span class="sd">                    pre-conversion metrics.</span>
+<span class="sd">                conv_dict_key (str): Key of that entry (the Ensembl gene).</span>
+<span class="sd">                a_path (list): Edge list representing one complete walk</span>
+<span class="sd">                    (history + synonym hop).</span>
 
 <span class="sd">            Returns:</span>
-<span class="sd">                Todo.</span>
+<span class="sd">                list[int | float]: `[assembly_jump, min_priority, n_priorities]`.</span>
 <span class="sd">            &quot;&quot;&quot;</span>
             <span class="c1"># the path will continue with final conversion so assembly penalty should be calculated again.</span>
             <span class="n">_s1</span><span class="p">,</span> <span class="n">_s2</span> <span class="o">=</span> <span class="n">conv_dict</span><span class="p">[</span><span class="n">conv_dict_key</span><span class="p">][</span><span class="s2">&quot;final_assembly_priority&quot;</span><span class="p">]</span>
@@ -1688,20 +2215,31 @@
 
         <span class="k">return</span> <span class="n">converted</span></div>
 
-<div class="viewcode-block" id="Track.identify_source"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track.identify_source">[docs]</a>    <span class="k">def</span> <span class="nf">identify_source</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+
+<div class="viewcode-block" id="Track.identify_source">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track.identify_source">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">identify_source</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Infer the most likely origin (assembly and/or Ensembl release) of a heterogeneous identifier list.</span>
+
+<span class="sd">        The function tallies how often each origin triple appears among</span>
+<span class="sd">        `dataset_ids` and returns the counts sorted in descending order.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            dataset_ids: Todo.</span>
-<span class="sd">            mode: Todo.</span>
+<span class="sd">            dataset_ids (list[str]): Collection of identifiers to analyse.</span>
+<span class="sd">            mode (str): Granularity of the origin to extract - one of</span>
+<span class="sd">                - &#39;complete&#39;                  → (assembly, db, release)</span>
+<span class="sd">                - &#39;ensembl_release&#39;           → release only</span>
+<span class="sd">                - &#39;assembly&#39;                  → assembly only</span>
+<span class="sd">                - &#39;assembly_ensembl_release&#39;  → (assembly, release)</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Todo.</span>
+<span class="sd">            list[tuple[Any, int]]: Pairs `(origin, count)` sorted by</span>
+<span class="sd">            frequency.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Todo.</span>
+<span class="sd">            ValueError: If `mode` is not one of the recognised values.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">possible_trios</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="n">possible_trios</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">di</span> <span class="ow">in</span> <span class="n">dataset_ids</span><span class="p">:</span>
             <span class="c1"># assembly = self.get_external_assembly()</span>
             <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;complete&quot;</span><span class="p">:</span>
@@ -1717,13 +2255,22 @@
 
         <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">Counter</span><span class="p">(</span><span class="n">possible_trios</span><span class="p">)</span><span class="o">.</span><span class="n">most_common</span><span class="p">())</span></div>
 
-<div class="viewcode-block" id="Track.convert_optimized_multiple"><a class="viewcode-back" href="../../reference.html#idtrack._track.Track.convert_optimized_multiple">[docs]</a>    <span class="k">def</span> <span class="nf">convert_optimized_multiple</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Accept multiple ID list and return the most optimal set of IDs, minimizing the clashes.</span>
+
+<div class="viewcode-block" id="Track.convert_optimized_multiple">
+<a class="viewcode-back" href="../../reference.html#idtrack._track.Track.convert_optimized_multiple">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">convert_optimized_multiple</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Placeholder for a **batch-optimised** converter.</span>
+
+<span class="sd">        The intended behaviour is to accept *multiple* query IDs and choose a</span>
+<span class="sd">        conversion target for each such that cross-sample clashes (e.g.</span>
+<span class="sd">        duplicate loci) are minimised.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            NotImplementedError: Todo.</span>
+<span class="sd">            NotImplementedError: Always - the optimisation strategy is not yet implemented.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span>  <span class="c1"># TODO</span></div></div>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>  <span class="c1"># TODO</span></div>
+</div>
+
 </pre></div>
 
            </div>
@@ -1733,7 +2280,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022, Kemal Inecik.</p>
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

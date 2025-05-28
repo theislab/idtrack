@@ -1,26 +1,22 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../../">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>idtrack._graph_maker &mdash; idtrack 0.0.4 documentation</title>
-      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/custom_cookietemple.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/dark_mode_css/general.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/dark_mode_css/dark.css" type="text/css" />
-  <!--[if lt IE 9]>
-    <script src="../../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=15bcc2cf" />
+
   
-        <script src="../../_static/jquery.js"></script>
-        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-        <script src="../../_static/doctools.js"></script>
-        <script src="../../_static/sphinx_highlight.js"></script>
-        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-        <script src="../../_static/dark_mode_js/default_light.js"></script>
-        <script src="../../_static/dark_mode_js/theme_switcher.js"></script>
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" /> 
@@ -86,24 +82,26 @@
 <span class="c1"># Kemal Inecik</span>
 <span class="c1"># k.inecik@gmail.com</span>
 
-<span class="kn">import</span> <span class="nn">copy</span>
-<span class="kn">import</span> <span class="nn">itertools</span>
-<span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">pickle</span>
-<span class="kn">import</span> <span class="nn">string</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">string</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
-<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">networkx</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nx</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
-<span class="kn">from</span> <span class="nn">._database_manager</span> <span class="kn">import</span> <span class="n">DatabaseManager</span>
-<span class="kn">from</span> <span class="nn">._db</span> <span class="kn">import</span> <span class="n">DB</span>
-<span class="kn">from</span> <span class="nn">._the_graph</span> <span class="kn">import</span> <span class="n">TheGraph</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._database_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">DatabaseManager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._the_graph</span><span class="w"> </span><span class="kn">import</span> <span class="n">TheGraph</span>
 
 
-<div class="viewcode-block" id="GraphMaker"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker">[docs]</a><span class="k">class</span> <span class="nc">GraphMaker</span><span class="p">:</span>
+<div class="viewcode-block" id="GraphMaker">
+<a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GraphMaker</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates ID history graph.</span>
 
 <span class="sd">    It includes Ensembl gene ID history. Ensembl ID history is obtained from Ensembl</span>
@@ -116,7 +114,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># Note: Example chaotic ID history: ENSG00000263464</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_manager</span><span class="p">:</span> <span class="n">DatabaseManager</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_manager</span><span class="p">:</span> <span class="n">DatabaseManager</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Class initialization.</span>
 
 <span class="sd">        Args:</span>
@@ -135,7 +133,9 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;Graph&#39; has to be created with the latest release possible defined in &#39;db_manager&#39;.&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span> <span class="o">=</span> <span class="n">db_manager</span>
 
-<div class="viewcode-block" id="GraphMaker.initialize_downloads"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.initialize_downloads">[docs]</a>    <span class="k">def</span> <span class="nf">initialize_downloads</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="GraphMaker.initialize_downloads">
+<a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.initialize_downloads">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">initialize_downloads</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the external database downloads.</span>
 
 <span class="sd">        Raises:</span>
@@ -144,7 +144,10 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
 
-<div class="viewcode-block" id="GraphMaker.update_graph_with_the_new_release"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.update_graph_with_the_new_release">[docs]</a>    <span class="k">def</span> <span class="nf">update_graph_with_the_new_release</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+<div class="viewcode-block" id="GraphMaker.update_graph_with_the_new_release">
+<a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.update_graph_with_the_new_release">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_graph_with_the_new_release</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;When new release arrive, just add new nodes.</span>
 
 <span class="sd">        Raises:</span>
@@ -154,8 +157,11 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
 
+
     <span class="c1"># flake8: noqa: C901</span>
-<div class="viewcode-block" id="GraphMaker.construct_graph"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.construct_graph">[docs]</a>    <span class="k">def</span> <span class="nf">construct_graph</span><span class="p">(</span>
+<div class="viewcode-block" id="GraphMaker.construct_graph">
+<a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.construct_graph">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">construct_graph</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">narrow</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">form_list</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -187,7 +193,7 @@
 <span class="sd">            ValueError: Unexpected error.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="k">def</span> <span class="nf">add_edge</span><span class="p">(</span><span class="n">n1</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">n2</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">db12</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">a12</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">er12</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">add_edge</span><span class="p">(</span><span class="n">n1</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">n2</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">db12</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">a12</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">er12</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 <span class="w">            </span><span class="sd">&quot;&quot;&quot;A simple function to create edges between provided nodes. Edits the graph that is under the construction.</span>
 
 <span class="sd">            The edge attribute will be added in the following format: ``{DB.connection_dict: {db12: {a12: {er12}}}}``.</span>
@@ -389,7 +395,7 @@
 
             <span class="k">for</span> <span class="n">aa</span> <span class="ow">in</span> <span class="n">avail_assemblies</span><span class="p">:</span>
                 <span class="n">nn_aa</span> <span class="o">=</span> <span class="n">new_nodes</span><span class="p">[</span><span class="n">new_nodes</span><span class="p">[</span><span class="s2">&quot;assembly&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">aa</span><span class="p">]</span>
-                <span class="n">dm_aa</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">aa</span><span class="p">)</span>
+                <span class="n">dm_aa</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">aa</span><span class="p">,</span> <span class="n">last_possible_ensembl_release</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">the_er</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dm_aa</span><span class="o">.</span><span class="n">available_releases</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
                     <span class="n">dm_aa_er</span> <span class="o">=</span> <span class="n">dm_aa</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">the_er</span><span class="p">)</span>
                     <span class="n">df_aa</span> <span class="o">=</span> <span class="n">dm_aa_er</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;relationcurrent&quot;</span><span class="p">)</span>
@@ -436,8 +442,14 @@
                 <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]:</span>
                     <span class="c1"># transcript and translation does not have base.</span>
                     <span class="c1"># It causes the tracking algorithm unnecessarily process too many possibilities.</span>
-                    <span class="k">for</span> <span class="n">er</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">aa</span><span class="p">)</span><span class="o">.</span><span class="n">available_releases</span><span class="p">:</span>
-                        <span class="n">db_manager</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">change_form</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">aa</span><span class="p">)</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">er</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">er</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span>
+                        <span class="n">aa</span><span class="p">,</span> <span class="n">last_possible_ensembl_release</span><span class="o">=</span><span class="kc">True</span>
+                    <span class="p">)</span><span class="o">.</span><span class="n">available_releases</span><span class="p">:</span>
+                        <span class="n">db_manager</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">change_form</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+                            <span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">aa</span><span class="p">,</span> <span class="n">last_possible_ensembl_release</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                            <span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">er</span><span class="p">)</span>
+                        <span class="p">)</span>
 
                         <span class="n">ids_db</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;ids&quot;</span><span class="p">)</span>
                         <span class="n">ids</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">id_ver_from_df</span><span class="p">(</span><span class="n">ids_db</span><span class="p">)</span>
@@ -493,7 +505,8 @@
 
         <span class="k">return</span> <span class="n">g</span></div>
 
-    <span class="k">def</span> <span class="nf">_merge_nodes_with_the_same_in_lower_case</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g</span><span class="p">:</span> <span class="n">TheGraph</span><span class="p">):</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_merge_nodes_with_the_same_in_lower_case</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g</span><span class="p">:</span> <span class="n">TheGraph</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Synonymous external nodes are being merged into one.&quot;</span><span class="p">)</span>
         <span class="n">before_node_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
         <span class="c1"># Get the problematic nodes</span>
@@ -595,7 +608,9 @@
 
         <span class="k">return</span> <span class="n">g</span>
 
-<div class="viewcode-block" id="GraphMaker.construct_graph_form"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.construct_graph_form">[docs]</a>    <span class="k">def</span> <span class="nf">construct_graph_form</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">narrow</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">db_manager</span><span class="p">:</span> <span class="n">DatabaseManager</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TheGraph</span><span class="p">:</span>
+<div class="viewcode-block" id="GraphMaker.construct_graph_form">
+<a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.construct_graph_form">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">construct_graph_form</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">narrow</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">db_manager</span><span class="p">:</span> <span class="n">DatabaseManager</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TheGraph</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates a graph with connected nodes based on historical relationships between each Ensembl IDs.</span>
 
 <span class="sd">        Args:</span>
@@ -610,7 +625,7 @@
 <span class="sd">            ValueError: Unexpected error.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="k">def</span> <span class="nf">ms_creator</span><span class="p">():</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">ms_creator</span><span class="p">():</span>
             <span class="c1"># Download the mapping session table from MYSQL server</span>
             <span class="n">df_ms</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">get_table</span><span class="p">(</span><span class="s2">&quot;mapping_session&quot;</span><span class="p">,</span> <span class="n">save_after_calculation</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># not a raw indeed</span>
 
@@ -618,12 +633,15 @@
             <span class="c1"># Note that due to some early versions like 18.2, converting to int here is not recommended.</span>
             <span class="n">df_ms</span><span class="p">[</span><span class="s2">&quot;new_release&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_ms</span><span class="p">[</span><span class="s2">&quot;new_release&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
             <span class="n">df_ms</span><span class="p">[</span><span class="s2">&quot;old_release&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_ms</span><span class="p">[</span><span class="s2">&quot;old_release&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+            <span class="n">df_ms</span> <span class="o">=</span> <span class="n">df_ms</span><span class="p">[</span>
+                <span class="p">(</span><span class="n">db_manager</span><span class="o">.</span><span class="n">ignore_after</span> <span class="o">&gt;=</span> <span class="n">df_ms</span><span class="p">[</span><span class="s2">&quot;old_release&quot;</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df_ms</span><span class="p">[</span><span class="s2">&quot;old_release&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">ignore_before</span><span class="p">)</span>
+            <span class="p">]</span>
             <span class="c1"># Make sure there is only one to many</span>
             <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">df_ms</span><span class="p">[</span><span class="s2">&quot;new_release&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Multiple rows in &#39;mapping_session&#39; for one &#39;new_release&#39;.&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">df_ms</span>
 
-        <span class="k">def</span> <span class="nf">edge_attribute_maker</span><span class="p">(</span><span class="n">the_edge_old_rel</span><span class="p">,</span> <span class="n">the_edge_new_rel</span><span class="p">,</span> <span class="n">weight</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">edge_attribute_maker</span><span class="p">(</span><span class="n">the_edge_old_rel</span><span class="p">,</span> <span class="n">the_edge_new_rel</span><span class="p">,</span> <span class="n">weight</span><span class="p">):</span>
             <span class="c1"># Initialize the dictionary for edge attributes.</span>
             <span class="n">the_ea</span> <span class="o">=</span> <span class="p">{</span>
                 <span class="s2">&quot;weight&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">weight</span><span class="p">),</span>
@@ -670,19 +688,19 @@
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Multiple rows in &#39;mapping_session&#39; for &#39;new_release&#39; of </span><span class="si">{</span><span class="n">the_edge_new_rel</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">the_ea</span>
 
-        <span class="k">def</span> <span class="nf">find_edge_score</span><span class="p">(</span><span class="n">lookup_cols_tuple</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">find_edge_score</span><span class="p">(</span><span class="n">lookup_cols_tuple</span><span class="p">):</span>
             <span class="k">try</span><span class="p">:</span>  <span class="c1"># try to find row corresponding to input multiindex, lookup_cols_tuple.</span>
                 <span class="k">return</span> <span class="n">df_w</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">lookup_cols_tuple</span><span class="p">][</span><span class="s2">&quot;score&quot;</span><span class="p">]</span>
             <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>  <span class="c1"># If no row is found, then the edge score is not known.</span>
                 <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
 
-        <span class="k">def</span> <span class="nf">find_last_loop_release</span><span class="p">(</span><span class="n">lookup_cols_tuple</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">find_last_loop_release</span><span class="p">(</span><span class="n">lookup_cols_tuple</span><span class="p">):</span>
             <span class="k">try</span><span class="p">:</span>  <span class="c1"># try to find row corresponding to input multiindex, lookup_cols_tuple.</span>
                 <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">lookup_cols_tuple</span><span class="p">][</span><span class="s2">&quot;new_release&quot;</span><span class="p">]</span>
             <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>  <span class="c1"># Otherwise, just put None</span>
                 <span class="k">return</span> <span class="kc">None</span>
 
-        <span class="k">def</span> <span class="nf">edge_maker_pipe</span><span class="p">(</span><span class="n">id_1</span><span class="p">,</span> <span class="n">ver_1</span><span class="p">,</span> <span class="n">id_2</span><span class="p">,</span> <span class="n">ver_2</span><span class="p">,</span> <span class="n">rel_1</span><span class="p">,</span> <span class="n">rel_2</span><span class="p">,</span> <span class="n">the_weight</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">edge_maker_pipe</span><span class="p">(</span><span class="n">id_1</span><span class="p">,</span> <span class="n">ver_1</span><span class="p">,</span> <span class="n">id_2</span><span class="p">,</span> <span class="n">ver_2</span><span class="p">,</span> <span class="n">rel_1</span><span class="p">,</span> <span class="n">rel_2</span><span class="p">,</span> <span class="n">the_weight</span><span class="p">):</span>
             <span class="c1"># First create a dictionary for the node attributes</span>
             <span class="n">node_att_1</span> <span class="o">=</span> <span class="n">DatabaseManager</span><span class="o">.</span><span class="n">node_dict_maker</span><span class="p">(</span><span class="n">id_1</span><span class="p">,</span> <span class="n">ver_1</span><span class="p">)</span>
             <span class="n">node_att_2</span> <span class="o">=</span> <span class="n">DatabaseManager</span><span class="o">.</span><span class="n">node_dict_maker</span><span class="p">(</span><span class="n">id_2</span><span class="p">,</span> <span class="n">ver_2</span><span class="p">)</span>
@@ -1035,8 +1053,11 @@
 
         <span class="k">return</span> <span class="n">g</span></div>
 
-<div class="viewcode-block" id="GraphMaker.split_id"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.split_id">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">split_id</span><span class="p">(</span><span class="n">id_to_split</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">which_part</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+
+<div class="viewcode-block" id="GraphMaker.split_id">
+<a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.split_id">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">split_id</span><span class="p">(</span><span class="n">id_to_split</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">which_part</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Simpler method to retrieve ID or Version part of a node name.</span>
 
 <span class="sd">        Args:</span>
@@ -1061,8 +1082,11 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span></div>
 
-<div class="viewcode-block" id="GraphMaker.remove_non_gene_trees"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.remove_non_gene_trees">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">remove_non_gene_trees</span><span class="p">(</span><span class="n">graph</span><span class="p">:</span> <span class="n">TheGraph</span><span class="p">,</span> <span class="n">forms_remove</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TheGraph</span><span class="p">:</span>
+
+<div class="viewcode-block" id="GraphMaker.remove_non_gene_trees">
+<a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.remove_non_gene_trees">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">remove_non_gene_trees</span><span class="p">(</span><span class="n">graph</span><span class="p">:</span> <span class="n">TheGraph</span><span class="p">,</span> <span class="n">forms_remove</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TheGraph</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Removes the edges between the nodes with the same `node type` and removes abstract nodes (Void and Retired).</span>
 
 <span class="sd">        The nodes between two the same :py:attr:`DB.node_type_str` will be removed. Also, the nodes with versions</span>
@@ -1109,7 +1133,10 @@
 
         <span class="k">return</span> <span class="n">graph</span></div>
 
-<div class="viewcode-block" id="GraphMaker.get_graph"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.get_graph">[docs]</a>    <span class="k">def</span> <span class="nf">get_graph</span><span class="p">(</span>
+
+<div class="viewcode-block" id="GraphMaker.get_graph">
+<a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.get_graph">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_graph</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">narrow</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">create_even_if_exist</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -1134,10 +1161,10 @@
 
         <span class="c1"># If the file name is not accessible for reading, or explicitly prompt to do so, then create the graph.</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">)</span> <span class="ow">or</span> <span class="n">create_even_if_exist</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;The graph is being constructed.&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The graph is being constructed: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">construct_graph</span><span class="p">(</span><span class="n">narrow</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>  <span class="c1"># Otherwise, just read the file that is already in the directory.</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;The graph is being read.&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The graph is being read: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="n">g</span> <span class="o">=</span> <span class="n">GraphMaker</span><span class="o">.</span><span class="n">read_exported</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
 
         <span class="c1"># If prompt, save the dataframe in requested format.</span>
@@ -1146,8 +1173,11 @@
 
         <span class="k">return</span> <span class="n">g</span></div>
 
-<div class="viewcode-block" id="GraphMaker.read_exported"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.read_exported">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">read_exported</span><span class="p">(</span><span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TheGraph</span><span class="p">:</span>
+
+<div class="viewcode-block" id="GraphMaker.read_exported">
+<a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.read_exported">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">read_exported</span><span class="p">(</span><span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TheGraph</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Read the `pickle` file in the provided file path, which contains the graph.</span>
 
 <span class="sd">        Args:</span>
@@ -1165,7 +1195,10 @@
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="GraphMaker.create_file_name"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.create_file_name">[docs]</a>    <span class="k">def</span> <span class="nf">create_file_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">narrow</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+
+<div class="viewcode-block" id="GraphMaker.create_file_name">
+<a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.create_file_name">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_file_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">narrow</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;File name creator which includes some information regarding the construction process.</span>
 
 <span class="sd">        Facilitates to recognize the graph based on file name.</span>
@@ -1179,10 +1212,13 @@
         <span class="n">narrow_ext</span> <span class="o">=</span> <span class="s2">&quot;_narrow&quot;</span> <span class="k">if</span> <span class="n">narrow</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
         <span class="n">min_ext</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;_min</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">ignore_before</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">ignore_before</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
         <span class="n">max_ext</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;_max</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">ignore_after</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">ignore_after</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
-        <span class="n">ext</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;ens</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">ensembl_release</span><span class="si">}{</span><span class="n">min_ext</span><span class="si">}{</span><span class="n">max_ext</span><span class="si">}{</span><span class="n">narrow_ext</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">local_repository</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;graph_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">ext</span><span class="si">}</span><span class="s2">.pickle&quot;</span><span class="p">)</span></div>
+        <span class="n">ext</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">min_ext</span><span class="si">}{</span><span class="n">max_ext</span><span class="si">}{</span><span class="n">narrow_ext</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">local_repository</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;graph_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">organism</span><span class="si">}{</span><span class="n">ext</span><span class="si">}</span><span class="s2">.pickle&quot;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="GraphMaker.export_disk"><a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.export_disk">[docs]</a>    <span class="k">def</span> <span class="nf">export_disk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g</span><span class="p">:</span> <span class="n">TheGraph</span><span class="p">,</span> <span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
+
+<div class="viewcode-block" id="GraphMaker.export_disk">
+<a class="viewcode-back" href="../../reference.html#idtrack._graph_maker.GraphMaker.export_disk">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">export_disk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g</span><span class="p">:</span> <span class="n">TheGraph</span><span class="p">,</span> <span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Write the `pickle` file in the provided file path, which contains the graph.</span>
 
 <span class="sd">        Args:</span>
@@ -1193,7 +1229,9 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">)</span> <span class="ow">or</span> <span class="n">overwrite</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The graph is being exported as &#39;</span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
             <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
-                <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span></div></div>
+                <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span></div>
+</div>
+
 </pre></div>
 
            </div>
@@ -1203,7 +1241,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022, Kemal Inecik.</p>
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

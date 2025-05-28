@@ -1,26 +1,22 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../../">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>idtrack._database_manager &mdash; idtrack 0.0.4 documentation</title>
-      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/custom_cookietemple.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/dark_mode_css/general.css" type="text/css" />
-      <link rel="stylesheet" href="../../_static/dark_mode_css/dark.css" type="text/css" />
-  <!--[if lt IE 9]>
-    <script src="../../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=15bcc2cf" />
+
   
-        <script src="../../_static/jquery.js"></script>
-        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
-        <script src="../../_static/doctools.js"></script>
-        <script src="../../_static/sphinx_highlight.js"></script>
-        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-        <script src="../../_static/dark_mode_js/default_light.js"></script>
-        <script src="../../_static/dark_mode_js/theme_switcher.js"></script>
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" /> 
@@ -86,35 +82,37 @@
 <span class="c1"># Kemal Inecik</span>
 <span class="c1"># k.inecik@gmail.com</span>
 
-<span class="kn">import</span> <span class="nn">copy</span>
-<span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">re</span>
-<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
-<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">cached_property</span>
-<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">repeat</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">Counter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">cached_property</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">itertools</span><span class="w"> </span><span class="kn">import</span> <span class="n">repeat</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="kn">import</span> <span class="nn">pymysql.cursors</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pymysql</span>
 
-<span class="kn">from</span> <span class="nn">._db</span> <span class="kn">import</span> <span class="n">DB</span>
-<span class="kn">from</span> <span class="nn">._external_databases</span> <span class="kn">import</span> <span class="n">ExternalDatabases</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">idtrack._utils_hdf5</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">hs</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_databases</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExternalDatabases</span>
 
 
-<div class="viewcode-block" id="DatabaseManager"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager">[docs]</a><span class="k">class</span> <span class="nc">DatabaseManager</span><span class="p">:</span>
+<div class="viewcode-block" id="DatabaseManager">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DatabaseManager</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Downloads, preprocesses, and stores the necessary source files for the program.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-        <span class="n">ensembl_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">form</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">local_repository</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">ensembl_release</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">ignore_before</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">ignore_after</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">compress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">store_raw_always</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">genome_assembly</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
@@ -132,7 +130,6 @@
 <span class="sd">            ignore_before: Ensembl release as the lower limit to include in the downloaded contents. The object will</span>
 <span class="sd">                ignore all Ensembl release lower than this integer.</span>
 <span class="sd">            ignore_after: Similar to &#39;ignore_before&#39; but as the upper limit as the name suggest.</span>
-<span class="sd">            compress: If ``True``, the resulting content will be compressed to take less space in the disk.</span>
 <span class="sd">            store_raw_always: If ``True``, the raw MySQL tables will be also saved in the disk.</span>
 <span class="sd">            genome_assembly: Genome assembly of interest. The selection should be one of the keys in the</span>
 <span class="sd">                :py:attr:`DB.assembly_mysqlport_priority` dictionary. The object will work on only given assembly.</span>
@@ -142,9 +139,9 @@
 <span class="sd">            ValueError: When the input parameters are not in the specified format.</span>
 <span class="sd">            NotImplementedError: Currently only supports &#39;homo_sapiens&#39; as the organism name.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">organism</span> <span class="o">!=</span> <span class="s2">&quot;homo_sapiens&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">organism</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;homo_sapiens&quot;</span><span class="p">,</span> <span class="s2">&quot;mus_musculus&quot;</span><span class="p">]:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
-                <span class="s2">&quot;Organisms other than human is not implemented. In theory, it should work but &quot;</span>
+                <span class="s2">&quot;Organisms other than human and mouse is not implemented. In theory, it should work but &quot;</span>
                 <span class="s2">&quot;no tests have been conducted yet. In the next version of the package, other &quot;</span>
                 <span class="s2">&quot;organisms will be available. Please note that adding new organisms necessitates &quot;</span>
                 <span class="s2">&quot;to determine which external databases to include using ExternalDatabase class.&quot;</span>
@@ -173,10 +170,8 @@
 
         <span class="c1"># Instance attributes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">local_repository</span> <span class="o">=</span> <span class="n">local_repository</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ensembl_release</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">organism</span> <span class="o">=</span> <span class="n">organism</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">form</span> <span class="o">=</span> <span class="n">form</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">compress</span> <span class="o">=</span> <span class="n">compress</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">store_raw_always</span> <span class="o">=</span> <span class="n">store_raw_always</span>
         <span class="c1"># If ignore_before is not specified clearly, than use the lowest possible priority defined by the MySQL server.</span>
         <span class="n">default_min_er</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;MinRelease&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">)</span>
@@ -187,9 +182,14 @@
         <span class="c1"># Protected attributes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">available_form_of_interests</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">forms_in_order</span><span class="p">)</span>  <span class="c1"># Warning: the order is important.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_available_version_info</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;add_version&quot;</span><span class="p">,</span> <span class="s2">&quot;without_version&quot;</span><span class="p">,</span> <span class="s2">&quot;with_version&quot;</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_comp_hdf5</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;complevel&quot;</span><span class="p">:</span> <span class="mi">9</span><span class="p">,</span> <span class="s2">&quot;complib&quot;</span><span class="p">:</span> <span class="s2">&quot;blosc:zlib&quot;</span><span class="p">}</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">compress</span> <span class="k">else</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_column_sep</span> <span class="o">=</span> <span class="s2">&quot;_COL_&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_identifiers</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">form</span><span class="si">}</span><span class="s2">_stable_id&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">form</span><span class="si">}</span><span class="s2">_version&quot;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">ensembl_release</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># Set last possible Ensembl release for given genome assembly.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># placeholder value for for file naming method, it is not gonna be saved anyway.</span>
+            <span class="n">ensembl_release</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">available_releases_no_save</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ensembl_release</span><span class="p">)</span>
+        <span class="c1"># _ = self.external_inst.load_modified_yaml()</span>
 
         <span class="c1"># Check if it seems ok.</span>
         <span class="n">checkers</span> <span class="o">=</span> <span class="p">(</span>
@@ -209,7 +209,7 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">checkers</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&#39;DatabaseManager&#39; could not pass the &#39;checkers&#39;: </span><span class="si">{</span><span class="n">checkers</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Makes the instance status to be inspected by the user easily.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;DatabaseManager instance:</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="si">}</span><span class="s2">&quot;</span>
@@ -220,12 +220,11 @@
             <span class="sa">f</span><span class="s2">&quot;    Ignore Before: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_before</span><span class="si">}{</span><span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="sa">f</span><span class="s2">&quot;    Ignore After: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_after</span><span class="si">}{</span><span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="sa">f</span><span class="s2">&quot;    Local Repository: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">local_repository</span><span class="si">}{</span><span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;    Compress: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">compress</span><span class="si">}{</span><span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="sa">f</span><span class="s2">&quot;    Store Raw Always: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">store_raw_always</span><span class="si">}{</span><span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="p">)</span>
 
     <span class="nd">@cached_property</span>
-    <span class="k">def</span> <span class="nf">external_inst</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ExternalDatabases</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">external_inst</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ExternalDatabases</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create an instance of :py:class:`ExternalDatabases` and set as a property.</span>
 
 <span class="sd">        The parameters of the DatabaseManager instance will be directly passed in the creation of the</span>
@@ -243,12 +242,48 @@
         <span class="p">)</span>
 
     <span class="nd">@cached_property</span>
-    <span class="k">def</span> <span class="nf">available_releases</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">available_releases</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List Ensembl releases that can be queried **and** meet the ignore-window constraints.</span>
+
+<span class="sd">        The list is computed once (via :py:meth`available_releases_versions`) and then cached for the rest of</span>
+<span class="sd">        the session.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[int]: Sorted list of integer release numbers.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_releases_versions</span><span class="p">()</span>
+
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">available_releases_no_save</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List Ensembl releases reachable on the remote MySQL server.</span>
+
+<span class="sd">        Unlike :py:attr:`available_releases`, this helper never writes the</span>
+<span class="sd">        discovered list to disk; it simply caches the value in memory for the</span>
+<span class="sd">        lifetime of the current :py:class:`DatabaseManager` instance.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[int]: Sorted list of release numbers that</span>
+<span class="sd">                * match the organism and genome assembly tied to the instance,</span>
+<span class="sd">                * fall within the ``ignore_before`` / ``ignore_after`` window.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_releases_versions</span><span class="p">(</span><span class="n">save_after_calculation</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DatabaseManager.available_releases_versions">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.available_releases_versions">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">available_releases_versions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Define available Ensembl releases for the DatabaseManager instance to work on.</span>
 
+<span class="sd">        Discover which releases exist on the configured MySQL mirror.</span>
 <span class="sd">        It looks on the MySQL server results to determine which Ensembl releases are available. The method does not</span>
 <span class="sd">        return directly the Ensembl releases defined by &#39;ignore_after&#39; and &#39;ignore_before&#39; parameters, and looks on the</span>
 <span class="sd">        server as a verification.</span>
+
+<span class="sd">        A ``SHOW DATABASES`` query is issued, the result is filtered with a</span>
+<span class="sd">        regex of the form ``^{organism}_core_&lt;release&gt;_.*$``, and the surviving</span>
+<span class="sd">        release numbers are cleaned and range-checked.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            kwargs: Passed straight through to :py:meth:`DatabaseManager.get_db`.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            List of integers indicating which Ensembl releases are available.</span>
@@ -257,8 +292,7 @@
 <span class="sd">            ValueError: Unexpected error in regex functions.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Get all possible ensembl releases for a given organism</span>
-        <span class="n">dbs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;availabledatabases&quot;</span><span class="p">)</span>  <span class="c1"># Obtain the databases dataframe</span>
-
+        <span class="n">dbs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;availabledatabases&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)[</span><span class="s2">&quot;available_databases&quot;</span><span class="p">]</span>  <span class="c1"># Obtain the databases dataframe</span>
         <span class="n">pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;^</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">_core_([0-9]+)_.+$&quot;</span><span class="p">)</span>
         <span class="c1"># Search organism name in a specified format. Extract ensembl release number</span>
         <span class="n">releases</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
@@ -292,10 +326,11 @@
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_after</span> <span class="o">&gt;=</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_before</span>  <span class="c1"># Filter out the releases that are not of interest.</span>
         <span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">releases_final</span>
+        <span class="k">return</span> <span class="n">releases_final</span></div>
+
 
     <span class="nd">@cached_property</span>
-    <span class="k">def</span> <span class="nf">mysql_database</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">mysql_database</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;The program has to choose a &#39;MySQL database&#39; based on ensembl release and organism name in the MYSQL server.</span>
 
 <span class="sd">        Returns:</span>
@@ -304,7 +339,7 @@
 <span class="sd">        Raises:</span>
 <span class="sd">            ValueError: If there is more than one such match.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">dbs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;availabledatabases&quot;</span><span class="p">)</span>  <span class="c1"># Obtain the databases dataframe</span>
+        <span class="n">dbs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;availabledatabases&quot;</span><span class="p">)[</span><span class="s2">&quot;available_databases&quot;</span><span class="p">]</span>  <span class="c1"># Obtain the databases dataframe</span>
 
         <span class="n">pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;^</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">_core_</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span><span class="p">)</span><span class="si">}</span><span class="s2">_.+$&quot;</span><span class="p">)</span>
         <span class="n">located</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">dbs</span> <span class="k">if</span> <span class="n">pattern</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span>
@@ -319,7 +354,9 @@
 
         <span class="k">return</span> <span class="n">located</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
-<div class="viewcode-block" id="DatabaseManager.change_form"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.change_form">[docs]</a>    <span class="k">def</span> <span class="nf">change_form</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;DatabaseManager&quot;</span><span class="p">:</span>
+<div class="viewcode-block" id="DatabaseManager.change_form">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.change_form">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">change_form</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;DatabaseManager&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Changes the form of DatabaseManager instance with passing all other variables unchanged.</span>
 
 <span class="sd">        Args:</span>
@@ -335,12 +372,14 @@
             <span class="n">local_repository</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">local_repository</span><span class="p">,</span>
             <span class="n">ignore_before</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_before</span><span class="p">,</span>
             <span class="n">ignore_after</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_after</span><span class="p">,</span>
-            <span class="n">compress</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">compress</span><span class="p">,</span>
             <span class="n">store_raw_always</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">store_raw_always</span><span class="p">,</span>
             <span class="n">genome_assembly</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">,</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.change_release"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.change_release">[docs]</a>    <span class="k">def</span> <span class="nf">change_release</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ensembl_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;DatabaseManager&quot;</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.change_release">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.change_release">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">change_release</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ensembl_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;DatabaseManager&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Changes the Ensembl release of DatabaseManager instance with passing all other variables unchanged.</span>
 
 <span class="sd">        Args:</span>
@@ -357,34 +396,43 @@
             <span class="n">local_repository</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">local_repository</span><span class="p">,</span>
             <span class="n">ignore_before</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_before</span><span class="p">,</span>
             <span class="n">ignore_after</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_after</span><span class="p">,</span>
-            <span class="n">compress</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">compress</span><span class="p">,</span>
             <span class="n">store_raw_always</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">store_raw_always</span><span class="p">,</span>
             <span class="n">genome_assembly</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">,</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.change_assembly"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.change_assembly">[docs]</a>    <span class="k">def</span> <span class="nf">change_assembly</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">genome_assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;DatabaseManager&quot;</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Changes the genome assembly of DatabaseManager instance with passing all other variables unchanged.</span>
+
+<div class="viewcode-block" id="DatabaseManager.change_assembly">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.change_assembly">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">change_assembly</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">genome_assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">last_possible_ensembl_release</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;DatabaseManager&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Clone the manager while targeting a new genome assembly.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            genome_assembly: New genome assembly of interest.</span>
-<span class="sd">                Refer to :py:attr:`DatabaseManager.__init__.genome_assembly`</span>
+<span class="sd">            genome_assembly (int): Key from :py:data:`DB.assembly_mysqlport_priority` (e.g. ``38`` for *GRCh38*).</span>
+<span class="sd">            last_possible_ensembl_release (bool): If ``True``, the new instance automatically picks the</span>
+<span class="sd">                newest Ensembl release available for *genome_assembly* instead of</span>
+<span class="sd">                re-using ``self.ensembl_release``. Defaults to ``False``.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            New instance of DatabaseManager with only &#39;genome_assembly&#39; is changed.</span>
+<span class="sd">            DatabaseManager: Independent manager configured for the requested assembly.</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            The original object remains unchanged; remember to switch your variable reference to the returned instance.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">DatabaseManager</span><span class="p">(</span>
             <span class="n">organism</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">,</span>
-            <span class="n">ensembl_release</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span><span class="p">,</span>
+            <span class="n">ensembl_release</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">last_possible_ensembl_release</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">form</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">form</span><span class="p">,</span>
             <span class="n">local_repository</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">local_repository</span><span class="p">,</span>
             <span class="n">ignore_before</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_before</span><span class="p">,</span>
             <span class="n">ignore_after</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_after</span><span class="p">,</span>
-            <span class="n">compress</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">compress</span><span class="p">,</span>
             <span class="n">store_raw_always</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">store_raw_always</span><span class="p">,</span>
             <span class="n">genome_assembly</span><span class="o">=</span><span class="n">genome_assembly</span><span class="p">,</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.create_available_databases"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_available_databases">[docs]</a>    <span class="k">def</span> <span class="nf">create_available_databases</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.create_available_databases">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_available_databases">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_available_databases</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Fetches all the databases in the MySQL server of the instance.</span>
 
 <span class="sd">        Filters out the query ``SHOW databases`` based on matching to a specific regex string</span>
@@ -413,11 +461,14 @@
 
         <span class="n">pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;^</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">_core_[0-9]+_.+$&quot;</span><span class="p">)</span>
         <span class="n">accepted_databases</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">results_query</span> <span class="k">if</span> <span class="n">pattern</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
-        <span class="n">results</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">accepted_databases</span><span class="p">)</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">accepted_databases</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;available_databases&quot;</span><span class="p">])</span>
 
         <span class="k">return</span> <span class="n">results</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.get_table"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.get_table">[docs]</a>    <span class="k">def</span> <span class="nf">get_table</span><span class="p">(</span>
+
+<div class="viewcode-block" id="DatabaseManager.get_table">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.get_table">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_table</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">table_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">usecols</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -450,22 +501,38 @@
 
         <span class="c1"># If the file name is not accessible for reading, or if the hdf5 file does not contain the table,</span>
         <span class="c1"># or explicitly prompt to do so, then download the table.</span>
-        <span class="k">if</span> <span class="p">(</span>
-            <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">)</span>
-            <span class="ow">or</span> <span class="n">create_even_if_exist</span>
-            <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">DatabaseManager</span><span class="o">.</span><span class="n">check_h5_key</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">hierarchy</span><span class="p">))</span>
-        <span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">)</span> <span class="ow">or</span> <span class="n">create_even_if_exist</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">hs</span><span class="o">.</span><span class="n">check_h5_key</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">hierarchy</span><span class="p">)):</span>
             <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">download_table</span><span class="p">(</span><span class="n">table_key</span><span class="p">,</span> <span class="n">usecols</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>  <span class="c1"># Otherwise, just read the file that is already in the directory.</span>
-            <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_exported</span><span class="p">(</span><span class="n">hierarchy</span><span class="p">,</span> <span class="n">file_path</span><span class="p">)</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">hs</span><span class="o">.</span><span class="n">read_exported</span><span class="p">(</span><span class="n">hierarchy</span><span class="p">,</span> <span class="n">file_path</span><span class="p">)</span>
 
         <span class="c1"># If prompt, save the dataframe in requested format.</span>
         <span class="k">if</span> <span class="n">save_after_calculation</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">export_disk</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">hierarchy</span><span class="p">,</span> <span class="n">file_path</span><span class="p">,</span> <span class="n">overwrite_even_if_exist</span><span class="p">)</span>
+            <span class="n">hs</span><span class="o">.</span><span class="n">export_disk</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">hierarchy</span><span class="p">,</span> <span class="n">file_path</span><span class="p">,</span> <span class="n">overwrite_even_if_exist</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">df</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.download_table"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.download_table">[docs]</a>    <span class="k">def</span> <span class="nf">download_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">usecols</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.tables_in_disk">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.tables_in_disk">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">tables_in_disk</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieves the keys in the h5 file, which is associated with the DatabaseManager instance.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List of keys (also called hierarchy) in the h5 file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">file_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="p">(</span><span class="s2">&quot;common&quot;</span><span class="p">,</span> <span class="s2">&quot;place_holder&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">file_name</span><span class="p">):</span>
+            <span class="k">return</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">hs</span><span class="o">.</span><span class="n">HDFStore</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="DatabaseManager.download_table">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.download_table">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">download_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">usecols</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Downloads the raw table from MySQL server and extracts requested columns.</span>
 
 <span class="sd">        The method is not generally expected to be used by the user. User is expected to use &#39;get_table&#39; instead.</span>
@@ -513,7 +580,7 @@
             <span class="c1"># Create a dataframe using the columns fetched.</span>
             <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">results_content</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">column_names</span> <span class="k">if</span> <span class="n">usecols</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">usecols</span><span class="p">)</span>
             <span class="c1"># Make sure the content does not contain any bytes object.</span>
-            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">applymap</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">))):</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">))):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span>
 
             <span class="n">info_usecols</span> <span class="o">=</span> <span class="s2">&quot; for following columns: &quot;</span> <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">usecols</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="k">if</span> <span class="n">usecols</span> <span class="k">else</span> <span class="s2">&quot;.&quot;</span>
@@ -524,7 +591,10 @@
 
             <span class="k">return</span> <span class="n">df</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.available_tables_mysql"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.available_tables_mysql">[docs]</a>    <span class="k">def</span> <span class="nf">available_tables_mysql</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+<div class="viewcode-block" id="DatabaseManager.available_tables_mysql">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.available_tables_mysql">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">available_tables_mysql</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Fetches all the tables in the MySQL database of the instance.</span>
 
 <span class="sd">        Raises:</span>
@@ -532,7 +602,10 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.get_release_date"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.get_release_date">[docs]</a>    <span class="k">def</span> <span class="nf">get_release_date</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+<div class="viewcode-block" id="DatabaseManager.get_release_date">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.get_release_date">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_release_date</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the associated date of release for each Ensembl release.</span>
 
 <span class="sd">        Raises:</span>
@@ -540,8 +613,11 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
 
-<div class="viewcode-block" id="DatabaseManager._determine_usecols_ids"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager._determine_usecols_ids">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_determine_usecols_ids</span><span class="p">(</span><span class="n">form</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+
+<div class="viewcode-block" id="DatabaseManager._determine_usecols_ids">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager._determine_usecols_ids">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_determine_usecols_ids</span><span class="p">(</span><span class="n">form</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Helper method to guide which columns are interesting for each form.</span>
 
 <span class="sd">        Args:</span>
@@ -572,7 +648,10 @@
 
         <span class="k">return</span> <span class="n">stable_id_version</span><span class="p">,</span> <span class="n">usecols_core</span><span class="p">,</span> <span class="n">usecols_asso</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.create_ids"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_ids">[docs]</a>    <span class="k">def</span> <span class="nf">create_ids</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.create_ids">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_ids">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_ids</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieves the Ensembl IDs.</span>
 
 <span class="sd">        Args:</span>
@@ -615,7 +694,10 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">version_uniformize</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">version_str</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">form</span><span class="si">}</span><span class="s2">_version&quot;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.create_relation_current"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_relation_current">[docs]</a>    <span class="k">def</span> <span class="nf">create_relation_current</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.create_relation_current">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_relation_current">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_relation_current</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieves the relationship between different forms of Ensembl IDs.</span>
 
 <span class="sd">        Returns:</span>
@@ -638,12 +720,15 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_relation_helper</span><span class="p">(</span><span class="n">tgp</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.create_relation_archive"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_relation_archive">[docs]</a>    <span class="k">def</span> <span class="nf">create_relation_archive</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.create_relation_archive">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_relation_archive">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_relation_archive</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieves the relationship between different forms of Ensembl IDs for all Ensembl releases.</span>
 
 <span class="sd">        It is not recommended as there are some missing rows. Instead use</span>
-<span class="sd">        :py:meth:`DatabaseManager.create_relation_current` for all Ensembl releases separately, and</span>
-<span class="sd">        concatanate the resulting data frames.</span>
+<span class="sd">        :py:meth:`DatabaseManager.create_relation_current` for all Ensembl releases separately,</span>
+<span class="sd">        and concatanate the resulting data frames.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Dataframe of three columns: `gene`, `transcript`, and `translation`. Note that there are some empty cells</span>
@@ -657,7 +742,10 @@
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_relation_helper</span><span class="p">(</span><span class="n">df</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="DatabaseManager._create_relation_helper"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager._create_relation_helper">[docs]</a>    <span class="k">def</span> <span class="nf">_create_relation_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager._create_relation_helper">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager._create_relation_helper">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_relation_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Helper method for creating &#39;relationship&#39; dataframes for two methods.</span>
 
 <span class="sd">        The two methods is :py:meth:`DatabaseManager.create_relation_current` and</span>
@@ -710,7 +798,10 @@
         <span class="n">res</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">res</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.create_id_history"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_id_history">[docs]</a>    <span class="k">def</span> <span class="nf">create_id_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">narrow</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.create_id_history">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_id_history">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_id_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">narrow</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieves historical releationship between Ensembl IDs of a given form.</span>
 
 <span class="sd">        Args:</span>
@@ -773,7 +864,10 @@
         <span class="n">sm</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">sm</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.create_id_history_fixed"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_id_history_fixed">[docs]</a>    <span class="k">def</span> <span class="nf">create_id_history_fixed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">narrow</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">inspect</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.create_id_history_fixed">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_id_history_fixed">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_id_history_fixed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">narrow</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">inspect</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Depracated method alternative for &#39;create_id_history&#39;, which also corrects the resulting dataframe.</span>
 
 <span class="sd">        This method created a fixed version of idhistory. It fixes the problems seen in some exceptional cases like</span>
@@ -794,8 +888,8 @@
         <span class="n">df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;new_release&quot;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="c1"># Initialize some temp variables</span>
-        <span class="n">extinct_version</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="n">last_active_version</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">extinct_version</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">last_active_version</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="n">corrected_entries</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
 
         <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
@@ -843,7 +937,10 @@
         <span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">df</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.create_external_db"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_external_db">[docs]</a>    <span class="k">def</span> <span class="nf">create_external_db</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filter_mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.create_external_db">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_external_db">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_external_db</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filter_mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieves External identifier relationship. Returns the connections or databases only.</span>
 
 <span class="sd">        The method actually based on a rationele to the following MySQL query, not exactly but quite close to the</span>
@@ -947,7 +1044,7 @@
         <span class="n">id_graph</span> <span class="o">=</span> <span class="s2">&quot;graph_id&quot;</span>
         <span class="n">count_col</span> <span class="o">=</span> <span class="s2">&quot;count&quot;</span>
 
-        <span class="k">def</span> <span class="nf">comb_renamer</span><span class="p">(</span><span class="n">col_list</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">comb_renamer</span><span class="p">(</span><span class="n">col_list</span><span class="p">):</span>
             <span class="k">return</span> <span class="p">{</span><span class="n">col_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">db_id</span><span class="p">,</span> <span class="n">col_list</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span> <span class="n">db_name</span><span class="p">}</span>
 
         <span class="c1"># Create &quot;ID.Version&quot;</span>
@@ -1007,12 +1104,22 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.create_database_content"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_database_content">[docs]</a>    <span class="k">def</span> <span class="nf">create_database_content</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.create_database_content">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_database_content">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_database_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">just_download</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrives all External database information from the server to feed the ``ExternalDatabase`` class.</span>
 
 <span class="sd">        It is quite costly operation, potentially takes time to be completed. It helps ``ExternalDatabase`` class to</span>
 <span class="sd">        create the ``yaml`` file mentioned. It downloads for all assemblies, all Ensembl releases and all forms</span>
 <span class="sd">        available.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            just_download (bool):</span>
+<span class="sd">                * ``False`` (default) - concatenate all intermediate results</span>
+<span class="sd">                  into one DataFrame and return it.</span>
+<span class="sd">                * ``True`` - perform the downloads so they are cached on disk</span>
+<span class="sd">                  but return an **empty** DataFrame.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            The output of ``create_external_db`` when `filter_mode` `relevant-database`. Adds `assembly`, `release`,</span>
@@ -1020,22 +1127,30 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>  <span class="c1"># For all assemblies possible.</span>
-            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_form_of_interests</span><span class="p">:</span>  <span class="c1"># For all assemblies possible.</span>
-                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_releases</span><span class="p">:</span>
+            <span class="n">dm_assembly</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">last_possible_ensembl_release</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">dm_assembly</span><span class="o">.</span><span class="n">available_form_of_interests</span><span class="p">:</span>  <span class="c1"># For all assemblies possible.</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">dm_assembly</span><span class="o">.</span><span class="n">available_releases</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
                         <span class="sa">f</span><span class="s2">&quot;Database content is being created for &quot;</span>
                         <span class="sa">f</span><span class="s2">&quot;`</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">`, assembly `</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">`, form `</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s2">`, ensembl release `</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">`&quot;</span>
                     <span class="p">)</span>
-                    <span class="n">df_temp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">change_form</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;external_database&quot;</span><span class="p">)</span>
+                    <span class="n">df_temp</span> <span class="o">=</span> <span class="n">dm_assembly</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">change_form</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;external_database&quot;</span><span class="p">)</span>
                     <span class="n">df_temp</span><span class="p">[</span><span class="s2">&quot;assembly&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">k</span>
                     <span class="n">df_temp</span><span class="p">[</span><span class="s2">&quot;release&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
                     <span class="n">df_temp</span><span class="p">[</span><span class="s2">&quot;form&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span>
-                    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span><span class="p">,</span> <span class="n">df_temp</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;organism&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism</span>
-        <span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">df</span></div>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">just_download</span><span class="p">:</span>
+                        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span><span class="p">,</span> <span class="n">df_temp</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">just_download</span><span class="p">:</span>
+            <span class="n">df</span><span class="p">[</span><span class="s2">&quot;organism&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">df</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">df</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.create_release_id"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_release_id">[docs]</a>    <span class="k">def</span> <span class="nf">create_release_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.create_release_id">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_release_id">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_release_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieves the Ensembl IDs and applies `version_fix` method to refine it.</span>
 
 <span class="sd">        Returns:</span>
@@ -1060,7 +1175,30 @@
         <span class="n">dbm_the_ids</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">dbm_the_ids</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.create_external_all"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_external_all">[docs]</a>    <span class="k">def</span> <span class="nf">create_external_all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">return_mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.check_if_change_assembly_works">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.check_if_change_assembly_works">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_if_change_assembly_works</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_manager</span><span class="p">,</span> <span class="n">target_assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Test whether ``change_assembly`` succeeds for *target_assembly*.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            db_manager (DatabaseManager): A working manager to clone.</span>
+<span class="sd">            target_assembly (int): Assembly code to probe.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: ``True`` if the new manager could be instantiated without</span>
+<span class="sd">            raising ``ValueError``; ``False`` otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">db_manager</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">target_assembly</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="DatabaseManager.create_external_all">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_external_all">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_external_all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">return_mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Download external databases for all assemblies.</span>
 
 <span class="sd">        The method considers the &#39;priority&#39; of the assemblies indicated in</span>
@@ -1083,10 +1221,11 @@
         <span class="n">assembly_priority</span> <span class="o">=</span> <span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;Priority&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ass</span><span class="p">]</span>
 
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">assembly_priority</span><span class="p">,</span> <span class="n">ass</span><span class="p">))]:</span>  <span class="c1"># sort according to priority</span>
-            <span class="n">dm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
-            <span class="n">df_temp</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;external_relevant&quot;</span><span class="p">)</span>
-            <span class="n">df_temp</span><span class="p">[</span><span class="s2">&quot;assembly&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
-            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span><span class="p">,</span> <span class="n">df_temp</span><span class="p">])</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_if_change_assembly_works</span><span class="p">(</span><span class="n">db_manager</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">target_assembly</span><span class="o">=</span><span class="n">i</span><span class="p">):</span>
+                <span class="n">dm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="n">df_temp</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;external_relevant&quot;</span><span class="p">)</span>
+                <span class="n">df_temp</span><span class="p">[</span><span class="s2">&quot;assembly&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span><span class="p">,</span> <span class="n">df_temp</span><span class="p">])</span>
         <span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="n">compare_columns</span> <span class="o">=</span> <span class="p">[</span>
@@ -1116,7 +1255,10 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Undefined parameter for &#39;return_mode&#39;: </span><span class="si">{</span><span class="n">return_mode</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.create_version_info"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_version_info">[docs]</a>    <span class="k">def</span> <span class="nf">create_version_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.create_version_info">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_version_info">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_version_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check whether all Ensembl release has Ensembl IDs with versions or without versions.</span>
 
 <span class="sd">        Some organisms such as S. cerevisiae has Ensembl identifiers that has no &#39;Version&#39;, but only &#39;ID&#39;. The method</span>
@@ -1149,7 +1291,10 @@
         <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">ver</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ensembl_release&quot;</span><span class="p">,</span> <span class="s2">&quot;version_info&quot;</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">df</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.get_db"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.get_db">[docs]</a>    <span class="k">def</span> <span class="nf">get_db</span><span class="p">(</span>
+
+<div class="viewcode-block" id="DatabaseManager.get_db">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.get_db">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_db</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">df_indicator</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">create_even_if_exist</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -1174,7 +1319,7 @@
 <span class="sd">            ValueError: If `df_indicator` parameter is not in specified format.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="k">def</span> <span class="nf">check_exist_as_diff_release</span><span class="p">(</span><span class="n">_df_type</span><span class="p">,</span> <span class="n">_df_indicator</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">check_exist_as_diff_release</span><span class="p">(</span><span class="n">_df_type</span><span class="p">,</span> <span class="n">_df_indicator</span><span class="p">):</span>
             <span class="c1"># Get the file name associated with table_key and columns of interest.</span>
             <span class="n">_</span><span class="p">,</span> <span class="n">_file_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="p">(</span><span class="n">_df_type</span><span class="p">,</span> <span class="n">_df_indicator</span><span class="p">)</span>
 
@@ -1185,7 +1330,7 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">_file_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">):</span>
                 <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">()</span>
 
-            <span class="k">with</span> <span class="n">pd</span><span class="o">.</span><span class="n">HDFStore</span><span class="p">(</span><span class="n">_file_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">hs</span><span class="o">.</span><span class="n">HDFStore</span><span class="p">(</span><span class="n">_file_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
                 <span class="n">_keys</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
             <span class="n">_downloaded_rels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">({</span><span class="nb">int</span><span class="p">(</span><span class="n">_pattern</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">groups</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">_keys</span> <span class="k">if</span> <span class="n">_pattern</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">i</span><span class="p">)})</span>
 
@@ -1194,16 +1339,16 @@
                     <span class="k">return</span> <span class="n">_dr</span><span class="p">,</span> <span class="n">_downloaded_rels</span>
             <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">_downloaded_rels</span>
 
-        <span class="k">def</span> <span class="nf">remove_redundant_exist</span><span class="p">(</span><span class="n">_df_type</span><span class="p">,</span> <span class="n">_df_indicator</span><span class="p">,</span> <span class="n">_keep_rel</span><span class="p">,</span> <span class="n">_all_rel_lst</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">remove_redundant_exist</span><span class="p">(</span><span class="n">_df_type</span><span class="p">,</span> <span class="n">_df_indicator</span><span class="p">,</span> <span class="n">_keep_rel</span><span class="p">,</span> <span class="n">_all_rel_lst</span><span class="p">):</span>
             <span class="k">for</span> <span class="n">_arl</span> <span class="ow">in</span> <span class="n">_all_rel_lst</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">_arl</span> <span class="o">!=</span> <span class="n">_keep_rel</span><span class="p">:</span>
                     <span class="n">_hi</span><span class="p">,</span> <span class="n">_fi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="p">(</span><span class="n">_df_type</span><span class="p">,</span> <span class="n">_df_indicator</span><span class="p">,</span> <span class="n">ensembl_release</span><span class="o">=</span><span class="n">_arl</span><span class="p">)</span>
-                    <span class="k">with</span> <span class="n">pd</span><span class="o">.</span><span class="n">HDFStore</span><span class="p">(</span><span class="n">_fi</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;a&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="k">with</span> <span class="n">hs</span><span class="o">.</span><span class="n">HDFStore</span><span class="p">(</span><span class="n">_fi</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;a&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                        <span class="n">f</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">_hi</span><span class="p">)</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
                             <span class="sa">f</span><span class="s2">&quot;Following file is being removed: `</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">_fi</span><span class="p">)</span><span class="si">}</span><span class="s2">` with key `</span><span class="si">{</span><span class="n">_hi</span><span class="si">}</span><span class="s2">`. &quot;</span>
                             <span class="sa">f</span><span class="s2">&quot;This could cause hdf5 file to not reclaim the emptied disk space.&quot;</span>
                         <span class="p">)</span>
-                        <span class="n">f</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">_hi</span><span class="p">)</span>
 
         <span class="c1"># Split the df_indicator with &quot;_&quot;, to get the extra parameters.</span>
         <span class="c1"># Main point of naming and df_indicator is to include the paramters in the file_names</span>
@@ -1234,11 +1379,7 @@
 
         <span class="c1"># If the file name is not accessible for reading, or if the hdf5 file does not contain the table,</span>
         <span class="c1"># or explicitly prompt to do so, then download the table.</span>
-        <span class="k">if</span> <span class="p">(</span>
-            <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">)</span>
-            <span class="ow">or</span> <span class="n">create_even_if_exist</span>
-            <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">DatabaseManager</span><span class="o">.</span><span class="n">check_h5_key</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">hierarchy</span><span class="p">))</span>
-        <span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">)</span> <span class="ow">or</span> <span class="n">create_even_if_exist</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">hs</span><span class="o">.</span><span class="n">check_h5_key</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">hierarchy</span><span class="p">)):</span>
             <span class="k">if</span> <span class="n">main_ind</span> <span class="o">==</span> <span class="s2">&quot;external&quot;</span> <span class="ow">and</span> <span class="n">param1_ind</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_external_db</span><span class="p">(</span><span class="n">filter_mode</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">)</span>
 
@@ -1281,40 +1422,18 @@
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unexpected entry for &#39;df_indicator&#39;.&quot;</span><span class="p">)</span>
 
         <span class="k">else</span><span class="p">:</span>  <span class="c1"># Otherwise, just read the file that is already in the directory.</span>
-            <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_exported</span><span class="p">(</span><span class="n">hierarchy</span><span class="p">,</span> <span class="n">file_path</span><span class="p">)</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">hs</span><span class="o">.</span><span class="n">read_exported</span><span class="p">(</span><span class="n">hierarchy</span><span class="p">,</span> <span class="n">file_path</span><span class="p">)</span>
 
         <span class="c1"># If prompt, save the dataframe in requested format.</span>
         <span class="k">if</span> <span class="n">save_after_calculation</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">export_disk</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">hierarchy</span><span class="p">,</span> <span class="n">file_path</span><span class="p">,</span> <span class="n">overwrite_even_if_exist</span><span class="p">)</span>
+            <span class="n">hs</span><span class="o">.</span><span class="n">export_disk</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">hierarchy</span><span class="p">,</span> <span class="n">file_path</span><span class="p">,</span> <span class="n">overwrite_even_if_exist</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">df</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.read_exported"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.read_exported">[docs]</a>    <span class="k">def</span> <span class="nf">read_exported</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hierarchy</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read the data souces saved previously given h5 file path and the &#39;h5 key&#39;.</span>
 
-<span class="sd">        The method is not expected to be used by the user.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            hierarchy: The key to retrieve the associated table in h5 file.</span>
-<span class="sd">            file_path: Absolute path for h5 file.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            The table of interest as a pandas object.</span>
-
-<span class="sd">        Raises:</span>
-<span class="sd">            FileNotFoundError: If the file indicated by `file_path` is not exist or not readable.</span>
-<span class="sd">            KeyError: If there is no key `hierarchy` in the ``h5`` file defined by `file_path`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">&quot;The file is not exist or not readable.&quot;</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">DatabaseManager</span><span class="o">.</span><span class="n">check_h5_key</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">hierarchy</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">KeyError</span>
-
-        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_hdf</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">hierarchy</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">df</span></div>
-
-<div class="viewcode-block" id="DatabaseManager.file_name"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.file_name">[docs]</a>    <span class="k">def</span> <span class="nf">file_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">ensembl_release</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<div class="viewcode-block" id="DatabaseManager.file_name">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.file_name">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">file_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">ensembl_release</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Determine file name for reading/writing into h5 file based on dataframe type.</span>
 
 <span class="sd">        The method is not expected to be used by the user.</span>
@@ -1333,14 +1452,14 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">ensembl_release</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">ensembl_release</span> <span class="k">else</span> <span class="n">ensembl_release</span>
 
-        <span class="k">def</span> <span class="nf">file_name_processed</span><span class="p">(</span><span class="n">df_indicator</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">file_name_processed</span><span class="p">(</span><span class="n">df_indicator</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
             <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;ens</span><span class="si">{</span><span class="n">ensembl_release</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">df_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">df_indicator</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">form</span><span class="si">}</span><span class="s2">&quot;</span>
 
-        <span class="k">def</span> <span class="nf">file_name_mysql</span><span class="p">(</span><span class="n">table_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">usecols</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">file_name_mysql</span><span class="p">(</span><span class="n">table_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">usecols</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
             <span class="n">col_suffix</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_column_sep</span><span class="si">}{</span><span class="bp">self</span><span class="o">.</span><span class="n">_column_sep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">usecols</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">usecols</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
             <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;ens</span><span class="si">{</span><span class="n">ensembl_release</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">df_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">table_key</span><span class="si">}{</span><span class="n">col_suffix</span><span class="si">}</span><span class="s2">&quot;</span>
 
-        <span class="k">def</span> <span class="nf">file_name_noform</span><span class="p">(</span><span class="n">df_indicator</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">file_name_noform</span><span class="p">(</span><span class="n">df_indicator</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
             <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;ens</span><span class="si">{</span><span class="n">ensembl_release</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">df_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">df_indicator</span><span class="si">}</span><span class="s2">&quot;</span>
 
         <span class="k">if</span> <span class="n">df_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;processed&quot;</span><span class="p">,</span> <span class="s2">&quot;mysql&quot;</span><span class="p">,</span> <span class="s2">&quot;common&quot;</span><span class="p">]:</span>
@@ -1354,102 +1473,10 @@
 
         <span class="k">return</span> <span class="n">hierarchy</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">local_repository</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">_assembly-</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="si">}</span><span class="s2">.h5&quot;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.export_disk"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.export_disk">[docs]</a>    <span class="k">def</span> <span class="nf">export_disk</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">],</span> <span class="n">hierarchy</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Stored the pandas object into the given h5 file with specified key.</span>
 
-<span class="sd">        The method is not expected to be used by the user.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            df: The table to stor into the disk.</span>
-<span class="sd">            hierarchy: The key to retrieve the associated table in h5 file.</span>
-<span class="sd">            file_path: Absolute path for h5 file.</span>
-<span class="sd">            overwrite: If ``True``, regardless of whether it is already saved in the disk, the program</span>
-<span class="sd">                re-saves removing the previous table with the same name.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">base_file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">)</span> <span class="ow">or</span> <span class="n">overwrite</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">DatabaseManager</span><span class="o">.</span><span class="n">check_h5_key</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">hierarchy</span><span class="p">)):</span>
-            <span class="c1"># Remove the file first to prevent hdf5 file to go arbitrarily larger after writing.</span>
-            <span class="k">if</span> <span class="n">DatabaseManager</span><span class="o">.</span><span class="n">check_h5_key</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">hierarchy</span><span class="p">)</span> <span class="ow">or</span> <span class="n">overwrite</span><span class="p">:</span>
-                <span class="k">with</span> <span class="n">pd</span><span class="o">.</span><span class="n">HDFStore</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;a&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="n">hierarchy</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                            <span class="sa">f</span><span class="s2">&quot;Following file is being removed: `</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span><span class="si">}</span><span class="s2">` &quot;</span>
-                            <span class="sa">f</span><span class="s2">&quot;with key `</span><span class="si">{</span><span class="n">hierarchy</span><span class="si">}</span><span class="s2">`. This could cause hdf5 file to not reclaim the &quot;</span>
-                            <span class="sa">f</span><span class="s2">&quot;newly emptied disk space.&quot;</span>
-                        <span class="p">)</span>
-                        <span class="n">f</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">hierarchy</span><span class="p">)</span>
-            <span class="c1"># Then save the dataframe under the root, compressed.</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Exporting to the following file `</span><span class="si">{</span><span class="n">base_file_path</span><span class="si">}</span><span class="s2">` with key `</span><span class="si">{</span><span class="n">hierarchy</span><span class="si">}</span><span class="s2">`&quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="bp">self</span><span class="o">.</span><span class="n">compress</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;, uncompressed&#39;</span><span class="si">}</span><span class="s2">.&quot;</span>
-            <span class="p">)</span>
-            <span class="n">df</span><span class="o">.</span><span class="n">to_hdf</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">hierarchy</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_comp_hdf5</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="DatabaseManager.check_h5_key"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.check_h5_key">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">check_h5_key</span><span class="p">(</span><span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check whether the given key is in the h5 file.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            file_path: Absolute path for h5 file.</span>
-<span class="sd">            key: The key to retrieve the associated table in h5 file.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            If there is such  a key ``True``, else ``False``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">):</span>
-            <span class="k">return</span> <span class="kc">False</span>
-        <span class="k">with</span> <span class="n">pd</span><span class="o">.</span><span class="n">HDFStore</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">f</span></div>
-
-<div class="viewcode-block" id="DatabaseManager.repack_hdf5"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.repack_hdf5">[docs]</a>    <span class="k">def</span> <span class="nf">repack_hdf5</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">remove_list</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Repack h5 file.</span>
-
-<span class="sd">        When a table is removed by the h5 file, the associated space is not reclaimed by the operating system. The</span>
-<span class="sd">        method here circumvents the problem by removing h5 files completely and re-writing all the tables.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            remove_list: Table keys to exclude from re-writing.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">_</span><span class="p">,</span> <span class="n">file_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="p">(</span><span class="s2">&quot;common&quot;</span><span class="p">,</span> <span class="s2">&quot;place_holder&quot;</span><span class="p">)</span>
-        <span class="n">old_name</span> <span class="o">=</span> <span class="n">file_name</span> <span class="o">+</span> <span class="s2">&quot;_to_delete_temp&quot;</span>
-        <span class="n">os</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="n">old_name</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Repacking the h5 file: </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-        <span class="k">with</span> <span class="n">pd</span><span class="o">.</span><span class="n">HDFStore</span><span class="p">(</span><span class="n">old_name</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-            <span class="n">all_keys</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">remove_list</span><span class="p">:</span>
-            <span class="n">keys</span> <span class="o">=</span> <span class="n">all_keys</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">keys</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">all_keys</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">remove_list</span><span class="p">]</span>
-
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">disabled</span> <span class="o">=</span> <span class="kc">True</span>
-            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
-                <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_exported</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">old_name</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">export_disk</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">disabled</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
-
-        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">old_name</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="DatabaseManager.tables_in_disk"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.tables_in_disk">[docs]</a>    <span class="k">def</span> <span class="nf">tables_in_disk</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieves the keys in the h5 file, which is associated with the DatabaseManager instance.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            List of keys (also called hierarchy) in the h5 file.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">_</span><span class="p">,</span> <span class="n">file_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="p">(</span><span class="s2">&quot;common&quot;</span><span class="p">,</span> <span class="s2">&quot;place_holder&quot;</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">file_name</span><span class="p">):</span>
-            <span class="k">return</span> <span class="nb">list</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">with</span> <span class="n">pd</span><span class="o">.</span><span class="n">HDFStore</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
-
-<div class="viewcode-block" id="DatabaseManager.id_ver_from_df"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.id_ver_from_df">[docs]</a>    <span class="k">def</span> <span class="nf">id_ver_from_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dbm_the_ids</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<div class="viewcode-block" id="DatabaseManager.id_ver_from_df">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.id_ver_from_df">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">id_ver_from_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dbm_the_ids</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates node names given the dataframe of IDs, which has different columns for &#39;ID&#39; and &#39;Version&#39;.</span>
 
 <span class="sd">        Args:</span>
@@ -1469,8 +1496,11 @@
         <span class="n">gri_generator</span> <span class="o">=</span> <span class="p">(</span><span class="n">DatabaseManager</span><span class="o">.</span><span class="n">node_dict_maker</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">dbm_the_ids</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
         <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">DatabaseManager</span><span class="o">.</span><span class="n">node_name_maker</span><span class="p">,</span> <span class="n">gri_generator</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.node_name_maker"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.node_name_maker">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">node_name_maker</span><span class="p">(</span><span class="n">node_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.node_name_maker">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.node_name_maker">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">node_name_maker</span><span class="p">(</span><span class="n">node_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;This function creates ID-Version.</span>
 
 <span class="sd">        If the Version information is not there, it only uses ID, which is necessary for some organisms which</span>
@@ -1487,8 +1517,11 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">node_dict</span><span class="p">[</span><span class="s2">&quot;ID&quot;</span><span class="p">]</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.node_dict_maker"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.node_dict_maker">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">node_dict_maker</span><span class="p">(</span><span class="n">id_entry</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">version_entry</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+
+<div class="viewcode-block" id="DatabaseManager.node_dict_maker">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.node_dict_maker">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">node_dict_maker</span><span class="p">(</span><span class="n">id_entry</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">version_entry</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a dict for ID and Version.</span>
 
 <span class="sd">        Args:</span>
@@ -1508,7 +1541,10 @@
                 <span class="n">version_entry</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">version_entry</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;ID&quot;</span><span class="p">:</span> <span class="n">id_entry</span><span class="p">,</span> <span class="s2">&quot;Version&quot;</span><span class="p">:</span> <span class="n">version_entry</span><span class="p">}</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.version_uniformize"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.version_uniformize">[docs]</a>    <span class="k">def</span> <span class="nf">version_uniformize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">version_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.version_uniformize">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.version_uniformize">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">version_uniformize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">version_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Final operation for :py:meth:`DatabaseManager.create_ids`.</span>
 
 <span class="sd">        The method is not expected to be used by the user.</span>
@@ -1540,7 +1576,10 @@
             <span class="n">df</span><span class="p">[</span><span class="n">version_str</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">version_str</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">df</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.version_fix_incomplete"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.version_fix_incomplete">[docs]</a>    <span class="k">def</span> <span class="nf">version_fix_incomplete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df_fx</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">id_col_fx</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ver_col_fx</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.version_fix_incomplete">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.version_fix_incomplete">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">version_fix_incomplete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df_fx</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">id_col_fx</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ver_col_fx</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;The same logic with ``version_fix`` method, but do different process if associated &#39;ID&#39; is ``np.nan``.</span>
 
 <span class="sd">        Args:</span>
@@ -1566,7 +1605,10 @@
 
         <span class="k">return</span> <span class="n">df_fx</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.version_fix"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.version_fix">[docs]</a>    <span class="k">def</span> <span class="nf">version_fix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">version_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">version_info</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.version_fix">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.version_fix">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">version_fix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">version_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">version_info</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Depending the version information of the organism, uniformize the identifiers.</span>
 
 <span class="sd">        The method is not expected to be used by the user.</span>
@@ -1600,7 +1642,10 @@
 
         <span class="k">return</span> <span class="n">df</span></div>
 
-<div class="viewcode-block" id="DatabaseManager.check_version_info"><a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.check_version_info">[docs]</a>    <span class="k">def</span> <span class="nf">check_version_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+
+<div class="viewcode-block" id="DatabaseManager.check_version_info">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.check_version_info">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_version_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Look at across all Ensembl releases and decide the &#39;version_info&#39; variable to be used in the program.</span>
 
 <span class="sd">        Returns:</span>
@@ -1624,7 +1669,9 @@
             <span class="k">return</span> <span class="s2">&quot;with_version&quot;</span>
 
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="s2">&quot;add_version&quot;</span></div></div>
+            <span class="k">return</span> <span class="s2">&quot;add_version&quot;</span></div>
+</div>
+
 </pre></div>
 
            </div>
@@ -1634,7 +1681,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2022, Kemal Inecik.</p>
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
