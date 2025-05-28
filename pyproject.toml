@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "idtrack"
-version = "0.0.4"  # <<COOKIETEMPLE_FORCE_BUMP>>
+version = "0.0.4"
 description = "Cross-Temporal and Cross-Database Biological Identifier Mapping."
 authors = ["Kemal Inecik <k.inecik@gmail.com>"]
 license = "BSD-3-Clause"
@@ -18,33 +18,35 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: BSD License",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 
 
 [tool.poetry.dependencies]
-python = ">=3.8,<4.0"
+python = ">=3.9,<4.0"
 # dependencies are versioned based on their version on 19 October 2019, when Python 3.8 was released.
 PyYAML = ">=5.2"
 h5py = ">=2.10.0"
-tables = ">=2.6.1"
-pandas = ">=0.25.3,<2.0.0"
+pandas = ">=0.25.3"
 numpy = ">=1.17.4"
 networkx = ">=2.4"
 requests = ">=2.22.0"
 PyMySQL = ">=0.9.3"
 tqdm = ">=4.37.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 click = ">=8.0.0"
 rich = ">=10.3.0"
 pytest = ">=6.2.3"
 coverage = {extras = ["toml"], version = ">=5.3"}
-safety = ">=1.9.0"
+safety = ">=2,<3"
 typeguard = ">=2.12.0"
 xdoctest = {extras = ["colors"], version = ">=0.15.0"}
 sphinx = ">=4.0.2"
@@ -62,7 +64,8 @@ pre-commit-hooks = ">=4.0.1"
 sphinx-rtd-theme = ">=0.5.0"
 sphinx-click = ">=3.0.0"
 Pygments = ">=2.8.1"
-types-pkg-resources = ">=0.1.2"
+# types-pkg-resources, which was unceremoniously disappeared from the Python supply chain. instead `types-setuptools`
+types-setuptools = ">=71.1.0"
 types-requests = ">=2.25.2"
 types-attrs = ">=19.1.0"
 sphinx-rtd-dark-mode = ">=1.2.3"
@@ -77,6 +80,7 @@ types-PyMySQL = "^1.0.19"
 types-PyYAML = "^6.0.11"
 ipython = "^8.4.0"
 isort = "^5.12.0"
+poetry-plugin-export = ">=1.8"
 
 [tool.poetry.scripts]
 idtrack = "idtrack.__main__:main"

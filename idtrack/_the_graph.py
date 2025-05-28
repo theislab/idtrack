@@ -9,12 +9,12 @@ import logging
 import re
 from collections import Counter
 from functools import cached_property
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Optional, Union
 
 import networkx as nx
 import numpy as np
 
-from ._db import DB
+from idtrack._db import DB
 
 
 class TheGraph(nx.MultiDiGraph):
@@ -271,7 +271,7 @@ class TheGraph(nx.MultiDiGraph):
 
         return result
 
-    def node_name_alternatives(self, identifier: str) -> Tuple[Optional[str], bool]:
+    def node_name_alternatives(self, identifier: str) -> tuple[Optional[str], bool]:
         """Matching a query ID into the ID found in the graph based on some criteria and priorities.
 
         A query ID is sometimes not found exactly in the graph due to the format it has. However, very slight
@@ -292,7 +292,7 @@ class TheGraph(nx.MultiDiGraph):
                 The second element is to show whether the query ID is found without any modifications or not.
         """
 
-        def _node_name_alternatives(the_id: str) -> Tuple[Optional[str], bool]:
+        def _node_name_alternatives(the_id: str) -> tuple[Optional[str], bool]:
             """Helper function for :py:meth:`TheGraph.node_name_alternatives`.
 
             Args:
@@ -302,7 +302,7 @@ class TheGraph(nx.MultiDiGraph):
                 The same as the parental method.
             """
 
-            def compare_lowers(id_to_find: str) -> Tuple[Optional[str], bool]:
+            def compare_lowers(id_to_find: str) -> tuple[Optional[str], bool]:
                 """Check whether lower-character ID is found.
 
                 Args:
@@ -319,7 +319,7 @@ class TheGraph(nx.MultiDiGraph):
                 else:
                     return None, False  # If cannot return anything, just return None (unfound).
 
-            def check_variation(id_str: str) -> Tuple[Optional[str], bool]:
+            def check_variation(id_str: str) -> tuple[Optional[str], bool]:
                 """Search ID in the graph without flanking substring.
 
                 Args:
@@ -412,7 +412,7 @@ class TheGraph(nx.MultiDiGraph):
         return new_ident, is_conv
 
     @cached_property
-    def get_active_ranges_of_id(self) -> Dict[str, List[List]]:
+    def get_active_ranges_of_id(self) -> dict[str, list[list]]:
         """Returns the range of active ensembl releases of nodes, ignoring which assembly the release is coming from.
 
         Returns:
@@ -422,7 +422,7 @@ class TheGraph(nx.MultiDiGraph):
         self.log.info(f"Cached properties being calculated: {'get_active_ranges_of_id'}")
         return {n: self._get_active_ranges_of_id(n) for n in self.nodes}
 
-    def _get_active_ranges_of_id(self, input_id: str) -> List[List]:
+    def _get_active_ranges_of_id(self, input_id: str) -> list[list]:
         """Calculating the range of active ensembl releases of nodes separately for backbone nodes and others.
 
         Args:
@@ -432,7 +432,7 @@ class TheGraph(nx.MultiDiGraph):
             Ranges of the ID as list of lists. Outputs should always be increasing, inclusive ranges.
         """
 
-        def _get_active_ranges_of_id_nonbackbone(the_id: str) -> List[List]:
+        def _get_active_ranges_of_id_nonbackbone(the_id: str) -> list[list]:
             """For the non-backbone nodes, calculates the ranges of IDs using `combined_edges` dictionaries.
 
             Args:
@@ -453,7 +453,7 @@ class TheGraph(nx.MultiDiGraph):
             rels = sorted({s for p in rd for r in rd[p] for s in rd[p][r]})
             return TheGraph.list_to_ranges(rels)  # Convert the list of ensembl releases into range.
 
-        def _get_active_ranges_of_id_backbone(the_id: str) -> List[List]:
+        def _get_active_ranges_of_id_backbone(the_id: str) -> list[list]:
             """For the backbone nodes, calculates the ranges of IDs.
 
             Args:
@@ -534,7 +534,7 @@ class TheGraph(nx.MultiDiGraph):
         else:
             return _get_active_ranges_of_id_nonbackbone(input_id)
 
-    def get_active_ranges_of_id_ensembl_all_inclusive(self, the_id: str) -> List[List]:
+    def get_active_ranges_of_id_ensembl_all_inclusive(self, the_id: str) -> list[list]:
         """Generate active ranges of Ensembl gene nodes with all assemblies.
 
         Note that :py:meth:`TheGraph.get_active_ranges_of_id` method provided the range for main assembly
@@ -559,7 +559,7 @@ class TheGraph(nx.MultiDiGraph):
         if ndt == DB.nts_ensembl["gene"]:
             narrowed = self.get_active_ranges_of_id[the_id]  # Get the range of main assembly.
             comb_result = self.combined_edges_genes[the_id]  # Get the range of main assembly and also others.
-            comb_reduced: Dict[int, set] = dict()  # Create a dict that flattens all ensembl releases on assemblies.
+            comb_reduced: dict[int, set] = dict()  # Create a dict that flattens all ensembl releases on assemblies.
             for i in comb_result:
                 for j in comb_result[i]:
                     if j not in comb_reduced:
@@ -605,9 +605,11 @@ class TheGraph(nx.MultiDiGraph):
 
         return list(
             {
-                an_edge["old_release"]  # (8) Get the 'old release' attribute of the edge.
-                if (not np.isinf(an_edge["new_release"]) and not reverse)  # (7) In forward dir and non-retired edge
-                else an_edge["new_release"]  # (9) Else (reverse dir or non-retired edge), get the 'new release' attr.
+                (
+                    an_edge["old_release"]  # (8) Get the 'old release' attribute of the edge.
+                    if (not np.isinf(an_edge["new_release"]) and not reverse)  # (7) In forward dir and non-retired edge
+                    else an_edge["new_release"]
+                )  # (9) Else (reverse dir or non-retired edge), get the 'new release' attr.
                 # (1) Get the node_after based on the direction of interest
                 for node_after in nx.neighbors(self if not reverse else self.rev, from_id)
                 # (2) Get the edge data between each node_after and from_id.
@@ -628,7 +630,7 @@ class TheGraph(nx.MultiDiGraph):
             }  # (10) Create a set out of those to remove the duplicates.
         )  # (11) Convert into a list at the end.
 
-    def get_active_ranges_of_base_id_alternative(self, base_id: str) -> List[List]:
+    def get_active_ranges_of_base_id_alternative(self, base_id: str) -> list[list]:
         """Get the range of an base ID based on the child IDs it is connected to.
 
         Args:
@@ -642,7 +644,7 @@ class TheGraph(nx.MultiDiGraph):
         return self.list_to_ranges(self.ranges_to_list(all_ranges))
 
     @staticmethod
-    def list_to_ranges(lst: List[int]) -> List[List]:
+    def list_to_ranges(lst: list[int]) -> list[list]:
         """Convert sorted non-repeating list of integers into list of inclusive non-overlapping ranges.
 
         Args:
@@ -658,7 +660,7 @@ class TheGraph(nx.MultiDiGraph):
             res.append([b[0][1], b[-1][1]])
         return res
 
-    def ranges_to_list(self, lor: List[List]) -> List[int]:
+    def ranges_to_list(self, lor: list[list]) -> list[int]:
         """Convert list of inclusive non-overlapping ranges into sorted sorted non-repeating list of integers.
 
         Args:
@@ -677,7 +679,7 @@ class TheGraph(nx.MultiDiGraph):
         )
 
     @cached_property
-    def node_trios(self) -> Dict[str, Set[tuple]]:
+    def node_trios(self) -> dict[str, set[tuple]]:
         """Creates a dict for all nodes with `node_trios` calculated by :py:meth:`TheGraph._node_trios`.
 
         Returns:
@@ -686,7 +688,7 @@ class TheGraph(nx.MultiDiGraph):
         self.log.info(f"Cached properties being calculated: {'node_trios'}")
         return {n: self._node_trios(n) for n in self.nodes}
 
-    def _node_trios(self, the_id: str) -> Set[tuple]:
+    def _node_trios(self, the_id: str) -> set[tuple]:
         """Calculates the unique tuple called `trios` (database, assembly, Ensembl release) for a given ID.
 
         Args:
@@ -713,7 +715,14 @@ class TheGraph(nx.MultiDiGraph):
             if not 0 < l1 <= l2:
                 raise ValueError
 
-            return range(l1, (l2 if not np.isinf(l2) else max(self.graph["confident_for_release"])) + 1)
+            if not np.isinf(l2) and isinstance(l2, int):
+                right_l2 = l2
+            elif not np.isinf(l2):
+                raise ValueError(f"Unexpected error: {l2!r} should be either np.inf or integer.")
+            else:
+                right_l2 = max(self.graph["confident_for_release"])
+
+            return range(l1, right_l2 + 1)
 
         # Use associated function to create the ranges of a node.
         the_node_type = self.nodes[the_id][DB.node_type_str]
@@ -736,7 +745,7 @@ class TheGraph(nx.MultiDiGraph):
         return {(p, r, s) for p in rd for r in rd[p] for s in rd[p][r]}
 
     @staticmethod
-    def compact_ranges(list_of_ranges: List[List]) -> List[List]:
+    def compact_ranges(list_of_ranges: list[list]) -> list[list]:
         """Reduce the list of ranges into least possible number of ranges.
 
         O(n) time and space complexity: a forward in place compaction and copying back the elements,
@@ -763,7 +772,7 @@ class TheGraph(nx.MultiDiGraph):
         return list_of_ranges[: next_index + 1]
 
     @staticmethod
-    def get_intersecting_ranges(lor1: List[List], lor2: List[List], compact: bool = True) -> List[List]:
+    def get_intersecting_ranges(lor1: list[list], lor2: list[list], compact: bool = True) -> list[list]:
         """As the name suggest, calculates the intersecting ranges of two list of ranges.
 
         Args:
@@ -785,7 +794,7 @@ class TheGraph(nx.MultiDiGraph):
         return TheGraph.compact_ranges(result) if compact else result
 
     @staticmethod
-    def is_point_in_range(lor: List[List], p: int) -> bool:
+    def is_point_in_range(lor: list[list], p: int) -> bool:
         """Simple method to determine whether a given integer is covered by list of ranges.
 
         Args:
@@ -800,7 +809,7 @@ class TheGraph(nx.MultiDiGraph):
                 return True
         return False
 
-    def get_two_nodes_coinciding_releases(self, id1: str, id2: str, compact: bool = True) -> List[List]:
+    def get_two_nodes_coinciding_releases(self, id1: str, id2: str, compact: bool = True) -> list[list]:
         """Find the intersecting range of two nodes in the graph.
 
         Args:
@@ -831,14 +840,14 @@ class TheGraph(nx.MultiDiGraph):
         }
 
     @cached_property
-    def available_external_databases_assembly(self) -> Dict[int, set]:
+    def available_external_databases_assembly(self) -> dict[int, set]:
         """Find the available external databases found in the graph for each assembly separately.
 
         Returns:
             Dict of all external databases in the graph, assemblies as keys.
         """
         self.log.info(f"Cached properties being calculated: {'available_external_databases_assembly'}")
-        result: Dict[int, set] = {i: set() for i in self.available_genome_assemblies}
+        result: dict[int, set] = {i: set() for i in self.available_genome_assemblies}
         for i in self.combined_edges:
             d = self.combined_edges[i]
             for i in d:
@@ -848,7 +857,7 @@ class TheGraph(nx.MultiDiGraph):
         return result
 
     @cached_property
-    def external_database_connection_form(self) -> Dict[str, str]:
+    def external_database_connection_form(self) -> dict[str, str]:
         """Finds which form of Ensembl ID the external database identifiers are connected to.
 
         Each external database connects to a specific form (gene, transcript, translation) Ensembl ID. The relevant
@@ -867,7 +876,7 @@ class TheGraph(nx.MultiDiGraph):
         res = dict()
 
         for e in aed:  # For each database
-            ra: List[str] = list()
+            ra: list[str] = list()
             # Get the identifiers (node names) from all Ensembl releases and assemblies for a given external database.
             nodes = self.get_external_database_nodes(e)
 
@@ -893,7 +902,7 @@ class TheGraph(nx.MultiDiGraph):
         return res
 
     @cached_property
-    def available_genome_assemblies(self) -> Set[int]:
+    def available_genome_assemblies(self) -> set[int]:
         """Find the genome assemblies found in the graph by iterating through all nodes.
 
         Returns:
@@ -907,7 +916,7 @@ class TheGraph(nx.MultiDiGraph):
 
         return output
 
-    def available_releases_given_database_assembly(self, database_name: str, assembly: int) -> Set[int]:
+    def available_releases_given_database_assembly(self, database_name: str, assembly: int) -> set[int]:
         """Possible Ensembl releases defined for a given database and assembly.
 
         The method uses `node_trios` unnecessarily method, which consumes a lot of memory and hinders high
@@ -932,7 +941,7 @@ class TheGraph(nx.MultiDiGraph):
             j3 for i in self.node_trios for j1, j2, j3 in self.node_trios[i] if j1 == database_name and j2 == assembly
         }
 
-    def get_id_list(self, database: str, assembly: int, release: int) -> List[str]:
+    def get_id_list(self, database: str, assembly: int, release: int) -> list[str]:
         """Given a trio (database, assembly, release), generates a list of node names (identifiers).
 
         Similar to :py:meth:`TheGraph.available_releases_given_database_assembly`, the method uses
@@ -967,7 +976,7 @@ class TheGraph(nx.MultiDiGraph):
                 final_list.append(n)
         return final_list
 
-    def get_external_database_nodes(self, database_name: str) -> Set[str]:
+    def get_external_database_nodes(self, database_name: str) -> set[str]:
         """For a given external database, returns set of all node names defined at least once in that database.
 
         Args:

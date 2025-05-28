@@ -1,0 +1,162 @@
+# ---------------------------------------------------
+# IDTrack Development and Reproducibility Environment
+# ---------------------------------------------------
+
+name: idtrack_dev_env
+
+channels:
+    - conda-forge
+    - bioconda
+
+dependencies:
+    # 1) CORE PYTHON & JUPYTER ENVIRONMENT
+    - python=3.11
+    - pip
+    - jupyterlab>4.1
+    - notebook
+    - markdown
+    - nodejs
+    - jupyterlab_widgets
+    - ipywidgets
+    - python-lsp-server
+    - jupyterlab-lsp
+    - jupyterlab_code_formatter
+
+    # 2) LINTING & CODE-FORMATTING TOOLS
+    - libcurl
+    - openssl
+    - libxml2
+    - arrow
+    - webcolors
+    - isort
+    - black
+    - pyupgrade
+    - pre-commit-hooks
+    - flake8
+    - flake8-bugbear
+    - flake8-docstrings
+    - flake8-rst-docstrings
+    - pep8-naming
+    - darglint
+    - flake8-builtins
+    - flake8-colors
+    - bandit
+    - mypy
+
+    # 3) DATA MANIPULATION & NUMERICAL COMPUTING
+    - pandas>=0.25.3
+    - numpy>=1.17.4
+    - scipy
+    - scikit-learn
+    - scikit-sparse
+    - scikit-plot
+    - gdown
+    - zarr
+
+    # 4) VISUALIZATION
+    - matplotlib<3.7
+    - seaborn>0.13
+    - plotly
+
+    # 5) BIOINFORMATICS
+    - gget
+    - pybiomart
+    - mygene
+    - gprofiler-official
+    - mudata=0.3.0
+    - scanpy=1.10.2
+    - anndata=0.10.8
+    - pytorch
+    - lightning
+    - scvi-tools=1.2.2
+    - omnipath
+    - cellxgene
+    - cellxgene-census
+
+    # 6) GRAPH, TOPOLOGY & RELATED LIBRARIES
+    - pygraphviz
+    - graphviz
+    - colorcet
+    - gudhi
+    - eagerpy
+    - fastdtw
+    - esda
+    - pot
+
+    # 7) MISC. PYTHON LIBRARIES (STUBS, UPDATES, ETC.)
+    - pyyaml>=5.2
+    - pandas-stubs
+    - jsonpickle
+    - joblib
+    - natsort
+    - deprecated
+    - cython
+    - future>=0.16.0
+    - sparse
+    - scikit-image
+    - scikit-bio
+    - statsmodels>=0.12
+    - cycler
+    - colorlover
+    - mscorefonts
+    - hiplot
+    - igraph>=0.10,<0.12
+    - python-igraph
+    - leidenalg
+    - python-louvain
+    - rclone
+    - adjustText
+    - upsetplot
+    - python-levenshtein
+    - memory_profiler
+    - typing_extensions
+    - anytree
+    - umap-learn>=0.5.0
+    - pydot
+    - llvmlite
+    - plottable
+    - pynndescent
+    - chex
+    - hypothesis
+
+    # 8) GENERAL-PURPOSE LIBRARIES
+    - tqdm>=4.37.0
+    - objsize
+    - networkx>=2.4
+    - dill
+    - requests>=2.22.0
+    - pymysql
+    - pytables
+    - hdf5
+    - h5py
+    - packaging>22.0.0
+    - gputil
+
+    # 9) DEVELOPMENT & TESTING TOOLS
+    - poetry
+    - pre_commit
+    - click
+    - rich
+    - pytest
+    - coverage
+    - safety>=2,<3
+    - nox
+    - nox-poetry
+    - typeguard
+    - cookiecutter
+    - xdoctest
+    - sphinx
+    - sphinx-autobuild
+    - sphinx-rtd-theme
+    - sphinx-click
+    - jinja2
+    - cryptography
+
+    # 10) PIP-ONLY DEPENDENCIES
+    - pip:
+          - flake8-bandit
+          - sphinx-rtd-dark-mode
+          - types-attrs
+          - scib-metrics==0.5.1
+          - scib==1.1.5
+          - louvain==0.8.2

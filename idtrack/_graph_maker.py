@@ -15,9 +15,9 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-from ._database_manager import DatabaseManager
-from ._db import DB
-from ._the_graph import TheGraph
+from idtrack._database_manager import DatabaseManager
+from idtrack._db import DB
+from idtrack._the_graph import TheGraph
 
 
 class GraphMaker:
@@ -306,7 +306,7 @@ class GraphMaker:
 
             for aa in avail_assemblies:
                 nn_aa = new_nodes[new_nodes["assembly"] == aa]
-                dm_aa = self.db_manager.change_assembly(aa)
+                dm_aa = self.db_manager.change_assembly(aa, last_possible_ensembl_release=True)
                 for the_er in sorted(dm_aa.available_releases, reverse=True):
                     dm_aa_er = dm_aa.change_release(the_er)
                     df_aa = dm_aa_er.get_db("relationcurrent")
@@ -353,8 +353,14 @@ class GraphMaker:
                 for f in ["gene"]:
                     # transcript and translation does not have base.
                     # It causes the tracking algorithm unnecessarily process too many possibilities.
-                    for er in self.db_manager.change_assembly(aa).available_releases:
-                        db_manager = self.db_manager.change_form(f).change_assembly(aa).change_release(er)
+                    for er in self.db_manager.change_assembly(
+                        aa, last_possible_ensembl_release=True
+                    ).available_releases:
+                        db_manager = (
+                            self.db_manager.change_form(f)
+                            .change_assembly(aa, last_possible_ensembl_release=True)
+                            .change_release(er)
+                        )
 
                         ids_db = db_manager.get_db("ids")
                         ids = db_manager.id_ver_from_df(ids_db)
@@ -535,6 +541,9 @@ class GraphMaker:
             # Note that due to some early versions like 18.2, converting to int here is not recommended.
             df_ms["new_release"] = df_ms["new_release"].astype(float)
             df_ms["old_release"] = df_ms["old_release"].astype(float)
+            df_ms = df_ms[
+                (db_manager.ignore_after >= df_ms["old_release"]) & (df_ms["old_release"] >= db_manager.ignore_before)
+            ]
             # Make sure there is only one to many
             if np.any(df_ms["new_release"].duplicated(keep=False)):
                 raise ValueError("Multiple rows in 'mapping_session' for one 'new_release'.")
@@ -1051,10 +1060,10 @@ class GraphMaker:
 
         # If the file name is not accessible for reading, or explicitly prompt to do so, then create the graph.
         if not os.access(file_path, os.R_OK) or create_even_if_exist:
-            self.log.info("The graph is being constructed.")
+            self.log.info(f"The graph is being constructed: {file_path}")
             g = self.construct_graph(narrow)
         else:  # Otherwise, just read the file that is already in the directory.
-            self.log.info("The graph is being read.")
+            self.log.info(f"The graph is being read: {file_path}")
             g = GraphMaker.read_exported(file_path)
 
         # If prompt, save the dataframe in requested format.
@@ -1096,8 +1105,8 @@ class GraphMaker:
         narrow_ext = "_narrow" if narrow else ""
         min_ext = f"_min{self.db_manager.ignore_before}" if not np.isinf(self.db_manager.ignore_before) else ""
         max_ext = f"_max{self.db_manager.ignore_after}" if not np.isinf(self.db_manager.ignore_after) else ""
-        ext = f"ens{self.db_manager.ensembl_release}{min_ext}{max_ext}{narrow_ext}"
-        return os.path.join(self.db_manager.local_repository, f"graph_{self.db_manager.organism}_{ext}.pickle")
+        ext = f"{min_ext}{max_ext}{narrow_ext}"
+        return os.path.join(self.db_manager.local_repository, f"graph_{self.db_manager.organism}{ext}.pickle")
 
     def export_disk(self, g: TheGraph, file_path: str, overwrite: bool):
         """Write the `pickle` file in the provided file path, which contains the graph.

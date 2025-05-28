@@ -1,11 +1,14 @@
 """Test cases for the __main__ module."""
+
 import pytest
+
+import idtrack
 
 
 @pytest.fixture
 def runner() -> None:
     """Fixture for invoking command-line interfaces."""
-    pass
+    _ = idtrack.DB
 
 
 def test_main_succeeds() -> None:

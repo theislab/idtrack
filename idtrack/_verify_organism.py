@@ -4,21 +4,20 @@
 # k.inecik@gmail.com
 
 import logging
-from typing import Tuple
 
 import pandas as pd
 import requests
 
-from ._db import DB
+from idtrack._db import DB
 
 
 class VerifyOrganism:
     """Finds the formal organism name and associated latest Ensembl release given a tentative organism name.
 
-    This class is designed to aid the user regarding the organism name accepted by the program and latest
-    Ensembl release possible without manually looking online resources. Every time of use, the class uses Ensembl
-    REST API to get the information regarding the organisms and associated Ensembl releases, so the class
-    requires an active Internet connection.
+    This class is designed to aid the user regarding the organism name accepted by the program and latest Ensembl
+    release possible without manually looking online resources. Every time of use, the class uses Ensembl REST API to
+    get the information regarding the organisms and associated Ensembl releases, so the class requires an active
+    Internet connection.
     """
 
     def __init__(self, organism_query: str):
@@ -73,7 +72,7 @@ class VerifyOrganism:
 
     def fetch_organism_and_latest_release(
         self, connect_timeout: int, read_timeout: int
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Creates a query and process the data to construct two dataframes for Ensembl release and organism names.
 
         The query to get the name of the organisms defined in the database, but also to get the latest

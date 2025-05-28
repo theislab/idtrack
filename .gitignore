@@ -144,3 +144,10 @@ dmypy.json
 # MacOS files
 *.DS_Store
 docs/_notebooks/.pybiomart.sqlite
+
+# development
+__temp__/
+*slurm_out*.out
+*slurm_out*.log
+*slurm_job*.sh
+*slurm-*.out

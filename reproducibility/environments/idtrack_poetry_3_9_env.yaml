@@ -1,6 +1,6 @@
 # IDTrack Development and Reproducibility Environment
 
-name: poetry_env_3_9
+name: idtrack_poetry_3_9_env
 
 channels:
     - conda-forge
@@ -11,6 +11,4 @@ dependencies:
     - pandoc
     - hdf5
     - poetry
-    - pip:
-          - cookietemple
-# apt-get/brew install pandoc
+    - packaging>22.0.0

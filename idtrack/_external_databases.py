@@ -5,7 +5,6 @@
 
 import logging
 import os
-from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -82,7 +81,7 @@ class ExternalDatabases:
         database.
 
         Args:
-            df: The output of following operation ``db_manager.get_db("externalcontent")``.
+            df: The output of following operation ``db_manager.create_database_content()``.
 
         Raises:
             ValueError: Unexpected error.
@@ -91,7 +90,7 @@ class ExternalDatabases:
         def list_to_str(iterable):
             return ",".join(map(str, iterable))
 
-        r: Dict[str, dict] = dict()
+        r: dict[str, dict] = dict()
         database_id = {item: i for i, item in enumerate(sorted(np.unique(df["name_db"])))}
         for a1 in sorted(np.unique(df["organism"])):
             df_a1 = df[df["organism"] == a1]
@@ -185,7 +184,36 @@ class ExternalDatabases:
                 )
 
         with open(file_name) as yaml_file:
-            return yaml.safe_load(yaml_file)
+            y = yaml.safe_load(yaml_file)
+        self.validate_yaml_file_up_to_date(y)
+        return y
+
+    def validate_yaml_file_up_to_date(self, read_yaml_file):
+        """Validates that the current Ensembl release is present in the YAML configuration file.
+
+        Args:
+            read_yaml_file (dict): read_yaml_file (dict): YAML file loaded as a dictionary,
+                typically from :py:meth:`ExternalDatabases.load_modified_yaml`.
+
+
+        Raises:
+            ValueError: If the current Ensembl release is not found in the YAML configuration.
+        """
+        ensembl_releases = {
+            int(e)
+            for _, j1 in read_yaml_file.items()
+            for _, j2 in j1.items()
+            for _, j3 in j2.items()
+            for _, j4 in j3["Assembly"].items()
+            for e in j4["Ensembl release"].split(",")
+        }
+        if self.ensembl_release not in ensembl_releases:
+            raise ValueError(
+                f"The Ensembl release {self.ensembl_release} is not included in any entry of the YAML config file.\n"
+                f"Please update the configuration to include this release, or create the graph/track object using a "
+                f"supported release (e.g., {max(ensembl_releases)}).\n"
+                "You may also report this issue on GitHub so the default configuration can be updated."
+            )
 
     def give_list_for_case(self, give_type: str) -> list:
         """Retrieve some simple information from `yaml` file.

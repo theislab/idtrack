@@ -7,16 +7,16 @@
 import copy
 import logging
 import os
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 from tqdm import tqdm
 
-from ._database_manager import DatabaseManager
-from ._db import DB
-from ._track import Track
-from ._track_tests import TrackTests
-from ._verify_organism import VerifyOrganism
+from idtrack._database_manager import DatabaseManager
+from idtrack._db import DB
+from idtrack._track import Track
+from idtrack._track_tests import TrackTests
+from idtrack._verify_organism import VerifyOrganism
 
 
 class API:
@@ -50,7 +50,7 @@ class API:
         """Calculate cached variables of the graph object using only one method."""
         self.track.graph.calculate_caches()
 
-    def get_ensembl_organism(self, tentative_organism_name: str) -> Tuple[str, int]:
+    def get_ensembl_organism(self, tentative_organism_name: str) -> tuple[str, int]:
         """Make sure the user enters correct organism name and retrieves latest Ensembl release with ease.
 
         Args:
@@ -66,19 +66,40 @@ class API:
         latest_release = vdf.get_latest_release()
         return formal_name, latest_release
 
-    def initialize_graph(self, organism_name: str, ensembl_release: int, return_test: bool = False):
+    def get_database_manager(self, organism_name: str, last_ensembl_release: int):
+        """Instantiate and return a DatabaseManager object for a specified organism and Ensembl release.
+
+        This method sets up a DatabaseManager configured to ignore data after a given Ensembl release.
+        It uses a deep copy of the default database backbone form and stores data in the local repository
+        specified during API initialization.
+
+        Args:
+            organism_name: The formal name of the organism (e.g., 'homo_sapiens').
+            last_ensembl_release: The most recent Ensembl release to include. Data after this release will be ignored.
+
+        Returns:
+            An instance of the DatabaseManager class configured with the provided organism and release settings.
+        """
+        return DatabaseManager(
+            organism=organism_name,
+            ensembl_release=None,
+            ignore_after=last_ensembl_release,
+            form=copy.deepcopy(DB.backbone_form),
+            local_repository=self.local_repository,
+        )
+
+    def initialize_graph(self, organism_name: str, last_ensembl_release: int, return_test: bool = False):
         """Creates a graph and initializes pathfinder class.
 
         Args:
             organism_name: Formal organism name as an output of ``get_ensembl_organism`` method.
-            ensembl_release: Ensembl release of interest. The object will work on only given Ensembl release, but some
-                methods does not care which form the DatabaseManager is defined to.
+            last_ensembl_release: Ensembl release of interest. The object will work on only given Ensembl release,
+                but some methods does not care which form the DatabaseManager is defined to.
                 The latest possible Ensembl release is the best choice for graph building with no drawbacks.
             return_test: If ``True``, return the ``TrackTest`` object instead, which has some functions to test the
                 pathfinder performance and graph integrity.
         """
-        backbone_form = copy.deepcopy(DB.backbone_form)
-        dm = DatabaseManager(organism_name, ensembl_release, backbone_form, self.local_repository)
+        dm = self.get_database_manager(organism_name=organism_name, last_ensembl_release=last_ensembl_release)
 
         if return_test:
             self.track = TrackTests(dm)
@@ -141,14 +162,14 @@ class API:
         else:
             no_corresponding = True
 
-        final_ids_together: List[Tuple[str, str]] = (
+        final_ids_together: list[tuple[str, str]] = (
             list({(i, j) for i in cnt for j in cnt[i]["final_conversion"]["final_elements"]})
             if not no_corresponding and not no_conversion
             else []
         )
         target_ids = list({i[1] for i in final_ids_together})
 
-        final_database_conv_: Set[Optional[str]] = (
+        final_database_conv_: set[Optional[str]] = (
             {cnt[i]["final_conversion"]["final_database"] for i in cnt}
             if not no_corresponding and not no_conversion
             else {None}
@@ -156,7 +177,7 @@ class API:
         assert len(final_database_conv_) == 1
         final_database_conv = list(final_database_conv_)[0]
 
-        final_conf_: Set[Optional[Union[int, float]]] = (
+        final_conf_: set[Optional[Union[int, float]]] = (
             {cnt[i]["final_conversion"]["final_conversion_confidence"] for i in cnt}
             if not no_corresponding and not no_conversion
             else {None}
@@ -164,7 +185,7 @@ class API:
         assert len(final_conf_) == 1
         final_conf = list(final_conf_)[0]
 
-        result: Dict[str, Any] = {
+        result: dict[str, Any] = {
             "target_id": target_ids,
             "last_node": final_ids_together,
             "final_database": final_database_conv,
@@ -192,7 +213,7 @@ class API:
 
     def convert_identifier_multiple(
         self, identifier_list, verbose: bool = True, pbar_prefix: str = "", **kwargs
-    ) -> List[dict]:
+    ) -> list[dict]:
         """Basically ``convert_identifier`` method for multiple conversion procedure with progress bar.
 
         Args:
@@ -212,7 +233,7 @@ class API:
                 result.append(self.convert_identifier(identifier, **kwargs))
         return result
 
-    def classify_multiple_conversion(self, matchings: List[Dict[str, Any]]) -> Dict[str, List[dict]]:
+    def classify_multiple_conversion(self, matchings: list[dict[str, Any]]) -> dict[str, list[dict]]:
         """Create a dictionary by classifying the results into different bins.
 
         Args:
@@ -224,7 +245,7 @@ class API:
         Returns:
             List of ``convert_identifier`` method outputs.
         """
-        r: Dict[str, List[dict]] = {
+        r: dict[str, list[dict]] = {
             "changed_only_1_to_n": [],
             "changed_only_1_to_1": [],
             "alternative_target_1_to_1": [],
@@ -315,7 +336,7 @@ class API:
         else:
             return identification[0][0]
 
-    def available_organisms(self) -> Set[str]:
+    def available_available_external_databases(self) -> set[str]:
         """Show which organisms are available to be used in the scope of this package.
 
         Returns:

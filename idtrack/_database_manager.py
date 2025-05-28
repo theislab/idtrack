@@ -10,14 +10,15 @@ import re
 from collections import Counter
 from functools import cached_property
 from itertools import repeat
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
-import pymysql.cursors
+import pymysql
 
-from ._db import DB
-from ._external_databases import ExternalDatabases
+import idtrack._utils_hdf5 as hs
+from idtrack._db import DB
+from idtrack._external_databases import ExternalDatabases
 
 
 class DatabaseManager:
@@ -26,12 +27,11 @@ class DatabaseManager:
     def __init__(
         self,
         organism: str,
-        ensembl_release: int,
         form: str,
         local_repository: str,
+        ensembl_release: Optional[int] = None,
         ignore_before: Optional[int] = None,
         ignore_after: Optional[Union[int, float]] = None,
-        compress: bool = True,
         store_raw_always: bool = True,
         genome_assembly: Optional[int] = None,
     ):
@@ -49,7 +49,6 @@ class DatabaseManager:
             ignore_before: Ensembl release as the lower limit to include in the downloaded contents. The object will
                 ignore all Ensembl release lower than this integer.
             ignore_after: Similar to 'ignore_before' but as the upper limit as the name suggest.
-            compress: If ``True``, the resulting content will be compressed to take less space in the disk.
             store_raw_always: If ``True``, the raw MySQL tables will be also saved in the disk.
             genome_assembly: Genome assembly of interest. The selection should be one of the keys in the
                 :py:attr:`DB.assembly_mysqlport_priority` dictionary. The object will work on only given assembly.
@@ -59,9 +58,9 @@ class DatabaseManager:
             ValueError: When the input parameters are not in the specified format.
             NotImplementedError: Currently only supports 'homo_sapiens' as the organism name.
         """
-        if organism != "homo_sapiens":
+        if organism not in ["homo_sapiens", "mus_musculus"]:
             raise NotImplementedError(
-                "Organisms other than human is not implemented. In theory, it should work but "
+                "Organisms other than human and mouse is not implemented. In theory, it should work but "
                 "no tests have been conducted yet. In the next version of the package, other "
                 "organisms will be available. Please note that adding new organisms necessitates "
                 "to determine which external databases to include using ExternalDatabase class."
@@ -90,10 +89,8 @@ class DatabaseManager:
 
         # Instance attributes
         self.local_repository = local_repository
-        self.ensembl_release = int(ensembl_release)
         self.organism = organism
         self.form = form
-        self.compress = compress
         self.store_raw_always = store_raw_always
         # If ignore_before is not specified clearly, than use the lowest possible priority defined by the MySQL server.
         default_min_er = max(DB.assembly_mysqlport_priority[i]["MinRelease"] for i in DB.assembly_mysqlport_priority)
@@ -104,9 +101,14 @@ class DatabaseManager:
         # Protected attributes
         self.available_form_of_interests = copy.deepcopy(DB.forms_in_order)  # Warning: the order is important.
         self._available_version_info = ["add_version", "without_version", "with_version"]
-        self._comp_hdf5 = {"complevel": 9, "complib": "blosc:zlib"} if self.compress else dict()
         self._column_sep = "_COL_"
         self._identifiers = [f"{self.form}_stable_id", f"{self.form}_version"]
+
+        if ensembl_release is None:  # Set last possible Ensembl release for given genome assembly.
+            self.ensembl_release = 0  # placeholder value for for file naming method, it is not gonna be saved anyway.
+            ensembl_release = sorted(self.available_releases_no_save)[-1]
+        self.ensembl_release = int(ensembl_release)
+        # _ = self.external_inst.load_modified_yaml()
 
         # Check if it seems ok.
         checkers = (
@@ -137,7 +139,6 @@ class DatabaseManager:
             f"    Ignore Before: {self.ignore_before}{os.linesep}"
             f"    Ignore After: {self.ignore_after}{os.linesep}"
             f"    Local Repository: {self.local_repository}{os.linesep}"
-            f"    Compress: {self.compress}{os.linesep}"
             f"    Store Raw Always: {self.store_raw_always}{os.linesep}"
         )
 
@@ -160,12 +161,46 @@ class DatabaseManager:
         )
 
     @cached_property
-    def available_releases(self) -> List[int]:
+    def available_releases(self) -> list[int]:
+        """List Ensembl releases that can be queried **and** meet the ignore-window constraints.
+
+        The list is computed once (via :py:meth`available_releases_versions`) and then cached for the rest of
+        the session.
+
+        Returns:
+            list[int]: Sorted list of integer release numbers.
+        """
+        return self.available_releases_versions()
+
+    @cached_property
+    def available_releases_no_save(self) -> list[int]:
+        """List Ensembl releases reachable on the remote MySQL server.
+
+        Unlike :py:attr:`available_releases`, this helper never writes the
+        discovered list to disk; it simply caches the value in memory for the
+        lifetime of the current :py:class:`DatabaseManager` instance.
+
+        Returns:
+            list[int]: Sorted list of release numbers that
+                * match the organism and genome assembly tied to the instance,
+                * fall within the ``ignore_before`` / ``ignore_after`` window.
+        """
+        return self.available_releases_versions(save_after_calculation=False)
+
+    def available_releases_versions(self, **kwargs) -> list[int]:
         """Define available Ensembl releases for the DatabaseManager instance to work on.
 
+        Discover which releases exist on the configured MySQL mirror.
         It looks on the MySQL server results to determine which Ensembl releases are available. The method does not
         return directly the Ensembl releases defined by 'ignore_after' and 'ignore_before' parameters, and looks on the
         server as a verification.
+
+        A ``SHOW DATABASES`` query is issued, the result is filtered with a
+        regex of the form ``^{organism}_core_<release>_.*$``, and the surviving
+        release numbers are cleaned and range-checked.
+
+        Args:
+            kwargs: Passed straight through to :py:meth:`DatabaseManager.get_db`.
 
         Returns:
             List of integers indicating which Ensembl releases are available.
@@ -174,8 +209,7 @@ class DatabaseManager:
             ValueError: Unexpected error in regex functions.
         """
         # Get all possible ensembl releases for a given organism
-        dbs = self.get_db("availabledatabases")  # Obtain the databases dataframe
-
+        dbs = self.get_db("availabledatabases", **kwargs)["available_databases"]  # Obtain the databases dataframe
         pattern = re.compile(f"^{self.organism}_core_([0-9]+)_.+$")
         # Search organism name in a specified format. Extract ensembl release number
         releases = list()
@@ -221,7 +255,7 @@ class DatabaseManager:
         Raises:
             ValueError: If there is more than one such match.
         """
-        dbs = self.get_db("availabledatabases")  # Obtain the databases dataframe
+        dbs = self.get_db("availabledatabases")["available_databases"]  # Obtain the databases dataframe
 
         pattern = re.compile(f"^{self.organism}_core_{int(self.ensembl_release)}_.+$")
         located = [i for i in dbs if pattern.match(i)]
@@ -252,7 +286,6 @@ class DatabaseManager:
             local_repository=self.local_repository,
             ignore_before=self.ignore_before,
             ignore_after=self.ignore_after,
-            compress=self.compress,
             store_raw_always=self.store_raw_always,
             genome_assembly=self.genome_assembly,
         )
@@ -274,29 +307,32 @@ class DatabaseManager:
             local_repository=self.local_repository,
             ignore_before=self.ignore_before,
             ignore_after=self.ignore_after,
-            compress=self.compress,
             store_raw_always=self.store_raw_always,
             genome_assembly=self.genome_assembly,
         )
 
-    def change_assembly(self, genome_assembly: int) -> "DatabaseManager":
-        """Changes the genome assembly of DatabaseManager instance with passing all other variables unchanged.
+    def change_assembly(self, genome_assembly: int, last_possible_ensembl_release: bool = False) -> "DatabaseManager":
+        """Clone the manager while targeting a new genome assembly.
 
         Args:
-            genome_assembly: New genome assembly of interest.
-                Refer to :py:attr:`DatabaseManager.__init__.genome_assembly`
+            genome_assembly (int): Key from :py:data:`DB.assembly_mysqlport_priority` (e.g. ``38`` for *GRCh38*).
+            last_possible_ensembl_release (bool): If ``True``, the new instance automatically picks the
+                newest Ensembl release available for *genome_assembly* instead of
+                re-using ``self.ensembl_release``. Defaults to ``False``.
 
         Returns:
-            New instance of DatabaseManager with only 'genome_assembly' is changed.
+            DatabaseManager: Independent manager configured for the requested assembly.
+
+        Note:
+            The original object remains unchanged; remember to switch your variable reference to the returned instance.
         """
         return DatabaseManager(
             organism=self.organism,
-            ensembl_release=self.ensembl_release,
+            ensembl_release=self.ensembl_release if not last_possible_ensembl_release else None,
             form=self.form,
             local_repository=self.local_repository,
             ignore_before=self.ignore_before,
             ignore_after=self.ignore_after,
-            compress=self.compress,
             store_raw_always=self.store_raw_always,
             genome_assembly=genome_assembly,
         )
@@ -330,7 +366,7 @@ class DatabaseManager:
 
         pattern = re.compile(f"^{self.organism}_core_[0-9]+_.+$")
         accepted_databases = sorted(i for i in results_query if pattern.match(i))
-        results = pd.Series(accepted_databases)
+        results = pd.DataFrame(accepted_databases, columns=["available_databases"])
 
         return results
 
@@ -367,20 +403,30 @@ class DatabaseManager:
 
         # If the file name is not accessible for reading, or if the hdf5 file does not contain the table,
         # or explicitly prompt to do so, then download the table.
-        if (
-            not os.access(file_path, os.R_OK)
-            or create_even_if_exist
-            or (not DatabaseManager.check_h5_key(file_path, hierarchy))
-        ):
+        if not os.access(file_path, os.R_OK) or create_even_if_exist or (not hs.check_h5_key(file_path, hierarchy)):
             df = self.download_table(table_key, usecols)
         else:  # Otherwise, just read the file that is already in the directory.
-            df = self.read_exported(hierarchy, file_path)
+            df = hs.read_exported(hierarchy, file_path)
 
         # If prompt, save the dataframe in requested format.
         if save_after_calculation:
-            self.export_disk(df, hierarchy, file_path, overwrite_even_if_exist)
+            hs.export_disk(df, hierarchy, file_path, overwrite_even_if_exist, logger=self.log)
 
         return df
+
+    def tables_in_disk(self) -> list[str]:
+        """Retrieves the keys in the h5 file, which is associated with the DatabaseManager instance.
+
+        Returns:
+            List of keys (also called hierarchy) in the h5 file.
+        """
+        _, file_name = self.file_name("common", "place_holder")
+
+        if not os.path.isfile(file_name):
+            return list()
+        else:
+            with hs.HDFStore(file_name, mode="r") as f:
+                return list(f.keys())
 
     def download_table(self, table_key: str, usecols: Optional[list] = None) -> pd.DataFrame:
         """Downloads the raw table from MySQL server and extracts requested columns.
@@ -430,7 +476,7 @@ class DatabaseManager:
             # Create a dataframe using the columns fetched.
             df = pd.DataFrame(results_content, columns=column_names if usecols is None else usecols)
             # Make sure the content does not contain any bytes object.
-            if np.any(df.applymap(lambda x: isinstance(x, bytes))):
+            if np.any(df.map(lambda x: isinstance(x, bytes))):
                 raise ValueError
 
             info_usecols = " for following columns: " + ", ".join(usecols) + "." if usecols else "."
@@ -458,7 +504,7 @@ class DatabaseManager:
         raise NotImplementedError
 
     @staticmethod
-    def _determine_usecols_ids(form: str) -> Tuple[List[str], List[str], List[str]]:
+    def _determine_usecols_ids(form: str) -> tuple[list[str], list[str], list[str]]:
         """Helper method to guide which columns are interesting for each form.
 
         Args:
@@ -559,8 +605,8 @@ class DatabaseManager:
         """Retrieves the relationship between different forms of Ensembl IDs for all Ensembl releases.
 
         It is not recommended as there are some missing rows. Instead use
-        :py:meth:`DatabaseManager.create_relation_current` for all Ensembl releases separately, and
-        concatanate the resulting data frames.
+        :py:meth:`DatabaseManager.create_relation_current` for all Ensembl releases separately,
+        and concatanate the resulting data frames.
 
         Returns:
             Dataframe of three columns: `gene`, `transcript`, and `translation`. Note that there are some empty cells
@@ -711,8 +757,8 @@ class DatabaseManager:
         df.sort_values(by=["new_release"], inplace=True)
 
         # Initialize some temp variables
-        extinct_version: Dict[str, set] = dict()
-        last_active_version: Dict[str, Any] = dict()
+        extinct_version: dict[str, set] = dict()
+        last_active_version: dict[str, Any] = dict()
         corrected_entries = list()
 
         for ind, row in df.iterrows():
@@ -924,12 +970,19 @@ class DatabaseManager:
         else:
             raise ValueError
 
-    def create_database_content(self) -> pd.DataFrame:
+    def create_database_content(self, just_download: bool = False) -> pd.DataFrame:
         """Retrives all External database information from the server to feed the ``ExternalDatabase`` class.
 
         It is quite costly operation, potentially takes time to be completed. It helps ``ExternalDatabase`` class to
         create the ``yaml`` file mentioned. It downloads for all assemblies, all Ensembl releases and all forms
         available.
+
+        Args:
+            just_download (bool):
+                * ``False`` (default) - concatenate all intermediate results
+                  into one DataFrame and return it.
+                * ``True`` - perform the downloads so they are cached on disk
+                  but return an **empty** DataFrame.
 
         Returns:
             The output of ``create_external_db`` when `filter_mode` `relevant-database`. Adds `assembly`, `release`,
@@ -937,20 +990,25 @@ class DatabaseManager:
         """
         df = pd.DataFrame()
         for k in DB.assembly_mysqlport_priority.keys():  # For all assemblies possible.
-            for j in self.available_form_of_interests:  # For all assemblies possible.
-                for i in self.available_releases:
+            dm_assembly = self.change_assembly(k, last_possible_ensembl_release=True)
+            for j in dm_assembly.available_form_of_interests:  # For all assemblies possible.
+                for i in dm_assembly.available_releases:
                     self.log.info(
                         f"Database content is being created for "
                         f"`{self.organism}`, assembly `{k}`, form `{j}`, ensembl release `{i}`"
                     )
-                    df_temp = self.change_assembly(k).change_release(i).change_form(j).get_db("external_database")
+                    df_temp = dm_assembly.change_release(i).change_form(j).get_db("external_database")
                     df_temp["assembly"] = k
                     df_temp["release"] = i
                     df_temp["form"] = j
-                    df = pd.concat([df, df_temp], axis=0)
-        df["organism"] = self.organism
-        df.reset_index(inplace=True, drop=True)
-        return df
+                    if not just_download:
+                        df = pd.concat([df, df_temp], axis=0)
+        if not just_download:
+            df["organism"] = self.organism
+            df.reset_index(inplace=True, drop=True)
+            return df
+        else:
+            return df
 
     def create_release_id(self) -> pd.DataFrame:
         """Retrieves the Ensembl IDs and applies `version_fix` method to refine it.
@@ -977,6 +1035,23 @@ class DatabaseManager:
         dbm_the_ids.drop_duplicates(inplace=True)
         return dbm_the_ids
 
+    def check_if_change_assembly_works(self, db_manager, target_assembly: int):
+        """Test whether ``change_assembly`` succeeds for *target_assembly*.
+
+        Args:
+            db_manager (DatabaseManager): A working manager to clone.
+            target_assembly (int): Assembly code to probe.
+
+        Returns:
+            bool: ``True`` if the new manager could be instantiated without
+            raising ``ValueError``; ``False`` otherwise.
+        """
+        try:
+            db_manager.change_assembly(target_assembly)
+            return True
+        except ValueError:
+            return False
+
     def create_external_all(self, return_mode: str) -> pd.DataFrame:
         """Download external databases for all assemblies.
 
@@ -1000,10 +1075,11 @@ class DatabaseManager:
         assembly_priority = [DB.assembly_mysqlport_priority[i]["Priority"] for i in ass]
 
         for i in [x for _, x in sorted(zip(assembly_priority, ass))]:  # sort according to priority
-            dm = self.change_assembly(i)
-            df_temp = dm.get_db("external_relevant")
-            df_temp["assembly"] = i
-            df = pd.concat([df, df_temp])
+            if self.check_if_change_assembly_works(db_manager=self, target_assembly=i):
+                dm = self.change_assembly(i)
+                df_temp = dm.get_db("external_relevant")
+                df_temp["assembly"] = i
+                df = pd.concat([df, df_temp])
         df.reset_index(drop=True, inplace=True)
 
         compare_columns = [
@@ -1102,7 +1178,7 @@ class DatabaseManager:
             if not os.access(_file_path, os.R_OK):
                 return None, list()
 
-            with pd.HDFStore(_file_path, mode="r") as f:
+            with hs.HDFStore(_file_path, mode="r") as f:
                 _keys = f.keys()
             _downloaded_rels = list({int(_pattern.search(i).groups()[0]) for i in _keys if _pattern.search(i)})
 
@@ -1115,12 +1191,12 @@ class DatabaseManager:
             for _arl in _all_rel_lst:
                 if _arl != _keep_rel:
                     _hi, _fi = self.file_name(_df_type, _df_indicator, ensembl_release=_arl)
-                    with pd.HDFStore(_fi, mode="a") as f:
+                    with hs.HDFStore(_fi, mode="a") as f:
+                        f.remove(_hi)
                         self.log.info(
                             f"Following file is being removed: `{os.path.basename(_fi)}` with key `{_hi}`. "
                             f"This could cause hdf5 file to not reclaim the emptied disk space."
                         )
-                        f.remove(_hi)
 
         # Split the df_indicator with "_", to get the extra parameters.
         # Main point of naming and df_indicator is to include the paramters in the file_names
@@ -1151,11 +1227,7 @@ class DatabaseManager:
 
         # If the file name is not accessible for reading, or if the hdf5 file does not contain the table,
         # or explicitly prompt to do so, then download the table.
-        if (
-            not os.access(file_path, os.R_OK)
-            or create_even_if_exist
-            or (not DatabaseManager.check_h5_key(file_path, hierarchy))
-        ):
+        if not os.access(file_path, os.R_OK) or create_even_if_exist or (not hs.check_h5_key(file_path, hierarchy)):
             if main_ind == "external" and param1_ind is None:
                 df = self.create_external_db(filter_mode="all")
 
@@ -1198,40 +1270,15 @@ class DatabaseManager:
                 raise ValueError("Unexpected entry for 'df_indicator'.")
 
         else:  # Otherwise, just read the file that is already in the directory.
-            df = self.read_exported(hierarchy, file_path)
+            df = hs.read_exported(hierarchy, file_path)
 
         # If prompt, save the dataframe in requested format.
         if save_after_calculation:
-            self.export_disk(df, hierarchy, file_path, overwrite_even_if_exist)
+            hs.export_disk(df, hierarchy, file_path, overwrite_even_if_exist, logger=self.log)
 
         return df
 
-    def read_exported(self, hierarchy: str, file_path: str) -> Union[pd.DataFrame, pd.Series]:
-        """Read the data souces saved previously given h5 file path and the 'h5 key'.
-
-        The method is not expected to be used by the user.
-
-        Args:
-            hierarchy: The key to retrieve the associated table in h5 file.
-            file_path: Absolute path for h5 file.
-
-        Returns:
-            The table of interest as a pandas object.
-
-        Raises:
-            FileNotFoundError: If the file indicated by `file_path` is not exist or not readable.
-            KeyError: If there is no key `hierarchy` in the ``h5`` file defined by `file_path`.
-        """
-        if not os.access(file_path, os.R_OK):
-            raise FileNotFoundError("The file is not exist or not readable.")
-
-        if not DatabaseManager.check_h5_key(file_path, hierarchy):
-            raise KeyError
-
-        df = pd.read_hdf(file_path, key=hierarchy, mode="r")
-        return df
-
-    def file_name(self, df_type: str, *args, ensembl_release: Optional[int] = None, **kwargs) -> Tuple[str, str]:
+    def file_name(self, df_type: str, *args, ensembl_release: Optional[int] = None, **kwargs) -> tuple[str, str]:
         """Determine file name for reading/writing into h5 file based on dataframe type.
 
         The method is not expected to be used by the user.
@@ -1271,102 +1318,7 @@ class DatabaseManager:
 
         return hierarchy, os.path.join(self.local_repository, f"{self.organism}_assembly-{self.genome_assembly}.h5")
 
-    def export_disk(self, df: Union[pd.DataFrame, pd.Series], hierarchy: str, file_path: str, overwrite: bool):
-        """Stored the pandas object into the given h5 file with specified key.
-
-        The method is not expected to be used by the user.
-
-        Args:
-            df: The table to stor into the disk.
-            hierarchy: The key to retrieve the associated table in h5 file.
-            file_path: Absolute path for h5 file.
-            overwrite: If ``True``, regardless of whether it is already saved in the disk, the program
-                re-saves removing the previous table with the same name.
-        """
-        base_file_path = os.path.basename(file_path)
-
-        if not os.access(file_path, os.R_OK) or overwrite or (not DatabaseManager.check_h5_key(file_path, hierarchy)):
-            # Remove the file first to prevent hdf5 file to go arbitrarily larger after writing.
-            if DatabaseManager.check_h5_key(file_path, hierarchy) or overwrite:
-                with pd.HDFStore(file_path, mode="a") as f:
-                    if hierarchy in f:
-                        self.log.info(
-                            f"Following file is being removed: `{os.path.basename(file_path)}` "
-                            f"with key `{hierarchy}`. This could cause hdf5 file to not reclaim the "
-                            f"newly emptied disk space."
-                        )
-                        f.remove(hierarchy)
-            # Then save the dataframe under the root, compressed.
-            self.log.info(
-                f"Exporting to the following file `{base_file_path}` with key `{hierarchy}`"
-                f"{'' if self.compress else ', uncompressed'}."
-            )
-            df.to_hdf(file_path, key=hierarchy, mode="a", **self._comp_hdf5)
-
-    @staticmethod
-    def check_h5_key(file_path: str, key: str) -> bool:
-        """Check whether the given key is in the h5 file.
-
-        Args:
-            file_path: Absolute path for h5 file.
-            key: The key to retrieve the associated table in h5 file.
-
-        Returns:
-            If there is such  a key ``True``, else ``False``.
-        """
-        if not os.access(file_path, os.R_OK):
-            return False
-        with pd.HDFStore(file_path, mode="r") as f:
-            return key in f
-
-    def repack_hdf5(self, remove_list: Optional[list] = None):
-        """Repack h5 file.
-
-        When a table is removed by the h5 file, the associated space is not reclaimed by the operating system. The
-        method here circumvents the problem by removing h5 files completely and re-writing all the tables.
-
-        Args:
-            remove_list: Table keys to exclude from re-writing.
-        """
-        _, file_name = self.file_name("common", "place_holder")
-        old_name = file_name + "_to_delete_temp"
-        os.rename(file_name, old_name)
-        self.log.info(f"Repacking the h5 file: {file_name}")
-
-        with pd.HDFStore(old_name, mode="r") as f:
-            all_keys = f.keys()
-
-        if not remove_list:
-            keys = all_keys
-        else:
-            keys = [i for i in all_keys if i not in remove_list]
-
-        if len(keys) != 0:
-            self.log.disabled = True
-            for key in keys:
-                df = self.read_exported(key, old_name)
-                self.export_disk(df, key, file_name, overwrite=False)
-            self.log.disabled = False
-        else:
-            os.remove(file_name)
-
-        os.remove(old_name)
-
-    def tables_in_disk(self) -> List[str]:
-        """Retrieves the keys in the h5 file, which is associated with the DatabaseManager instance.
-
-        Returns:
-            List of keys (also called hierarchy) in the h5 file.
-        """
-        _, file_name = self.file_name("common", "place_holder")
-
-        if not os.path.isfile(file_name):
-            return list()
-        else:
-            with pd.HDFStore(file_name, mode="r") as f:
-                return list(f.keys())
-
-    def id_ver_from_df(self, dbm_the_ids: pd.DataFrame) -> List[str]:
+    def id_ver_from_df(self, dbm_the_ids: pd.DataFrame) -> list[str]:
         """Creates node names given the dataframe of IDs, which has different columns for 'ID' and 'Version'.
 
         Args:
@@ -1387,7 +1339,7 @@ class DatabaseManager:
         return list(map(DatabaseManager.node_name_maker, gri_generator))
 
     @staticmethod
-    def node_name_maker(node_dict: Dict[str, Any]) -> str:
+    def node_name_maker(node_dict: dict[str, Any]) -> str:
         """This function creates ID-Version.
 
         If the Version information is not there, it only uses ID, which is necessary for some organisms which
@@ -1405,7 +1357,7 @@ class DatabaseManager:
             return node_dict["ID"]
 
     @staticmethod
-    def node_dict_maker(id_entry: str, version_entry: Any) -> Dict[str, Any]:
+    def node_dict_maker(id_entry: str, version_entry: Any) -> dict[str, Any]:
         """Create a dict for ID and Version.
 
         Args:
