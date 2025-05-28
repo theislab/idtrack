@@ -136,8 +136,8 @@ Poetry is a tool for Python package management that simplifies declaring, managi
 
 -   **Conducting a Security Vulnerability Check:**
 
-    For ensuring the security of the project's dependencies, the following command is run. It starts by activating the Conda environment designated for the project and navigating to the project directory. The `safety check --full-report --file=.nox/safety-3-9/tmp/requirements.txt` command performs a security vulnerability check against the dependencies listed in the specified requirements file, providing a full report of any issues found. Following the security check, the environment is deactivated, and the command exits to the home directory.
+    For ensuring the security of the project's dependencies, the following command is run. It starts by activating the Conda environment designated for the project and navigating to the project directory. The `safety check --full-report --file=requirements.txt` command performs a security vulnerability check against the dependencies listed in the specified requirements file, providing a full report of any issues found. Following the security check, the environment is deactivated, and the command exits to the home directory.
 
     ```bash
-    conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/idtrack; safety check --full-report --file=.nox/safety-3-9/tmp/requirements.txt; conda deactivate; cd
+    conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/idtrack; poetry export -f requirements.txt --output __requirements.txt; safety check --full-report --file=__requirements.txt; rm -rf __requirements.txt; conda deactivate; cd
     ```

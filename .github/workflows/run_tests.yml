@@ -125,12 +125,17 @@ jobs:
                   brew install pandoc
                   nox --force-color --python=${{ matrix.python-version }}
 
+            - name: Show coverage files
+              if: always() && matrix.session == 'tests'
+              run: ls -alh .coverage*
+
             - name: Upload coverage data
               if: always() && matrix.session == 'tests'
               uses: actions/upload-artifact@v4
               with:
                   name: coverage-data
-                  path: ".coverage.*"
+                  path: .coverage*
+                  include-hidden-files: true
 
             - name: Upload documentation
               if: matrix.session == 'docs-build'
