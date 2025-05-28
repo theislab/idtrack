@@ -128,7 +128,7 @@ def precommit(session: Session) -> None:
 def safety(session: Session) -> None:
     """Scan dependencies for insecure packages."""
     requirements = session.poetry.export_requirements()
-    session.install("safety")
+    session.install("safety>=2,<3")
     session.run("safety", "check", "--full-report", f"--file={requirements}")
 
 

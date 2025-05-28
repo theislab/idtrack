@@ -139,7 +139,7 @@ dependencies:
     - rich
     - pytest
     - coverage
-    - safety
+    - safety>=2,<3
     - nox
     - nox-poetry
     - typeguard

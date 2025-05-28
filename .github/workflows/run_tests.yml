@@ -17,11 +17,11 @@ jobs:
                           os: ubuntu-latest,
                           session: "pre-commit",
                       }
-                    # - {
-                    #       python-version: 3.9,
-                    #       os: ubuntu-latest,
-                    #       session: "safety",
-                    #   }
+                    - {
+                          python-version: 3.9,
+                          os: ubuntu-latest,
+                          session: "safety",
+                      }
                     - {
                           python-version: 3.9,
                           os: ubuntu-latest,
@@ -126,11 +126,11 @@ jobs:
                   nox --force-color --python=${{ matrix.python-version }}
 
             - name: Show coverage files
-              if: always() && matrix.session == 'tests'
+              if: always() && matrix.session == 'tests' && matrix.os == 'ubuntu-latest'
               run: ls -alh .coverage*
 
             - name: Upload coverage data
-              if: always() && matrix.session == 'tests'
+              if: always() && matrix.session == 'tests' && matrix.os == 'ubuntu-latest'
               uses: actions/upload-artifact@v4
               with:
                   name: coverage-data
