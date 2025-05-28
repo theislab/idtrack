@@ -128,6 +128,12 @@ Poetry is a tool for Python package management that simplifies declaring, managi
     conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/idtrack; poetry run pytest --typeguard-packages=idtrack; conda deactivate; cd
     ```
 
+    or better
+
+    ```bash
+    conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/idtrack; poetry run coverage run --parallel -m pytest tests; coverage combine; coverage report; conda deactivate; cd
+    ```
+
 -   **Conducting a Security Vulnerability Check:**
 
     For ensuring the security of the project's dependencies, the following command is run. It starts by activating the Conda environment designated for the project and navigating to the project directory. The `safety check --full-report --file=.nox/safety-3-9/tmp/requirements.txt` command performs a security vulnerability check against the dependencies listed in the specified requirements file, providing a full report of any issues found. Following the security check, the environment is deactivated, and the command exits to the home directory.
