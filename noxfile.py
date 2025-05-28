@@ -4,6 +4,7 @@ import os
 import shlex
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 from textwrap import dedent
 
@@ -124,12 +125,26 @@ def precommit(session: Session) -> None:
         activate_virtualenv_in_precommit_hooks(session)
 
 
-@session(python=python_versions)
+@nox.session(python=python_versions)
 def safety(session: Session) -> None:
     """Scan dependencies for insecure packages."""
-    requirements = session.poetry.export_requirements()
-    session.install("safety>=2,<3")
-    session.run("safety", "check", "--full-report", f"--file={requirements}")
+    # Create a temporary file for exported requirements
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False, suffix=".txt") as reqs_file:
+        reqs_path = Path(reqs_file.name)
+
+    try:
+        # Export the requirements from poetry
+        session.run("poetry", "export", "--format=requirements.txt", "--without-hashes", "--output", str(reqs_path))
+
+        # Install safety 2.x
+        session.install("safety>=2,<3")
+
+        # Run safety check
+        session.run("safety", "check", "--full-report", f"--file={reqs_path}")
+    finally:
+        # Clean up the temp file
+        if reqs_path.exists():
+            reqs_path.unlink()
 
 
 @session(python=python_versions)
