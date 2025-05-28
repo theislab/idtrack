@@ -23,7 +23,7 @@ Before proceeding with the installation on macOS Silicon, you need to ensure tha
         brew install hdf5
         ```
     -   Install Pandoc for handling document conversions for docs built:
-    `bash brew install pandoc `
+        `bash brew install pandoc `
     -   Set environment variables to ensure these libraries are correctly recognized by your package manager:
         ```bash
         export BREW_PREFIX="$(brew --prefix)"
