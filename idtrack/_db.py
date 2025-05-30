@@ -49,6 +49,8 @@ class DB:
     for ap1 in assembly_mysqlport_priority:
         assembly_priority.append(assembly_mysqlport_priority[ap1]["Priority"])
     assembly_priority = sorted(assembly_priority, reverse=True)
+    sorted_assemblies = sorted(assembly_mysqlport_priority.items(), key=lambda item: item[1]["Priority"])
+    main_assembly = sorted_assemblies[0][0]
 
     # Protected Non-int Version Strings/Thresholds
     synonym_id_nodes_prefix = "synonym_id::"
@@ -61,7 +63,7 @@ class DB:
     node_type_str = "node_type"
     nts_external = "external"
     forms_in_order = ["gene", "transcript", "translation"]  # Warning: the order is important here.
-    backbone_form = "gene"
+    backbone_form = "gene"  # No other choice possible.
 
     nts_ensembl = {i: f"ensembl_{i}" for i in forms_in_order}  # ensembl_gene
     nts_ensembl_reverse = {v: k for k, v in nts_ensembl.items()}
@@ -94,3 +96,8 @@ class DB:
         "synonymous_max_depth": 2,
         "nts_backbone": nts_ensembl[backbone_form],
     }
+
+
+class EmptyConversionMetricsError(ValueError):
+    """Raised when conversion_metrics is empty and no alternative conversion is possible."""
+    pass

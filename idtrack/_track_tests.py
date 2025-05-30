@@ -3,6 +3,7 @@
 # Kemal Inecik
 # k.inecik@gmail.com
 
+import traceback
 import copy
 import itertools
 import logging
@@ -10,13 +11,13 @@ import random
 import time
 from abc import ABC
 from math import ceil
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, Dict
 
 import networkx as nx
 import numpy as np
 from tqdm import tqdm
 
-from idtrack._db import DB
+from idtrack._db import DB, EmptyConversionMetricsError
 from idtrack._track import Track
 
 
@@ -106,7 +107,7 @@ class TrackTests(Track, ABC):
                     db_from = self.db_manager.change_release(ens_rel).change_assembly(assembly)
                     ids_from = set(db_from.id_ver_from_df(db_from.get_db("ids", save_after_calculation=False)))
 
-                    ids_from_graph = set(self.graph.get_id_list(DB.nts_assembly[assembly]["gene"], assembly, ens_rel))
+                    ids_from_graph = set(self.graph.get_id_list(DB.nts_assembly[assembly][DB.backbone_form], assembly, ens_rel))
                     if ids_from != ids_from_graph:
                         switch = False
                         self.log.warning(
@@ -141,7 +142,7 @@ class TrackTests(Track, ABC):
         the_ids = list()
         for i in self.graph.nodes:
             if (
-                self.graph.nodes[i]["node_type"] == DB.nts_ensembl["gene"]
+                self.graph.nodes[i]["node_type"] == DB.nts_ensembl[DB.backbone_form]
                 and self.graph.nodes[i]["Version"] not in DB.alternative_versions
             ):
                 the_ids.append(i)
@@ -186,7 +187,7 @@ class TrackTests(Track, ABC):
         """
         base_ids = set()
         for i in self.graph.nodes:
-            if self.graph.nodes[i]["node_type"] == DB.nts_base_ensembl["gene"]:
+            if self.graph.nodes[i]["node_type"] == DB.nts_base_ensembl[DB.backbone_form]:
                 base_ids.add(i)
 
         switch = True
@@ -546,7 +547,8 @@ class TrackTests(Track, ABC):
             "lost_item": [],
             "one_to_one_ids": {},
             "query_not_in_the_graph": [],
-            "history_voyage_failed": [],
+            "history_voyage_failed_gracefully": [],
+            "history_voyage_failed_unknown": [],
             "lost_item_but_the_same_id_exists": [],
             "found_ids_not_accurate": {},
             "conversion": {},
@@ -569,7 +571,7 @@ class TrackTests(Track, ABC):
                         f"{len(metrics['one_to_multiple_ids'])},"
                         f"{len(metrics['lost_item'])},"
                         f"{len(metrics['found_ids_not_accurate'])},"
-                        f"{len(metrics['query_not_in_the_graph']) + len(metrics['history_voyage_failed'])}"
+                        f"{len(metrics['query_not_in_the_graph']) + len(metrics['history_voyage_failed_unknown'])}"
                     )
                     loop_obj.set_postfix_str(suffix, refresh=False)
 
@@ -600,8 +602,13 @@ class TrackTests(Track, ABC):
                 except nx.exception.NetworkXError:
                     metrics["query_not_in_the_graph"].append(the_id)
                     continue
-                except Exception as err:
-                    metrics["history_voyage_failed"].append((the_id, err))
+                except EmptyConversionMetricsError:
+                    full_tb = traceback.format_exc()
+                    metrics["history_voyage_failed_gracefully"].append((the_id, full_tb))
+                    continue
+                except Exception:
+                    full_tb = traceback.format_exc()
+                    metrics["history_voyage_failed_unknown"].append((the_id, full_tb))
                     continue
 
                 # Metrics aggregation
@@ -658,7 +665,11 @@ class TrackTests(Track, ABC):
         metrics["time"] = t2 - t1
         return metrics
 
-    def history_travel_testing_random_arguments_generator(self, strict_forward: bool):
+    def history_travel_testing_random_arguments_generator(
+            self, 
+            strict_forward: bool,
+            include_exclude_list: list    
+        ):
         """Generate a plausible random parameter set for :py:meth:`history_travel_testing`.
 
         The helper picks **compatible** source/target assemblies, releases and
@@ -674,15 +685,17 @@ class TrackTests(Track, ABC):
             ``from_database``, ``to_database`` ready to be splatted into
             :py:meth:`history_travel_testing`.
         """
+        include_ensembl_1, include_external_1, include_ensembl_2, include_external_2 = include_exclude_list
+        
         from_assembly = random.choice(list(DB.assembly_mysqlport_priority.keys()))
         # as the final release should be always the main assembly
         to_assembly = self.graph.graph["genome_assembly"]
         the_key1, the_key2 = None, None
         while the_key1 is None or the_key2 is None:
-            the_key1 = self.random_dataset_source_generator(from_assembly, include_ensembl=True)
+            the_key1 = self.random_dataset_source_generator(from_assembly, include_ensembl=include_ensembl_1, include_external=include_external_1, for_final_database=False)
             if the_key1 is not None:
                 the_key2 = self.random_dataset_source_generator(
-                    to_assembly, include_ensembl=True, release_lower_limit=None if not strict_forward else the_key1[2]
+                    to_assembly, include_ensembl=include_ensembl_2, include_external=include_external_2, for_final_database=True, release_lower_limit=None if not strict_forward else the_key1[2]
                 )
             if the_key1 is None or the_key2 is None:
                 self.log.warning("Recalculating parameters.")
@@ -698,11 +711,16 @@ class TrackTests(Track, ABC):
     def history_travel_testing_random(
         self,
         from_fraction: float,
-        strict_forward: bool,
-        convert_using_release: bool,
-        prioritize_to_one_filter: bool,
-        verbose: bool,
-        verbose_detailed: bool,
+        include_ensembl_source=True,
+        include_external_source=True,
+        include_ensembl_destination=True,
+        include_external_destination=True,
+        verbose: bool=True,
+        verbose_detailed: bool=False,
+        strict_forward: bool=False,
+        convert_using_release: bool=False,
+        prioritize_to_one_filter: bool=True,
+        return_result: bool = False
     ):
         """Convenience wrapper around :py:meth:`history_travel_testing`.
 
@@ -726,10 +744,10 @@ class TrackTests(Track, ABC):
             dict: The *metrics* dictionary returned by
             :py:meth:`history_travel_testing`.
         """
-        parameters = self.history_travel_testing_random_arguments_generator(strict_forward=strict_forward)
-        if verbose:
-            print(parameters)
-        return self.history_travel_testing(
+        include_exclude_list = [include_ensembl_source, include_external_source, include_ensembl_destination, include_external_destination]
+        
+        parameters = self.history_travel_testing_random_arguments_generator(strict_forward=strict_forward, include_exclude_list=include_exclude_list)
+        res = self.history_travel_testing(
             **parameters,
             go_external=True,
             prioritize_to_one_filter=prioritize_to_one_filter,
@@ -739,8 +757,14 @@ class TrackTests(Track, ABC):
             verbose_detailed=verbose_detailed,
             return_ensembl_alternative=False,
         )
+        if verbose:
+            printable = self.format_history_travel_testing_report(res)
+            self.log.info(printable)
+        if return_result:
+            return res
+        
 
-    def is_external_conversion_robust(self, convert_using_release: bool, verbose: bool = True):
+    def is_external_conversion_robust(self, convert_using_release: bool = False, database: str = None, ens_rel: int = None, verbose: bool = True):
         """Validate Ensembl→external conversion against MySQL ground truth.
 
         A random external database is chosen for **every** genome assembly. For
@@ -756,57 +780,80 @@ class TrackTests(Track, ABC):
 
         Returns:
             bool: *True* if every converted set equals the MySQL reference,
-            *False* upon the first deviation.
+                *False* upon the first deviation.
         """
-        for asym in DB.assembly_mysqlport_priority:
+        issues_t1 = []
+        issues_t2 = []
+        issues_t3 = []
+        assembly = DB.main_assembly
+        
+        if not database or not ens_rel:
+            self.log.info("Random database and Ensembl release.")
             database, _, ens_rel = self.random_dataset_source_generator(
-                assembly=asym, form=DB.backbone_form, include_ensembl=False
+                assembly=assembly, form=DB.backbone_form, include_ensembl=False
             )
 
-            if self.db_manager.check_if_change_assembly_works(
-                db_manager=self.db_manager.change_release(ens_rel), target_assembly=asym
-            ):
-                dm = self.db_manager.change_release(ens_rel).change_assembly(asym)
+        if not self.db_manager.check_if_change_assembly_works(
+            db_manager=self.db_manager.change_release(ens_rel), target_assembly=assembly
+        ):
+            raise ValueError
+        
+        dm = self.db_manager.change_release(ens_rel).change_assembly(assembly)
 
-                df = dm.get_db("external_relevant")
-                df = df[df["name_db"] == database]
-                base_dict: dict[str, set] = dict()
-                for _, item in df.iterrows():
-                    if item["graph_id"] not in base_dict:
-                        base_dict[item["graph_id"]] = set()
-                    base_dict[item["graph_id"]].add(item["id_db"])
+        df = dm.get_db("external_relevant")
+        df = df[df["name_db"] == database]
+        base_dict: dict[str, set] = dict()
+        for _, item in df.iterrows():
+            if item["graph_id"] not in base_dict:
+                base_dict[item["graph_id"]] = set()
+            base_dict[item["graph_id"]].add(item["id_db"])
 
-                if verbose:
-                    print(f"Assembly: {asym}, Database: {database}, Release: {ens_rel}")
+        if verbose:
+            self.log.info(f"Assembly: {assembly}, Database: {database}, Release: {ens_rel}")
 
-                res = self.history_travel_testing(
-                    from_release=ens_rel,
-                    from_assembly=asym,
-                    from_database=DB.nts_assembly[asym][DB.backbone_form],
-                    to_release=ens_rel,
-                    to_database=database,
-                    go_external=True,
-                    prioritize_to_one_filter=True,
-                    convert_using_release=convert_using_release,
-                    verbose=verbose,
-                    verbose_detailed=False,
-                )
-                converts = res["conversion"]
-                for from_id in converts:
-                    if set(converts[from_id]) != base_dict[from_id]:
-                        self.log.warning(
-                            f"Inconsistent external conversion for `{(database, asym, ens_rel)}`:\n"
-                            f"ID: {from_id},\n"
-                            f"Converted: {converts[from_id]},\n"
-                            f"Base expectation: {base_dict[from_id]}"
-                        )
-                        return False
-        return True
+        res = self.history_travel_testing(
+            from_release=ens_rel,
+            from_assembly=assembly,
+            from_database=DB.nts_assembly[assembly][DB.backbone_form],
+            to_release=ens_rel,
+            to_database=database,
+            go_external=True,
+            prioritize_to_one_filter=True,
+            convert_using_release=convert_using_release,
+            verbose=verbose,
+            verbose_detailed=False,
+        )
+        
+        for from_id in res["ids"]["from"]:
+            if from_id not in res["conversion"]:
+                issues_t3.append(from_id)
+            else:
+                issue_dict = {
+                    "database": database,
+                    "asym": assembly,
+                    "ens_rel": ens_rel,
+                    "id": from_id,
+                    "converted": res["conversion"][from_id],
+                }
+                if from_id not in base_dict:
+                    issues_t2.append(issue_dict)
+                elif set(res["conversion"][from_id]) != base_dict[from_id]:
+                    issue_dict["base_expectation"] = base_dict[from_id]
+                    issues_t1.append(issue_dict)
+        
+        # make sure issues_t3 is not found in base_dict_from_id
+        
+        if len(issues_t1) == 0 and len(issues_t2) == 0:
+            return True, (issues_t1, issues_t2, issues_t3, res)
+        else:
+            return False, (issues_t1, issues_t2, issues_t3, res)
 
     def random_dataset_source_generator(
         self,
         assembly: int,
+        include_external: bool,
         include_ensembl: bool,
+        for_final_database: bool,
         release_lower_limit: Optional[int] = None,
         form: Optional[str] = None,
     ):
@@ -828,21 +875,30 @@ class TrackTests(Track, ABC):
         Returns:
             tuple | None: ``(<database>, <assembly>, <release>)`` or *None* when
             no matching release exists.
-        """
-        all_possible_sources = copy.deepcopy(list(self.graph.available_external_databases_assembly[assembly]))
+        """            
+        if include_external:
+            all_possible_sources = copy.deepcopy(list(self.graph.available_external_databases_assembly[assembly]))
+            all_possible_sources = [i for i in all_possible_sources if not i.startswith("synonym_id")]
+        else:
+            all_possible_sources = []
+        
         if form is not None:
             all_possible_sources = [
                 i for i in all_possible_sources if self.graph.external_database_connection_form[i] == form
             ]
 
-        if include_ensembl:
+        if include_ensembl and not for_final_database:
             if form is None:
                 all_possible_sources.extend(list(DB.nts_assembly[assembly].values()))
             else:
                 all_possible_sources.append(DB.nts_assembly[assembly][form])
-
-        if form is None or form == DB.backbone_form:
+                
+        if include_ensembl and (form == DB.backbone_form or form is None):
+            all_possible_sources.append(DB.nts_ensembl[DB.backbone_form])
             all_possible_sources.append(DB.nts_base_ensembl[DB.backbone_form])
+
+        if not all_possible_sources:
+            raise ValueError("There is nothing as possible sources.")
 
         selected_database = random.choice(all_possible_sources)
         possible_releases = self.graph.available_releases_given_database_assembly(selected_database, assembly)
@@ -878,7 +934,7 @@ class TrackTests(Track, ABC):
                     ni = self.graph.nodes[i][DB.node_type_str]
                     nj = self.graph.nodes[j][DB.node_type_str]
 
-                    if ni == nj and ni != DB.nts_ensembl["gene"]:
+                    if ni == nj and ni != DB.nts_ensembl[DB.backbone_form]:
                         if verbose:
                             self.log.warning(f"Neighbor nodes (not backbone) has similar node type: `{i}`, `{j}`")
                         return False
@@ -889,3 +945,61 @@ class TrackTests(Track, ABC):
                         return False
 
         return True
+
+    def format_history_travel_testing_report(self, res: Dict[str, Any]) -> str:
+        """Build a clean, printable summary of the metrics emitted by TrackTests.history_travel_testing.
+
+        Args: 
+            res: The dictionary returned by `history_travel_testing`.
+
+        Returns:
+            str: Nicely formatted multi-line report.
+        """
+        # ── helpers ────────────────────────────────────────────────────────────────
+        def block(title: str, rows) -> list[str]:
+            pad = max(len(k) for k, _ in rows)
+            hdr = f"\n{title}:"
+            body = [f"  - {k.ljust(pad)} : {v:,}" for k, v in rows]
+            return [hdr, *body]
+
+        # ── header & parameters ────────────────────────────────────────────────────
+        params = res.get("parameters", {})
+        header = [
+            "\n╔═ History-Travel-Testing Report ═╗",
+            f"Source  : {params.get('from_database')} "
+            f"(Assembly {params.get('from_assembly')}, Release {params.get('from_release')})",
+            f"Target  : {params.get('to_database')} "
+            f"(Release {params.get('to_release')})",
+            f"External: {params.get('go_external')}   "
+            f"1→1-pref.: {params.get('prioritize_to_one_filter')}",
+            f"Sample  : {params.get('from_fraction'):g} of source IDs",
+        ]
+
+        # ── failure / anomaly counts ──────────────────────────────────────────────
+        failure_rows = [
+            ("Voyage failed (graceful)", len(res["history_voyage_failed_gracefully"])),
+            ("Voyage failed (unknown) ", len(res["history_voyage_failed_unknown"])),
+            ("Query not in graph      ", len(res["query_not_in_the_graph"])),
+            ("Lost item               ", len(res["lost_item"])),
+            ("Found IDs not accurate  ", len(res["found_ids_not_accurate"])),
+        ]
+
+        # ── mapping & clash statistics ────────────────────────────────────────────
+        clash_one_one, clash_multi_multi, clash_multi_one = res["clashing_id_type"]
+        mapping_rows = [
+            ("One→one IDs",            len(res["one_to_one_ids"])),
+            ("One→many IDs",           len(res["one_to_multiple_ids"])),
+            ("Clash one→one",          clash_one_one),
+            ("Clash many→many",        clash_multi_multi),
+            ("Clash mixed",            clash_multi_one),
+        ]
+
+        # ── assemble full report ──────────────────────────────────────────────────
+        report_lines = (
+            header
+            + block("Failure / Anomaly Counts", failure_rows)
+            + block("Mapping Statistics", mapping_rows)
+            + [f"\nTotal runtime: {res.get('time', 0):.2f} s"]
+        )
+
+        return "\n".join(report_lines)

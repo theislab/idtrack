@@ -297,7 +297,7 @@ class API:
         Args:
             binned_conversion: The output of ``classify_multiple_conversion`` method.
         """
-        print(f"{os.linesep}".join([f"{i}: {len(binned_conversion[i])}" for i in binned_conversion]))
+        self.log.info(f"{os.linesep}".join([f"{i}: {len(binned_conversion[i])}" for i in binned_conversion]))
 
     def infer_identifier_source(
         self, id_list: list, mode: str = "assembly_ensembl_release", report_only_winner: bool = True
