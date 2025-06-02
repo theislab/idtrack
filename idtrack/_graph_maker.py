@@ -174,7 +174,7 @@ class GraphMaker:
         # Compose all graphs into one. If there is a
         g: TheGraph = nx.compose_all([graph_s[f] for f in form_list])
         # To make the form_list cached in the object.
-        g.attach_included_forms(form_list)
+        g._attach_included_forms(form_list)
 
         # Establish connection between different forms
         self.log.info("Establishing connection between different forms.")

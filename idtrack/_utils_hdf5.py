@@ -14,11 +14,7 @@ import h5py
 import numpy as np
 import pandas as pd
 
-placeholder_na = "_PLACEHOLDER_NA_"
-
-# Define a UTF-8 string dtype for HDF5
-UTF8 = "utf-8"
-UTF8_STR = h5py.string_dtype(encoding=UTF8)
+from idtrack._db import DB
 
 
 def to_hdf(path: str, key: str, df: pd.DataFrame, mode: str = "a", compression=9):
@@ -162,7 +158,7 @@ def _save_column_metadata(grp: h5py.Group, df: pd.DataFrame):
     """Save column names, dtypes, and columns.name."""
     # Save column names
     col_names = [str(col) for col in df.columns]
-    grp.create_dataset("column_names", data=np.array(col_names, dtype=UTF8_STR))
+    grp.create_dataset("column_names", data=np.array(col_names, dtype=DB.UTF8_STR))
 
     # Save column dtypes
     dtypes_info = []
@@ -176,7 +172,7 @@ def _save_column_metadata(grp: h5py.Group, df: pd.DataFrame):
         else:
             dtypes_info.append(str(dtype))
 
-    grp.create_dataset("column_dtypes", data=np.array(dtypes_info, dtype=UTF8_STR))
+    grp.create_dataset("column_dtypes", data=np.array(dtypes_info, dtype=DB.UTF8_STR))
 
     # Save columns.name
     columns_name = str(df.columns.name) if df.columns.name is not None else ""
@@ -187,20 +183,20 @@ def _save_index_data(grp: h5py.Group, df: pd.DataFrame, compression):
     """Save index data and metadata."""
     # Save index names
     index_names = [str(name) if name is not None else "" for name in df.index.names]
-    grp.create_dataset("index_names", data=np.array(index_names, dtype=UTF8_STR))
+    grp.create_dataset("index_names", data=np.array(index_names, dtype=DB.UTF8_STR))
 
     # Save index data
     if pd.api.types.is_datetime64_any_dtype(df.index):
         # Convert datetime to string for reliable storage
         idx_data = df.index.astype(str).values
-        grp.create_dataset("index_data", data=np.array(idx_data, dtype=UTF8_STR), compression=compression)
+        grp.create_dataset("index_data", data=np.array(idx_data, dtype=DB.UTF8_STR), compression=compression)
         grp.attrs["index_dtype"] = "datetime64[ns]"
     elif pd.api.types.is_categorical_dtype(df.index):
         # Store categorical index
         codes = df.index.codes
         cats = [str(x) for x in df.index.categories.tolist()]
         grp.create_dataset("index_data", data=codes, compression=compression)
-        grp.create_dataset("index_categories", data=cats, dtype=UTF8_STR)
+        grp.create_dataset("index_categories", data=cats, dtype=DB.UTF8_STR)
         grp.attrs["index_dtype"] = f"category|{df.index.ordered}"
     else:
         # Regular index
@@ -222,22 +218,22 @@ def _save_column_data(grp: h5py.Group, df: pd.DataFrame, compression):
             categories = col_data.cat.categories.tolist()
             data_grp.create_dataset(f"{col_key}_codes", data=codes, compression=compression)
             data_grp.create_dataset(
-                f"{col_key}_categories", data=np.array([str(cat) for cat in categories], dtype=UTF8_STR)
+                f"{col_key}_categories", data=np.array([str(cat) for cat in categories], dtype=DB.UTF8_STR)
             )
 
         elif pd.api.types.is_datetime64_any_dtype(col_data):
             # Convert datetime to string for reliable storage
             dt_strings = col_data.astype(str).values
-            data_grp.create_dataset(col_key, data=np.array(dt_strings, dtype=UTF8_STR), compression=compression)
+            data_grp.create_dataset(col_key, data=np.array(dt_strings, dtype=DB.UTF8_STR), compression=compression)
 
         elif pd.api.types.is_string_dtype(col_data) or col_data.dtype == "object":
             # Handle string/object data, replacing NA with a placeholder
             series = col_data.copy()
             na_mask = series.isna()
             series = series.astype(str)
-            series[na_mask] = placeholder_na
+            series[na_mask] = DB.placeholder_na
             str_data = series.values
-            data_grp.create_dataset(col_key, data=np.array(str_data, dtype=UTF8_STR), compression=compression)
+            data_grp.create_dataset(col_key, data=np.array(str_data, dtype=DB.UTF8_STR), compression=compression)
 
         else:
             # Numeric, boolean, or other simple types
@@ -247,10 +243,10 @@ def _save_column_data(grp: h5py.Group, df: pd.DataFrame, compression):
 def _load_column_metadata(grp: h5py.Group):
     """Load column names, dtypes, and columns.name."""
     # Load column names
-    col_names = [name.decode(UTF8) for name in grp["column_names"][()]]
+    col_names = [name.decode(DB.UTF8) for name in grp["column_names"][()]]
 
     # Load column dtypes
-    dtype_strs = [dt.decode(UTF8) for dt in grp["column_dtypes"][()]]
+    dtype_strs = [dt.decode(DB.UTF8) for dt in grp["column_dtypes"][()]]
 
     # Parse dtypes
     dtypes = []
@@ -274,7 +270,7 @@ def _load_column_metadata(grp: h5py.Group):
 def _load_index_data(grp: h5py.Group):
     """Load index data and names."""
     # Load index names
-    index_names = [name.decode(UTF8) for name in grp["index_names"][()]]
+    index_names = [name.decode(DB.UTF8) for name in grp["index_names"][()]]
     index_names = [name if name != "" else None for name in index_names]
 
     # Load index data based on dtype
@@ -283,17 +279,17 @@ def _load_index_data(grp: h5py.Group):
 
     if index_dtype.startswith("datetime64"):
         # Convert string back to datetime
-        index_strs = [x.decode(UTF8) if isinstance(x, bytes) else str(x) for x in index_data]
+        index_strs = [x.decode(DB.UTF8) if isinstance(x, bytes) else str(x) for x in index_data]
         index = pd.to_datetime(index_strs)
     elif index_dtype.startswith("category"):
         # Reconstruct categorical index
         ordered = index_dtype.split("|")[1] == "True"
-        categories = [cat.decode(UTF8) for cat in grp["index_categories"][()]]
+        categories = [cat.decode(DB.UTF8) for cat in grp["index_categories"][()]]
         index = pd.CategoricalIndex.from_codes(index_data, categories=categories, ordered=ordered)
     else:
         # Regular index
         if isinstance(index_data[0], bytes):
-            index_data = [x.decode(UTF8) for x in index_data]
+            index_data = [x.decode(DB.UTF8) for x in index_data]
         index = pd.Index(index_data, dtype=index_dtype)
 
     return index, index_names
@@ -310,20 +306,20 @@ def _load_column_data(grp: h5py.Group, columns, dtypes):
         if isinstance(dtype, pd.CategoricalDtype):
             # Reconstruct categorical data
             codes = data_grp[f"{col_key}_codes"][()]
-            categories = [cat.decode(UTF8) for cat in data_grp[f"{col_key}_categories"][()]]
+            categories = [cat.decode(DB.UTF8) for cat in data_grp[f"{col_key}_categories"][()]]
             data_dict[col] = pd.Categorical.from_codes(codes, categories=categories, ordered=dtype.ordered)
 
         elif str(dtype).startswith("datetime64"):
             # Convert string back to datetime
-            dt_strs = [x.decode(UTF8) if isinstance(x, bytes) else str(x) for x in data_grp[col_key][()]]
+            dt_strs = [x.decode(DB.UTF8) if isinstance(x, bytes) else str(x) for x in data_grp[col_key][()]]
             data_dict[col] = pd.to_datetime(dt_strs)
 
         elif str(dtype) in ["object", "string"]:
             # Handle string/object data, restoring placeholder back to NA
             raw = data_grp[col_key][()]
             if isinstance(raw[0], bytes):
-                raw = [x.decode(UTF8) for x in raw]
-            restored = [pd.NA if x == placeholder_na else x for x in raw]
+                raw = [x.decode(DB.UTF8) for x in raw]
+            restored = [pd.NA if x == DB.placeholder_na else x for x in raw]
             data_dict[col] = restored
 
         else:

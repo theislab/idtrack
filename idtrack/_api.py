@@ -226,7 +226,7 @@ class API:
             List of ``convert_identifier`` method outputs.
         """
         result = list()
-        with tqdm(identifier_list, mininterval=0.25, disable=not verbose, desc=pbar_prefix) as loop_obj:
+        with tqdm(identifier_list, mininterval=0.25, disable=not verbose, desc=pbar_prefix, ncols=100) as loop_obj:
             for identifier in loop_obj:
                 loop_obj.set_postfix_str(f"ID:{identifier}", refresh=False)
 
@@ -297,7 +297,9 @@ class API:
         Args:
             binned_conversion: The output of ``classify_multiple_conversion`` method.
         """
-        print(f"{os.linesep}".join([f"{i}: {len(binned_conversion[i])}" for i in binned_conversion]))
+        self.log.info(
+            os.linesep + f"{os.linesep}".join([f"{i}: {len(binned_conversion[i])}" for i in binned_conversion])
+        )
 
     def infer_identifier_source(
         self, id_list: list, mode: str = "assembly_ensembl_release", report_only_winner: bool = True

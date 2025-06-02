@@ -40,6 +40,9 @@ networkx = ">=2.4"
 requests = ">=2.22.0"
 PyMySQL = ">=0.9.3"
 tqdm = ">=4.37.0"
+anndata = ">=0.7"
+scipy = ">=1.5.3"  # sparse
+sparse = ">0.11.2"
 
 [tool.poetry.group.dev.dependencies]
 click = ">=8.0.0"

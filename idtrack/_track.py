@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 from idtrack._database_manager import DatabaseManager
-from idtrack._db import DB
+from idtrack._db import DB, EmptyConversionMetricsError
 from idtrack._graph_maker import GraphMaker
 from idtrack._the_graph import TheGraph
 
@@ -96,6 +96,7 @@ class Track:
         depth_max: int = 0,
         from_release: Optional[int] = None,
         ensembl_backbone_shallow_search: bool = False,
+        account_for_hyperconnected_nodes: bool = True,
     ):
         """Helper method to be used in :py:meth:`_graph.Track.synonymous_nodes`.
 
@@ -141,6 +142,7 @@ class Track:
                 nodes that are *active* in this Ensembl release.
             ensembl_backbone_shallow_search (bool): Activate the
                 shallow, mostly-reverse search mode described above.
+            account_for_hyperconnected_nodes: Todo.
         """
 
         def decide_terminate_externals():
@@ -156,7 +158,6 @@ class Track:
                         for _ed2 in the_data[_ed1]:  # assembly
                             if from_release is None or from_release in the_data[_ed1][_ed2]:
                                 return True
-
             return False
 
         def decide_terminate_others():
@@ -166,7 +167,6 @@ class Track:
                     or TheGraph.is_point_in_range(self.graph.get_active_ranges_of_id[_the_id], from_release)
                 ):
                     return True
-
             return False
 
         input_node_type = self.graph.nodes[_the_id][DB.node_type_str]
@@ -192,7 +192,7 @@ class Track:
                         # prevent bouncing.
                         continue
 
-                    if _next_neighbour in self.graph.hyperconnective_nodes:
+                    if account_for_hyperconnected_nodes and _next_neighbour in self.graph.hyperconnective_nodes:
                         continue
 
                     gnt = self.graph.nodes[_next_neighbour][DB.node_type_str]
@@ -211,7 +211,7 @@ class Track:
                             # Allow bouncing if it bridges two 'external' nodes.
                             and gnt != DB.nts_external
                             # Allow bouncing if it bridges two 'ensembl base' nodes.
-                            and gnt != DB.nts_base_ensembl["gene"]  # transcript or translation base depracated.
+                            and gnt != DB.nts_base_ensembl[DB.backbone_form]  # transcript/translation base depracated.
                             # Check if 1st and 3rd element are the same 'ID' (could have different 'Versions'.)
                             and self.graph.nodes[_the_path[-2]]["ID"] == self.graph.nodes[_next_neighbour]["ID"]
                         ):
@@ -235,6 +235,7 @@ class Track:
                         depth_max=depth_max,
                         from_release=from_release,
                         ensembl_backbone_shallow_search=ensembl_backbone_shallow_search,
+                        account_for_hyperconnected_nodes=account_for_hyperconnected_nodes,
                     )
 
     def synonymous_nodes(
@@ -244,6 +245,7 @@ class Track:
         filter_node_type: set[str],
         from_release: Optional[int] = None,
         ensembl_backbone_shallow_search: bool = False,
+        account_for_hyperconnected_nodes: bool = True,
     ):
         """Public wrapper around :py:meth:`_recursive_synonymous`.
 
@@ -266,6 +268,7 @@ class Track:
             from_release (int | None): Constrain targets to those active in this Ensembl release.
             ensembl_backbone_shallow_search (bool): If *True*,
                 restricts the graph traversal as explained in :py:meth:`_recursive_synonymous`.
+            account_for_hyperconnected_nodes: Todo.
 
         Returns:
             list[list[list[str]]]: A list whose elements are `[identifier_path, node_type_path]` pairs,
@@ -280,7 +283,7 @@ class Track:
 
         if ensembl_backbone_shallow_search:
             if depth_max != 2:
-                raise ValueError
+                raise ValueError("Does not allowed.")
 
         # Use default depth max if there is at least one item in the syn path.
         synonymous_ones: list = []
@@ -293,6 +296,7 @@ class Track:
             depth_max=DB.external_search_settings["synonymous_max_depth"],
             from_release=from_release,
             ensembl_backbone_shallow_search=ensembl_backbone_shallow_search,
+            account_for_hyperconnected_nodes=account_for_hyperconnected_nodes,
         )
 
         # Otherwise use supplemented depth_max, which is generally 1, 2 higher than default.
@@ -305,6 +309,7 @@ class Track:
                 depth_max=depth_max,
                 from_release=from_release,
                 ensembl_backbone_shallow_search=ensembl_backbone_shallow_search,
+                account_for_hyperconnected_nodes=account_for_hyperconnected_nodes,
             )
 
         remove_set: set = set()
@@ -374,7 +379,7 @@ class Track:
         # graph backbone nodes (ensembl gene), and the backbone is always the latest (currently 38).
         for l1, l2 in lor:
             if l1 > l2:
-                raise ValueError
+                raise ValueError("l1 > l2")
 
             elif mode == "closest" and p == l1:
                 result.append((l1, False))
@@ -400,7 +405,7 @@ class Track:
                 result.append((l1, False))
 
             else:
-                raise ValueError
+                raise ValueError("Else?")
 
         return result
 
@@ -519,7 +524,7 @@ class Track:
                             candidate_ranges.append([syn_id, m1, m2])
 
         if len(distance_to_target) == 0:
-            raise ValueError
+            raise ValueError("len(distance_to_target) == 0")
 
         global_min_distance = min(distance_to_target)
         result = [item for ind, item in enumerate(candidate_ranges) if global_min_distance == distance_to_target[ind]]
@@ -663,7 +668,7 @@ class Track:
                             prev_edge_release_index = more_than_one_edges[node_after_id]
                             prev_edge_release = edges[prev_edge_release_index][0]
                             if prev_edge_release == edge_release:
-                                raise ValueError
+                                raise ValueError("prev_edge_release == edge_release")
                             if (not reverse and prev_edge_release > edge_release) or (
                                 reverse and prev_edge_release < edge_release
                             ):  # keep only the first possible edge!
@@ -734,7 +739,7 @@ class Track:
         elif lffi:
             return "forward", min(forward_from_ids)
         else:
-            raise ValueError
+            raise ValueError("no other choice")
 
     def path_search(
         self,
@@ -1176,6 +1181,7 @@ class Track:
                 filter_node_type=filter_set,
                 from_release=ens_release,
                 ensembl_backbone_shallow_search=True,
+                account_for_hyperconnected_nodes=True,
             )
         ]
         imp1, imp2, imp3 = set(), set(), set()
@@ -1188,7 +1194,7 @@ class Track:
             elif nt in ensembl_include[form_importance_order[1]]:
                 imp3.add(i)
             else:
-                raise ValueError
+                raise ValueError("unexpected!2")
 
         # Importance order is as following
         return [-len(imp1), -len(imp2), -len(imp3)]  # minus is added to minimize in the method used.
@@ -1280,7 +1286,7 @@ class Track:
                     from_release = the_edge[3]  # _external_path_maker
 
                 else:
-                    raise ValueError
+                    raise ValueError("len(edge)")
 
             # longest continous ens_gene path'ine sahip olan one cikmali?
 
@@ -1411,7 +1417,7 @@ class Track:
             edge_data = self.graph.get_edge_data(*edge_key)[DB.connection_dict]
             return sorted({j for i in edge_data for j in edge_data[i] if len(n4 & edge_data[i][j]) > 0})
         else:
-            raise ValueError
+            raise ValueError("isinstance(n4, ...)")
 
     def minimum_assembly_jumps(self, the_path, step_pri=None, current_priority=None) -> tuple:
         """Compute the penalty incurred by assembly downgrades along a path.
@@ -1497,7 +1503,7 @@ class Track:
                     current_priority = next_priority_2(current_priority, step_pri)
                 step_pri = priorities.pop(0)
             else:
-                raise ValueError
+                raise ValueError("while len(priorities) > 0")
 
         return penalty, step_pri, current_priority
 
@@ -1532,7 +1538,7 @@ class Track:
         )  # they all are needed to be minimized
 
         if not len(lst_of_dict) > 0:
-            raise ValueError
+            raise ValueError("not len(lst_of_dict) > 0")
 
         minimum_scores = [[dct[i] for i in importance_order] + [ind] for ind, dct in enumerate(lst_of_dict)]
         minimum_scores = sorted(minimum_scores, reverse=False)
@@ -1593,7 +1599,7 @@ class Track:
         # max(external_count), max(protein_count), max(transcript_count)
 
         if not len(dict_of_dict) > 0:
-            raise ValueError
+            raise ValueError("not len(dict_of_dict) > 0")
 
         minimum_scores: dict[tuple, list] = dict()
 
@@ -1722,7 +1728,7 @@ class Track:
                 logical inconsistencies detected during processing.
         """
         if not callable(reduction):
-            raise ValueError
+            raise ValueError("not callable(reduction)")
         to_release = to_release if to_release is not None else self.graph.graph["ensembl_release"]
 
         if from_release is None:
@@ -1772,7 +1778,7 @@ class Track:
             )
             ff = itertools.chain(itertools.repeat(fr, len(poss_paths)))
         else:
-            raise ValueError
+            raise ValueError("should_reversed")
 
         if len(poss_paths) == 0:
             return None
@@ -1788,8 +1794,13 @@ class Track:
                 if len(new_converted) > 0:
                     converted = new_converted
 
+            allowed_ones = self.graph.available_external_databases_assembly[DB.main_assembly].union(
+                {DB.nts_ensembl[DB.backbone_form], DB.nts_base_ensembl[DB.backbone_form]}
+            )
             for cnvt in converted:
-                if final_database is None or final_database == DB.nts_ensembl["gene"]:
+                if final_database not in allowed_ones:
+                    raise ValueError(f"Final database (`final_database`) is not among allowed ones: {allowed_ones}")
+                elif final_database is None or final_database == DB.nts_ensembl[DB.backbone_form]:
                     prio_list = self._create_priority_list_ensembl(cnvt, to_release)
                     converted[cnvt]["final_conversion"] = Track._final_conversion_dict_prepare(
                         confidence=0,
@@ -1798,17 +1809,17 @@ class Track:
                         add_ass_jump_list=[0],
                         min_priority_list=[min(prio_list)],
                         len_priority_list=[len(prio_list)],
-                        final_database=DB.nts_ensembl["gene"],
+                        final_database=DB.nts_ensembl[DB.backbone_form],
                     )
                 elif (
                     final_database in self.graph.available_external_databases
-                    or final_database == DB.nts_base_ensembl["gene"]
+                    or final_database == DB.nts_base_ensembl[DB.backbone_form]
                 ):
                     converted = self._final_conversion(
                         converted, cnvt, final_database, to_release, return_path, return_ensembl_alternative
                     )
                 else:
-                    raise ValueError
+                    raise ValueError("This should not be raised.")
 
             # if there is no conversable entry, remove the conversion
             converted = {
@@ -1836,15 +1847,12 @@ class Track:
 
         Returns:
             list[int]: Sorted list of priority values (ascending).
-
-        Raises:
-            ValueError: If the gene is not active in *any* assembly at
-                `to_release`.
         """
         ceg = self.graph.combined_edges_genes[from_id]
         ceg_assembly_list = sorted({j for i in ceg for j in ceg[i] if to_release in ceg[i][j]})
         if len(ceg_assembly_list) == 0:
-            raise ValueError
+            self.log.warning(f"A form of rare event found for {from_id!r}.")
+            return [np.iinfo(np.int32).max]  # placeholder large integer
         return [DB.assembly_mysqlport_priority[i]["Priority"] for i in ceg_assembly_list]
 
     @staticmethod
@@ -1880,7 +1888,7 @@ class Track:
             add_ass_jump_list (list): Additional assembly-jump penalty
                 incurred during the synonym hop itself.
             final_database (str): Name of the database these synonyms belong
-                to (e.g. `'uniprot'` or `DB.nts_ensembl["gene"]`).
+                to (e.g. `'uniprot'` or `DB.nts_ensembl[DB.backbone_form]`).
 
         Returns:
             dict: Nested dictionary ready to be stored under the key
@@ -1922,6 +1930,8 @@ class Track:
         ens_release: int,
         return_path: bool,
         return_ensembl_alternative: bool,
+        prevent_assembly_jumps: bool = True,
+        account_for_hyperconnected_nodes: bool = False,
     ):
         """Convert an Ensembl gene node to the requested external database.
 
@@ -1950,10 +1960,15 @@ class Track:
                 synonym.
             return_ensembl_alternative (bool): When no synonym can be found,
                 add a fallback entry that keeps the Ensembl gene.
+            prevent_assembly_jumps: Todo.
+            account_for_hyperconnected_nodes: Todo.
 
         Returns:
             dict: The same `converted` dict, updated in place (and also
             returned for convenience).
+
+        Raises:
+            EmptyConversionMetricsError: Todo.
         """
 
         def _final_conversion_path(gene_id: str, target_db: str, from_release: int):
@@ -1989,13 +2004,79 @@ class Track:
                     result.append(ens_rels_avail)
                 return result
 
+            def _contains_assembly(lst, asyml: int, er_for_jumps: Optional[int], er_for_last_node: Optional[int]):
+
+                # prevent assembly jumps {some ensembl-gene's are also shared, and they are not called as assembly_37..}
+                # just for each returned synonymous, check whether the connection is only possible on assembly 38,
+                # if not just remove this one. check graph ans see whether the nodes returned share 38 assembly.
+
+                def _get_edge_data(u, v):
+                    e1 = self.graph.get_edge_data(u, v)
+                    e2 = self.graph.get_edge_data(v, u)
+                    if e1 and e2 is None:
+                        return e1
+                    elif e2 and e1 is None:
+                        return e2
+                    elif e1 is None and e2 is None:
+                        raise ValueError(f"No edge between {u!r} and {v!r}.")
+                    else:
+                        raise ValueError(f"Two directional edge between {u!r} and {v!r}.")
+
+                # these are for external jumps to make it allowed in only assembly defined
+                switch_1 = False
+                for u, v in zip(lst, lst[1:]):
+                    edges = _get_edge_data(u, v)
+                    for _, edge in edges.items():
+                        for _, ae in edge["connection"].items():
+                            for assembly, ensembl_release in ae.items():
+                                if er_for_jumps is None:
+                                    if asyml == assembly:
+                                        switch_1 = True
+                                else:
+                                    if er_for_jumps in ensembl_release and asyml == assembly:
+                                        switch_1 = True
+                switch_2 = False
+                # last node should be in the database requested within assembly defined. See the line:
+                # idt.convert_identifier("ENSG00000199293.1", to_release=94, from_release=94, final_database="RFAM")
+                edges = _get_edge_data(u, v)
+                for _, edge in edges.items():
+                    for assembly, ensembl_release in edge["connection"][target_db].items():
+                        if er_for_last_node is None:
+                            if asyml == assembly:
+                                switch_2 = True
+                        else:
+                            if er_for_last_node in ensembl_release and asyml == assembly:
+                                switch_2 = True
+
+                return all([switch_1, switch_2])
+
+            def _prevent_assembly_jumps(synonymous_nodes_output, er_for_jumps, er_for_last_node):
+                if prevent_assembly_jumps:
+                    return [
+                        i
+                        for i in synonymous_nodes_output
+                        if _contains_assembly(
+                            lst=i[0],  # where node ids are stored.
+                            asyml=DB.main_assembly,
+                            er_for_jumps=er_for_jumps,
+                            er_for_last_node=er_for_last_node,
+                        )
+                    ]
+                else:
+                    return synonymous_nodes_output
+
             a = _final_conversion_path_helper(
-                self.synonymous_nodes(
-                    the_id=gene_id,
-                    depth_max=2,
-                    filter_node_type={target_db},
-                    from_release=from_release,
-                    ensembl_backbone_shallow_search=True,
+                _prevent_assembly_jumps(
+                    self.synonymous_nodes(
+                        the_id=gene_id,
+                        depth_max=2,
+                        filter_node_type={target_db},
+                        from_release=from_release,
+                        ensembl_backbone_shallow_search=True,
+                        account_for_hyperconnected_nodes=account_for_hyperconnected_nodes,
+                    ),
+                    er_for_jumps=from_release,
+                    er_for_last_node=from_release,
                 ),
                 er=from_release,
             )
@@ -2005,12 +2086,17 @@ class Track:
                 return a, confidence  # syns, confidence (lower better)
             else:
                 the_paths_no_ens_rel = _final_conversion_path_helper(
-                    self.synonymous_nodes(
-                        the_id=gene_id,
-                        depth_max=2,
-                        filter_node_type={target_db},
-                        from_release=None,
-                        ensembl_backbone_shallow_search=True,
+                    _prevent_assembly_jumps(
+                        self.synonymous_nodes(
+                            the_id=gene_id,
+                            depth_max=2,
+                            filter_node_type={target_db},
+                            from_release=None,
+                            ensembl_backbone_shallow_search=True,
+                            account_for_hyperconnected_nodes=account_for_hyperconnected_nodes,
+                        ),
+                        er_for_jumps=None,
+                        er_for_last_node=from_release,
                     ),
                     er=None,
                 )
@@ -2045,7 +2131,6 @@ class Track:
 
         if len(syn_ids) == 0 and return_ensembl_alternative:
             # Alternativelu return ensembl itself, return confidence np.inf [which means unsuccessful]
-
             prio_list = self._create_priority_list_ensembl(cnvt, ens_release)
 
             converted[cnvt]["final_conversion"] = Track._final_conversion_dict_prepare(
@@ -2055,10 +2140,15 @@ class Track:
                 add_ass_jump_list=[0],
                 min_priority_list=[min(prio_list)],
                 len_priority_list=[len(prio_list)],
-                final_database=DB.nts_ensembl["gene"],
+                final_database=DB.nts_ensembl[DB.backbone_form],
             )
         else:
             conversion_metrics = [_final_conversion_helper(converted, cnvt, i) for i in syn_ids_path]
+            if not conversion_metrics:
+                raise EmptyConversionMetricsError(
+                    "The `conversion_metrics` is emtpy. It happens when `return_ensembl_alternative` "
+                    f"is `false` and no corresponding final conversion possible: {cnvt}\n{converted}."
+                )
             sl1, sl2, sl3 = list(map(list, zip(*conversion_metrics)))
             converted[cnvt]["final_conversion"] = Track._final_conversion_dict_prepare(
                 confidence=conf,
@@ -2105,7 +2195,7 @@ class Track:
             elif mode == "assembly_ensembl_release":
                 possible_trios.extend({i[1:] for i in self.graph.node_trios[di]})
             else:
-                raise ValueError
+                raise ValueError("no 1234")
 
         return list(Counter(possible_trios).most_common())
 

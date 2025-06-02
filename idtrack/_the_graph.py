@@ -18,18 +18,42 @@ from idtrack._db import DB
 
 
 class TheGraph(nx.MultiDiGraph):
-    """Graph object containing all the information about the relationships between bio-IDs.
+    """Represent a bio-identifier multigraph with IDTrack-specific helpers.
 
-    It is a subclass of :py:class:`networkx.MultiDiGraph`, with some additional methods to aid the pathfinder
-    algorithm in :py:class:`Track`. The object is constructed by :py:class:`GraphMaker`.
+    The class extends :py:class:`networkx.MultiDiGraph` to model historical and
+    cross-reference relationships between Ensembl identifiers (genes,
+    transcripts, translations) and third-party database accessions
+    (UniProt, RefSeq, …).  It is built by
+    :py:class:`idtrack._graph_maker.GraphMaker`, then queried by
+    :py:class:`idtrack.Track` for high-performance path-finding across Ensembl
+    releases and external resources.
+
+    Additional cached properties (e.g. :py:attr:`rev`,
+    :py:attr:`combined_edges`, and :py:attr:`hyperconnective_nodes`) collapse
+    expensive aggregate calculations into single attribute look-ups, while
+    helpers such as :py:meth:`attach_included_forms` record which biological
+    forms were merged into a particular instance.  Together these conveniences
+    allow downstream algorithms to traverse millions of edges without the
+    memory overhead of duplicating graphs or recomputing summaries.
     """
 
     def __init__(self, *args, **kwargs):
-        """Class initialization.
+        """Instantiate the multigraph and configure package logging.
+
+        All positional and keyword arguments are forwarded verbatim to
+        :py:class:`networkx.MultiDiGraph`, allowing callers to pre-seed the graph
+        with nodes, edges, or name/metadata attributes exactly as they would with a
+        vanilla NetworkX constructor.  After delegating to ``super().__init__``,
+        the method initialises two convenience attributes:
+
+        - :py:data:`log` — a dedicated ``logging.Logger`` named ``"the_graph"`` for
+            structured, per-instance diagnostics.
+        - :py:data:`available_forms` — a placeholder set to ``None`` until
+            :py:meth:`attach_included_forms` is called by :py:class:`idtrack._graph_maker.GraphMaker`.
 
         Args:
-            args: Arguments to be passed to :py:class:`networkx.MultiDiGraph`.
-            kwargs: Keyword arguments to be passed to :py:class:`networkx.MultiDiGraph`.
+            args (Any): Positional arguments accepted by :py:meth:`networkx.MultiDiGraph.__init__`.
+            kwargs (Any): Keyword arguments accepted by :py:meth:`networkx.MultiDiGraph.__init__`.
         """
         super().__init__(*args, **kwargs)  # SubClass initialization
 
@@ -37,57 +61,101 @@ class TheGraph(nx.MultiDiGraph):
         self.log = logging.getLogger("the_graph")
         self.available_forms = None
 
-    def attach_included_forms(self, available_forms: list) -> None:
-        """Set the ``available_forms`` variable for the instance.
+    def _attach_included_forms(self, available_forms: list[str]) -> None:
+        """Record which Ensembl forms are present in the merged graph.
 
-        This is a separate function and mainly aimed to be used by :py:class:`GraphMaker` during the
-        process of constructing the graph. Just after the graphs for the forms of interests (typically `gene`,
-        `transcript`, and `protein`) are merged, this method is called to store which forms are included in the graph.
-        Setting the variable before merging the graphs causes errors and inconsistencies.
+        Graphs for *gene*, *transcript*, and *protein* are first built
+        independently by :py:class:`~idtrack._graph_maker.GraphMaker` and then
+        merged into a single :py:class:`TheGraph` instance.  This helper runs
+        **after** that merge to store the subset of forms that actually made it
+        into the final graph—information required by several cached properties
+        (e.g. :py:data:`available_external_databases`) for consistency checks
+        and downstream analyses.  Calling the method **before** the merge would
+        mis-report available forms and corrupt those caches.
 
         Args:
-            available_forms: Determine which forms (transcript, translation, gene) are included.
+            available_forms (list[str]): Exact list of included forms
+                (typically ``["gene", "transcript", "protein"]``).  Order is
+                preserved so callers can rely on a deterministic iteration
+                sequence.
         """
         self.available_forms = available_forms
 
-    def calculate_caches(self):
-        """Calculate cached variables using only one method."""
+    def calculate_caches(self, for_test: bool = False) -> None:
+        """Eagerly materialise every ``@cached_property`` to prime the cache.
+
+        Accessing a cached property for the first time triggers an expensive
+        computation. Batch-loading all of them up-front improves latency for
+        subsequent graph queries and simplifies unit-test expectations because
+        no additional properties are computed lazily in the background.
+
+        The optional *for_test* flag activates a few heavyweight diagnostics
+        that are normally skipped in production but useful for test suites and
+        profiling.
+
+        Args:
+            for_test (bool): If ``True`` (default), also compute
+                caches that exist solely for testing or sanity-check purposes
+                (e.g. :py:data:`external_database_connection_form`).  Set to
+                ``False`` to warm only the properties required at run-time.
+        """
         _ = self.combined_edges
         _ = self.combined_edges_assembly_specific_genes
         _ = self.combined_edges_genes
         _ = self.lower_chars_graph
         _ = self.get_active_ranges_of_id
         _ = self.available_external_databases
-        _ = self.external_database_connection_form
         _ = self.available_genome_assemblies
         _ = self.available_external_databases_assembly
         _ = self.node_trios
         _ = self.hyperconnective_nodes
+        if for_test:
+            _ = self.external_database_connection_form
+            _ = self.available_releases_given_database_assembly
 
     @cached_property
     def rev(self) -> "TheGraph":
-        """The same graph but the edges are in reverse orientation.
+        """Return a view of the same graph with all edge directions reversed.
+
+        The call delegates to :py:meth:`networkx.MultiDiGraph.reverse` with
+        ``copy=False``, meaning the returned object re-uses the underlying data
+        structures and therefore consumes **no additional memory**.  Use this
+        property whenever a temporal walk must proceed *backwards* in history
+        (e.g. when resolving identifiers from a newer to an older Ensembl
+        release).
 
         Returns:
-            ``TheGraph`` object without copying another one in the memory.
+            TheGraph: A non-copying, lazily constructed reverse-orientation
+                view that honours every node and edge attribute of the original graph.
         """
         return self.reverse(copy=False)
 
     @cached_property
-    def hyperconnective_nodes(self) -> dict:
-        """Cached property for hyper-connective nodes as keys and number of connections as values.
+    def hyperconnective_nodes(self) -> dict[str, int]:
+        """Return hyper-connective external nodes and their out-degree counts.
 
-        Hyper-connective nodes are defined as external nodes with more than
-        :py:attr:`DB.hyperconnecting_threshold`. This nodes creates a huge bottleneck in finding the synonyms
-        of a node and hence the pathfinder algorithm. The pathfinder algoritm is hence speed-up by ignoring these nodes
-        in the search process. This is in theory sacrificing the precision of the algorithm a little bit, but
-        in practice these nodes generally does not have not very precise ID matching. Most of the case, the relavant
-        IDs are matched via some other external ID, so the performance of the pathfinder algorithm actually improves
-        if hyper-connective nodes are ignored.
+        Hyper-connective nodes are external identifiers whose out-degree (number of outgoing edges) exceeds
+        :py:attr:`idtrack._db.DB.hyperconnecting_threshold`. Because such nodes may participate in tens of thousands
+        of mappings, they explode the breadth-first frontier of the synonym *pathfinder* algorithm and become a major
+        performance bottleneck.  The algorithm therefore **ignores** these nodes, sacrificing a small amount of
+        theoretical precision for a substantial speed-up.
+
+        In practice the precision penalty is negligible: hyper-connective nodes tend to be coarse-grained identifiers
+        that already suffer from low mapping specificity (for example, generic protein or transcript accessions
+        re-used across many unrelated biological entities).  Meaningful, one-to-one synonym relationships are almost
+        always reachable through alternative external identifiers.  Consequently, ignoring hyper-connective nodes both
+        accelerates the search and often improves the overall relevance of the results.
+
+        The value is computed lazily on first access and memoised via :py:meth:`functools.cached_property`, so the
+        underlying query runs at most once per :py:class:`~idtrack._the_graph.TheGraph` instance.
 
         Returns:
-            Dictionary of hyper-connective nodes as keys and number of connections as values.
+            dict[str, int]: Mapping from external node identifier to its out-degree, limited to nodes whose
+                out-degree is greater than :py:attr:`idtrack._db.DB.hyperconnecting_threshold` and whose
+                :py:data:`idtrack._db.DB.node_type_str` equals :py:data:`idtrack._db.DB.nts_external`.
         """
+        self.log.info(f"Cached properties being calculated: {'hyperconnective_nodes'}")
+
         hcn_dict = dict()  # Initialize a dictionary
 
         for hcn in self.nodes:
@@ -101,13 +169,27 @@ class TheGraph(nx.MultiDiGraph):
 
     @cached_property
     def combined_edges(self) -> dict:
-        """Combines all the edge data for a given node except `Ensembl gene` and `assembly specific Ensembl gene` nodes.
+        """Aggregate outgoing-edge metadata for every non-gene node in the graph.
 
-        It iterates all the edges of a given node to construct a dictionary with a specified format.
+        This cached view pre-computes, for each backbone or external identifier, which external databases,
+        genome assemblies, and Ensembl releases are reachable through *outgoing* edges—while purposely
+        excluding Ensembl gene and assembly-specific gene nodes.  The summary accelerates synonym search
+        and other traversal routines in :py:meth:`idtrack.track.Track.pathfinder` because consumers can
+        consult a compact dictionary instead of repeatedly iterating raw NetworkX edges and attributes.
 
         Returns:
-            A dictionary with following format
-            ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.
+            dict: Nested mapping of the form ``{node_name: {database_name: {assembly: set[int]}}}``, where
+
+                * **node_name** (*str*) - Identifier of the start node whose edges were inspected.
+                * **database_name** (*str*) - Canonical name of the external database or Ensembl sub-type
+                    (e.g. ``uniprot``, ``refseq_rna``, ``assembly_x_ensembl_gene``).
+                * **assembly** (*str*) - UCSC-style assembly label (e.g. ``GRCh38``); ``None`` when the edge
+                    is not assembly-scoped.
+                * **set[int]** - Collection of Ensembl release numbers in which the connection is valid.
+
+        Notes:
+            *Edges that link two nodes of the **same** node-type are ignored,* ensuring the dictionary
+            focuses on cross-type relationships that matter for ID translation.
         """
         self.log.info(f"Cached properties being calculated: {'combined_edges'}")
 
@@ -117,14 +199,18 @@ class TheGraph(nx.MultiDiGraph):
 
     @cached_property
     def combined_edges_genes(self) -> dict:
-        """Combines all the edge data for a given node for only `Ensembl gene` nodes.
+        """Aggregate incoming-edge metadata for Ensembl gene nodes.
 
-        It iterates all the edges of a given node to construct a dictionary with a specified format.
+        Gene nodes only possess **incoming** edges (toward the gene); therefore the calculation traverses
+        the graph in reverse (``self.rev``) to collect equivalent information to
+        :py:meth:`~TheGraph.combined_edges`, but restricted solely to nodes whose
+        :py:data:`idtrack._db.DB.node_type_str` is ``DB.nts_ensembl["gene"]``.  The result merges edge
+        data from *all* contributing external databases so that downstream callers receive one consolidated
+        view per gene.
 
         Returns:
-            A dictionary with following format
-            ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.
-            Can have multiple assemblies as some main assembly genes are shared across different assemblies.
+            dict: Nested mapping ``{gene_id: {database_name: {assembly: set[int]}}}``.
+                A single gene may appear under multiple assemblies when reference genomes share that transcript locus.
         """
         self.log.info(f"Cached properties being calculated: {'combined_edges_genes'}")
 
@@ -138,14 +224,18 @@ class TheGraph(nx.MultiDiGraph):
 
     @cached_property
     def combined_edges_assembly_specific_genes(self) -> dict:
-        """Combines all the edge data for a given node for only `assembly specific Ensembl gene` nodes.
+        """Aggregate incoming‐edge metadata for assembly-specific Ensembl gene nodes.
 
-        It iterates all the edges of a given node to construct a dictionary with a specified format.
+        Assembly-specific gene identifiers (e.g. ``GRCh37:ENSG00000123456``) represent loci that differ
+        between reference builds.  This property mirrors the logic of
+        :py:meth:`~TheGraph.combined_edges_genes` but targets nodes *not* captured by that property,
+        ensuring the three cached dictionaries are mutually exclusive and collectively exhaustive.
+        Because each such gene belongs to exactly **one** assembly, the returned structure always contains
+        a single assembly key per outer node.
 
         Returns:
-            A dictionary with following format
-            ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.
-            But ut has only one assembly, whose hint is given in the database_name.
+            dict: Mapping ``{assembly_specific_gene_id: {database_name: {assembly: set[int]}}}`` where the sole
+                *assembly* key matches the assembly implied by the node's own identifier.
         """
         self.log.info(f"Cached properties being calculated: {'combined_edges_assembly_specific_genes'}")
 
@@ -163,27 +253,31 @@ class TheGraph(nx.MultiDiGraph):
 
     @staticmethod
     def _combined_edges_genes_helper(the_result) -> dict:
-        """Helper method is called for two methods only.
+        """Merge per-neighbour edge metadata for gene-centric queries.
 
-        The method is called by :py:meth:`TheGraph.combined_edges_assembly_specific_genes` and
-        :py:meth:`TheGraph.combined_edges_genes` only. The aim of the method is to merge all the data
-        coming from multiple external databases.
+        This helper is used exclusively by :py:meth:`TheGraph.combined_edges_genes` and
+        :py:meth:`TheGraph.combined_edges_assembly_specific_genes` to post-process
+        the dictionaries returned by :py:meth:`TheGraph._combined_edges`.
+        Because backbone *gene* nodes have no outgoing edges except to other gene
+        nodes, the caller invokes :py:meth:`TheGraph._combined_edges` on a
+        **reversed** graph and receives one nested dictionary per neighbour.
+        The present routine
 
-        Note that the main reason of having a separate methods for these two is basically due to the fact that `gene`
-        nodes has no outgoing edges except to another `gene` node. For this reason,
-        :py:meth:`TheGraph._combined_edges` method has been used with reversed graph. In order to have the
-        information for Ensembl genes or Ensembl assembly genes, the information from all edges should be merged and
-        the name for the database has to be edited accordingly.
-
-        Here, `ensembl_gene` is renamed with `assembly_X_ensembl_gene` for more intuitive understanding of the source of
-        the gene, and also to make the naming consistent.
+        1. Flattens those per-neighbour sub-dicts so that information from
+            multiple neighbours of the same external database and assembly is unified.
+        2. Re-labels the generic ``ensembl_gene`` key to the assembly-qualified
+            form ``assembly_<N>_ensembl_gene`` so that the provenance of every
+            entry remains explicit and consistent with the rest of the code base.
 
         Args:
-            the_result: A dictionary as the output of :py:meth:`TheGraph._combined_edges`.
+            the_result (dict): Nested mapping produced by
+                :py:meth:`TheGraph._combined_edges` for a *single* gene node.
+                The structure is  ``{neighbour: {database: {assembly: set[int]}}}``.
 
         Returns:
-            A dictionary with following format
-            ``{database_name: {assembly: {ensembl release set}}}``.
+            dict: Collapsed mapping  ``{database: {assembly: set[int]}}`` where all neighbour-level
+                dictionaries have been merged and database names have been renamed
+                to their assembly-specific counterparts when appropriate.
         """
         output: dict = dict()  # Initialize a dict
         for i in the_result:
@@ -201,20 +295,35 @@ class TheGraph(nx.MultiDiGraph):
 
     @staticmethod
     def _combined_edges(node_list: Union[nx.classes.reportviews.NodeView, list], the_graph: nx.MultiDiGraph) -> dict:
-        """Combines the database, assembly, ensembl release information from all edges from a given node.
+        """Aggregate database/assembly/release metadata for the edges of *node_list*.
 
-        The method fills the dictionary with nodes provided as a parameter. The edge data coming from the same node
-        types (the edge between the same node type can exist only between backbone nodes as tested in
-        :py:meth:`TrackTest.is_edge_with_same_nts_only_at_backbone_nodes`) are excluded.
+        The routine is the work-horse behind the
+        :py:attr:`TheGraph.combined_edges` family of cached properties.
+        It iterates over every node in *node_list*, inspects each outgoing
+        (or, when *the_graph* is a reversed view, incoming) edge, and builds a
+        deterministic description of which external database, genome assembly,
+        and Ensembl release the connection originates from.
+
+        Edges that link two nodes of the **same** node-type are ignored so that
+        backbone history links (gene ↔ gene, transcript ↔ transcript, …) do not
+        pollute the output (as tested in
+        :py:meth:`idtrack._track_tests.TrackTest.is_edge_with_same_nts_only_at_backbone_nodes`).
+        For edges whose database key is one of the generic Ensembl forms
+        (``ensembl_gene``, ``ensembl_transcript``, …) the key is rewritten to the
+        assembly-specific variant (e.g. ``assembly_38_ensembl_gene``) to keep
+        assemblies logically separate in downstream analyses.
 
         Args:
-            node_list: Node names to be calculated.
-            the_graph: The graph to be used for the calculation. It is generally `self` or `self.rev` depending on
-                how it has been wanted to calculate.
+            node_list (NodeView | list[str]): Nodes whose edge metadata will be
+                consolidated.  Accepts either a plain list or the
+                :py:class:`networkx` view returned by ``graph.nodes``.
+            the_graph (nx.MultiDiGraph): Graph to inspect.  Pass ``self`` for the
+                native orientation or ``self.rev`` when a reverse walk is
+                required.
 
         Returns:
-            A dictionary with following format
-            ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.
+            dict: Mapping  ``{node: {database: {assembly: set[int]}}}`` that summarises every
+                admissible edge attached to the requested nodes.
         """
         result: dict = dict()
         for i in node_list:
@@ -869,7 +978,7 @@ class TheGraph(nx.MultiDiGraph):
         Raises:
             ValueError: If non-Ensembl node is connected.
         """
-        self.log.info(f"Cached properties being calculated: {'external_database_connection_form'}")
+        self.log.info(f"Cached properties being calculated (for tests): {'external_database_connection_form'}")
 
         # Get the available databases to be matched
         aed = self.available_external_databases
@@ -916,30 +1025,63 @@ class TheGraph(nx.MultiDiGraph):
 
         return output
 
-    def available_releases_given_database_assembly(self, database_name: str, assembly: int) -> set[int]:
-        """Possible Ensembl releases defined for a given database and assembly.
+    @cached_property
+    def available_releases_given_database_assembly(self) -> dict[tuple[str, int], set]:
+        """Todo."""
+        self.log.info(f"Cached properties being calculated (for tests): {'available_releases_given_database_assembly'}")
 
-        The method uses `node_trios` unnecessarily method, which consumes a lot of memory and hinders high
-        computational efficiency. However, this method is used only in testing purposes, when the speed and memory is
-        not of a concern.
+        # Inline logic from _available_releases_given_database_assembly
+        def _inline_available_releases(database_name: str, assembly: int) -> set[int]:
+            """Possible Ensembl releases defined for a given database and assembly.
 
-        It is important to note that not all databases are defined in all Ensembl release. To see for more information,
-        have a look at the :py:class:`ExternalDatabases`.
+            The method uses `node_trios` unnecessarily method, which consumes a lot of memory and hinders high
+            computational efficiency. However, this method is used only in testing purposes, when the speed and memory
+            is not of a concern.
 
-        Args:
-            database_name: External database or node type (except `external`) it should be one of the item from
-                :py:meth:`TheGraph.available_external_databases`. The method also works with `node types`
-                (except `external`), since they are also defined in `node_trios`. Important to note that the `node type`
-                for Ensembl should follow :py:attr:`DB.nts_assembly` or :py:attr:`DB.nts_base_ensembl`.
-            assembly: Assembly, it should be one of the item from
-                :py:meth:`TheGraph.available_genome_assemblies`.
+            It is important to note that not all databases are defined in all Ensembl release. To see for more
+            information, have a look at the :py:class:`ExternalDatabases`.
 
-        Returns:
-            Available Ensembl releases as set of integers.
-        """
-        return {
-            j3 for i in self.node_trios for j1, j2, j3 in self.node_trios[i] if j1 == database_name and j2 == assembly
-        }
+            Args:
+                database_name: External database or node type (except `external`) it should be one of the item from
+                    :py:meth:`TheGraph.available_external_databases`. The method also works with `node types`
+                    (except `external`), since they are also defined in `node_trios`. Important to note that the
+                    `node type` for Ensembl should follow :py:attr:`DB.nts_assembly` or :py:attr:`DB.nts_base_ensembl`.
+                assembly: Assembly, it should be one of the item from
+                    :py:meth:`TheGraph.available_genome_assemblies`.
+
+            Returns:
+                Available Ensembl releases as set of integers.
+            """
+            return {
+                j3
+                for key in self.node_trios
+                for j1, j2, j3 in self.node_trios[key]
+                if j1 == database_name and j2 == assembly
+            }
+
+        r = dict()
+        for assembly, database_names in self.available_external_databases_assembly.items():
+            for database_name in database_names:
+                r[(database_name, assembly)] = _inline_available_releases(
+                    assembly=assembly, database_name=database_name
+                )
+
+        for assembly, _inner_dict in DB.nts_assembly.items():
+            for _, database_name in _inner_dict.items():
+                r[(database_name, assembly)] = _inline_available_releases(
+                    assembly=assembly, database_name=database_name
+                )
+
+        for database_name in DB.nts_base_ensembl.values():
+            r[(database_name, DB.main_assembly)] = _inline_available_releases(
+                assembly=DB.main_assembly, database_name=database_name
+            )
+
+        available_release = {j for i in r.values() for j in i}
+        for database_name in DB.nts_ensembl.values():
+            r[(database_name, DB.main_assembly)] = available_release
+
+        return r
 
     def get_id_list(self, database: str, assembly: int, release: int) -> list[str]:
         """Given a trio (database, assembly, release), generates a list of node names (identifiers).
@@ -962,7 +1104,12 @@ class TheGraph(nx.MultiDiGraph):
         Returns:
             Node names (identifiers) list.
         """
-        the_key = (database, assembly, release)
+        if database in DB.nts_ensembl_reverse.keys():
+            form = DB.nts_ensembl_reverse[database]
+            the_key = (f"assembly_{assembly}_ensembl_{form}", assembly, release)
+        else:
+            the_key = (database, assembly, release)
+
         final_list = list()
         for n in self.nodes:
             if (
