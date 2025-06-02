@@ -13,6 +13,12 @@ Reference
     :show-inheritance: True
 
 
+.. automodule:: idtrack._harmonize_features
+    :members:
+    :private-members:
+    :show-inheritance: True
+
+
 .. automodule:: idtrack._database_manager
     :members:
     :private-members:

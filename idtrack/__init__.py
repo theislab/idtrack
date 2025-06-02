@@ -13,6 +13,7 @@ from idtrack._api import API  # noqa
 from idtrack._database_manager import DatabaseManager  # noqa
 from idtrack._db import DB  # noqa
 from idtrack._external_databases import ExternalDatabases  # noqa
+from idtrack._harmonize_features import HarmonizeFeatures  # noqa
 from idtrack._the_graph import TheGraph  # noqa
 from idtrack._track import Track  # noqa
 from idtrack._verify_organism import VerifyOrganism  # noqa

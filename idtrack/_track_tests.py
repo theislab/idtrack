@@ -3,15 +3,16 @@
 # Kemal Inecik
 # k.inecik@gmail.com
 
-import traceback
 import copy
 import itertools
 import logging
+import os
 import random
 import time
+import traceback
 from abc import ABC
 from math import ceil
-from typing import Any, Optional, Union, Dict
+from typing import Any, Optional, Union
 
 import networkx as nx
 import numpy as np
@@ -97,7 +98,9 @@ class TrackTests(Track, ABC):
         # In other assemblies, the Ensembl IDs are added if there is an external connection.
         switch = True
 
-        with tqdm(self.graph.graph["confident_for_release"], mininterval=0.25, disable=not verbose) as loop_obj:
+        with tqdm(
+            self.graph.graph["confident_for_release"], mininterval=0.25, disable=not verbose, ncols=100
+        ) as loop_obj:
             for ens_rel in loop_obj:
                 loop_obj.set_postfix_str(f"Item:{ens_rel}", refresh=False)
 
@@ -107,7 +110,9 @@ class TrackTests(Track, ABC):
                     db_from = self.db_manager.change_release(ens_rel).change_assembly(assembly)
                     ids_from = set(db_from.id_ver_from_df(db_from.get_db("ids", save_after_calculation=False)))
 
-                    ids_from_graph = set(self.graph.get_id_list(DB.nts_assembly[assembly][DB.backbone_form], assembly, ens_rel))
+                    ids_from_graph = set(
+                        self.graph.get_id_list(DB.nts_assembly[assembly][DB.backbone_form], assembly, ens_rel)
+                    )
                     if ids_from != ids_from_graph:
                         switch = False
                         self.log.warning(
@@ -148,7 +153,7 @@ class TrackTests(Track, ABC):
                 the_ids.append(i)
 
         assembly = self.graph.graph["genome_assembly"]
-        with tqdm(the_ids, mininterval=0.25, disable=not verbose) as loop_obj:
+        with tqdm(the_ids, mininterval=0.25, disable=not verbose, ncols=100) as loop_obj:
             for ti in loop_obj:
                 loop_obj.set_postfix_str(f"Item:{ti}", refresh=False)
                 # (1) raw recomputation
@@ -191,7 +196,7 @@ class TrackTests(Track, ABC):
                 base_ids.add(i)
 
         switch = True
-        with tqdm(base_ids, mininterval=0.25, disable=not verbose) as loop_obj:
+        with tqdm(base_ids, mininterval=0.25, disable=not verbose, ncols=100) as loop_obj:
             for i in loop_obj:
                 loop_obj.set_postfix_str(f"Item:{i}", refresh=False)
                 id_family = list(self.graph.neighbors(i))
@@ -238,7 +243,7 @@ class TrackTests(Track, ABC):
                 base_ids.add(i)
 
         switch = True
-        with tqdm(base_ids, mininterval=0.25, disable=not verbose) as loop_obj:
+        with tqdm(base_ids, mininterval=0.25, disable=not verbose, ncols=100) as loop_obj:
             for bi in loop_obj:
                 loop_obj.set_postfix_str(f"Item:{bi}", refresh=False)
 
@@ -368,6 +373,7 @@ class TrackTests(Track, ABC):
                 mininterval=0.25,
                 desc=f"Assembly {assembly}",
                 disable=not verbose,
+                ncols=100,
             ) as loop_obj:
                 for release in loop_obj:
                     loop_obj.set_postfix_str(f"Item:{release}", refresh=False)
@@ -435,7 +441,7 @@ class TrackTests(Track, ABC):
         to_reverse = from_release > to_release
 
         result = list()
-        with tqdm(ids_from, mininterval=0.25, disable=not verbose) as loop_obj:
+        with tqdm(ids_from, mininterval=0.25, disable=not verbose, ncols=100) as loop_obj:
             for from_id in loop_obj:
                 loop_obj.set_postfix_str(f"Item:{from_id}", refresh=False)
 
@@ -466,52 +472,95 @@ class TrackTests(Track, ABC):
         verbose_detailed: bool = False,
         return_ensembl_alternative: bool = False,
     ):
-        """End-to-end conversion regression test.
+        """Run an end-to-end Ensembl-history conversion and collect granular QA metrics.
 
-        This is the *work-horse* diagnostic routine: it converts a (possibly
-        random) subset of source IDs to *to_database*/*to_release* using the
-        full path-finder and records detailed metrics along the way.
+        The routine samples identifiers from *from_database*/*from_release*
+        (optionally down-sampling via *from_fraction*) and converts each one to
+        *to_database*/*to_release* using :py:meth:`idtrack.Track.convert`.  It
+        is intentionally **non-fatal**: every failure mode is caught, logged
+        and tallied so that large regression suites can run unattended.  All
+        results are returned in a single nested *metrics* dictionary whose
+        structure mirrors the printable report produced by
+        :py:meth:`format_history_travel_testing_report`.
 
-        The function is intentionally permissive - it never aborts on a single
-        failed conversion but rather builds up a comprehensive *metrics*
-        dictionary for post-mortem analysis.
+        The statistics fall into **four conceptual groups**; each counter not only records an absolute event
+        count but also serves as a red-flag indicator for specific classes of mapping pathology.  Use the
+        guidelines below to interpret the numbers and decide whether a run is *healthy*, *questionable*, or
+        *action-required*.
+
+        * **Failure / anomaly counters**
+
+          * ``history_voyage_failed_gracefully`` - the converter raised :py:data:`EmptyConversionMetricsError`.
+          * ``history_voyage_failed_unknown`` - any *other* unexpected exception.
+          * ``query_not_in_the_graph`` - source ID absent from the graph.
+          * ``lost_item`` - traversal finished but produced **no** final IDs.
+          * ``lost_item_but_the_same_id_exists`` - special case of *lost_item*
+            when the target and source DB are both Ensembl-gene and the target
+            ID still exists in the graph.
+          * ``found_ids_not_accurate`` - at least one returned target ID is not
+            part of the authoritative *ids_to* reference set.
+
+        * **Mapping quality**
+
+          * ``one_to_one_ids`` - queries that resolved to *exactly* one target ID.
+          * ``one_to_multiple_ids`` - queries with > 1 admissible targets.
+          * ``one_to_multiple_final_conversion`` - subset of the above where
+            *exactly one* traversal path was found (heuristics eliminated alternatives).
+
+        * **Collision analysis**
+
+          The list ``clashing_id_type == [clash_one_one, clash_multi_multi,
+          clash_multi_one]`` classifies *target IDs* that were reached by
+          more than one query:
+
+          * ``clash_one_one`` - every colliding query was 1→1.
+          * ``clash_multi_multi`` - every colliding query was 1→many.
+          * ``clash_multi_one`` - mixture of 1→1 and 1→many queries (most
+            alarming category).
+
+        * **Timings & book-keeping**
+
+          * ``time`` - wall-clock runtime in seconds.
+          * ``conversion`` - per-query mapping result for *all* successful traversals.
+          * ``converted_item_dict`` / ``converted_item_dict_reversed`` - raw
+            per-ID caches used to derive the higher-level counters above.
+          * ``parameters`` - echo of the function arguments.
+          * ``ids`` - the sampled *from* and reference *to* ID sets.
 
         Args:
-            from_release: Source Ensembl release.
-            from_assembly: Source genome assembly.
-            from_database: Name of the starting database (Ensembl backbone or
-                external).
-            to_release: Destination Ensembl release.
-            to_database: Name of the destination database.
-            go_external: Allow the path-finder to leave the Ensembl lineage at
-                intermediate steps (recommended *True* unless you explicitly
-                want a pure Ensembl mapping).
-            prioritize_to_one_filter: When *True* the converter ranks 1→1 paths
-                above many→many alternatives.  This mimics the behaviour of the
-                public conversion API.
-            convert_using_release: If *True* the source release is passed to
-                :py:meth:`idtrack.Track.convert` so the path-finder need not
-                `guess` the starting point.
-            from_fraction: Fraction (0.0 - 1.0] of *ids_from* to sample.  Use
-                < 1.0 for a quicker, stochastic smoke test.
-            verbose: Show coarse progress information via tqdm.
-            verbose_detailed: Include additional per-ID counters in the tqdm
-                suffix to watch the metrics grow in real time.
-            return_ensembl_alternative: Forwarded to
-                :py:meth:`idtrack.Track.convert`; when *True* the converter also
-                reports Ensembl gene alternatives that would lead to the same
-                final IDs.
+            from_release (int): Ensembl release number of the *source* IDs.
+            from_assembly (int): Genome assembly code of the source IDs.
+            from_database (str): Node-type / database of the source IDs.
+            to_release (int): Ensembl release number of the *target* IDs.
+            to_database (str): Node-type / database to convert **into**.
+            go_external (bool): Permit temporary detours through external IDs when native Ensembl history edges break.
+            prioritize_to_one_filter (bool): Prefer 1→1 mappings over 1→many when multiple paths exist.
+            convert_using_release (bool): Pass *from_release* straight into
+                :py:meth:`idtrack.Track.convert` instead of letting it infer the starting point.
+            from_fraction (float): Fraction (0 < x ≤ 1) of the
+                *ids_from* population to sample; speeds up smoke tests.
+            verbose (bool): Show tqdm progress bar (coarse).
+            verbose_detailed (bool): Embed live metric counters in the tqdm postfix.
+            return_ensembl_alternative (bool): Forwarded to :py:meth:`idtrack.Track.convert`.
 
         Raises:
-            ValueError: *from_database* or *to_database* is an Ensembl
-                node-type that should be addressed through the backbone helper
-                or *from_fraction* is outside (0.0, 1.0].
+            ValueError: If either database argument refers to an Ensembl
+                node-type (must use backbone helpers instead) or if
+                *from_fraction* is outside the open interval (0, 1].
 
         Returns:
-            dict: A nested dictionary with keys ``parameters``, ``time`` and
-            multiple sub-sections such as ``lost_item``, ``one_to_one_ids``,
-            ``one_to_multiple_ids``, ``conversion`` as described in the source
-            code.
+            dict: Nested *metrics* dictionary with the layout described above.
+                Use :py:meth:`format_history_travel_testing_report` for a
+                human-readable summary.
+
+        Notes:
+            * All counters are **absolute counts** - divide by
+              ``len(metrics['ids']['from'])`` to obtain rates.
+            * The collision analysis is inspired by the *clash statistics*
+              logic implemented at the end of the function and helps spot
+              discrepant “unique” IDs that suddenly become ambiguous. Keeping
+              all three clash counters at zero is the gold standard for a
+              healthy build.
         """
         if from_database in DB.nts_ensembl or to_database in DB.nts_ensembl:
             raise ValueError
@@ -560,7 +609,7 @@ class TrackTests(Track, ABC):
 
         t1 = time.time()
 
-        with tqdm(ids_from, mininterval=0.25, disable=not verbose) as loop_obj:
+        with tqdm(ids_from, mininterval=0.25, disable=not verbose, desc="Mapping", ncols=100) as loop_obj:
             for the_id in loop_obj:
                 if not verbose_detailed:
                     loop_obj.set_postfix_str(f"Item:{the_id}", refresh=False)
@@ -641,21 +690,31 @@ class TrackTests(Track, ABC):
                                 metrics["found_ids_not_accurate"][the_id] = list()
                             metrics["found_ids_not_accurate"][the_id].append(c)
 
-        # Clash statistics
-        clash_multi_multi: int = 0
-        clash_multi_one: int = 0
-        clash_one_one: int = 0
+        # ── Clash statistics:
+        # Each counter tracks how many *target* IDs were reached by more than
+        # one *source* ID, broken down by the **type of mapping** that led to
+        # the collision:
+        clash_multi_multi: int = 0  # all colliding sources were 1→many mappings
+        clash_multi_one: int = 0  # mix of 1→many and 1→1 sources
+        clash_one_one: int = 0  # all colliding sources were clean 1→1
 
-        for cidr in metrics["converted_item_dict_reversed"]:
-            cidr_val = metrics["converted_item_dict_reversed"][cidr]
+        # `converted_item_dict_reversed` maps every target ID to the list of
+        # source IDs that converted to it (built earlier inside the big mapping
+        # loop).  We inspect only those targets hit by ≥ 2 sources - a “clash”.
+        for _, cidr_val in metrics["converted_item_dict_reversed"].items():
+
+            # Skip non-clashing targets (exactly one source mapped here).
             if len(cidr_val) > 1:
+                # Does *any* of the sources belong to the 1→many bucket?
                 s1 = any([cv in metrics["one_to_multiple_ids"] for cv in cidr_val])
+                # Does *any* of the sources belong to the 1→1 bucket?
                 s2 = any([cv in metrics["one_to_one_ids"] for cv in cidr_val])
-                if s1 and s2:
+                # Categorise clash by the mixture of mapping types.
+                if s1 and s2:  # at least one 1→many **and** one 1→1
                     clash_multi_one += 1
-                elif s1:
+                elif s1:  # only 1→many sources present
                     clash_multi_multi += 1
-                elif s2:
+                elif s2:  # only 1→1 sources present
                     clash_one_one += 1
                 else:
                     raise ValueError
@@ -665,11 +724,7 @@ class TrackTests(Track, ABC):
         metrics["time"] = t2 - t1
         return metrics
 
-    def history_travel_testing_random_arguments_generator(
-            self, 
-            strict_forward: bool,
-            include_exclude_list: list    
-        ):
+    def history_travel_testing_random_arguments_generator(self, strict_forward: bool, include_exclude_list: list):
         """Generate a plausible random parameter set for :py:meth:`history_travel_testing`.
 
         The helper picks **compatible** source/target assemblies, releases and
@@ -679,6 +734,7 @@ class TrackTests(Track, ABC):
 
         Args:
             strict_forward: Enforce a non-decreasing release direction.
+            include_exclude_list: Todo.
 
         Returns:
             dict: Keys ``from_assembly``, ``from_release``, ``to_release``,
@@ -686,18 +742,35 @@ class TrackTests(Track, ABC):
             :py:meth:`history_travel_testing`.
         """
         include_ensembl_1, include_external_1, include_ensembl_2, include_external_2 = include_exclude_list
-        
-        from_assembly = random.choice(list(DB.assembly_mysqlport_priority.keys()))
+        only_backbone_tests_1 = True if not any([include_ensembl_1, include_external_1]) else False
+        only_backbone_tests_2 = True if not any([include_ensembl_2, include_external_2]) else False
+
+        from_assembly = (
+            random.choice(list(DB.assembly_mysqlport_priority.keys()))
+            if not only_backbone_tests_1
+            else DB.main_assembly
+        )
         # as the final release should be always the main assembly
-        to_assembly = self.graph.graph["genome_assembly"]
+        to_assembly = self.graph.graph["genome_assembly"] if not only_backbone_tests_2 else DB.main_assembly
         the_key1, the_key2 = None, None
         while the_key1 is None or the_key2 is None:
-            the_key1 = self.random_dataset_source_generator(from_assembly, include_ensembl=include_ensembl_1, include_external=include_external_1, for_final_database=False)
-            if the_key1 is not None:
+            the_key1 = self.random_dataset_source_generator(
+                from_assembly,
+                include_ensembl=include_ensembl_1,
+                include_external=include_external_1,
+                only_backbone_tests=only_backbone_tests_1,
+                for_final_database=False,
+            )
+            if the_key1 != ("", -1, -1):
                 the_key2 = self.random_dataset_source_generator(
-                    to_assembly, include_ensembl=include_ensembl_2, include_external=include_external_2, for_final_database=True, release_lower_limit=None if not strict_forward else the_key1[2]
+                    to_assembly,
+                    include_ensembl=include_ensembl_2,
+                    include_external=include_external_2,
+                    for_final_database=True,
+                    only_backbone_tests=only_backbone_tests_2,
+                    release_lower_limit=None if not strict_forward else the_key1[2],
                 )
-            if the_key1 is None or the_key2 is None:
+            if the_key1 == ("", -1, -1) or the_key2 == ("", -1, -1):
                 self.log.warning("Recalculating parameters.")
 
         return {
@@ -715,12 +788,12 @@ class TrackTests(Track, ABC):
         include_external_source=True,
         include_ensembl_destination=True,
         include_external_destination=True,
-        verbose: bool=True,
-        verbose_detailed: bool=False,
-        strict_forward: bool=False,
-        convert_using_release: bool=False,
-        prioritize_to_one_filter: bool=True,
-        return_result: bool = False
+        verbose: bool = True,
+        verbose_detailed: bool = False,
+        strict_forward: bool = False,
+        convert_using_release: bool = False,
+        prioritize_to_one_filter: bool = True,
+        return_result: bool = False,
     ):
         """Convenience wrapper around :py:meth:`history_travel_testing`.
 
@@ -737,16 +810,32 @@ class TrackTests(Track, ABC):
             prioritize_to_one_filter: Forwarded to
                 :py:meth:`history_travel_testing`.
             verbose: Show coarse progress information.
-            verbose_detailed: Include extended per-ID counters in the progress
-                bar.
+            verbose_detailed: Include extended per-ID counters in the progress bar.
+            return_result: Todo.
+            include_ensembl_source: Todo.
+            include_external_source: Todo.
+            include_ensembl_destination: Todo.
+            include_external_destination: Todo.
 
         Returns:
             dict: The *metrics* dictionary returned by
             :py:meth:`history_travel_testing`.
         """
-        include_exclude_list = [include_ensembl_source, include_external_source, include_ensembl_destination, include_external_destination]
-        
-        parameters = self.history_travel_testing_random_arguments_generator(strict_forward=strict_forward, include_exclude_list=include_exclude_list)
+        include_exclude_list = [
+            include_ensembl_source,
+            include_external_source,
+            include_ensembl_destination,
+            include_external_destination,
+        ]
+
+        parameters = self.history_travel_testing_random_arguments_generator(
+            strict_forward=strict_forward, include_exclude_list=include_exclude_list
+        )
+
+        if verbose:
+            printable1 = os.linesep + os.linesep.join(self.format_history_travel_testing_report_header(parameters))
+            self.log.info(printable1)
+
         res = self.history_travel_testing(
             **parameters,
             go_external=True,
@@ -757,14 +846,25 @@ class TrackTests(Track, ABC):
             verbose_detailed=verbose_detailed,
             return_ensembl_alternative=False,
         )
+
         if verbose:
-            printable = self.format_history_travel_testing_report(res)
-            self.log.info(printable)
+            printable2 = os.linesep + os.linesep.join(
+                self.format_history_travel_testing_report(res, include_header=False)
+            )
+            self.log.info(printable2)
+
         if return_result:
             return res
-        
 
-    def is_external_conversion_robust(self, convert_using_release: bool = False, database: str = None, ens_rel: int = None, verbose: bool = True):
+    def is_final_external_conversion_robust(
+        self,
+        convert_using_release: bool = False,
+        database: Optional[str] = None,
+        ens_rel: Optional[int] = None,
+        verbose: bool = True,
+        from_fraction: float = 1.0,
+        prioritize_to_one_filter: bool = False,
+    ):
         """Validate Ensembl→external conversion against MySQL ground truth.
 
         A random external database is chosen for **every** genome assembly. For
@@ -777,27 +877,39 @@ class TrackTests(Track, ABC):
                 calling the converter.  Keeping this *True* usually speeds up
                 the search and mimics user-facing behaviour.
             verbose: Print the current assembly/database/release being tested.
+            prioritize_to_one_filter: Todo.
+            ens_rel: Todo.
+            from_fraction: Todo.
+            database: Todo.
 
         Returns:
             bool: *True* if every converted set equals the MySQL reference,
                 *False* upon the first deviation.
+
+        Raises:
+            ValueError: Todo.
         """
         issues_t1 = []
         issues_t2 = []
         issues_t3 = []
         assembly = DB.main_assembly
-        
-        if not database or not ens_rel:
+
+        if database is None or ens_rel is None:
             self.log.info("Random database and Ensembl release.")
             database, _, ens_rel = self.random_dataset_source_generator(
-                assembly=assembly, form=DB.backbone_form, include_ensembl=False
+                include_ensembl=True,
+                include_external=True,
+                only_backbone_tests=False,
+                for_final_database=False,
+                assembly=assembly,
+                form=DB.backbone_form,
             )
 
         if not self.db_manager.check_if_change_assembly_works(
             db_manager=self.db_manager.change_release(ens_rel), target_assembly=assembly
         ):
             raise ValueError
-        
+
         dm = self.db_manager.change_release(ens_rel).change_assembly(assembly)
 
         df = dm.get_db("external_relevant")
@@ -812,18 +924,19 @@ class TrackTests(Track, ABC):
             self.log.info(f"Assembly: {assembly}, Database: {database}, Release: {ens_rel}")
 
         res = self.history_travel_testing(
+            from_fraction=from_fraction,
             from_release=ens_rel,
             from_assembly=assembly,
             from_database=DB.nts_assembly[assembly][DB.backbone_form],
             to_release=ens_rel,
             to_database=database,
             go_external=True,
-            prioritize_to_one_filter=True,
+            prioritize_to_one_filter=prioritize_to_one_filter,
             convert_using_release=convert_using_release,
             verbose=verbose,
             verbose_detailed=False,
         )
-        
+
         for from_id in res["ids"]["from"]:
             if from_id not in res["conversion"]:
                 issues_t3.append(from_id)
@@ -837,12 +950,12 @@ class TrackTests(Track, ABC):
                 }
                 if from_id not in base_dict:
                     issues_t2.append(issue_dict)
-                elif set(res["conversion"][from_id]) != base_dict[from_id]:
+                elif {i.lower() for i in res["conversion"][from_id]} != {i.lower() for i in base_dict[from_id]}:
                     issue_dict["base_expectation"] = base_dict[from_id]
                     issues_t1.append(issue_dict)
-        
+
         # make sure issues_t3 is not found in base_dict_from_id
-        
+
         if len(issues_t1) == 0 and len(issues_t2) == 0:
             return True, (issues_t1, issues_t2, issues_t3, res)
         else:
@@ -854,9 +967,10 @@ class TrackTests(Track, ABC):
         include_external: bool,
         include_ensembl: bool,
         for_final_database: bool,
+        only_backbone_tests: bool,
         release_lower_limit: Optional[int] = None,
         form: Optional[str] = None,
-    ):
+    ) -> tuple[str, int, int]:
         """Pick a random (<database>, <assembly>, <release>) tuple.
 
         The function guarantees that the triple actually exists in the graph
@@ -871,37 +985,46 @@ class TrackTests(Track, ABC):
                 for the returned triple.  *None* disables the filter.
             form: Restrict the draw to a particular connection *form*
                 (protein/coding/gene).  *None* means no restriction.
+            only_backbone_tests: Todo.
+            include_external: Todo.
+            for_final_database: Todo.
 
         Returns:
             tuple | None: ``(<database>, <assembly>, <release>)`` or *None* when
             no matching release exists.
-        """            
-        if include_external:
-            all_possible_sources = copy.deepcopy(list(self.graph.available_external_databases_assembly[assembly]))
-            all_possible_sources = [i for i in all_possible_sources if not i.startswith("synonym_id")]
-        else:
-            all_possible_sources = []
-        
-        if form is not None:
-            all_possible_sources = [
-                i for i in all_possible_sources if self.graph.external_database_connection_form[i] == form
-            ]
 
-        if include_ensembl and not for_final_database:
-            if form is None:
-                all_possible_sources.extend(list(DB.nts_assembly[assembly].values()))
+        Raises:
+            ValueError: Todo.
+        """
+        if not only_backbone_tests:
+            if include_external:
+                all_possible_sources = copy.deepcopy(list(self.graph.available_external_databases_assembly[assembly]))
+                all_possible_sources = [i for i in all_possible_sources if not i.startswith("synonym_id")]
             else:
-                all_possible_sources.append(DB.nts_assembly[assembly][form])
-                
-        if include_ensembl and (form == DB.backbone_form or form is None):
-            all_possible_sources.append(DB.nts_ensembl[DB.backbone_form])
-            all_possible_sources.append(DB.nts_base_ensembl[DB.backbone_form])
+                all_possible_sources = []
 
-        if not all_possible_sources:
-            raise ValueError("There is nothing as possible sources.")
+            if form is not None:
+                all_possible_sources = [
+                    i for i in all_possible_sources if self.graph.external_database_connection_form[i] == form
+                ]
+
+            if include_ensembl and not for_final_database:
+                if form is None:
+                    all_possible_sources.extend(list(DB.nts_assembly[assembly].values()))
+                else:
+                    all_possible_sources.append(DB.nts_assembly[assembly][form])
+
+            if include_ensembl and (form == DB.backbone_form or form is None):
+                all_possible_sources.append(DB.nts_ensembl[DB.backbone_form])
+                all_possible_sources.append(DB.nts_base_ensembl[DB.backbone_form])
+
+            if not all_possible_sources:
+                raise ValueError("There is nothing as possible sources.")
+        else:
+            all_possible_sources = [DB.nts_ensembl[DB.backbone_form]]
 
         selected_database = random.choice(all_possible_sources)
-        possible_releases = self.graph.available_releases_given_database_assembly(selected_database, assembly)
+        possible_releases = self.graph.available_releases_given_database_assembly[(selected_database, assembly)]
         if release_lower_limit is not None:
             possible_releases = {i for i in possible_releases if i >= release_lower_limit}
 
@@ -910,7 +1033,7 @@ class TrackTests(Track, ABC):
             the_key = (selected_database, assembly, selected_release)
             return the_key
         else:
-            return None
+            return ("", -1, -1)
 
     def is_node_consistency_robust(self, verbose: bool = True):
         """Check for illegal neighbour relationships and multi-edges.
@@ -928,7 +1051,7 @@ class TrackTests(Track, ABC):
             bool: *True* when the graph satisfies the topology rules, *False*
             otherwise.
         """
-        with tqdm(self.graph.nodes, mininterval=0.25, disable=not verbose) as loop_obj:
+        with tqdm(self.graph.nodes, mininterval=0.25, disable=not verbose, ncols=100) as loop_obj:
             for i in loop_obj:
                 for j in self.graph.neighbors(i):
                     ni = self.graph.nodes[i][DB.node_type_str]
@@ -946,60 +1069,85 @@ class TrackTests(Track, ABC):
 
         return True
 
-    def format_history_travel_testing_report(self, res: Dict[str, Any]) -> str:
-        """Build a clean, printable summary of the metrics emitted by TrackTests.history_travel_testing.
+    def format_history_travel_testing_report_header(self, p: dict[str, Any]) -> list[str]:
+        """Todo.
 
-        Args: 
-            res: The dictionary returned by `history_travel_testing`.
+        Args:
+            p (dict[str, Any]): Todo.
 
         Returns:
-            str: Nicely formatted multi-line report.
+            str: Todo.
         """
-        # ── helpers ────────────────────────────────────────────────────────────────
-        def block(title: str, rows) -> list[str]:
-            pad = max(len(k) for k, _ in rows)
-            hdr = f"\n{title}:"
-            body = [f"  - {k.ljust(pad)} : {v:,}" for k, v in rows]
-            return [hdr, *body]
-
-        # ── header & parameters ────────────────────────────────────────────────────
-        params = res.get("parameters", {})
         header = [
-            "\n╔═ History-Travel-Testing Report ═╗",
-            f"Source  : {params.get('from_database')} "
-            f"(Assembly {params.get('from_assembly')}, Release {params.get('from_release')})",
-            f"Target  : {params.get('to_database')} "
-            f"(Release {params.get('to_release')})",
-            f"External: {params.get('go_external')}   "
-            f"1→1-pref.: {params.get('prioritize_to_one_filter')}",
-            f"Sample  : {params.get('from_fraction'):g} of source IDs",
+            "╔═ History-Travel-Testing Report ═╗",
+            f"Source  : {p.get('from_database')} "
+            f"(Assembly {p.get('from_assembly')}, Release {p.get('from_release')})",
+            f"Target  : {p.get('to_database')} " f"(Release {p.get('to_release')})",
         ]
 
-        # ── failure / anomaly counts ──────────────────────────────────────────────
+        return header
+
+    def format_history_travel_testing_report(
+        self, res: dict[str, Any], include_header=False, line_separation_at_end=True
+    ) -> list[str]:
+        """Todo.
+
+        Args:
+            res (dict[str, Any]): Todo.
+            include_header (bool): Todo. Defaults to False.
+            line_separation_at_end (bool): Todo.. Defaults to True.
+
+        Returns:
+            str: Todo.
+        """
+
+        def cnt(key: str) -> int:
+            """Return length of list/dict at res[key] or zero if absent."""
+            return len(res.get(key, []))
+
+        def block(title: str, rows: list[tuple]) -> list[str]:
+            pad = max(len(k) for k, _ in rows)
+            return [f"{title}:"] + [f"  - {k.ljust(pad)} : {v:,}" for k, v in rows]
+
+        if include_header:
+            p = res.get("parameters", {})
+            header = self.format_history_travel_testing_report_header(p)
+            header_extension = [
+                f"External: {p.get('go_external')}   " f"1→1-pref.: {p.get('prioritize_to_one_filter')}",
+                f"Sample  : {p.get('from_fraction'):g} of source IDs",
+            ]
+            header.extend(header_extension)
+        else:
+            header = []
+
         failure_rows = [
-            ("Voyage failed (graceful)", len(res["history_voyage_failed_gracefully"])),
-            ("Voyage failed (unknown) ", len(res["history_voyage_failed_unknown"])),
-            ("Query not in graph      ", len(res["query_not_in_the_graph"])),
-            ("Lost item               ", len(res["lost_item"])),
-            ("Found IDs not accurate  ", len(res["found_ids_not_accurate"])),
+            ("Voyage failed (graceful)      ", cnt("history_voyage_failed_gracefully")),
+            ("Voyage failed (unknown)       ", cnt("history_voyage_failed_unknown")),
+            ("Query not in graph            ", cnt("query_not_in_the_graph")),
+            ("Lost item                     ", cnt("lost_item")),
+            ("Lost item, but ID exists      ", cnt("lost_item_but_the_same_id_exists")),
+            ("Found IDs not accurate        ", cnt("found_ids_not_accurate")),
         ]
 
-        # ── mapping & clash statistics ────────────────────────────────────────────
-        clash_one_one, clash_multi_multi, clash_multi_one = res["clashing_id_type"]
+        clashes = res.get("clashing_id_type", [0, 0, 0])
         mapping_rows = [
-            ("One→one IDs",            len(res["one_to_one_ids"])),
-            ("One→many IDs",           len(res["one_to_multiple_ids"])),
-            ("Clash one→one",          clash_one_one),
-            ("Clash many→many",        clash_multi_multi),
-            ("Clash mixed",            clash_multi_one),
+            ("One→one IDs                   ", cnt("one_to_one_ids")),
+            ("One→many IDs                  ", cnt("one_to_multiple_ids")),
+            ("One→many (single conv.)       ", cnt("one_to_multiple_final_conversion")),
+            ("Successfully converted IDs    ", cnt("conversion")),
+            ("Clash one→one                 ", clashes[0]),
+            ("Clash many→many               ", clashes[1]),
+            ("Clash mixed                   ", clashes[2]),
         ]
 
-        # ── assemble full report ──────────────────────────────────────────────────
-        report_lines = (
+        report_lines: list[str] = (
             header
             + block("Failure / Anomaly Counts", failure_rows)
             + block("Mapping Statistics", mapping_rows)
-            + [f"\nTotal runtime: {res.get('time', 0):.2f} s"]
+            + [f"Total runtime: {res.get('time', 0):.2f} s"]
         )
 
-        return "\n".join(report_lines)
+        if line_separation_at_end:
+            report_lines.append("")
+
+        return report_lines

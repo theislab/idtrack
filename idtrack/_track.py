@@ -142,6 +142,7 @@ class Track:
                 nodes that are *active* in this Ensembl release.
             ensembl_backbone_shallow_search (bool): Activate the
                 shallow, mostly-reverse search mode described above.
+            account_for_hyperconnected_nodes: Todo.
         """
 
         def decide_terminate_externals():
@@ -234,7 +235,7 @@ class Track:
                         depth_max=depth_max,
                         from_release=from_release,
                         ensembl_backbone_shallow_search=ensembl_backbone_shallow_search,
-                        account_for_hyperconnected_nodes=account_for_hyperconnected_nodes
+                        account_for_hyperconnected_nodes=account_for_hyperconnected_nodes,
                     )
 
     def synonymous_nodes(
@@ -267,6 +268,7 @@ class Track:
             from_release (int | None): Constrain targets to those active in this Ensembl release.
             ensembl_backbone_shallow_search (bool): If *True*,
                 restricts the graph traversal as explained in :py:meth:`_recursive_synonymous`.
+            account_for_hyperconnected_nodes: Todo.
 
         Returns:
             list[list[list[str]]]: A list whose elements are `[identifier_path, node_type_path]` pairs,
@@ -294,7 +296,7 @@ class Track:
             depth_max=DB.external_search_settings["synonymous_max_depth"],
             from_release=from_release,
             ensembl_backbone_shallow_search=ensembl_backbone_shallow_search,
-            account_for_hyperconnected_nodes=account_for_hyperconnected_nodes
+            account_for_hyperconnected_nodes=account_for_hyperconnected_nodes,
         )
 
         # Otherwise use supplemented depth_max, which is generally 1, 2 higher than default.
@@ -307,7 +309,7 @@ class Track:
                 depth_max=depth_max,
                 from_release=from_release,
                 ensembl_backbone_shallow_search=ensembl_backbone_shallow_search,
-                account_for_hyperconnected_nodes=account_for_hyperconnected_nodes
+                account_for_hyperconnected_nodes=account_for_hyperconnected_nodes,
             )
 
         remove_set: set = set()
@@ -1179,7 +1181,7 @@ class Track:
                 filter_node_type=filter_set,
                 from_release=ens_release,
                 ensembl_backbone_shallow_search=True,
-                account_for_hyperconnected_nodes=False  # TODO: make sure this is correct?
+                account_for_hyperconnected_nodes=True,
             )
         ]
         imp1, imp2, imp3 = set(), set(), set()
@@ -1791,7 +1793,7 @@ class Track:
                 new_converted = {i: converted[i] for i in converted if not i.lower().startswith("lrg")}
                 if len(new_converted) > 0:
                     converted = new_converted
-            
+
             allowed_ones = self.graph.available_external_databases_assembly[DB.main_assembly].union(
                 {DB.nts_ensembl[DB.backbone_form], DB.nts_base_ensembl[DB.backbone_form]}
             )
@@ -1845,10 +1847,6 @@ class Track:
 
         Returns:
             list[int]: Sorted list of priority values (ascending).
-
-        Raises:
-            ValueError: If the gene is not active in *any* assembly at
-                `to_release`.
         """
         ceg = self.graph.combined_edges_genes[from_id]
         ceg_assembly_list = sorted({j for i in ceg for j in ceg[i] if to_release in ceg[i][j]})
@@ -1933,7 +1931,7 @@ class Track:
         return_path: bool,
         return_ensembl_alternative: bool,
         prevent_assembly_jumps: bool = True,
-        account_for_hyperconnected_nodes: bool = False
+        account_for_hyperconnected_nodes: bool = False,
     ):
         """Convert an Ensembl gene node to the requested external database.
 
@@ -1962,10 +1960,15 @@ class Track:
                 synonym.
             return_ensembl_alternative (bool): When no synonym can be found,
                 add a fallback entry that keeps the Ensembl gene.
+            prevent_assembly_jumps: Todo.
+            account_for_hyperconnected_nodes: Todo.
 
         Returns:
             dict: The same `converted` dict, updated in place (and also
             returned for convenience).
+
+        Raises:
+            EmptyConversionMetricsError: Todo.
         """
 
         def _final_conversion_path(gene_id: str, target_db: str, from_release: int):
@@ -2002,9 +2005,9 @@ class Track:
                 return result
 
             def _contains_assembly(lst, asyml: int, er_for_jumps: Optional[int], er_for_last_node: Optional[int]):
-                
+
                 # prevent assembly jumps {some ensembl-gene's are also shared, and they are not called as assembly_37..}
-                # just for each returned synonymous, check whether the connection is only possible on assembly 38, 
+                # just for each returned synonymous, check whether the connection is only possible on assembly 38,
                 # if not just remove this one. check graph ans see whether the nodes returned share 38 assembly.
 
                 def _get_edge_data(u, v):
@@ -2018,7 +2021,7 @@ class Track:
                         raise ValueError(f"No edge between {u!r} and {v!r}.")
                     else:
                         raise ValueError(f"Two directional edge between {u!r} and {v!r}.")
-                
+
                 # these are for external jumps to make it allowed in only assembly defined
                 switch_1 = False
                 for u, v in zip(lst, lst[1:]):
@@ -2044,30 +2047,37 @@ class Track:
                         else:
                             if er_for_last_node in ensembl_release and asyml == assembly:
                                 switch_2 = True
-                                
+
                 return all([switch_1, switch_2])
-                
+
             def _prevent_assembly_jumps(synonymous_nodes_output, er_for_jumps, er_for_last_node):
                 if prevent_assembly_jumps:
-                    return [i for i in synonymous_nodes_output if _contains_assembly(
-                            lst=i[0],  # where node ids are stored. 
-                            asyml=DB.main_assembly, 
+                    return [
+                        i
+                        for i in synonymous_nodes_output
+                        if _contains_assembly(
+                            lst=i[0],  # where node ids are stored.
+                            asyml=DB.main_assembly,
                             er_for_jumps=er_for_jumps,
-                            er_for_last_node=er_for_last_node
+                            er_for_last_node=er_for_last_node,
                         )
                     ]
                 else:
                     return synonymous_nodes_output
 
             a = _final_conversion_path_helper(
-                _prevent_assembly_jumps(self.synonymous_nodes(
-                    the_id=gene_id,
-                    depth_max=2,
-                    filter_node_type={target_db},
-                    from_release=from_release,
-                    ensembl_backbone_shallow_search=True,
-                    account_for_hyperconnected_nodes=account_for_hyperconnected_nodes
-                ), er_for_jumps=from_release, er_for_last_node=from_release),
+                _prevent_assembly_jumps(
+                    self.synonymous_nodes(
+                        the_id=gene_id,
+                        depth_max=2,
+                        filter_node_type={target_db},
+                        from_release=from_release,
+                        ensembl_backbone_shallow_search=True,
+                        account_for_hyperconnected_nodes=account_for_hyperconnected_nodes,
+                    ),
+                    er_for_jumps=from_release,
+                    er_for_last_node=from_release,
+                ),
                 er=from_release,
             )
 
@@ -2076,14 +2086,18 @@ class Track:
                 return a, confidence  # syns, confidence (lower better)
             else:
                 the_paths_no_ens_rel = _final_conversion_path_helper(
-                    _prevent_assembly_jumps(self.synonymous_nodes(
-                        the_id=gene_id,
-                        depth_max=2,
-                        filter_node_type={target_db},
-                        from_release=None,
-                        ensembl_backbone_shallow_search=True,
-                        account_for_hyperconnected_nodes=account_for_hyperconnected_nodes
-                    ), er_for_jumps=None, er_for_last_node=from_release),
+                    _prevent_assembly_jumps(
+                        self.synonymous_nodes(
+                            the_id=gene_id,
+                            depth_max=2,
+                            filter_node_type={target_db},
+                            from_release=None,
+                            ensembl_backbone_shallow_search=True,
+                            account_for_hyperconnected_nodes=account_for_hyperconnected_nodes,
+                        ),
+                        er_for_jumps=None,
+                        er_for_last_node=from_release,
+                    ),
                     er=None,
                 )
 
