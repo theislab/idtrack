@@ -97,7 +97,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._database_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">DatabaseManager</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span><span class="p">,</span> <span class="n">EmptyConversionMetricsError</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._graph_maker</span><span class="w"> </span><span class="kn">import</span> <span class="n">GraphMaker</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._the_graph</span><span class="w"> </span><span class="kn">import</span> <span class="n">TheGraph</span>
 
@@ -179,6 +179,7 @@
         <span class="n">depth_max</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
         <span class="n">from_release</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">ensembl_backbone_shallow_search</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">account_for_hyperconnected_nodes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Helper method to be used in :py:meth:`_graph.Track.synonymous_nodes`.</span>
 
@@ -224,6 +225,7 @@
 <span class="sd">                nodes that are *active* in this Ensembl release.</span>
 <span class="sd">            ensembl_backbone_shallow_search (bool): Activate the</span>
 <span class="sd">                shallow, mostly-reverse search mode described above.</span>
+<span class="sd">            account_for_hyperconnected_nodes: Todo.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">decide_terminate_externals</span><span class="p">():</span>
@@ -239,7 +241,6 @@
                         <span class="k">for</span> <span class="n">_ed2</span> <span class="ow">in</span> <span class="n">the_data</span><span class="p">[</span><span class="n">_ed1</span><span class="p">]:</span>  <span class="c1"># assembly</span>
                             <span class="k">if</span> <span class="n">from_release</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">from_release</span> <span class="ow">in</span> <span class="n">the_data</span><span class="p">[</span><span class="n">_ed1</span><span class="p">][</span><span class="n">_ed2</span><span class="p">]:</span>
                                 <span class="k">return</span> <span class="kc">True</span>
-
             <span class="k">return</span> <span class="kc">False</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">decide_terminate_others</span><span class="p">():</span>
@@ -249,7 +250,6 @@
                     <span class="ow">or</span> <span class="n">TheGraph</span><span class="o">.</span><span class="n">is_point_in_range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get_active_ranges_of_id</span><span class="p">[</span><span class="n">_the_id</span><span class="p">],</span> <span class="n">from_release</span><span class="p">)</span>
                 <span class="p">):</span>
                     <span class="k">return</span> <span class="kc">True</span>
-
             <span class="k">return</span> <span class="kc">False</span>
 
         <span class="n">input_node_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">_the_id</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span>
@@ -275,7 +275,7 @@
                         <span class="c1"># prevent bouncing.</span>
                         <span class="k">continue</span>
 
-                    <span class="k">if</span> <span class="n">_next_neighbour</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">hyperconnective_nodes</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">account_for_hyperconnected_nodes</span> <span class="ow">and</span> <span class="n">_next_neighbour</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">hyperconnective_nodes</span><span class="p">:</span>
                         <span class="k">continue</span>
 
                     <span class="n">gnt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">_next_neighbour</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span>
@@ -294,7 +294,7 @@
                             <span class="c1"># Allow bouncing if it bridges two &#39;external&#39; nodes.</span>
                             <span class="ow">and</span> <span class="n">gnt</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_external</span>
                             <span class="c1"># Allow bouncing if it bridges two &#39;ensembl base&#39; nodes.</span>
-                            <span class="ow">and</span> <span class="n">gnt</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_base_ensembl</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]</span>  <span class="c1"># transcript or translation base depracated.</span>
+                            <span class="ow">and</span> <span class="n">gnt</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_base_ensembl</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">]</span>  <span class="c1"># transcript/translation base depracated.</span>
                             <span class="c1"># Check if 1st and 3rd element are the same &#39;ID&#39; (could have different &#39;Versions&#39;.)</span>
                             <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">_the_path</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]][</span><span class="s2">&quot;ID&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">_next_neighbour</span><span class="p">][</span><span class="s2">&quot;ID&quot;</span><span class="p">]</span>
                         <span class="p">):</span>
@@ -318,6 +318,7 @@
                         <span class="n">depth_max</span><span class="o">=</span><span class="n">depth_max</span><span class="p">,</span>
                         <span class="n">from_release</span><span class="o">=</span><span class="n">from_release</span><span class="p">,</span>
                         <span class="n">ensembl_backbone_shallow_search</span><span class="o">=</span><span class="n">ensembl_backbone_shallow_search</span><span class="p">,</span>
+                        <span class="n">account_for_hyperconnected_nodes</span><span class="o">=</span><span class="n">account_for_hyperconnected_nodes</span><span class="p">,</span>
                     <span class="p">)</span></div>
 
 
@@ -330,6 +331,7 @@
         <span class="n">filter_node_type</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
         <span class="n">from_release</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">ensembl_backbone_shallow_search</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">account_for_hyperconnected_nodes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Public wrapper around :py:meth:`_recursive_synonymous`.</span>
 
@@ -352,6 +354,7 @@
 <span class="sd">            from_release (int | None): Constrain targets to those active in this Ensembl release.</span>
 <span class="sd">            ensembl_backbone_shallow_search (bool): If *True*,</span>
 <span class="sd">                restricts the graph traversal as explained in :py:meth:`_recursive_synonymous`.</span>
+<span class="sd">            account_for_hyperconnected_nodes: Todo.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            list[list[list[str]]]: A list whose elements are `[identifier_path, node_type_path]` pairs,</span>
@@ -366,7 +369,7 @@
 
         <span class="k">if</span> <span class="n">ensembl_backbone_shallow_search</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">depth_max</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Does not allowed.&quot;</span><span class="p">)</span>
 
         <span class="c1"># Use default depth max if there is at least one item in the syn path.</span>
         <span class="n">synonymous_ones</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[]</span>
@@ -379,6 +382,7 @@
             <span class="n">depth_max</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">external_search_settings</span><span class="p">[</span><span class="s2">&quot;synonymous_max_depth&quot;</span><span class="p">],</span>
             <span class="n">from_release</span><span class="o">=</span><span class="n">from_release</span><span class="p">,</span>
             <span class="n">ensembl_backbone_shallow_search</span><span class="o">=</span><span class="n">ensembl_backbone_shallow_search</span><span class="p">,</span>
+            <span class="n">account_for_hyperconnected_nodes</span><span class="o">=</span><span class="n">account_for_hyperconnected_nodes</span><span class="p">,</span>
         <span class="p">)</span>
 
         <span class="c1"># Otherwise use supplemented depth_max, which is generally 1, 2 higher than default.</span>
@@ -391,6 +395,7 @@
                 <span class="n">depth_max</span><span class="o">=</span><span class="n">depth_max</span><span class="p">,</span>
                 <span class="n">from_release</span><span class="o">=</span><span class="n">from_release</span><span class="p">,</span>
                 <span class="n">ensembl_backbone_shallow_search</span><span class="o">=</span><span class="n">ensembl_backbone_shallow_search</span><span class="p">,</span>
+                <span class="n">account_for_hyperconnected_nodes</span><span class="o">=</span><span class="n">account_for_hyperconnected_nodes</span><span class="p">,</span>
             <span class="p">)</span>
 
         <span class="n">remove_set</span><span class="p">:</span> <span class="nb">set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
@@ -463,7 +468,7 @@
         <span class="c1"># graph backbone nodes (ensembl gene), and the backbone is always the latest (currently 38).</span>
         <span class="k">for</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span> <span class="ow">in</span> <span class="n">lor</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">l1</span> <span class="o">&gt;</span> <span class="n">l2</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;l1 &gt; l2&quot;</span><span class="p">)</span>
 
             <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;closest&quot;</span> <span class="ow">and</span> <span class="n">p</span> <span class="o">==</span> <span class="n">l1</span><span class="p">:</span>
                 <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">l1</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
@@ -489,7 +494,7 @@
                 <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">l1</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
 
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Else?&quot;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">result</span></div>
 
@@ -611,7 +616,7 @@
                             <span class="n">candidate_ranges</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">syn_id</span><span class="p">,</span> <span class="n">m1</span><span class="p">,</span> <span class="n">m2</span><span class="p">])</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">distance_to_target</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;len(distance_to_target) == 0&quot;</span><span class="p">)</span>
 
         <span class="n">global_min_distance</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">distance_to_target</span><span class="p">)</span>
         <span class="n">result</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">candidate_ranges</span><span class="p">)</span> <span class="k">if</span> <span class="n">global_min_distance</span> <span class="o">==</span> <span class="n">distance_to_target</span><span class="p">[</span><span class="n">ind</span><span class="p">]]</span>
@@ -761,7 +766,7 @@
                             <span class="n">prev_edge_release_index</span> <span class="o">=</span> <span class="n">more_than_one_edges</span><span class="p">[</span><span class="n">node_after_id</span><span class="p">]</span>
                             <span class="n">prev_edge_release</span> <span class="o">=</span> <span class="n">edges</span><span class="p">[</span><span class="n">prev_edge_release_index</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
                             <span class="k">if</span> <span class="n">prev_edge_release</span> <span class="o">==</span> <span class="n">edge_release</span><span class="p">:</span>
-                                <span class="k">raise</span> <span class="ne">ValueError</span>
+                                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;prev_edge_release == edge_release&quot;</span><span class="p">)</span>
                             <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">reverse</span> <span class="ow">and</span> <span class="n">prev_edge_release</span> <span class="o">&gt;</span> <span class="n">edge_release</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
                                 <span class="n">reverse</span> <span class="ow">and</span> <span class="n">prev_edge_release</span> <span class="o">&lt;</span> <span class="n">edge_release</span>
                             <span class="p">):</span>  <span class="c1"># keep only the first possible edge!</span>
@@ -835,7 +840,7 @@
         <span class="k">elif</span> <span class="n">lffi</span><span class="p">:</span>
             <span class="k">return</span> <span class="s2">&quot;forward&quot;</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">forward_from_ids</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span></div>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;no other choice&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Track.path_search">
@@ -1286,6 +1291,7 @@
                 <span class="n">filter_node_type</span><span class="o">=</span><span class="n">filter_set</span><span class="p">,</span>
                 <span class="n">from_release</span><span class="o">=</span><span class="n">ens_release</span><span class="p">,</span>
                 <span class="n">ensembl_backbone_shallow_search</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">account_for_hyperconnected_nodes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="p">]</span>
         <span class="n">imp1</span><span class="p">,</span> <span class="n">imp2</span><span class="p">,</span> <span class="n">imp3</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(),</span> <span class="nb">set</span><span class="p">(),</span> <span class="nb">set</span><span class="p">()</span>
@@ -1298,7 +1304,7 @@
             <span class="k">elif</span> <span class="n">nt</span> <span class="ow">in</span> <span class="n">ensembl_include</span><span class="p">[</span><span class="n">form_importance_order</span><span class="p">[</span><span class="mi">1</span><span class="p">]]:</span>
                 <span class="n">imp3</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;unexpected!2&quot;</span><span class="p">)</span>
 
         <span class="c1"># Importance order is as following</span>
         <span class="k">return</span> <span class="p">[</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">imp1</span><span class="p">),</span> <span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">imp2</span><span class="p">),</span> <span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">imp3</span><span class="p">)]</span>  <span class="c1"># minus is added to minimize in the method used.</span></div>
@@ -1393,7 +1399,7 @@
                     <span class="n">from_release</span> <span class="o">=</span> <span class="n">the_edge</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>  <span class="c1"># _external_path_maker</span>
 
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;len(edge)&quot;</span><span class="p">)</span>
 
             <span class="c1"># longest continous ens_gene path&#39;ine sahip olan one cikmali?</span>
 
@@ -1530,7 +1536,7 @@
             <span class="n">edge_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="o">*</span><span class="n">edge_key</span><span class="p">)[</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_dict</span><span class="p">]</span>
             <span class="k">return</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">j</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">edge_data</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">edge_data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">n4</span> <span class="o">&amp;</span> <span class="n">edge_data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">})</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span></div>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;isinstance(n4, ...)&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Track.minimum_assembly_jumps">
@@ -1622,7 +1628,7 @@
                     <span class="n">current_priority</span> <span class="o">=</span> <span class="n">next_priority_2</span><span class="p">(</span><span class="n">current_priority</span><span class="p">,</span> <span class="n">step_pri</span><span class="p">)</span>
                 <span class="n">step_pri</span> <span class="o">=</span> <span class="n">priorities</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;while len(priorities) &gt; 0&quot;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">penalty</span><span class="p">,</span> <span class="n">step_pri</span><span class="p">,</span> <span class="n">current_priority</span></div>
 
@@ -1660,7 +1666,7 @@
         <span class="p">)</span>  <span class="c1"># they all are needed to be minimized</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">lst_of_dict</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;not len(lst_of_dict) &gt; 0&quot;</span><span class="p">)</span>
 
         <span class="n">minimum_scores</span> <span class="o">=</span> <span class="p">[[</span><span class="n">dct</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">importance_order</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">dct</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lst_of_dict</span><span class="p">)]</span>
         <span class="n">minimum_scores</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">minimum_scores</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -1724,7 +1730,7 @@
         <span class="c1"># max(external_count), max(protein_count), max(transcript_count)</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">dict_of_dict</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;not len(dict_of_dict) &gt; 0&quot;</span><span class="p">)</span>
 
         <span class="n">minimum_scores</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 
@@ -1856,7 +1862,7 @@
 <span class="sd">                logical inconsistencies detected during processing.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">reduction</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;not callable(reduction)&quot;</span><span class="p">)</span>
         <span class="n">to_release</span> <span class="o">=</span> <span class="n">to_release</span> <span class="k">if</span> <span class="n">to_release</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;ensembl_release&quot;</span><span class="p">]</span>
 
         <span class="k">if</span> <span class="n">from_release</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -1906,7 +1912,7 @@
             <span class="p">)</span>
             <span class="n">ff</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">fr</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">poss_paths</span><span class="p">)))</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;should_reversed&quot;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">poss_paths</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
@@ -1922,8 +1928,13 @@
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_converted</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="n">converted</span> <span class="o">=</span> <span class="n">new_converted</span>
 
+            <span class="n">allowed_ones</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">available_external_databases_assembly</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">main_assembly</span><span class="p">]</span><span class="o">.</span><span class="n">union</span><span class="p">(</span>
+                <span class="p">{</span><span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">],</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_base_ensembl</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">]}</span>
+            <span class="p">)</span>
             <span class="k">for</span> <span class="n">cnvt</span> <span class="ow">in</span> <span class="n">converted</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">final_database</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">final_database</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">final_database</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">allowed_ones</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Final database (`final_database`) is not among allowed ones: </span><span class="si">{</span><span class="n">allowed_ones</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">final_database</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">final_database</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">]:</span>
                     <span class="n">prio_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_priority_list_ensembl</span><span class="p">(</span><span class="n">cnvt</span><span class="p">,</span> <span class="n">to_release</span><span class="p">)</span>
                     <span class="n">converted</span><span class="p">[</span><span class="n">cnvt</span><span class="p">][</span><span class="s2">&quot;final_conversion&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Track</span><span class="o">.</span><span class="n">_final_conversion_dict_prepare</span><span class="p">(</span>
                         <span class="n">confidence</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
@@ -1932,17 +1943,17 @@
                         <span class="n">add_ass_jump_list</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                         <span class="n">min_priority_list</span><span class="o">=</span><span class="p">[</span><span class="nb">min</span><span class="p">(</span><span class="n">prio_list</span><span class="p">)],</span>
                         <span class="n">len_priority_list</span><span class="o">=</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">prio_list</span><span class="p">)],</span>
-                        <span class="n">final_database</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">],</span>
+                        <span class="n">final_database</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">],</span>
                     <span class="p">)</span>
                 <span class="k">elif</span> <span class="p">(</span>
                     <span class="n">final_database</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">available_external_databases</span>
-                    <span class="ow">or</span> <span class="n">final_database</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_base_ensembl</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">]</span>
+                    <span class="ow">or</span> <span class="n">final_database</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_base_ensembl</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">]</span>
                 <span class="p">):</span>
                     <span class="n">converted</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_final_conversion</span><span class="p">(</span>
                         <span class="n">converted</span><span class="p">,</span> <span class="n">cnvt</span><span class="p">,</span> <span class="n">final_database</span><span class="p">,</span> <span class="n">to_release</span><span class="p">,</span> <span class="n">return_path</span><span class="p">,</span> <span class="n">return_ensembl_alternative</span>
                     <span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;This should not be raised.&quot;</span><span class="p">)</span>
 
             <span class="c1"># if there is no conversable entry, remove the conversion</span>
             <span class="n">converted</span> <span class="o">=</span> <span class="p">{</span>
@@ -1973,15 +1984,12 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            list[int]: Sorted list of priority values (ascending).</span>
-
-<span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If the gene is not active in *any* assembly at</span>
-<span class="sd">                `to_release`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">ceg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">combined_edges_genes</span><span class="p">[</span><span class="n">from_id</span><span class="p">]</span>
         <span class="n">ceg_assembly_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">j</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ceg</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">ceg</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="n">to_release</span> <span class="ow">in</span> <span class="n">ceg</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]})</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ceg_assembly_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;A form of rare event found for </span><span class="si">{</span><span class="n">from_id</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">iinfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">]</span>  <span class="c1"># placeholder large integer</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;Priority&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ceg_assembly_list</span><span class="p">]</span></div>
 
 
@@ -2020,7 +2028,7 @@
 <span class="sd">            add_ass_jump_list (list): Additional assembly-jump penalty</span>
 <span class="sd">                incurred during the synonym hop itself.</span>
 <span class="sd">            final_database (str): Name of the database these synonyms belong</span>
-<span class="sd">                to (e.g. `&#39;uniprot&#39;` or `DB.nts_ensembl[&quot;gene&quot;]`).</span>
+<span class="sd">                to (e.g. `&#39;uniprot&#39;` or `DB.nts_ensembl[DB.backbone_form]`).</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            dict: Nested dictionary ready to be stored under the key</span>
@@ -2065,6 +2073,8 @@
         <span class="n">ens_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">return_path</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
         <span class="n">return_ensembl_alternative</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">prevent_assembly_jumps</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">account_for_hyperconnected_nodes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert an Ensembl gene node to the requested external database.</span>
 
@@ -2093,10 +2103,15 @@
 <span class="sd">                synonym.</span>
 <span class="sd">            return_ensembl_alternative (bool): When no synonym can be found,</span>
 <span class="sd">                add a fallback entry that keeps the Ensembl gene.</span>
+<span class="sd">            prevent_assembly_jumps: Todo.</span>
+<span class="sd">            account_for_hyperconnected_nodes: Todo.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            dict: The same `converted` dict, updated in place (and also</span>
 <span class="sd">            returned for convenience).</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            EmptyConversionMetricsError: Todo.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">_final_conversion_path</span><span class="p">(</span><span class="n">gene_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">target_db</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">from_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
@@ -2132,13 +2147,79 @@
                     <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ens_rels_avail</span><span class="p">)</span>
                 <span class="k">return</span> <span class="n">result</span>
 
+            <span class="k">def</span><span class="w"> </span><span class="nf">_contains_assembly</span><span class="p">(</span><span class="n">lst</span><span class="p">,</span> <span class="n">asyml</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">er_for_jumps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">er_for_last_node</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]):</span>
+
+                <span class="c1"># prevent assembly jumps {some ensembl-gene&#39;s are also shared, and they are not called as assembly_37..}</span>
+                <span class="c1"># just for each returned synonymous, check whether the connection is only possible on assembly 38,</span>
+                <span class="c1"># if not just remove this one. check graph ans see whether the nodes returned share 38 assembly.</span>
+
+                <span class="k">def</span><span class="w"> </span><span class="nf">_get_edge_data</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+                    <span class="n">e1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+                    <span class="n">e2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get_edge_data</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">u</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">e1</span> <span class="ow">and</span> <span class="n">e2</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">e1</span>
+                    <span class="k">elif</span> <span class="n">e2</span> <span class="ow">and</span> <span class="n">e1</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">e2</span>
+                    <span class="k">elif</span> <span class="n">e1</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">e2</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No edge between </span><span class="si">{</span><span class="n">u</span><span class="si">!r}</span><span class="s2"> and </span><span class="si">{</span><span class="n">v</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Two directional edge between </span><span class="si">{</span><span class="n">u</span><span class="si">!r}</span><span class="s2"> and </span><span class="si">{</span><span class="n">v</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+                <span class="c1"># these are for external jumps to make it allowed in only assembly defined</span>
+                <span class="n">switch_1</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">for</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">lst</span><span class="p">,</span> <span class="n">lst</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>
+                    <span class="n">edges</span> <span class="o">=</span> <span class="n">_get_edge_data</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">edges</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">ae</span> <span class="ow">in</span> <span class="n">edge</span><span class="p">[</span><span class="s2">&quot;connection&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                            <span class="k">for</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">ensembl_release</span> <span class="ow">in</span> <span class="n">ae</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                                <span class="k">if</span> <span class="n">er_for_jumps</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                                    <span class="k">if</span> <span class="n">asyml</span> <span class="o">==</span> <span class="n">assembly</span><span class="p">:</span>
+                                        <span class="n">switch_1</span> <span class="o">=</span> <span class="kc">True</span>
+                                <span class="k">else</span><span class="p">:</span>
+                                    <span class="k">if</span> <span class="n">er_for_jumps</span> <span class="ow">in</span> <span class="n">ensembl_release</span> <span class="ow">and</span> <span class="n">asyml</span> <span class="o">==</span> <span class="n">assembly</span><span class="p">:</span>
+                                        <span class="n">switch_1</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">switch_2</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="c1"># last node should be in the database requested within assembly defined. See the line:</span>
+                <span class="c1"># idt.convert_identifier(&quot;ENSG00000199293.1&quot;, to_release=94, from_release=94, final_database=&quot;RFAM&quot;)</span>
+                <span class="n">edges</span> <span class="o">=</span> <span class="n">_get_edge_data</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">edges</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="k">for</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">ensembl_release</span> <span class="ow">in</span> <span class="n">edge</span><span class="p">[</span><span class="s2">&quot;connection&quot;</span><span class="p">][</span><span class="n">target_db</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="n">er_for_last_node</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">asyml</span> <span class="o">==</span> <span class="n">assembly</span><span class="p">:</span>
+                                <span class="n">switch_2</span> <span class="o">=</span> <span class="kc">True</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">er_for_last_node</span> <span class="ow">in</span> <span class="n">ensembl_release</span> <span class="ow">and</span> <span class="n">asyml</span> <span class="o">==</span> <span class="n">assembly</span><span class="p">:</span>
+                                <span class="n">switch_2</span> <span class="o">=</span> <span class="kc">True</span>
+
+                <span class="k">return</span> <span class="nb">all</span><span class="p">([</span><span class="n">switch_1</span><span class="p">,</span> <span class="n">switch_2</span><span class="p">])</span>
+
+            <span class="k">def</span><span class="w"> </span><span class="nf">_prevent_assembly_jumps</span><span class="p">(</span><span class="n">synonymous_nodes_output</span><span class="p">,</span> <span class="n">er_for_jumps</span><span class="p">,</span> <span class="n">er_for_last_node</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">prevent_assembly_jumps</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="p">[</span>
+                        <span class="n">i</span>
+                        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">synonymous_nodes_output</span>
+                        <span class="k">if</span> <span class="n">_contains_assembly</span><span class="p">(</span>
+                            <span class="n">lst</span><span class="o">=</span><span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>  <span class="c1"># where node ids are stored.</span>
+                            <span class="n">asyml</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">main_assembly</span><span class="p">,</span>
+                            <span class="n">er_for_jumps</span><span class="o">=</span><span class="n">er_for_jumps</span><span class="p">,</span>
+                            <span class="n">er_for_last_node</span><span class="o">=</span><span class="n">er_for_last_node</span><span class="p">,</span>
+                        <span class="p">)</span>
+                    <span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">synonymous_nodes_output</span>
+
             <span class="n">a</span> <span class="o">=</span> <span class="n">_final_conversion_path_helper</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">synonymous_nodes</span><span class="p">(</span>
-                    <span class="n">the_id</span><span class="o">=</span><span class="n">gene_id</span><span class="p">,</span>
-                    <span class="n">depth_max</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-                    <span class="n">filter_node_type</span><span class="o">=</span><span class="p">{</span><span class="n">target_db</span><span class="p">},</span>
-                    <span class="n">from_release</span><span class="o">=</span><span class="n">from_release</span><span class="p">,</span>
-                    <span class="n">ensembl_backbone_shallow_search</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">_prevent_assembly_jumps</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">synonymous_nodes</span><span class="p">(</span>
+                        <span class="n">the_id</span><span class="o">=</span><span class="n">gene_id</span><span class="p">,</span>
+                        <span class="n">depth_max</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                        <span class="n">filter_node_type</span><span class="o">=</span><span class="p">{</span><span class="n">target_db</span><span class="p">},</span>
+                        <span class="n">from_release</span><span class="o">=</span><span class="n">from_release</span><span class="p">,</span>
+                        <span class="n">ensembl_backbone_shallow_search</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">account_for_hyperconnected_nodes</span><span class="o">=</span><span class="n">account_for_hyperconnected_nodes</span><span class="p">,</span>
+                    <span class="p">),</span>
+                    <span class="n">er_for_jumps</span><span class="o">=</span><span class="n">from_release</span><span class="p">,</span>
+                    <span class="n">er_for_last_node</span><span class="o">=</span><span class="n">from_release</span><span class="p">,</span>
                 <span class="p">),</span>
                 <span class="n">er</span><span class="o">=</span><span class="n">from_release</span><span class="p">,</span>
             <span class="p">)</span>
@@ -2148,12 +2229,17 @@
                 <span class="k">return</span> <span class="n">a</span><span class="p">,</span> <span class="n">confidence</span>  <span class="c1"># syns, confidence (lower better)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">the_paths_no_ens_rel</span> <span class="o">=</span> <span class="n">_final_conversion_path_helper</span><span class="p">(</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">synonymous_nodes</span><span class="p">(</span>
-                        <span class="n">the_id</span><span class="o">=</span><span class="n">gene_id</span><span class="p">,</span>
-                        <span class="n">depth_max</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-                        <span class="n">filter_node_type</span><span class="o">=</span><span class="p">{</span><span class="n">target_db</span><span class="p">},</span>
-                        <span class="n">from_release</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                        <span class="n">ensembl_backbone_shallow_search</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">_prevent_assembly_jumps</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">synonymous_nodes</span><span class="p">(</span>
+                            <span class="n">the_id</span><span class="o">=</span><span class="n">gene_id</span><span class="p">,</span>
+                            <span class="n">depth_max</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                            <span class="n">filter_node_type</span><span class="o">=</span><span class="p">{</span><span class="n">target_db</span><span class="p">},</span>
+                            <span class="n">from_release</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                            <span class="n">ensembl_backbone_shallow_search</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                            <span class="n">account_for_hyperconnected_nodes</span><span class="o">=</span><span class="n">account_for_hyperconnected_nodes</span><span class="p">,</span>
+                        <span class="p">),</span>
+                        <span class="n">er_for_jumps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="n">er_for_last_node</span><span class="o">=</span><span class="n">from_release</span><span class="p">,</span>
                     <span class="p">),</span>
                     <span class="n">er</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="p">)</span>
@@ -2188,7 +2274,6 @@
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">syn_ids</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">return_ensembl_alternative</span><span class="p">:</span>
             <span class="c1"># Alternativelu return ensembl itself, return confidence np.inf [which means unsuccessful]</span>
-
             <span class="n">prio_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_priority_list_ensembl</span><span class="p">(</span><span class="n">cnvt</span><span class="p">,</span> <span class="n">ens_release</span><span class="p">)</span>
 
             <span class="n">converted</span><span class="p">[</span><span class="n">cnvt</span><span class="p">][</span><span class="s2">&quot;final_conversion&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Track</span><span class="o">.</span><span class="n">_final_conversion_dict_prepare</span><span class="p">(</span>
@@ -2198,10 +2283,15 @@
                 <span class="n">add_ass_jump_list</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                 <span class="n">min_priority_list</span><span class="o">=</span><span class="p">[</span><span class="nb">min</span><span class="p">(</span><span class="n">prio_list</span><span class="p">)],</span>
                 <span class="n">len_priority_list</span><span class="o">=</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">prio_list</span><span class="p">)],</span>
-                <span class="n">final_database</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">],</span>
+                <span class="n">final_database</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">],</span>
             <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">conversion_metrics</span> <span class="o">=</span> <span class="p">[</span><span class="n">_final_conversion_helper</span><span class="p">(</span><span class="n">converted</span><span class="p">,</span> <span class="n">cnvt</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">syn_ids_path</span><span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">conversion_metrics</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">EmptyConversionMetricsError</span><span class="p">(</span>
+                    <span class="s2">&quot;The `conversion_metrics` is emtpy. It happens when `return_ensembl_alternative` &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;is `false` and no corresponding final conversion possible: </span><span class="si">{</span><span class="n">cnvt</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">converted</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span>
             <span class="n">sl1</span><span class="p">,</span> <span class="n">sl2</span><span class="p">,</span> <span class="n">sl3</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">conversion_metrics</span><span class="p">)))</span>
             <span class="n">converted</span><span class="p">[</span><span class="n">cnvt</span><span class="p">][</span><span class="s2">&quot;final_conversion&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Track</span><span class="o">.</span><span class="n">_final_conversion_dict_prepare</span><span class="p">(</span>
                 <span class="n">confidence</span><span class="o">=</span><span class="n">conf</span><span class="p">,</span>
@@ -2251,7 +2341,7 @@
             <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;assembly_ensembl_release&quot;</span><span class="p">:</span>
                 <span class="n">possible_trios</span><span class="o">.</span><span class="n">extend</span><span class="p">({</span><span class="n">i</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">node_trios</span><span class="p">[</span><span class="n">di</span><span class="p">]})</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;no 1234&quot;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">Counter</span><span class="p">(</span><span class="n">possible_trios</span><span class="p">)</span><span class="o">.</span><span class="n">most_common</span><span class="p">())</span></div>
 

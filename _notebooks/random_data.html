@@ -25,7 +25,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Comparison with Available Tools" href="comparison.html" />
-    <link rel="prev" title="Use Case: HLCA Datasets" href="results_preliminary_for_hlca.html" /> 
+    <link rel="prev" title="Multiple Dataset Harmonization Tutorial" href="tutorial_harmonization.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -55,7 +55,8 @@
 <li class="toctree-l2"><a class="reference internal" href="prepare_new_external_yaml.html">External Database Description Initialization</a></li>
 <li class="toctree-l2"><a class="reference internal" href="initialization_graph.html">Initialize Graph Object</a></li>
 <li class="toctree-l2"><a class="reference internal" href="initialization_test.html">Initialization and Tests</a></li>
-<li class="toctree-l2"><a class="reference internal" href="results_preliminary_for_hlca.html">Use Case: HLCA Datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="example_manual_running.html">Manual Identifier Conversion Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial_harmonization.html">Multiple Dataset Harmonization Tutorial</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Calculations with Random Data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="comparison.html">Comparison with Available Tools</a></li>
 </ul>
@@ -94,16 +95,25 @@
   <section id="Calculations-with-Random-Data">
 <h1>Calculations with Random Data<a class="headerlink" href="#Calculations-with-Random-Data" title="Link to this heading"></a></h1>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
-<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;../..&quot;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
+<span class="o">%</span><span class="k">autoreload</span> 2
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;/home/icb/kemal.inecik/work/codes/idtrack&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
@@ -113,6 +123,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">tqdm</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">multiprocessing</span>
 </pre></div>
 </div>
 </div>
@@ -120,25 +131,42 @@
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
-<span class="o">%</span><span class="k">autoreload</span> 2
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>ls<span class="w"> </span>-l<span class="w"> </span>/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">local_dir</span> <span class="o">=</span> <span class="s2">&quot;/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp&quot;</span>
 <span class="n">idt</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="n">local_dir</span><span class="p">)</span>
 <span class="n">idt</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
-<span class="n">idt</span><span class="o">.</span><span class="n">initialize_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s1">&#39;homo_sapiens&#39;</span><span class="p">,</span> <span class="n">ensembl_release</span><span class="o">=</span><span class="mi">107</span><span class="p">,</span> <span class="n">return_test</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">idt</span><span class="o">.</span><span class="n">initialize_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s1">&#39;homo_sapiens&#39;</span><span class="p">,</span> <span class="n">last_ensembl_release</span><span class="o">=</span><span class="mi">114</span><span class="p">,</span> <span class="n">return_test</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="n">idt</span><span class="o">.</span><span class="n">calculate_graph_caches</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2025-05-29 07:55:35 INFO:graph_maker: The graph is being read: /lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/graph_homo_sapiens_min79_max114_narrow.pickle
+2025-05-29 07:56:38 INFO:the_graph: Cached properties being calculated: combined_edges
+2025-05-29 07:57:17 INFO:the_graph: Cached properties being calculated: combined_edges_assembly_specific_genes
+2025-05-29 07:57:20 INFO:the_graph: Cached properties being calculated: combined_edges_genes
+2025-05-29 07:57:34 INFO:the_graph: Cached properties being calculated: lower_chars_graph
+2025-05-29 07:57:34 INFO:the_graph: Cached properties being calculated: get_active_ranges_of_id
+2025-05-29 07:58:14 INFO:the_graph: Cached properties being calculated: available_external_databases
+2025-05-29 07:58:16 INFO:the_graph: Cached properties being calculated: external_database_connection_form
+2025-05-29 07:59:01 INFO:the_graph: Cached properties being calculated: available_genome_assemblies
+2025-05-29 07:59:03 INFO:the_graph: Cached properties being calculated: available_external_databases_assembly
+2025-05-29 07:59:04 INFO:the_graph: Cached properties being calculated: node_trios
+</pre></div></div>
+</div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">get_matching</span><span class="p">(</span><span class="n">convert_output</span><span class="p">):</span>
@@ -148,7 +176,7 @@
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">subset_external</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;assembly_38_ensembl_gene&quot;</span><span class="p">,</span> <span class="s1">&#39;assembly_38_ensembl_transcript&#39;</span><span class="p">,</span>
@@ -158,10 +186,10 @@
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">iteration</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">101</span><span class="p">,</span> <span class="mi">102</span><span class="p">]:</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">iteration</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">101</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">103</span><span class="p">]:</span>
 
     <span class="n">identifier_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
@@ -197,7 +225,7 @@
     <span class="k">for</span> <span class="n">fer</span> <span class="ow">in</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">]:</span>
         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;With From Release: </span><span class="si">{</span><span class="n">fer</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">r</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">ter</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">107</span><span class="p">,</span> <span class="mi">98</span><span class="p">,</span> <span class="mi">89</span><span class="p">,</span> <span class="mi">80</span><span class="p">]:</span>
+        <span class="k">for</span> <span class="n">ter</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">114</span><span class="p">,</span> <span class="mi">110</span><span class="p">,</span> <span class="mi">107</span><span class="p">,</span> <span class="mi">98</span><span class="p">,</span> <span class="mi">89</span><span class="p">,</span> <span class="mi">80</span><span class="p">]:</span>
             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;To Ensembl Release: </span><span class="si">{</span><span class="n">ter</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="n">results</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">identifier_duos</span><span class="p">:</span>
@@ -579,7 +607,7 @@ total 15G
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/_notebooks_random_data_20_0.png" class="no-scaled-link" src="../_images/_notebooks_random_data_20_0.png" style="width: 243px; height: 353px;" />
+<img alt="../_images/_notebooks_random_data_21_0.png" class="no-scaled-link" src="../_images/_notebooks_random_data_21_0.png" style="width: 243px; height: 353px;" />
 </div>
 </div>
 <div class="nbinput docutils container">
@@ -610,7 +638,7 @@ total 15G
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/_notebooks_random_data_21_0.png" class="no-scaled-link" src="../_images/_notebooks_random_data_21_0.png" style="width: 239px; height: 353px;" />
+<img alt="../_images/_notebooks_random_data_22_0.png" class="no-scaled-link" src="../_images/_notebooks_random_data_22_0.png" style="width: 239px; height: 353px;" />
 </div>
 </div>
 <div class="nbinput nblast docutils container">
@@ -659,7 +687,7 @@ total 15G
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="results_preliminary_for_hlca.html" class="btn btn-neutral float-left" title="Use Case: HLCA Datasets" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="tutorial_harmonization.html" class="btn btn-neutral float-left" title="Multiple Dataset Harmonization Tutorial" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="comparison.html" class="btn btn-neutral float-right" title="Comparison with Available Tools" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

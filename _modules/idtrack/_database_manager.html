@@ -103,7 +103,38 @@
 <div class="viewcode-block" id="DatabaseManager">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">DatabaseManager</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Downloads, preprocesses, and stores the necessary source files for the program.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Manage retrieval, preprocessing, and storage of Ensembl Core and related external datasets.</span>
+
+<span class="sd">    The *DatabaseManager* centralizes all low-level operations required for ID-track analyses, including</span>
+<span class="sd">    discovering which Ensembl releases are available for a given organism/assembly, downloading the</span>
+<span class="sd">    corresponding MySQL tables, normalizing column names, persisting raw and processed files under a</span>
+<span class="sd">    local cache directory, and orchestrating auxiliary look-ups to third-party resources via</span>
+<span class="sd">    :py:class:`ExternalDatabases`.  By funnelling every data-access path through a single object the</span>
+<span class="sd">    wider package gains:</span>
+
+<span class="sd">    * **Stable, reproducible builds** - every graph, lookup table, or ID-history file is anchored to</span>
+<span class="sd">      the exact *Ensembl release*, *genome assembly*, and *form* (gene, transcript, translation, …)</span>
+<span class="sd">      with which the manager was configured.</span>
+<span class="sd">    * **Transparent caching** - expensive downloads happen once; subsequent requests are served from</span>
+<span class="sd">      disk, making large iterative analyses feasible on modest hardware.</span>
+<span class="sd">    * **Unified version logic** - helper methods such as</span>
+<span class="sd">      :py:meth:`~DatabaseManager.version_uniformize` and</span>
+<span class="sd">      :py:meth:`~DatabaseManager.check_version_info` guarantee that cross-release identifier changes</span>
+<span class="sd">      are captured and resolved consistently across the codebase.</span>
+
+<span class="sd">    Key public methods/attributes</span>
+<span class="sd">    -----------------------------</span>
+<span class="sd">    * :py:meth:`available_releases` — list releases that can be queried *and* saved locally.</span>
+<span class="sd">    * :py:meth:`change_release` — switch the manager to another Ensembl release in-place.</span>
+<span class="sd">    * :py:meth:`download_table` — fetch a single MySQL table and write it to ``local_repository``.</span>
+<span class="sd">    * :py:meth:`create_external_all` — pull every supported external resource (UniProt, RefSeq, …).</span>
+<span class="sd">    * :py:attr:`organism`, :py:attr:`form`, :py:attr:`ensembl_release`,</span>
+<span class="sd">      :py:attr:`genome_assembly` — core configuration knobs, surfaced for quick inspection.</span>
+
+<span class="sd">    The class is **stateful**: change-mutating helpers update internal cached properties so that the</span>
+<span class="sd">    instance always reflects its current configuration.  Use the built-in :py:meth:`__str__` for a</span>
+<span class="sd">    concise, human-readable dump of that state.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -116,28 +147,31 @@
         <span class="n">store_raw_always</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">genome_assembly</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Class initialization.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a :py:class:`DatabaseManager` for a specific organism, release, and assembly.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            organism: Formal organism name. The output provided by :py:class:`VerifyOrganism` would be</span>
-<span class="sd">                a perfect choice.</span>
-<span class="sd">            ensembl_release: Ensembl release of interest. The object will work on only given Ensembl release, but some</span>
-<span class="sd">                methods does not care which form the DatabaseManager is defined to.</span>
-<span class="sd">                The latest possible Ensembl release is the best choice for graph building with no drawbacks.</span>
-<span class="sd">            form: Either &#39;gene&#39;, &#39;transcript&#39; or &#39;translation&#39;. The object will work on only given form, but some</span>
-<span class="sd">                methods does not care which form the DatabaseManager is defined to.</span>
-<span class="sd">            local_repository: An absolute path in local machine to store downloaded and preprocessed content.</span>
-<span class="sd">            ignore_before: Ensembl release as the lower limit to include in the downloaded contents. The object will</span>
-<span class="sd">                ignore all Ensembl release lower than this integer.</span>
-<span class="sd">            ignore_after: Similar to &#39;ignore_before&#39; but as the upper limit as the name suggest.</span>
-<span class="sd">            store_raw_always: If ``True``, the raw MySQL tables will be also saved in the disk.</span>
-<span class="sd">            genome_assembly: Genome assembly of interest. The selection should be one of the keys in the</span>
-<span class="sd">                :py:attr:`DB.assembly_mysqlport_priority` dictionary. The object will work on only given assembly.</span>
-<span class="sd">                The default is the latest genome assembly (also called highest priority assembly).</span>
+<span class="sd">            organism (str): Canonical species name in Ensembl schema (e.g. ``&quot;homo_sapiens&quot;`` or</span>
+<span class="sd">                ``&quot;mus_musculus&quot;``). Anything else raises :py:class:`NotImplementedError`.</span>
+<span class="sd">            form (str): Biological entity level of interest—one of ``&quot;gene&quot;``, ``&quot;transcript&quot;``,</span>
+<span class="sd">                ``&quot;translation&quot;``, …—governing which stable-ID columns will be expected downstream.</span>
+<span class="sd">            local_repository (str): Absolute or relative path to a writable directory that will hold</span>
+<span class="sd">                all downloaded MySQL dumps, intermediate parquet/Feather files, and ready-to-use</span>
+<span class="sd">                artefacts. The directory must already exist and be both readable and writable.</span>
+<span class="sd">            ensembl_release (Optional[int]): Target Ensembl release number. If ``None`` the most</span>
+<span class="sd">                recent release available for *genome_assembly* is selected automatically.</span>
+<span class="sd">            ignore_before (Optional[int]): Earliest release to include when building cross-release ID</span>
+<span class="sd">                histories. Defaults to the minimum release supported by the selected assembly.</span>
+<span class="sd">            ignore_after (Optional[int | float]): Latest release to include when building histories.</span>
+<span class="sd">                ``np.inf`` (the default) disables the upper bound and includes all newer releases.</span>
+<span class="sd">            store_raw_always (bool): When ``True`` raw MySQL tables are *always* copied to</span>
+<span class="sd">                ``local_repository`` before conversion; when ``False`` they are kept only in memory.</span>
+<span class="sd">            genome_assembly (Optional[int]): NCBI assembly version (e.g. ``38`` for GRCh38). If</span>
+<span class="sd">                omitted, the assembly with the highest priority for *organism* is used.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: When the input parameters are not in the specified format.</span>
-<span class="sd">            NotImplementedError: Currently only supports &#39;homo_sapiens&#39; as the organism name.</span>
+<span class="sd">            ValueError: If *form* is not in the supported list or *local_repository* fails basic</span>
+<span class="sd">                path/read/write checks.</span>
+<span class="sd">            NotImplementedError: If *organism* is not yet supported by the package.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">organism</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;homo_sapiens&quot;</span><span class="p">,</span> <span class="s2">&quot;mus_musculus&quot;</span><span class="p">]:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
@@ -210,7 +244,14 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&#39;DatabaseManager&#39; could not pass the &#39;checkers&#39;: </span><span class="si">{</span><span class="n">checkers</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Makes the instance status to be inspected by the user easily.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a multi-line snapshot of the manager&#39;s current configuration.</span>
+
+<span class="sd">        The string lists organism, form, Ensembl release, genome assembly, ignore range,</span>
+<span class="sd">        repository path, and caching mode, making it convenient to embed in logs or console output.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Readable status summary, one attribute per line, ending with a newline.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;DatabaseManager instance:</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="sa">f</span><span class="s2">&quot;    Organism: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}{</span><span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="si">}</span><span class="s2">&quot;</span>
@@ -225,13 +266,16 @@
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">external_inst</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ExternalDatabases</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create an instance of :py:class:`ExternalDatabases` and set as a property.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Instantiate and cache an :py:class:`ExternalDatabases` helper for this manager.</span>
 
-<span class="sd">        The parameters of the DatabaseManager instance will be directly passed in the creation of the</span>
-<span class="sd">        `ExternalDatabases` instance so they will be consistent with each other.</span>
+<span class="sd">        The instance mirrors the configuration of the surrounding :py:class:`DatabaseManager`—organism,</span>
+<span class="sd">        Ensembl release, identifier form, local repository path, and genome assembly—so that all</span>
+<span class="sd">        interactions with external data sources remain consistent throughout the session.  Because the</span>
+<span class="sd">        property is backed by :py:data:`functools.cached_property`, the helper is created exactly once</span>
+<span class="sd">        and reused on subsequent accesses, eliminating redundant network or file-system look-ups.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            An ExternalDatabases instance.</span>
+<span class="sd">            ExternalDatabases: A lazily created, configuration-matched helper object.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">ExternalDatabases</span><span class="p">(</span>
             <span class="n">organism</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">,</span>
@@ -243,53 +287,55 @@
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">available_releases</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;List Ensembl releases that can be queried **and** meet the ignore-window constraints.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return Ensembl releases that are both reachable and within the ignore window.</span>
 
-<span class="sd">        The list is computed once (via :py:meth`available_releases_versions`) and then cached for the rest of</span>
-<span class="sd">        the session.</span>
+<span class="sd">        The set is discovered via :py:meth:`available_releases_versions`, filtered against</span>
+<span class="sd">        ``ignore_before`` / ``ignore_after``, sorted in ascending order, and cached for the lifetime of</span>
+<span class="sd">        this :py:class:`DatabaseManager` instance.  The resulting list represents releases that can</span>
+<span class="sd">        safely be queried **and** cached locally, guaranteeing reproducible downstream analyses.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            list[int]: Sorted list of integer release numbers.</span>
+<span class="sd">            list[int]: Sorted release numbers satisfying reachability and ignore-window constraints.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_releases_versions</span><span class="p">()</span>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">available_releases_no_save</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;List Ensembl releases reachable on the remote MySQL server.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return reachable Ensembl releases without persisting the discovery to disk.</span>
 
-<span class="sd">        Unlike :py:attr:`available_releases`, this helper never writes the</span>
-<span class="sd">        discovered list to disk; it simply caches the value in memory for the</span>
-<span class="sd">        lifetime of the current :py:class:`DatabaseManager` instance.</span>
+<span class="sd">        Functionally identical to :py:meth:`available_releases`, except that the discovered list is **not**</span>
+<span class="sd">        written to the on-disk YAML cache. This helper is useful when users want a quick, read-only view</span>
+<span class="sd">        of server availability—e.g., inside CI pipelines—without contaminating the persistent cache.</span>
+<span class="sd">        The value is still memoized in memory for the current :py:class:`DatabaseManager` instance.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            list[int]: Sorted list of release numbers that</span>
-<span class="sd">                * match the organism and genome assembly tied to the instance,</span>
-<span class="sd">                * fall within the ``ignore_before`` / ``ignore_after`` window.</span>
+<span class="sd">            list[int]: Sorted release numbers reachable on the remote MySQL server and compliant with the</span>
+<span class="sd">            ignore window.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_releases_versions</span><span class="p">(</span><span class="n">save_after_calculation</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
 <div class="viewcode-block" id="DatabaseManager.available_releases_versions">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.available_releases_versions">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">available_releases_versions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Define available Ensembl releases for the DatabaseManager instance to work on.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Discover valid Ensembl releases for the configured organism and assembly.</span>
 
-<span class="sd">        Discover which releases exist on the configured MySQL mirror.</span>
-<span class="sd">        It looks on the MySQL server results to determine which Ensembl releases are available. The method does not</span>
-<span class="sd">        return directly the Ensembl releases defined by &#39;ignore_after&#39; and &#39;ignore_before&#39; parameters, and looks on the</span>
-<span class="sd">        server as a verification.</span>
-
-<span class="sd">        A ``SHOW DATABASES`` query is issued, the result is filtered with a</span>
-<span class="sd">        regex of the form ``^{organism}_core_&lt;release&gt;_.*$``, and the surviving</span>
-<span class="sd">        release numbers are cleaned and range-checked.</span>
+<span class="sd">        A ``SHOW DATABASES`` query is issued against the configured MySQL mirror.  Results are matched</span>
+<span class="sd">        against the pattern ``^{organism}_core_&lt;release&gt;_.*$``; the captured ``&lt;release&gt;`` component is</span>
+<span class="sd">        converted to ``int`` (floating-point labels are rejected), range-checked against the manager&#39;s</span>
+<span class="sd">        ``ignore_before`` / ``ignore_after`` bounds, and finally sorted. Optional keyword arguments are</span>
+<span class="sd">        forwarded verbatim to :py:meth:`DatabaseManager.get_db`, allowing callers to tweak connection or</span>
+<span class="sd">        caching behaviour.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            kwargs: Passed straight through to :py:meth:`DatabaseManager.get_db`.</span>
+<span class="sd">            kwargs: Arbitrary keyword arguments passed straight through to</span>
+<span class="sd">                :py:meth:`DatabaseManager.get_db` (e.g., ``mysql_conn``, ``force_refresh``).</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            List of integers indicating which Ensembl releases are available.</span>
+<span class="sd">            list[int]: Sorted list of release numbers that exist on the mirror and comply with the ignore window.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Unexpected error in regex functions.</span>
+<span class="sd">            ValueError: If a database name does not match the expected regex, if floating-point release</span>
+<span class="sd">                labels are encountered, or if other inconsistencies arise while parsing server results.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Get all possible ensembl releases for a given organism</span>
         <span class="n">dbs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;availabledatabases&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)[</span><span class="s2">&quot;available_databases&quot;</span><span class="p">]</span>  <span class="c1"># Obtain the databases dataframe</span>
@@ -331,13 +377,22 @@
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">mysql_database</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;The program has to choose a &#39;MySQL database&#39; based on ensembl release and organism name in the MYSQL server.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the canonical Ensembl Core schema name for the current organism, release, and assembly.</span>
+
+<span class="sd">        The manager must resolve exactly one MySQL schema on the remote Ensembl server whose name encodes the</span>
+<span class="sd">        *organism* (e.g. ``homo_sapiens``), *release* (e.g. ``111``), and *genome assembly* (e.g. ``38``).  This</span>
+<span class="sd">        helper centralises that lookup, guaranteeing that downstream calls—such as :py:meth:`download_table`—always</span>
+<span class="sd">        talk to the correct database.  The search relies on :py:meth:`get_db` to fetch the server&#39;s catalogue and</span>
+<span class="sd">        then filters it by a strict regular expression; any ambiguity is treated as fatal because it would break</span>
+<span class="sd">        reproducibility.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            The string specifying the &#39;MySQL database&#39; in the format determined by the regex pattern.</span>
+<span class="sd">            str: A single schema name like ``&quot;homo_sapiens_core_111_38&quot;`` that uniquely matches the manager&#39;s</span>
+<span class="sd">                configuration.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If there is more than one such match.</span>
+<span class="sd">            ValueError: If zero **or** more than one schema satisfies the search criteria, signalling server</span>
+<span class="sd">                misconfiguration or an invalid combination of *organism* and *ensembl_release*.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">dbs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;availabledatabases&quot;</span><span class="p">)[</span><span class="s2">&quot;available_databases&quot;</span><span class="p">]</span>  <span class="c1"># Obtain the databases dataframe</span>
 
@@ -357,13 +412,18 @@
 <div class="viewcode-block" id="DatabaseManager.change_form">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.change_form">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">change_form</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;DatabaseManager&quot;</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Changes the form of DatabaseManager instance with passing all other variables unchanged.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Clone the manager while switching the biological form of interest.</span>
+
+<span class="sd">        A “form” denotes the identifier namespace to track—``gene``, ``transcript``, ``translation``, etc.  This</span>
+<span class="sd">        method preserves every other configuration knob (organism, release, assembly, cache directory, ignore</span>
+<span class="sd">        windows, …) and returns a brand-new instance so that the original object remains unaffected.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            form: New form of interest. Refer to :py:attr:`DatabaseManager.__init__.form`</span>
+<span class="sd">            form (str): Target form/namespace recognised by :py:meth:`~DatabaseManager.__init__`.  Typical values</span>
+<span class="sd">                are ``&quot;gene&quot;``, ``&quot;transcript&quot;``, or ``&quot;translation&quot;``.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            New instance of DatabaseManager with only &#39;form&#39; is changed.</span>
+<span class="sd">            DatabaseManager: An independent manager identical to *self* except for :py:attr:`form`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">DatabaseManager</span><span class="p">(</span>
             <span class="n">organism</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">,</span>
@@ -380,14 +440,19 @@
 <div class="viewcode-block" id="DatabaseManager.change_release">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.change_release">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">change_release</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ensembl_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;DatabaseManager&quot;</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Changes the Ensembl release of DatabaseManager instance with passing all other variables unchanged.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Produce a new manager that targets a different Ensembl release.</span>
+
+<span class="sd">        The returned instance inherits organism, form, assembly, and all caching parameters, but points every</span>
+<span class="sd">        subsequent query (MySQL, FTP, or REST) to *ensembl_release*.  This is the recommended way to traverse</span>
+<span class="sd">        releases in scripted analyses without mutating objects in-place.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            ensembl_release: New Ensembl release of interest.</span>
-<span class="sd">                Refer to :py:attr:`DatabaseManager.__init__.ensembl_release`</span>
+<span class="sd">            ensembl_release (int): Desired Ensembl release number (e.g. ``111``).  Must be available for the</span>
+<span class="sd">                current genome assembly or a :py:data:`NotImplementedError` may be raised further down the call</span>
+<span class="sd">                stack when data retrieval is attempted.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            New instance of DatabaseManager with only &#39;ensembl_release&#39; is changed.</span>
+<span class="sd">            DatabaseManager: Fresh manager initialised for *ensembl_release*.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">DatabaseManager</span><span class="p">(</span>
             <span class="n">organism</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">,</span>
@@ -404,19 +469,21 @@
 <div class="viewcode-block" id="DatabaseManager.change_assembly">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.change_assembly">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">change_assembly</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">genome_assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">last_possible_ensembl_release</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;DatabaseManager&quot;</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Clone the manager while targeting a new genome assembly.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Clone the manager while targeting a new genome assembly (e.g. GRCh38 → GRCh37).</span>
+
+<span class="sd">        Genome assemblies are encoded as integers in Ensembl&#39;s schema naming (``38`` for *GRCh38*,</span>
+<span class="sd">        ``37`` for *GRCh37*, ``102`` for *GRCm39*, …).  When *last_possible_ensembl_release* is ``True`` the</span>
+<span class="sd">        method automatically picks the most recent Ensembl release that **still** provides MySQL dumps for the</span>
+<span class="sd">        requested assembly, ensuring compatibility.  All other settings are copied verbatim.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            genome_assembly (int): Key from :py:data:`DB.assembly_mysqlport_priority` (e.g. ``38`` for *GRCh38*).</span>
-<span class="sd">            last_possible_ensembl_release (bool): If ``True``, the new instance automatically picks the</span>
-<span class="sd">                newest Ensembl release available for *genome_assembly* instead of</span>
-<span class="sd">                re-using ``self.ensembl_release``. Defaults to ``False``.</span>
+<span class="sd">            genome_assembly (int): Key from :py:data:`DB.assembly_mysqlport_priority` mapping—see Ensembl</span>
+<span class="sd">                documentation for valid values.</span>
+<span class="sd">            last_possible_ensembl_release (bool): When ``True`` override *ensembl_release* with the</span>
+<span class="sd">                newest version available for *genome_assembly*.  Defaults to ``False``.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            DatabaseManager: Independent manager configured for the requested assembly.</span>
-
-<span class="sd">        Note:</span>
-<span class="sd">            The original object remains unchanged; remember to switch your variable reference to the returned instance.</span>
+<span class="sd">            DatabaseManager: New manager tied to the requested assembly (and possibly a recalculated release).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">DatabaseManager</span><span class="p">(</span>
             <span class="n">organism</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">,</span>
@@ -433,17 +500,19 @@
 <div class="viewcode-block" id="DatabaseManager.create_available_databases">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_available_databases">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_available_databases</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fetches all the databases in the MySQL server of the instance.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Discover MySQL databases for the configured organism/assembly.</span>
 
-<span class="sd">        Filters out the query ``SHOW databases`` based on matching to a specific regex string</span>
-<span class="sd">        ``f&quot;^{self.organism}_core_[0-9]+_.+$&quot;``</span>
+<span class="sd">        The manager issues a ``SHOW DATABASES`` query against the Ensembl public MySQL mirror and filters</span>
+<span class="sd">        names that match ``^{organism}_core_[0-9]+_.*$``.  The resulting list is returned as a single-column</span>
+<span class="sd">        dataframe so that callers can seamlessly chain further pandas operations or persist the result.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            All available &#39;MySQL databases&#39; in the server for given assembly (which is a parameter in the</span>
-<span class="sd">            `DatabaseManager` instance).</span>
+<span class="sd">            pandas.DataFrame: One column named ``&quot;available_databases&quot;`` listing all databases that match</span>
+<span class="sd">                the organism, irrespective of Ensembl release or genome assembly.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If the response has unexpected format or length.</span>
+<span class="sd">            ValueError: If the server response is not a sequence of single-field tuples **or** if any tuple</span>
+<span class="sd">                element is not a string.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;Available MySQL databases for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="si">}</span><span class="s2"> &quot;</span>
@@ -476,22 +545,30 @@
         <span class="n">save_after_calculation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">overwrite_even_if_exist</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Master method for MySQL processes. Downloads, stores, or retrieves the database of raw MySQL results.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Download, cache, or read a raw MySQL table for the current release.</span>
+
+<span class="sd">        A high-level wrapper that coordinates three steps:</span>
+
+<span class="sd">        1. **Path resolution** - determines the HDF5 file and internal key under the local repository that</span>
+<span class="sd">           belong to *table_key* (and *usecols*, if provided).</span>
+<span class="sd">        2. **Fetch or reuse** - if the target key is absent, unreadable, or forcibly refreshed, delegates to</span>
+<span class="sd">           :py:meth:`download_table` to query the MySQL server; otherwise loads the dataframe from disk.</span>
+<span class="sd">        3. **Persistence** - optionally stores the freshly downloaded dataframe back to disk, shrinking the</span>
+<span class="sd">           number of future network calls.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            table_key: The raw MySQL database (table) of interest. For example `mapping_session`, `xref`, `gene`.</span>
-<span class="sd">            usecols: The column of interest in the specified table. Short for &#39;use columns&#39;.</span>
-<span class="sd">            create_even_if_exist: If ``True``, independent of the status in the disk, the table will be downloaded.</span>
-<span class="sd">            save_after_calculation: If ``True``, the downloaded table will be stored in the disk, under a `h5` file at</span>
-<span class="sd">                the local directory specified in init method.</span>
-<span class="sd">            overwrite_even_if_exist: If ``True``, regardless of whether it is already saved in the disk, the program</span>
-<span class="sd">                re-saves removing the previous table with the same name.</span>
+<span class="sd">            table_key (str): Name of the MySQL table (e.g. ``&quot;gene&quot;``, ``&quot;xref&quot;``, ``&quot;mapping_session&quot;``).</span>
+<span class="sd">            usecols (list[str] | None): Column subset to retrieve. ``None`` (default) selects *all* columns.</span>
+<span class="sd">            create_even_if_exist (bool): Ignore any on-disk cache and re-download the table unconditionally.</span>
+<span class="sd">            save_after_calculation (bool): Persist the dataframe to the computed HDF5 path when ``True``.</span>
+<span class="sd">            overwrite_even_if_exist (bool): Replace an existing HDF5 key even when it is already present.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Raw table as a pandas DataFrame.</span>
+<span class="sd">            pandas.DataFrame: The requested raw table with column order mirroring *usecols* when supplied,</span>
+<span class="sd">                otherwise the server&#39;s natural order.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If the &#39;usecols&#39; is not specified correctly.</span>
+<span class="sd">            ValueError: If *usecols* is an empty list, not a list, or otherwise fails basic validation.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">usecols</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">usecols</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">usecols</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Empty &#39;usecols&#39; parameter, or &#39;usecols&#39; is not a list.&quot;</span><span class="p">)</span>
@@ -516,10 +593,14 @@
 <div class="viewcode-block" id="DatabaseManager.tables_in_disk">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.tables_in_disk">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">tables_in_disk</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieves the keys in the h5 file, which is associated with the DatabaseManager instance.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List all dataframes cached for this manager on local disk.</span>
+
+<span class="sd">        The helper inspects the HDF5 file located at the path generated by</span>
+<span class="sd">        :py:meth:`file_name` (``df_type=&quot;common&quot;``) and returns every key it contains.</span>
+<span class="sd">        When the file does not exist yet, an empty list is returned instead of raising.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            List of keys (also called hierarchy) in the h5 file.</span>
+<span class="sd">            list[str]: Sorted HDF5 keys corresponding to dataframes already materialised for this manager.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">_</span><span class="p">,</span> <span class="n">file_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="p">(</span><span class="s2">&quot;common&quot;</span><span class="p">,</span> <span class="s2">&quot;place_holder&quot;</span><span class="p">)</span>
 
@@ -533,19 +614,31 @@
 <div class="viewcode-block" id="DatabaseManager.download_table">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.download_table">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">download_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">usecols</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Downloads the raw table from MySQL server and extracts requested columns.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Download a raw Ensembl MySQL table and return it as a DataFrame.</span>
 
-<span class="sd">        The method is not generally expected to be used by the user. User is expected to use &#39;get_table&#39; instead.</span>
+<span class="sd">        The method forms the low-level backbone of all table acquisition in *IDTrackDocs*.  It opens a</span>
+<span class="sd">        direct connection to the Ensembl Core (or comparable) MySQL schema configured on the current</span>
+<span class="sd">        :py:class:`DatabaseManager` instance, issues a `SELECT` statement against *table_key*, converts</span>
+<span class="sd">        the results into a :py:class:`pandas.DataFrame`, and performs a minimal sanitisation pass</span>
+<span class="sd">        (bytes-to-string decoding, column subset validation, logging).  Public code is expected to call</span>
+<span class="sd">        :py:meth:`DatabaseManager.get_table`, which wraps this helper with caching and post-processing,</span>
+<span class="sd">        but keeping this routine separate allows fine-grained testing, mocking, and reuse in advanced</span>
+<span class="sd">        workflows.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            table_key: The raw MySQL database (table) of interest. For example `mapping_session`, `xref`, `gene`.</span>
-<span class="sd">            usecols: The column of interest in the specified table. Short for &#39;use columns&#39;.</span>
+<span class="sd">            table_key (str): Name of the raw table as it appears in the remote Ensembl database</span>
+<span class="sd">                (e.g. ``&#39;gene&#39;``, ``&#39;mapping_session&#39;``, ``&#39;xref&#39;``).  Must exist in the schema</span>
+<span class="sd">                returned by :py:meth:`DatabaseManager.mysql_database`.</span>
+<span class="sd">            usecols (Optional[list[str]]): Sequence of column names to project; *None* retrieves the</span>
+<span class="sd">                entire table.  Column order is preserved.  An empty list is treated the same as *None*.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Raw table as a pandas DataFrame.</span>
+<span class="sd">            pandas.DataFrame: A frame containing the requested columns in the exact order supplied via</span>
+<span class="sd">                *usecols* (or all columns if *usecols* is *None*).  Index is monotonic and zero-based.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If there is no column in the table.</span>
+<span class="sd">            ValueError: If any element of *usecols* is missing from *table_key*, or if the query returns</span>
+<span class="sd">                binary payloads that cannot be coerced into native Python types.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Base settings for MYSQL server.</span>
         <span class="n">which_mysql_server</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">mysql_settings</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="s2">&quot;database&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">mysql_database</span><span class="p">})</span>
@@ -595,10 +688,15 @@
 <div class="viewcode-block" id="DatabaseManager.available_tables_mysql">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.available_tables_mysql">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">available_tables_mysql</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fetches all the tables in the MySQL database of the instance.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Enumerate tables present in the selected Ensembl MySQL schema.</span>
+
+<span class="sd">        Intended to complement :py:meth:`available_databases_mysql`: while that</span>
+<span class="sd">        method lists *databases* (one per organism/release/assembly), this one will</span>
+<span class="sd">        drill into the active database and return the table names themselves, such</span>
+<span class="sd">        as ``&quot;gene&quot;``, ``&quot;transcript&quot;``, ``&quot;xref&quot;``, and so on.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            NotImplementedError: Not implemented.</span>
+<span class="sd">            NotImplementedError: Always - the table enumeration logic has not yet been written.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
 
@@ -606,10 +704,16 @@
 <div class="viewcode-block" id="DatabaseManager.get_release_date">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.get_release_date">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_release_date</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the associated date of release for each Ensembl release.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a mapping of Ensembl release numbers to their publication dates.</span>
+
+<span class="sd">        The future implementation will query the ``meta`` table of each reachable</span>
+<span class="sd">        release—or fall back to the Ensembl REST API—to build a dictionary such as</span>
+<span class="sd">        ``{105: date(2022, 11, 1), 106: date(2023, 2, 7), …}``.  Down-stream</span>
+<span class="sd">        routines can then translate between absolute dates and release numbers,</span>
+<span class="sd">        enabling chronology-aware analyses and reporting.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            NotImplementedError: Note implemented.</span>
+<span class="sd">            NotImplementedError: Always - date discovery is not yet implemented.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
 
@@ -618,16 +722,29 @@
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager._determine_usecols_ids">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_determine_usecols_ids</span><span class="p">(</span><span class="n">form</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Helper method to guide which columns are interesting for each form.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Determine column subsets needed to fetch identifier tables for a given Ensembl molecular form.</span>
+
+<span class="sd">        The helper translates a user-facing *form* string (``&quot;gene&quot;``, ``&quot;transcript&quot;``, or</span>
+<span class="sd">        ``&quot;translation&quot;``) into three ordered lists that drive low-level SQL selects throughout</span>
+<span class="sd">        *ID-track*.  Splitting the information this way lets public routines such as</span>
+<span class="sd">        :py:meth:`DatabaseManager.create_ids` assemble the minimal column set required for each</span>
+<span class="sd">        organism/release while still keeping associated keys available for later joins.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            form: Form of interest</span>
+<span class="sd">            form (str): Molecular form whose identifier columns are requested. Must be one of</span>
+<span class="sd">                :py:data:`idtrack._db.DB.forms_in_order` (``&quot;gene&quot;``, ``&quot;transcript&quot;``, or</span>
+<span class="sd">                ``&quot;translation&quot;``).</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Tuple of lists to be used further in the main methods.</span>
+<span class="sd">            tuple[list[str], list[str], list[str]]:</span>
+<span class="sd">                * **stable_id_version** - always ``[&quot;stable_id&quot;, &quot;version&quot;]``; the canonical ID and its</span>
+<span class="sd">                  version counter.</span>
+<span class="sd">                * **usecols_core** - primary-key column for *form* plus ``stable_id_version``.</span>
+<span class="sd">                * **usecols_asso** - foreign-key columns linking *form* to upstream forms, enabling</span>
+<span class="sd">                  later joins (e.g., ``[&quot;transcript_id&quot;, &quot;gene_id&quot;]`` for transcripts).</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If form is not either &#39;gene&#39;, &#39;transcript&#39;, or &#39;translation&#39;.</span>
+<span class="sd">            ValueError: If *form* is not in ``{&quot;gene&quot;, &quot;transcript&quot;, &quot;translation&quot;}``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">stable_id_version</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;stable_id&quot;</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span><span class="p">]</span>
 
@@ -652,14 +769,29 @@
 <div class="viewcode-block" id="DatabaseManager.create_ids">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_ids">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_ids</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieves the Ensembl IDs.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve and normalise raw Ensembl identifier records for the requested molecular form.</span>
+
+<span class="sd">        This method pulls the appropriate MySQL table(s) for *form*, copes with schema differences</span>
+<span class="sd">        across Ensembl releases (e.g. the historical ``*_stable_id`` split tables), coerces data</span>
+<span class="sd">        types, and standardises column names so that downstream graph-building steps all consume the</span>
+<span class="sd">        same shape.  It finishes by delegating to :py:meth:`DatabaseManager.version_uniformize` to</span>
+<span class="sd">        ensure the *Version* field is either a proper integer or ``NaN`` across the entire DataFrame.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            form: Form of interest, either &#39;gene&#39;, &#39;transcript&#39;, or &#39;translation&#39;.</span>
+<span class="sd">            form (str): Target molecular form - ``&quot;gene&quot;``, ``&quot;transcript&quot;``, or ``&quot;translation&quot;``.</span>
+<span class="sd">                Anything else triggers a :py:class:`ValueError`.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Dataframe of three columns: `gene_id`, `gene_stable_id`, and `gene_version`. The &#39;ID&#39; and &#39;Version&#39; need to</span>
-<span class="sd">            be concatanated afterwards.</span>
+<span class="sd">            pandas.DataFrame: A de-duplicated, index-reset table whose columns depend on *form*:</span>
+
+<span class="sd">                * **gene** - ``gene_id``, ``gene_stable_id``, ``gene_version``</span>
+<span class="sd">                * **transcript** - ``transcript_id``, ``gene_id``, ``transcript_stable_id``,</span>
+<span class="sd">                  ``transcript_version``</span>
+<span class="sd">                * **translation** - ``translation_id``, ``transcript_id``, ``translation_stable_id``,</span>
+<span class="sd">                  ``translation_version``</span>
+
+<span class="sd">                All ID columns are ``int64`` except the ``*_stable_id`` strings; version columns are</span>
+<span class="sd">                ``int64`` or ``float64`` (with ``NaN`` when absent).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Determine which columns are interesting for each form.</span>
         <span class="n">stable_id_version</span><span class="p">,</span> <span class="n">usecols_core</span><span class="p">,</span> <span class="n">usecols_asso</span> <span class="o">=</span> <span class="n">DatabaseManager</span><span class="o">.</span><span class="n">_determine_usecols_ids</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
@@ -698,11 +830,23 @@
 <div class="viewcode-block" id="DatabaseManager.create_relation_current">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_relation_current">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_relation_current</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieves the relationship between different forms of Ensembl IDs.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build a current-release gene-transcript-translation mapping table.</span>
+
+<span class="sd">        The routine fetches the *raw* stable-ID/​version tables for genes,</span>
+<span class="sd">        transcripts and translations via :py:meth:`DatabaseManager.get_db`, merges</span>
+<span class="sd">        them into a single wide frame, and then delegates to</span>
+<span class="sd">        :py:meth:`DatabaseManager._create_relation_helper` to harmonise version</span>
+<span class="sd">        columns and compress the information into three canonical node labels</span>
+<span class="sd">        (``&quot;&lt;stable_id&gt;.&lt;version&gt;&quot;``).  The resulting mapping is the authoritative</span>
+<span class="sd">        per-release link between molecular forms and is consumed by downstream</span>
+<span class="sd">        graph-building utilities such as :py:meth:`DatabaseManager.create_graph`.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Dataframe of three columns: `gene`, `transcript`, and `translation`. Note that there are some empty cells</span>
-<span class="sd">            in `translation` column as not all transcripts has translations.</span>
+<span class="sd">            pandas.DataFrame: Three columns—``gene``, ``transcript``, and</span>
+<span class="sd">            ``translation``—with one row per transcript.  The ``translation`` column</span>
+<span class="sd">            may contain empty strings where non-coding transcripts have no</span>
+<span class="sd">            peptide.  All data are UTF-8 strings; duplicates are removed and the</span>
+<span class="sd">            index is reset.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Get required gene, transcript and translation IDs</span>
         <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;idsraw_gene&quot;</span><span class="p">,</span> <span class="n">save_after_calculation</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">store_raw_always</span><span class="p">)</span>
@@ -724,15 +868,22 @@
 <div class="viewcode-block" id="DatabaseManager.create_relation_archive">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_relation_archive">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_relation_archive</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieves the relationship between different forms of Ensembl IDs for all Ensembl releases.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve a cross-release gene-transcript-translation mapping table.</span>
 
-<span class="sd">        It is not recommended as there are some missing rows. Instead use</span>
-<span class="sd">        :py:meth:`DatabaseManager.create_relation_current` for all Ensembl releases separately,</span>
-<span class="sd">        and concatanate the resulting data frames.</span>
+<span class="sd">        This legacy helper pulls the Ensembl ``gene_archive`` table—spanning *all*</span>
+<span class="sd">        releases for the current organism—via</span>
+<span class="sd">        :py:meth:`DatabaseManager.get_table`, drops columns unrelated to identifier</span>
+<span class="sd">        mapping, and passes the result to</span>
+<span class="sd">        :py:meth:`DatabaseManager._create_relation_helper`.  **Because the archive</span>
+<span class="sd">        contains known gaps, the preferred workflow is to call**</span>
+<span class="sd">        :py:meth:`DatabaseManager.create_relation_current` **once per release and</span>
+<span class="sd">        concatenate the outputs.**</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Dataframe of three columns: `gene`, `transcript`, and `translation`. Note that there are some empty cells</span>
-<span class="sd">            in `translation` column as not all transcripts has translations.</span>
+<span class="sd">            pandas.DataFrame: Same schema as</span>
+<span class="sd">                :py:meth:`DatabaseManager.create_relation_current`—``gene``,</span>
+<span class="sd">                ``transcript``, ``translation``—but potentially with missing rows</span>
+<span class="sd">                because Ensembl did not always back-populate older releases.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Not recommended method: Use &#39;create_relation_current&#39; instead.&quot;</span><span class="p">)</span>
         <span class="c1"># Get the table from the server</span>
@@ -746,21 +897,31 @@
 <div class="viewcode-block" id="DatabaseManager._create_relation_helper">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager._create_relation_helper">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">_create_relation_helper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Helper method for creating &#39;relationship&#39; dataframes for two methods.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert an ID/version matrix into the canonical three-column relationship table.</span>
 
-<span class="sd">        The two methods is :py:meth:`DatabaseManager.create_relation_current` and</span>
-<span class="sd">        :py:meth:`DatabaseManager.create_relation_archive`. The method is not expected to be used by</span>
-<span class="sd">        the user.</span>
+<span class="sd">        The helper is shared by :py:meth:`DatabaseManager.create_relation_current`</span>
+<span class="sd">        and :py:meth:`DatabaseManager.create_relation_archive` and is not intended</span>
+<span class="sd">        for direct use.  It validates the incoming frame, fixes inconsistent</span>
+<span class="sd">        version numbers (via :py:meth:`DatabaseManager.version_fix` and</span>
+<span class="sd">        :py:meth:`DatabaseManager.version_fix_incomplete`), converts missing</span>
+<span class="sd">        translations to ``NaN``-compatible floats, casts all stable-ID columns to</span>
+<span class="sd">        string, and finally compresses each *ID + version* pair into the compact</span>
+<span class="sd">        node label used throughout *ID-track* graphs.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            df: Output of these two methods mentioned.</span>
+<span class="sd">            df (pandas.DataFrame): A six-column frame with exactly the following</span>
+<span class="sd">                names (order irrelevant): ``gene_stable_id``, ``gene_version``,</span>
+<span class="sd">                ``transcript_stable_id``, ``transcript_version``,</span>
+<span class="sd">                ``translation_stable_id``, ``translation_version``.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Dataframe of three columns `gene`, `transcript`, and `translation`. Note that there are some empty</span>
-<span class="sd">            cells in `translation` column as not all transcripts has translations.</span>
+<span class="sd">            pandas.DataFrame: Three columns—``gene``, ``transcript``,</span>
+<span class="sd">                ``translation``—deduplicated and index-reset, ready for graph</span>
+<span class="sd">                construction.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If the input dataframe is not with the correct number of columns or column names.</span>
+<span class="sd">            ValueError: If *df* does not contain the required six columns or if</span>
+<span class="sd">                version columns cannot be coerced to the expected numeric dtype.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Make sure there are correct number and name of columns</span>
         <span class="n">cols</span> <span class="o">=</span> <span class="p">{</span>
@@ -802,20 +963,34 @@
 <div class="viewcode-block" id="DatabaseManager.create_id_history">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_id_history">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_id_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">narrow</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieves historical releationship between Ensembl IDs of a given form.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve historical relationships between successive Ensembl stable IDs.</span>
+
+<span class="sd">        Build a cross-release lineage table mapping every obsolete ID version to its immediate successor for the</span>
+<span class="sd">        configured *organism*, *form*, and release window.  The information is assembled from the Core tables</span>
+<span class="sd">        ``stable_id_event`` and ``mapping_session`` and then normalised so that all identifiers follow the canonical</span>
+<span class="sd">        ``&lt;stable_id&gt;.&lt;version&gt;`` convention.  Downstream graph-construction utilities depend on this table to</span>
+<span class="sd">        reconstruct how genes, transcripts, or translations evolve across Ensembl releases.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            narrow:  Determine whether a some more information should be added between Ensembl gene IDs. For example,</span>
-<span class="sd">                which genome assembly is used, or when was the connection is established. For usual uses, no need to</span>
-<span class="sd">                set it ``True``.</span>
+<span class="sd">            narrow (bool): If ``True`` drop auxiliary columns (mapping session metadata, assembly labels, creation</span>
+<span class="sd">                timestamps, etc.) to minimise on-disk footprint; otherwise return the full schema for exploratory</span>
+<span class="sd">                analyses.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Dataframe of following columns; `old_stable_id`, `old_version`, `new_stable_id`, `new_version`, `score`,</span>
-<span class="sd">            `old_release`, `new_release`. Note that there are some empty cells in new and old Ensembl IDs, since</span>
-<span class="sd">            there are &#39;retirement&#39; events or &#39;birth&#39; events of IDs.</span>
+<span class="sd">            pandas.DataFrame: Seven-column table with the following fields, ordered as listed—</span>
+
+<span class="sd">                * ``old_stable_id`` - obsolete identifier (empty string for “birth” events).</span>
+<span class="sd">                * ``old_version``   - version number paired with *old_stable_id*.</span>
+<span class="sd">                * ``new_stable_id`` - successor identifier (empty string for “retirement” events).</span>
+<span class="sd">                * ``new_version``   - version paired with *new_stable_id*.</span>
+<span class="sd">                * ``score``         - homology score reported by Ensembl (``NaN`` if unavailable).</span>
+<span class="sd">                * ``old_release``   - Ensembl release where the *old* identifier last appeared.</span>
+<span class="sd">                * ``new_release``   - release where the *new* identifier first appeared.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If the delimiter :py:attr:`DB.id_ver_delimiter` is in Ensembl IDs.</span>
+<span class="sd">            ValueError: If the identifier delimiter</span>
+<span class="sd">                :py:data:`idtrack._db.DB.id_ver_delimiter` is found inside any ``*_stable_id`` field, indicating</span>
+<span class="sd">                malformed input.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Get the tables from the server</span>
         <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_table</span><span class="p">(</span><span class="s2">&quot;stable_id_event&quot;</span><span class="p">,</span> <span class="n">usecols</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">save_after_calculation</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">store_raw_always</span><span class="p">)</span>
@@ -868,20 +1043,28 @@
 <div class="viewcode-block" id="DatabaseManager.create_id_history_fixed">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_id_history_fixed">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_id_history_fixed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">narrow</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">inspect</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Depracated method alternative for &#39;create_id_history&#39;, which also corrects the resulting dataframe.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a corrected ID-history table that repairs cyclic or duplicated version transitions (deprecated).</span>
 
-<span class="sd">        This method created a fixed version of idhistory. It fixes the problems seen in some exceptional cases like</span>
-<span class="sd">        Homo sapiens ``ENSG00000232423`` at release 105. Raw version gives the order of versions as follows: 1-2, 2-3,</span>
-<span class="sd">        1-2, 2-3 and so on. However, after second connection, version 1 should be already lost, the last active version</span>
-<span class="sd">        should be 3. For this reason, 1-2 connection should be corrected as 3-2. This method does this.</span>
+<span class="sd">        Certain edge cases in the raw ``idhistory`` extraction—e.g. *Homo sapiens* ``ENSG00000232423`` at release 105—</span>
+<span class="sd">        produce sequences like ``1 → 2, 2 → 3, 1 → 2`` where an already retired version resurfaces later on.</span>
+<span class="sd">        Such cycles violate the monotonic version semantics assumed by graph algorithms.  This helper rewrites the</span>
+<span class="sd">        offending rows so that once a version is superseded it never reappears, transforming the above sequence into</span>
+<span class="sd">        the logically consistent ``3 → 2``.  The routine is retained for reproducibility but superseded by</span>
+<span class="sd">        :py:meth:`DatabaseManager.create_id_history`.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            narrow: The same parameter in :py:attr:`DatabaseManager.create_id_history.narrow`.</span>
-<span class="sd">            inspect: If inspect is ``True``, then add the newly created columns as new ones into the existing one.</span>
+<span class="sd">            narrow (bool): Propagated to the underlying data fetch—when ``True`` start from the column-reduced</span>
+<span class="sd">                ``idhistory_narrow`` view instead of the full table.</span>
+<span class="sd">            inspect (bool): When ``True`` add diagnostic columns (e.g. ``changed_old`` and ``changed_new``) to aid</span>
+<span class="sd">                manual auditing of the corrections; when ``False`` return only the cleaned canonical schema.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Dataframe of following columns: `old_stable_id`, `old_version`, `new_stable_id`, `new_version`, `score`,</span>
-<span class="sd">            `old_release`, `new_release`.</span>
+<span class="sd">            pandas.DataFrame: Corrected seven-column table ``old_stable_id``, ``old_version``, ``new_stable_id``,</span>
+<span class="sd">                ``new_version``, ``score``, ``old_release``, ``new_release``—ready for serialization and downstream use.</span>
+
+<span class="sd">        Note:</span>
+<span class="sd">            This function is deprecated and will be removed in a future major release once the core extractor fully</span>
+<span class="sd">            addresses the ordering anomaly.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Get the raw version of idhistory first, and sort.</span>
         <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;idhistory&quot;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">narrow</span> <span class="k">else</span> <span class="s2">&quot;idhistory_narrow&quot;</span><span class="p">)</span>
@@ -941,10 +1124,17 @@
 <div class="viewcode-block" id="DatabaseManager.create_external_db">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_external_db">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_external_db</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filter_mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieves External identifier relationship. Returns the connections or databases only.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve Ensembl-external-ID relationships and/or database statistics.</span>
 
-<span class="sd">        The method actually based on a rationele to the following MySQL query, not exactly but quite close to the</span>
-<span class="sd">        following query.</span>
+<span class="sd">        This consolidates a complex SQL join—spanning Ensembl core tables *gene*, *transcript*, *translation* and</span>
+<span class="sd">        the cross-reference tables *xref*, *object_xref*, *identity_xref*, *external_db*, and *external_synonym*—into a</span>
+<span class="sd">        single pandas dataframe. It enables downstream analyses such as mapping Ensembl gene models to</span>
+<span class="sd">        UniProt, RefSeq, or CCDS identifiers, or summarising which external sources are represented in a given Ensembl</span>
+<span class="sd">        release.  The result type and granularity are controlled by *filter_mode*, allowing either the raw relationship</span>
+<span class="sd">        rows or a per-database count to be returned.</span>
+
+<span class="sd">        The query executed is conceptually equivalent to the (simplified) MySQL statement below,</span>
+<span class="sd">        though the actual SQL is constructed programmatically for flexibility and performance:</span>
 
 <span class="sd">        .. code-block:: sql</span>
 
@@ -959,41 +1149,55 @@
 <span class="sd">            LEFT JOIN external_synonym es ON (x.xref_id = es.xref_id)</span>
 <span class="sd">            LIMIT 10;</span>
 
-<span class="sd">        Instead of ``FROM gene g``, it is possible to be a bit more specific by replacing the following:</span>
+<span class="sd">        When tighter genomic scoping is required the *gene* table can be prefixed with *coord_system* and *seq_region*:</span>
 
 <span class="sd">        .. code-block:: sql</span>
 
 <span class="sd">            FROM coord_system cs</span>
-<span class="sd">            JOIN seq_region sr USING (coord_system_id)</span>
-<span class="sd">            JOIN gene g USING (seq_region_id)</span>
+<span class="sd">            JOIN seq_region  sr USING (coord_system_id)</span>
+<span class="sd">            JOIN gene        g  USING (seq_region_id)</span>
 
-<span class="sd">        The MySQL server can be following for the experimentation purpose.</span>
+<span class="sd">        You can experiment interactively against the public Ensembl MySQL mirror:</span>
 
 <span class="sd">        .. code-block:: bash</span>
 
 <span class="sd">            mysql --user=anonymous --host=ensembldb.ensembl.org -D homo_sapiens_core_105_38 -A</span>
-<span class="sd">            # As written in the following link.</span>
+<span class="sd">            # Schema reference:</span>
 <span class="sd">            # https://m.ensembl.org/info/docs/api/core/core_schema.html</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            filter_mode: Determine what to return after retrieving the data.</span>
-<span class="sd">                One of the followings: `relevant`, `all`, `database`, `relevant-database`.</span>
+<span class="sd">            filter_mode (str): Controls both the **row subset** and the **output schema**. Must be one of:</span>
 
-<span class="sd">                - `relevant` and `all`:</span>
-<span class="sd">                  Returns the relationship information. &#39;all&#39; returns all relationships while</span>
-<span class="sd">                  &#39;relevant&#39; returns only those indicated by ``ExternalDatabases`` class.</span>
-<span class="sd">                  The result is a dataframe with &#39;release&#39;, &#39;graph_id&#39;, &#39;id_db&#39;, &#39;name_db&#39;, &#39;ensembl_identity&#39;, and</span>
-<span class="sd">                  &#39;xref_identity&#39;.</span>
-<span class="sd">                - `database` and `relevant-database`:</span>
-<span class="sd">                  Returns the a dataframe indicating databases. The resulting dataframe</span>
-<span class="sd">                  contain two columns: &#39;name_db&#39; and &#39;count&#39;.</span>
+<span class="sd">                * ``&quot;all&quot;`` - return **every** mapping found in MySQL, no post-filtering applied.</span>
+<span class="sd">                * ``&quot;relevant&quot;`` - return only mappings whose external database is marked *Include: true* in the</span>
+<span class="sd">                    :py:meth:`ExternalDatabases.give_list_for_case` YAML configuration.</span>
+<span class="sd">                * ``&quot;database&quot;`` - return a two-column summary (``name_db``, ``count``) for **all** external databases.</span>
+<span class="sd">                * ``&quot;relevant-database&quot;`` - as above, but restricted to databases flagged *Include: true*.</span>
+<span class="sd">                    The special values ``&quot;relevant&quot;`` and ``&quot;relevant-database&quot;`` implicitly consult the cached</span>
+<span class="sd">                    :py:attr:`external_inst` to honour the user&#39;s curated allow-list.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Dataframe of specifified type via ``filter_mode``.</span>
+<span class="sd">            pandas.DataFrame:</span>
+<span class="sd">                * For ``&quot;all&quot;`` / ``&quot;relevant&quot;`` - six-column frame</span>
+<span class="sd">                    ``[&quot;release&quot;, &quot;graph_id&quot;, &quot;id_db&quot;, &quot;name_db&quot;, &quot;ensembl_identity&quot;, &quot;xref_identity&quot;]`` holding one</span>
+<span class="sd">                    row per Ensembl→external identifier edge. ``graph_id`` is the Ensembl stable ID (+version), while</span>
+<span class="sd">                    the two *identity* columns store Smith-Waterman percent identities (*float16*) for QC.</span>
+<span class="sd">                * For ``&quot;database&quot;`` / ``&quot;relevant-database&quot;`` - two-column frame</span>
+<span class="sd">                    ``[&quot;name_db&quot;, &quot;count&quot;]`` giving how many distinct ``graph_id`` values each external database</span>
+<span class="sd">                    touches. ``count`` is an ``int64``.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If incorrect entry for ``filter_mode`` parameter, or if there is an inconsistency between</span>
-<span class="sd">                external `yaml` file and current state of ``DatabaseManager``.</span>
+<span class="sd">            ValueError: If *filter_mode* is not one of the accepted literals **or** if the YAML allow-list claims a</span>
+<span class="sd">                database that is absent from the retrieved mappings—indicating the configuration and MySQL data are</span>
+<span class="sd">                out of sync.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            *Synonym handling* - any synonym brought in from ``external_synonym`` is prefixed with</span>
+<span class="sd">            :py:data:`DB.synonym_id_nodes_prefix`, and its ``name_db`` is likewise prefixed so that synonym nodes remain</span>
+<span class="sd">            distinguishable during graph building.</span>
+<span class="sd">            *Caching* - the heavy MySQL queries are executed only if the processed frame is not already present in the</span>
+<span class="sd">            manager&#39;s per-organism HDF5 cache; otherwise the cached frame is read from disk, ensuring repeat calls are</span>
+<span class="sd">            inexpensive.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Get the necessary tables from the server</span>
         <span class="n">m</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;save_after_calculation&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_raw_always</span><span class="p">}</span>
@@ -1108,22 +1312,24 @@
 <div class="viewcode-block" id="DatabaseManager.create_database_content">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_database_content">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_database_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">just_download</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrives all External database information from the server to feed the ``ExternalDatabase`` class.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve and optionally cache external-database metadata for every assembly, release, and form.</span>
 
-<span class="sd">        It is quite costly operation, potentially takes time to be completed. It helps ``ExternalDatabase`` class to</span>
-<span class="sd">        create the ``yaml`` file mentioned. It downloads for all assemblies, all Ensembl releases and all forms</span>
-<span class="sd">        available.</span>
+<span class="sd">        The helper iterates over *all* genome assemblies defined in</span>
+<span class="sd">        :py:data:`idtrack._db.DB.assembly_mysqlport_priority`, every available Ensembl release for each assembly,</span>
+<span class="sd">        and every identifier *form* supported by the package, downloading the ``external_database`` table for</span>
+<span class="sd">        each combination.  The resulting frames are concatenated, enriched with ``assembly``, ``release``,</span>
+<span class="sd">        ``form``, and ``organism`` columns, and returned to the caller.  When ``just_download`` is ``True`` the</span>
+<span class="sd">        downloads are still performed (ensuring they are cached on disk for future runs) but an **empty**</span>
+<span class="sd">        dataframe is returned to avoid unnecessary memory use.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            just_download (bool):</span>
-<span class="sd">                * ``False`` (default) - concatenate all intermediate results</span>
-<span class="sd">                  into one DataFrame and return it.</span>
-<span class="sd">                * ``True`` - perform the downloads so they are cached on disk</span>
-<span class="sd">                  but return an **empty** DataFrame.</span>
+<span class="sd">                * **False** - concatenate intermediate results and return the union dataframe (default).</span>
+<span class="sd">                * **True** - download and cache each frame but return an empty dataframe.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            The output of ``create_external_db`` when `filter_mode` `relevant-database`. Adds `assembly`, `release`,</span>
-<span class="sd">            and `form` columns to the resulting dataframe.</span>
+<span class="sd">            pandas.DataFrame: External-database relationships augmented with assembly, release, form, and organism</span>
+<span class="sd">                columns.  Empty when ``just_download`` is ``True``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>  <span class="c1"># For all assemblies possible.</span>
@@ -1151,14 +1357,21 @@
 <div class="viewcode-block" id="DatabaseManager.create_release_id">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_release_id">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_release_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieves the Ensembl IDs and applies `version_fix` method to refine it.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return deduplicated stable-identifier/version pairs for the current form and release.</span>
+
+<span class="sd">        Raw identifiers are fetched via :py:meth:`DatabaseManager.get_db`, normalised with</span>
+<span class="sd">        :py:meth:`DatabaseManager.version_fix`, trimmed to the canonical columns, and sanity-checked.  Two</span>
+<span class="sd">        integrity rules are enforced: (1) the delimiter</span>
+<span class="sd">        :py:data:`idtrack._db.DB.id_ver_delimiter` must **not** appear inside any stable identifier, and</span>
+<span class="sd">        (2) every stable identifier must be unique after deduplication.  Violations raise</span>
+<span class="sd">        :py:class:`ValueError`.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            A dataframe with ``f&#39;{form}_stable_id&#39;`` and ``f&#39;{form}_version&#39;``.</span>
+<span class="sd">            pandas.DataFrame: Two-column dataframe ``[{form}_stable_id, {form}_version]`` with duplicates removed.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If the delimiter :py:attr:`DB.id_ver_delimiter` is in Ensembl IDs, or if the stable IDs are</span>
-<span class="sd">                not unique.</span>
+<span class="sd">            ValueError: If the delimiter is present inside any stable identifier or if identifiers are not</span>
+<span class="sd">                unique after deduplication.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">dbm_the_ids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;idsraw_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">form</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">dbm_the_ids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">version_fix</span><span class="p">(</span><span class="n">dbm_the_ids</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">form</span><span class="si">}</span><span class="s2">_version&quot;</span><span class="p">)</span>
@@ -1178,16 +1391,21 @@
 
 <div class="viewcode-block" id="DatabaseManager.check_if_change_assembly_works">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.check_if_change_assembly_works">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">check_if_change_assembly_works</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_manager</span><span class="p">,</span> <span class="n">target_assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Test whether ``change_assembly`` succeeds for *target_assembly*.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_if_change_assembly_works</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_manager</span><span class="p">:</span> <span class="s2">&quot;DatabaseManager&quot;</span><span class="p">,</span> <span class="n">target_assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Evaluate whether *db_manager* can be cloned to operate on *target_assembly*.</span>
+
+<span class="sd">        A lightweight health-check that calls :py:meth:`DatabaseManager.change_assembly` inside a</span>
+<span class="sd">        ``try/except`` block and converts the outcome to a boolean flag rather than letting the exception</span>
+<span class="sd">        propagate.  It allows batch workflows to skip assemblies that are unavailable or invalid without</span>
+<span class="sd">        interrupting processing.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            db_manager (DatabaseManager): A working manager to clone.</span>
-<span class="sd">            target_assembly (int): Assembly code to probe.</span>
+<span class="sd">            db_manager (DatabaseManager): Manager instance to probe.</span>
+<span class="sd">            target_assembly (int): Genome-assembly code to test (a key of</span>
+<span class="sd">                :py:data:`idtrack._db.DB.assembly_mysqlport_priority`).</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            bool: ``True`` if the new manager could be instantiated without</span>
-<span class="sd">            raising ``ValueError``; ``False`` otherwise.</span>
+<span class="sd">            bool: ``True`` if the assembly switch succeeds without raising :py:class:`ValueError`; ``False`` otherwise.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">db_manager</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">target_assembly</span><span class="p">)</span>
@@ -1198,23 +1416,46 @@
 
 <div class="viewcode-block" id="DatabaseManager.create_external_all">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_external_all">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">create_external_all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">return_mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Download external databases for all assemblies.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_external_all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">return_mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">groupby</span><span class="o">.</span><span class="n">generic</span><span class="o">.</span><span class="n">DataFrameGroupBy</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Download and collate cross-reference mappings from every supported genome assembly.</span>
 
-<span class="sd">        The method considers the &#39;priority&#39; of the assemblies indicated in</span>
-<span class="sd">        :py:attr:`DB.assembly_mysqlport_priority`. The method is not found in &#39;get_db&#39; so the result is not saved.</span>
+<span class="sd">        The manager cycles through every genome assembly recognised for the current organism (ordered by</span>
+<span class="sd">        :py:data:`idtrack._db.DB.assembly_mysqlport_priority`), fetches the *external_relevant* mapping table</span>
+<span class="sd">        for each via :py:meth:`~DatabaseManager.get_db`, labels every row with its source assembly, and finally</span>
+<span class="sd">        concatenates the tables.  Because this helper is intended for **ad-hoc inspection only**, it bypasses</span>
+<span class="sd">        the :py:meth:`~DatabaseManager.get_db` caching layer and therefore **never writes** the result to the</span>
+<span class="sd">        local repository.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            return_mode: Either one of three choices `all`, `unique`, `duplicated`. There is currently no use case for</span>
-<span class="sd">                `unique`, `duplicated` by the program.</span>
+<span class="sd">            return_mode (str): Strategy for handling rows that appear in more than one assembly.</span>
+
+<span class="sd">                - ``&quot;all&quot;``</span>
+<span class="sd">                    Keep one copy of every unique</span>
+<span class="sd">                    ``(release, graph_id, id_db, name_db, ensembl_identity, xref_identity, assembly)``</span>
+<span class="sd">                    combination.  Duplicates are resolved *within* each assembly only.</span>
+
+<span class="sd">                - ``&quot;unique&quot;``</span>
+<span class="sd">                    Keep one copy of every unique</span>
+<span class="sd">                    ``(release, graph_id, id_db, name_db, ensembl_identity, xref_identity)`` combination *across*</span>
+<span class="sd">                    **all** assemblies, preferring the assembly with the highest</span>
+<span class="sd">                    priority. *(Currently no downstream use case.)*</span>
+
+<span class="sd">                - ``&quot;duplicated&quot;``</span>
+<span class="sd">                    Return **only** the rows that occur in more than one assembly as a</span>
+<span class="sd">                    :py:class:`pandas.core.groupby.generic.DataFrameGroupBy`, keyed by the same column set used for</span>
+<span class="sd">                    ``&quot;unique&quot;``. *(Currently no downstream use case.)*</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Returns the relationship information indicated by ``ExternalDatabases`` class.</span>
-<span class="sd">            The result is a dataframe with &#39;release&#39;, &#39;graph_id&#39;, &#39;id_db&#39;, &#39;name_db&#39;, &#39;ensembl_identity&#39;, and</span>
-<span class="sd">            &#39;xref_identity&#39;, and also &#39;assembly&#39;.</span>
+<span class="sd">            Union[pandas.DataFrame, pandas.core.groupby.generic.DataFrameGroupBy]:</span>
+<span class="sd">                - If *return_mode* is ``&quot;all&quot;`` or ``&quot;unique&quot;``,</span>
+<span class="sd">                    a de-duplicated cross-reference table with the</span>
+<span class="sd">                    columns ``release``, ``graph_id``, ``id_db``, ``name_db``, ``ensembl_identity``, ``xref_identity``,</span>
+<span class="sd">                    and ``assembly``.</span>
+<span class="sd">                - If *return_mode* is ``&quot;duplicated&quot;``,</span>
+<span class="sd">                    a group-by view containing only duplicated entries.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If `return_mode` is not among the possible ones.</span>
+<span class="sd">            ValueError: If *return_mode* is not ``&quot;all&quot;``, ``&quot;unique&quot;``, or ``&quot;duplicated&quot;``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">ass</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="n">give_type</span><span class="o">=</span><span class="s2">&quot;assembly&quot;</span><span class="p">)</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
@@ -1259,16 +1500,31 @@
 <div class="viewcode-block" id="DatabaseManager.create_version_info">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_version_info">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_version_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check whether all Ensembl release has Ensembl IDs with versions or without versions.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Determine whether each Ensembl release stores identifiers with or without version suffixes.</span>
 
-<span class="sd">        Some organisms such as S. cerevisiae has Ensembl identifiers that has no &#39;Version&#39;, but only &#39;ID&#39;. The method</span>
-<span class="sd">        looks whether this is the case for all the Ensembl releases for a given organism.</span>
+<span class="sd">        Ensembl stable identifiers can appear either *with* a ``.version`` facet (e.g. *ENSG00000139618.17*)</span>
+<span class="sd">        or *without* it (e.g. *YAL001C* in *S. cerevisiae*).  For robust cross-release tracking the package</span>
+<span class="sd">        needs to know which convention applies to every release of the current organism.  The method loops</span>
+<span class="sd">        over :py:attr:`available_releases`, downloads the raw identifier table for *self.form*, and inspects</span>
+<span class="sd">        the ``&lt;form&gt;_version`` column:</span>
+
+<span class="sd">        * **All values NaN** → the release uses *unversioned* identifiers.</span>
+<span class="sd">        * **No values NaN**  → the release uses *versioned* identifiers.</span>
+<span class="sd">        * **Mixed NaN / non-NaN** → unsupported; raises :py:class:`NotImplementedError`.</span>
+
+<span class="sd">        The outcome is encoded as a Boolean flag per release and later consumed by</span>
+<span class="sd">        :py:meth:`~DatabaseManager.check_version_info` to decide whether version strings should be kept,</span>
+<span class="sd">        stripped, or synthesised.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            A dataframe with two columns as `ensembl_release`, `version_info`.</span>
+<span class="sd">            pandas.DataFrame: Two-column table with:</span>
+<span class="sd">                * ``ensembl_release`` - integer release number.</span>
+<span class="sd">                * ``version_info``   - ``True`` if *all* identifiers **lack** a version suffix, ``False`` if</span>
+<span class="sd">                    *all* identifiers **include** a version suffix.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            NotImplementedError: If some Ensembl identifiers without versions, some are not.&quot;</span>
+<span class="sd">            NotImplementedError: If any individual release contains a mixture of versioned and unversioned</span>
+<span class="sd">                identifiers, indicating an inconsistent upstream annotation.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">ver</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
 
@@ -1301,22 +1557,55 @@
         <span class="n">save_after_calculation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">overwrite_even_if_exist</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;For saving, exporting, and naming convention. Main method to retrieve the data sources.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve or create a cached data table defined by an indicator string.</span>
+
+<span class="sd">        This method is the central gateway for *all* tabular resources managed by</span>
+<span class="sd">        :py:class:`~DatabaseManager`.  It interprets a compact *indicator* string,</span>
+<span class="sd">        decides whether the requested table already exists in the local HDF5</span>
+<span class="sd">        repository, and either loads the cached copy or triggers the appropriate</span>
+<span class="sd">        builder (``create_*`` helper) to download/assemble it.  A consistent naming</span>
+<span class="sd">        convention is maintained so that subsequent calls with the same indicator</span>
+<span class="sd">        transparently reuse the on-disk cache, ensuring reproducible builds and</span>
+<span class="sd">        minimal network traffic.</span>
+
+<span class="sd">        **Supported base indicators**</span>
+
+<span class="sd">        * ``external`` — cross-reference database registry; optional qualifier</span>
+<span class="sd">            ``relevant`` | ``database`` | ``relevant-database`` narrows the view.</span>
+<span class="sd">        * ``idsraw`` — raw Ensembl identifiers for a given form *(``gene``,</span>
+<span class="sd">          ``transcript``, ``translation``)*; requires the form as qualifier.</span>
+<span class="sd">        * ``ids`` — release-specific identifier table (no qualifier).</span>
+<span class="sd">        * ``externalcontent`` — summary of per-database content.</span>
+<span class="sd">        * ``relationcurrent`` — current gene/ID relationships.</span>
+<span class="sd">        * ``relationarchive`` — historical gene/ID relationships across releases.</span>
+<span class="sd">        * ``idhistory`` — full ID history; qualifier ``narrow`` restricts to current IDs.</span>
+<span class="sd">        * ``versioninfo`` — version comparison across releases.</span>
+<span class="sd">        * ``availabledatabases`` — list of locally cacheable resources.</span>
+
+<span class="sd">        Additional indicators may be introduced by subclass extensions; consult the</span>
+<span class="sd">        module documentation for the authoritative list.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            df_indicator: A string indicating which dataframe the user is requested to access.</span>
-<span class="sd">                It should contain only one or zero &#39;_&#39; character.</span>
-<span class="sd">            create_even_if_exist: If ``True``, independent of the status in the disk, the table will be downloaded.</span>
-<span class="sd">            save_after_calculation: If ``True``, the downloaded table will be stored in the disk, under a `h5` file at</span>
-<span class="sd">                the local directory specified in init method.</span>
-<span class="sd">            overwrite_even_if_exist: If ``True``, regardless of whether it is already saved in the disk, the program</span>
-<span class="sd">                re-saves removing the previous table with the same name.</span>
+<span class="sd">            df_indicator (str): Compact descriptor of the table to retrieve.  Must</span>
+<span class="sd">                follow the ``base[qualifier]`` pattern described above.</span>
+<span class="sd">            create_even_if_exist (bool): Force a rebuild/download even if</span>
+<span class="sd">                a cached copy is present.  Defaults to ``False``.</span>
+<span class="sd">            save_after_calculation (bool): Persist a newly created table</span>
+<span class="sd">                to the local HDF5 store.  Has no effect when the table is merely</span>
+<span class="sd">                loaded from disk.  Defaults to ``True``.</span>
+<span class="sd">            overwrite_even_if_exist (bool): When saving, replace an</span>
+<span class="sd">                existing HDF5 key with the same hierarchy (file-internal path).</span>
+<span class="sd">                Defaults to ``False``.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            The data of interest depending on `df_indicator` parameter.</span>
+<span class="sd">            pandas.DataFrame | pandas.Series: The requested dataset.  The exact</span>
+<span class="sd">            shape, index, and column layout depend on ``df_indicator``; see the</span>
+<span class="sd">            indicator list above for semantic details.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If `df_indicator` parameter is not in specified format.</span>
+<span class="sd">            ValueError: If *df_indicator* is malformed, references an unsupported</span>
+<span class="sd">                resource, or its qualifier violates the expected pattern (e.g.,</span>
+<span class="sd">                missing form for ``idsraw``).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">check_exist_as_diff_release</span><span class="p">(</span><span class="n">_df_type</span><span class="p">,</span> <span class="n">_df_indicator</span><span class="p">):</span>
@@ -1434,21 +1723,48 @@
 <div class="viewcode-block" id="DatabaseManager.file_name">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.file_name">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">file_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">ensembl_release</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Determine file name for reading/writing into h5 file based on dataframe type.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve HDF5 hierarchy key and absolute file path for a dataframe request.</span>
 
-<span class="sd">        The method is not expected to be used by the user.</span>
+<span class="sd">        This internal helper centralises every rule that :py:class:`DatabaseManager` uses to build HDF5</span>
+<span class="sd">        *hierarchy* keys and their corresponding on-disk filenames, ensuring that any two call-sites</span>
+<span class="sd">        confronted with the same combination of organism, genome assembly, Ensembl release, dataframe</span>
+<span class="sd">        *kind*, and optional column subset produce **identical** results.  By funnelling every I/O</span>
+<span class="sd">        operation through this method the wider package avoids silent cache misses, duplicate downloads,</span>
+<span class="sd">        and hard-to-trace inconsistencies in downstream analytics.  Public code is expected to invoke</span>
+<span class="sd">        higher-level wrappers such as :py:meth:`DatabaseManager.get_db`; use this routine only when</span>
+<span class="sd">        implementing new caching utilities or in low-level tests.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            df_type: Either `processed`, `mysql`, `common`.</span>
-<span class="sd">            args: Arguments to pass into the functions, which are specific to each ``df_type``.</span>
-<span class="sd">            ensembl_release: Associated Ensembl release of the file of interest.</span>
-<span class="sd">            kwargs: Keyword arguments to pass into the functions, which are specific to each ``df_type``.</span>
+<span class="sd">            df_type (str): Category of dataframe whose name is required. Accepted values are</span>
+<span class="sd">                ``&quot;processed&quot;``, ``&quot;mysql&quot;``, and ``&quot;common&quot;``; any other string triggers :py:class:`ValueError`.</span>
+<span class="sd">            ensembl_release (int, optional): Ensembl release to encode in the filename.  If *None*, the</span>
+<span class="sd">                current :py:attr:`DatabaseManager.ensembl_release` is used instead.</span>
+<span class="sd">            kwargs: Additional keyword arguments forwarded to the helper that handles the selected</span>
+<span class="sd">                *df_type* (currently only ``usecols`` for the *mysql* path).</span>
+<span class="sd">            args: Positional arguments interpreted according to *df_type*:</span>
+
+<span class="sd">                - **processed** - ``df_indicator`` (str): symbolic label such as ``&quot;idhistory&quot;`` or</span>
+<span class="sd">                  ``&quot;idsraw_gene&quot;``.  The manager appends :py:attr:`DatabaseManager.form` so that artefacts</span>
+<span class="sd">                  for different biological forms do not collide.</span>
+
+<span class="sd">                - **mysql** - ``table_key`` (str): raw MySQL table name (e.g. ``&quot;gene&quot;``, ``&quot;exon&quot;``).</span>
+<span class="sd">                  An optional ``usecols`` (list[str]) must then be supplied via *kwargs*; the column list</span>
+<span class="sd">                  is embedded in the hierarchy using the delimiter held in</span>
+<span class="sd">                  :py:attr:`DatabaseManager._column_sep`.</span>
+
+<span class="sd">                - **common** - ``df_indicator`` (str): same as the processed case **but without** the form</span>
+<span class="sd">                  suffix, allowing cross-form artefacts (e.g. ``&quot;availabledatabases&quot;``) to share a single key.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            The file name for h5 file and the key to be used inside.</span>
+<span class="sd">            tuple[str, str]: Two-element tuple ``(hierarchy_key, file_path)`` where *hierarchy_key* is</span>
+<span class="sd">                the internal node path (e.g. ``&quot;ens111_mysql_gene_COL_gene_id&quot;``) and *file_path* is the</span>
+<span class="sd">                absolute path to ``&lt;local_repository&gt;/&lt;organism&gt;_assembly-&lt;assembly&gt;.h5``.  The path is</span>
+<span class="sd">                **not** created on disk—callers remain responsible for reading or writing the HDF5 file.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If the parameter `df_type` is not in specified format.</span>
+<span class="sd">            ValueError: If *df_type* is not one of the accepted categories or if the positional/keyword</span>
+<span class="sd">                argument combination does not satisfy the expectations for that category (e.g. missing</span>
+<span class="sd">                ``table_key`` when *df_type* is ``&quot;mysql&quot;``).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">ensembl_release</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">ensembl_release</span> <span class="k">else</span> <span class="n">ensembl_release</span>
 
@@ -1477,16 +1793,33 @@
 <div class="viewcode-block" id="DatabaseManager.id_ver_from_df">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.id_ver_from_df">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">id_ver_from_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dbm_the_ids</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates node names given the dataframe of IDs, which has different columns for &#39;ID&#39; and &#39;Version&#39;.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Assemble fully qualified node names from a *stable-ID / version* DataFrame.</span>
+
+<span class="sd">        This convenience routine converts a two-column frame—usually produced by</span>
+<span class="sd">        :py:meth:`DatabaseManager.get_db` with the *ids* form—into the canonical node</span>
+<span class="sd">        labels used throughout ID-track graphs (e.g. ``ENSG00000000001.1``).  It first</span>
+<span class="sd">        validates that the input columns match :py:data:`self._identifiers`</span>
+<span class="sd">        (typically ``[&quot;gene_stable_id&quot;, &quot;gene_version&quot;]`` or analogous for the</span>
+<span class="sd">        current ``form``), then delegates per-row processing to</span>
+<span class="sd">        :py:meth:`DatabaseManager.node_dict_maker` and</span>
+<span class="sd">        :py:meth:`DatabaseManager.node_name_maker`.  The resulting list may be fed</span>
+<span class="sd">        directly into downstream graph builders or written to disk for later reuse.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            dbm_the_ids: Dataframe of IDs, typically the output of ``db_manager.get_db(&quot;ids&quot;)``.</span>
+<span class="sd">            dbm_the_ids (pandas.DataFrame): Two-column frame containing the stable</span>
+<span class="sd">                identifiers and their Ensembl version numbers.  The column order and</span>
+<span class="sd">                names **must** exactly match ``self._identifiers``; otherwise an</span>
+<span class="sd">                exception is raised.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Node name as &quot;ID.Version&quot; if there is &#39;Version&#39;, else only &quot;ID&quot;.</span>
+<span class="sd">            list[str]: Ordered list where each element is either</span>
+<span class="sd">                ``&quot;&lt;ID&gt;.&lt;version&gt;&quot;`` when a valid numeric version is present or simply</span>
+<span class="sd">                ``&quot;&lt;ID&gt;&quot;`` when the version is *None* / *NaN* / an alternative marker</span>
+<span class="sd">                (see :py:data:`idtrack._db.DB.alternative_versions`).</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If column names of the `dbm_the_ids` is not as expected.</span>
+<span class="sd">            ValueError: If ``dbm_the_ids`` does not contain the expected column</span>
+<span class="sd">                names stored in :py:data:`self._identifiers`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">dbm_the_ids</span><span class="o">.</span><span class="n">columns</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_identifiers</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -1501,16 +1834,24 @@
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.node_name_maker">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">node_name_maker</span><span class="p">(</span><span class="n">node_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;This function creates ID-Version.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Concatenate *ID* and *Version* into a single node label.</span>
 
-<span class="sd">        If the Version information is not there, it only uses ID, which is necessary for some organisms which</span>
-<span class="sd">        does not have versioned IDs.</span>
+<span class="sd">        Given the miniature dictionary returned by</span>
+<span class="sd">        :py:meth:`DatabaseManager.node_dict_maker`, this helper builds the string</span>
+<span class="sd">        representation that uniquely identifies a biological entity within the graph</span>
+<span class="sd">        layer.  When a numeric version is available, it appends that value to the</span>
+<span class="sd">        stable ID using :py:data:`idtrack._db.DB.id_ver_delimiter` (``&quot;.&quot;`` by</span>
+<span class="sd">        default).  For organisms or datasets lacking versioned identifiers, it falls</span>
+<span class="sd">        back to the bare stable ID to preserve compatibility.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            node_dict: The output of :py:meth:`DatabaseManager.node_dict_maker`.</span>
+<span class="sd">            node_dict (dict[str, Any]): Mapping with exactly two keys, ``&quot;ID&quot;`` and</span>
+<span class="sd">                ``&quot;Version&quot;``, as produced by</span>
+<span class="sd">                :py:meth:`DatabaseManager.node_dict_maker`.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Node name as &quot;ID.Version&quot; if there is &#39;Version&#39;, else only &quot;ID&quot;.</span>
+<span class="sd">            str: Either ``&quot;&lt;ID&gt;.&lt;version&gt;&quot;`` or ``&quot;&lt;ID&gt;&quot;`` depending on whether a</span>
+<span class="sd">                non-null, non-alternative version is present.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">node_dict</span><span class="p">[</span><span class="s2">&quot;Version&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">node_dict</span><span class="p">[</span><span class="s2">&quot;Version&quot;</span><span class="p">]):</span>
             <span class="k">return</span> <span class="n">node_dict</span><span class="p">[</span><span class="s2">&quot;ID&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">DB</span><span class="o">.</span><span class="n">id_ver_delimiter</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">node_dict</span><span class="p">[</span><span class="s2">&quot;Version&quot;</span><span class="p">])</span>
@@ -1522,17 +1863,32 @@
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.node_dict_maker">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">node_dict_maker</span><span class="p">(</span><span class="n">id_entry</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">version_entry</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a dict for ID and Version.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a normalized *ID/Version* dictionary from raw column values.</span>
+
+<span class="sd">        This helper creates the canonical structure consumed by</span>
+<span class="sd">        :py:meth:`DatabaseManager.node_name_maker` and higher-level graph utilities,</span>
+<span class="sd">        ensuring that version numbers are strictly integers whenever possible.  It</span>
+<span class="sd">        also recognises special placeholders defined in</span>
+<span class="sd">        :py:data:`idtrack._db.DB.alternative_versions` (e.g. ``&quot;Retired&quot;`` or</span>
+<span class="sd">        ``&quot;Void&quot;``) and passes them through unchanged so that downstream code can</span>
+<span class="sd">        handle deprecated or missing entries appropriately.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            id_entry: For example, the first part of (`ENSG00000000001`) in `ENSG00000000001.1` before delimiter.</span>
-<span class="sd">            version_entry: For example, the second part of (`1`) in `ENSG00000000001.1` before delimiter.</span>
+<span class="sd">            id_entry (str): Stable identifier portion preceding the delimiter</span>
+<span class="sd">                (e.g. ``&quot;ENSG00000000001&quot;``).</span>
+<span class="sd">            version_entry (Any): Raw version value following the delimiter</span>
+<span class="sd">                (e.g. ``1`` in ``&quot;ENSG00000000001.1&quot;``).  May be *float*, *int*,</span>
+<span class="sd">                *str*, *None*, *NaN*, or an alternative placeholder such as</span>
+<span class="sd">                ``&quot;Retired&quot;``.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Dictionary in the format of ``{&quot;ID&quot;: id_entry, &quot;Version&quot;: version_entry}``</span>
+<span class="sd">            dict[str, Any]: ``{&quot;ID&quot;: id_entry, &quot;Version&quot;: version_entry}`` with</span>
+<span class="sd">            *Version* coerced to *int* when it represents a whole number.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If &#39;Version&#39; is not floating number (cannot be converted into integer).</span>
+<span class="sd">            ValueError: If ``version_entry`` is numeric but contains a fractional</span>
+<span class="sd">                component (e.g. ``1.2``), indicating a malformed identifier that cannot</span>
+<span class="sd">                be represented as an integer version.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">version_entry</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">version_entry</span><span class="p">)</span> <span class="ow">and</span> <span class="n">version_entry</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">alternative_versions</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">version_entry</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">float</span><span class="p">(</span><span class="n">version_entry</span><span class="p">):</span>
@@ -1545,23 +1901,27 @@
 <div class="viewcode-block" id="DatabaseManager.version_uniformize">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.version_uniformize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">version_uniformize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">version_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Final operation for :py:meth:`DatabaseManager.create_ids`.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Normalise a *Version* column so every entry is either an ``int`` or ``NaN``.</span>
 
-<span class="sd">        The method is not expected to be used by the user.</span>
-
-<span class="sd">        Make the &#39;Version&#39; column, integer if there is &#39;Version&#39; information, else, make put ``np.nan`` instead. The</span>
-<span class="sd">        operation is in line with :py:meth:`DatabaseManager.create_version_info` method.</span>
-<span class="sd">        Note that ``np.nan`` values will be used by `node_name_maker` and `node_name_maker` methods.</span>
+<span class="sd">        This post-processing helper finalises the output of :py:meth:`DatabaseManager.create_ids`.</span>
+<span class="sd">        Ensembl releases differ: some assign an explicit integer version to every stable identifier,</span>
+<span class="sd">        whereas others omit the suffix entirely.  Downstream code expects a *uniform* dtype, so this</span>
+<span class="sd">        routine coerces the designated column to a proper integer when *all* entries are present or</span>
+<span class="sd">        fills the entire column with ``np.nan`` when *none* are.  Mixed presence is forbidden because</span>
+<span class="sd">        it would break the ID-version pairing logic used by :py:meth:`DatabaseManager.node_name_maker`.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            df: Input dataframe, see the `create_ids` method for more detail.</span>
-<span class="sd">            version_str: Which column contain the &#39;Version&#39; information</span>
+<span class="sd">            df (pandas.DataFrame): Frame returned by :py:meth:`create_ids`; must already contain a</span>
+<span class="sd">                column named *version_str*.</span>
+<span class="sd">            version_str (str): Name of the column that holds version information (e.g. ``&quot;gene_version&quot;``).</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Corrected version of the dataframe in terms of &#39;Version&#39; information.</span>
+<span class="sd">            pandas.DataFrame: Same object *df* with *version_str* either cast to ``int64`` or overwritten</span>
+<span class="sd">                with ``np.nan`` for every row.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            NotImplementedError: If some Ensembl identifiers without versions, some are not.&quot;</span>
+<span class="sd">            NotImplementedError: If some rows have a version and others do not, indicating an Ensembl</span>
+<span class="sd">                release with inconsistent schema.  Such a release is currently unsupported.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">contains_na</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">version_str</span><span class="p">])</span>
         <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">contains_na</span><span class="p">):</span>
@@ -1580,15 +1940,21 @@
 <div class="viewcode-block" id="DatabaseManager.version_fix_incomplete">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.version_fix_incomplete">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">version_fix_incomplete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df_fx</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">id_col_fx</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ver_col_fx</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;The same logic with ``version_fix`` method, but do different process if associated &#39;ID&#39; is ``np.nan``.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Clean up version columns when *some* identifiers are entirely missing.</span>
+
+<span class="sd">        Ensembl *translation* tables occasionally encode parent IDs without a version while descendants</span>
+<span class="sd">        retain one, producing frames where *id_col_fx* is ``NaN`` but *ver_col_fx* contains a number.</span>
+<span class="sd">        This helper splits the frame, delegates to :py:meth:`version_fix` for each subset, then stitches</span>
+<span class="sd">        the pieces back together so that every row obeys a single “with/without/add version” policy.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            df_fx: Input dataframe to fix the version information.</span>
-<span class="sd">            id_col_fx: Which column contain the &#39;ID&#39; information.</span>
-<span class="sd">            ver_col_fx: Which column contain the &#39;Version&#39; information.</span>
+<span class="sd">            df_fx (pandas.DataFrame): Data to harmonise.  The frame **must** include *id_col_fx* and *ver_col_fx*.</span>
+<span class="sd">            id_col_fx (str): Column holding the *stable* part of the identifier (e.g. ``&quot;translation_id&quot;``).</span>
+<span class="sd">            ver_col_fx (str): Column holding the integer version suffix.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Modified dataframe in terms of version information.</span>
+<span class="sd">            pandas.DataFrame: Frame whose *ver_col_fx* is consistent with the organism-level policy</span>
+<span class="sd">                determined by :py:meth:`check_version_info`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Get the columns that do not have any id</span>
         <span class="n">na_cols_fx</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">df_fx</span><span class="p">[</span><span class="n">id_col_fx</span><span class="p">])</span>
@@ -1609,20 +1975,28 @@
 <div class="viewcode-block" id="DatabaseManager.version_fix">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.version_fix">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">version_fix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">version_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">version_info</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Depending the version information of the organism, uniformize the identifiers.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply a *global* ID-version policy to a DataFrame.</span>
 
-<span class="sd">        The method is not expected to be used by the user.</span>
+<span class="sd">        Depending on the organism and its historical annotation quirks, identifiers may (1) **never**</span>
+<span class="sd">        include a version, (2) **always** include a version, or (3) require a *synthetic* version when</span>
+<span class="sd">        mixing cross-release data.  The *version_info* flag encodes that policy:</span>
+
+<span class="sd">        * ``&quot;without_version&quot;`` — strip all versions (set column to ``NaN``).</span>
+<span class="sd">        * ``&quot;with_version&quot;``    — cast column to ``int64`` (all values must exist).</span>
+<span class="sd">        * ``&quot;add_version&quot;``     — fill missing entries with :py:data:`DB.first_version`.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            df: Input dataframe to fix the version information.</span>
-<span class="sd">            version_str: Which column contain the &#39;Version&#39; information.</span>
-<span class="sd">            version_info: The program parameter obtained somehow by ``check_version_info`` method.</span>
+<span class="sd">            df (pandas.DataFrame): Frame whose *version_str* column needs harmonising.</span>
+<span class="sd">            version_str (str): Name of the column that stores version numbers.</span>
+<span class="sd">            version_info (Optional[str]): One of ``&quot;add_version&quot;``, ``&quot;without_version&quot;``, or</span>
+<span class="sd">                ``&quot;with_version&quot;``.  When ``None`` (default) the method calls</span>
+<span class="sd">                :py:meth:`check_version_info` to determine the correct policy automatically.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Modified dataframe in terms of version information.</span>
+<span class="sd">            pandas.DataFrame: Same object *df* with *version_str* updated in-place.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If `version_info` is not one of the output of `check_version_info` method.</span>
+<span class="sd">            ValueError: If *version_info* is not recognised.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># If version_info is not entered, just re-calculate.</span>
         <span class="n">version_info</span> <span class="o">=</span> <span class="n">version_info</span> <span class="k">if</span> <span class="n">version_info</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_version_info</span><span class="p">()</span>
@@ -1646,15 +2020,23 @@
 <div class="viewcode-block" id="DatabaseManager.check_version_info">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.check_version_info">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">check_version_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Look at across all Ensembl releases and decide the &#39;version_info&#39; variable to be used in the program.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Infer whether the organism&#39;s Ensembl IDs come **with**, **without**, or **mixed** versions.</span>
+
+<span class="sd">        The method scans all releases available for the current genome assembly and inspects the boolean</span>
+<span class="sd">        flag in the ``version_info`` column of a pre-computed table (``get_db(&quot;versioninfo&quot;)``).  Three</span>
+<span class="sd">        mutually exclusive scenarios exist:</span>
+
+<span class="sd">        * All releases lack version suffixes: ``&quot;without_version&quot;``</span>
+<span class="sd">        * All releases include suffixes: ``&quot;with_version&quot;``</span>
+<span class="sd">        * A mixture of both states: ``&quot;add_version&quot;`` (synthetic versions will be injected)</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Either `without_version` when all Ensembl releases has identifiers without &#39;Versions&#39;,</span>
-<span class="sd">            `with_version` when all Ensembl releases has identifiers with &#39;Versions&#39;,</span>
-<span class="sd">            or `add_version` when some Ensembl releases has identifiers with &#39;Versions&#39;.</span>
+<span class="sd">            str: One of ``&quot;without_version&quot;``, ``&quot;with_version&quot;``, or ``&quot;add_version&quot;``.  Callers use the</span>
+<span class="sd">                string to decide how to standardise identifier columns.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If the dataframe obtained by ``self.get_db(&quot;versioninfo&quot;)`` has a problematic column.</span>
+<span class="sd">            ValueError: If the *version_info* column in the source table is not strictly boolean, signalling</span>
+<span class="sd">                a corrupted download or schema drift.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">vi_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;versioninfo&quot;</span><span class="p">)</span>
         <span class="n">narrowed</span> <span class="o">=</span> <span class="n">vi_df</span><span class="p">[</span><span class="s2">&quot;version_info&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>

@@ -93,7 +93,33 @@
 <div class="viewcode-block" id="ExternalDatabases">
 <a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ExternalDatabases</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates and manages external database `yaml` file.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Manage third-party metadata for Ensembl entities through YAML side-car files.</span>
+
+<span class="sd">    This helper encapsulates everything related to the *external* (i.e. non-Ensembl) databases that</span>
+<span class="sd">    can be linked to a given organism, genome assembly, release, and biological form</span>
+<span class="sd">    (*gene* / *transcript* / *translation*).  Examples of such resources include ArrayExpress,</span>
+<span class="sd">    RefSeq, Uniprot, HGNC, and dozens of smaller annotation providers.  Rather than hard-coding</span>
+<span class="sd">    those relationships, the wider *ID-Track* toolkit stores them in a human-readable YAML file that</span>
+<span class="sd">    lives next to the local data cache managed by :py:class:`_database_manager.DatabaseManager`.</span>
+
+<span class="sd">    The YAML workflow is:</span>
+
+<span class="sd">    1. :py:meth:`create_template_yaml` enumerates every known combination and writes a *template*</span>
+<span class="sd">       where each entry is marked ``Include: false``.</span>
+<span class="sd">    2. A user (or an automated post-processing step) reviews the template, toggling ``Include`` to</span>
+<span class="sd">       ``true`` for the resources they need.</span>
+<span class="sd">    3. The modified YAML is saved under *local_repository*; subsequent calls to</span>
+<span class="sd">       :py:meth:`load_modified_yaml` return it as a plain :py:class:`dict` for downstream logic.</span>
+<span class="sd">    4. :py:meth:`validate_yaml_file_up_to_date` warns if the user file lags behind a newer template</span>
+<span class="sd">       (e.g. because a later Ensembl release introduced extra tables).</span>
+<span class="sd">    5. Utility helpers such as :py:meth:`give_list_for_case` expose convenient filtered views—e.g.</span>
+<span class="sd">       *all databases that should be downloaded for the current form*, or *all releases supported by</span>
+<span class="sd">       assembly 38*.</span>
+
+<span class="sd">    In short, *ExternalDatabases* provides a single, version-controlled “contract” describing which</span>
+<span class="sd">    third-party tables belong in an ID-track run, while granting users explicit opt-in control over</span>
+<span class="sd">    optional resources.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -103,14 +129,25 @@
         <span class="n">local_repository</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">genome_assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Class initialization.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Instantiate a YAML controller tied to a specific organism, release, and assembly.</span>
+
+<span class="sd">        The constructor mirrors the core configuration of :py:class:`_database_manager.DatabaseManager`</span>
+<span class="sd">        so that both objects operate on the exact same coordinate system.  No I/O is performed at</span>
+<span class="sd">        construction time; paths are merely recorded, and loggers are configured.  Heavy-weight</span>
+<span class="sd">        actions—such as scanning the cache for existing YAMLs or writing new ones—happen lazily when</span>
+<span class="sd">        the corresponding methods are called.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            organism: Refer to :py:attr:`DatabaseManager.__init__.organism`.</span>
-<span class="sd">            ensembl_release: Refer to :py:attr:`DatabaseManager.__init__.ensembl_release`.</span>
-<span class="sd">            form: Refer to :py:attr:`DatabaseManager.__init__.form`.</span>
-<span class="sd">            local_repository: Refer to :py:attr:`DatabaseManager.__init__.local_repository`.</span>
-<span class="sd">            genome_assembly: Refer to :py:attr:`DatabaseManager.__init__.genome_assembly`.</span>
+<span class="sd">            organism (str): Canonical Ensembl species identifier in *snake_case*</span>
+<span class="sd">                (e.g. ``&quot;homo_sapiens&quot;``).  Case-insensitive but must match Ensembl conventions.</span>
+<span class="sd">            ensembl_release (int): Target Ensembl release number (e.g. ``110``).  Must be ≥ 79 and</span>
+<span class="sd">                correspond to a release that actually exists for *organism* and *assembly*.</span>
+<span class="sd">            form (str): Entity level—``&quot;gene&quot;``, ``&quot;transcript&quot;``, or ``&quot;translation&quot;``.  Any other</span>
+<span class="sd">                value raises :py:class:`ValueError` in higher-level validation.</span>
+<span class="sd">            local_repository (str): Writable directory where YAML files and downloads are cached.</span>
+<span class="sd">                The directory need not pre-exist; if missing, most public methods will attempt to create it.</span>
+<span class="sd">            genome_assembly (int): NCBI genome assembly version (e.g. ``38`` for GRCh38).  Used to</span>
+<span class="sd">                disambiguate multiple assemblies available for the same *organism*/*release* pair.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># The logger for informing the user about the progress.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;external_databases&quot;</span><span class="p">)</span>
@@ -125,9 +162,25 @@
 <div class="viewcode-block" id="ExternalDatabases.create_template_yaml">
 <a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.create_template_yaml">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_template_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates the templete `yaml` file, indicating each external database possible.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generate a template YAML enumerating external-database options.</span>
 
-<span class="sd">        Example output file will start as following, of course, with much more database under `gene`.</span>
+<span class="sd">        This helper scans *df*—typically the dataframe returned by</span>
+<span class="sd">        :py:meth:`idtrack._database_manager.DatabaseManager.create_database_content`—and</span>
+<span class="sd">        writes a scaffold configuration file to</span>
+<span class="sd">        :py:meth:`~ExternalDatabases.file_name_template_yaml`.</span>
+<span class="sd">        The file lists every *organism* → *form* → database combination observed in</span>
+<span class="sd">        *df*, grouped by genome assembly and Ensembl release.  For each entry the</span>
+<span class="sd">        template records whether the database should be *included* when building an</span>
+<span class="sd">        ID-history graph, its integer **Database Index**, and an empty</span>
+<span class="sd">        **Potential Synonymous** placeholder that future versions may use to flag</span>
+<span class="sd">        overlapping resources.</span>
+
+<span class="sd">        Users are **expected to edit** the generated file—changing ``Include`` from</span>
+<span class="sd">        ``false`` to ``true`` where appropriate—and **rename** it by appending</span>
+<span class="sd">        ``_modified`` to the filename before the package will load it.  A warning to</span>
+<span class="sd">        that effect is emitted via :py:meth:`logging.Logger.warning`.</span>
+
+<span class="sd">        The resulting YAML resembles the structure below (truncated for brevity):</span>
 
 <span class="sd">        .. code-block:: yaml</span>
 
@@ -154,20 +207,32 @@
 <span class="sd">                        Database Index: 5</span>
 <span class="sd">                        Potential Synonymous: &quot;&quot;</span>
 
-<span class="sd">        Note that the `Potential Synonymous` is now all empty. In the following versions, it is aimed to integrate</span>
-<span class="sd">        a feature that prevent to heve synonymous databases in the list. Likewise, `Database Index` has now no use case,</span>
-<span class="sd">        in the program.</span>
+<span class="sd">        **Editing guidelines**</span>
 
-<span class="sd">        It is important to follow the final warning raised by the method. &quot;Please edit the file based on</span>
-<span class="sd">        requested external databases and add &#39;_modified&#39; to the file name.&quot;. The editing should be done by converting</span>
-<span class="sd">        `Include` sections from `false` to `true`. It is recommended to make the change for each assembly for a given</span>
-<span class="sd">        database.</span>
+<span class="sd">        * Set ``Include`` to *true* for every assembly of the databases you need.</span>
+<span class="sd">        * Save the edited file with ``_modified`` appended to the base name so that</span>
+<span class="sd">          downstream routines load the customised version.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            df: The output of following operation ``db_manager.create_database_content()``.</span>
+<span class="sd">            df (pandas.DataFrame): Dataframe containing at least the columns</span>
+<span class="sd">                ``[&quot;organism&quot;, &quot;form&quot;, &quot;name_db&quot;, &quot;assembly&quot;, &quot;release&quot;]``.  It</span>
+<span class="sd">                should be produced by</span>
+<span class="sd">                :py:meth:`idtrack._database_manager.DatabaseManager.create_database_content`</span>
+<span class="sd">                so that the expected schema is guaranteed.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Unexpected error.</span>
+<span class="sd">            ValueError: If *df* contains duplicate *assembly* entries for the same</span>
+<span class="sd">                organism/form/database triple, causing an internal consistency check</span>
+<span class="sd">                to fail.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            The **Potential Synonymous** is now all empty. In the following versions, it is aimed to integrate</span>
+<span class="sd">            a feature that prevent to heve synonymous databases in the list. Likewise, `Database Index` has now no</span>
+<span class="sd">            use case, in the program.</span>
+<span class="sd">            It is important to follow the final warning raised by the method. &#39;&#39;Please edit the file based on</span>
+<span class="sd">            requested external databases and add &#39;_modified&#39; to the file name.&#39;&#39;. The editing should be done by</span>
+<span class="sd">            converting `Include` sections from `false` to `true`. It is recommended to make the change for each</span>
+<span class="sd">            assembly for a given database.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">list_to_str</span><span class="p">(</span><span class="n">iterable</span><span class="p">):</span>
@@ -216,10 +281,21 @@
 <div class="viewcode-block" id="ExternalDatabases.file_name_template_yaml">
 <a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.file_name_template_yaml">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">file_name_template_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;File name creator, intended to be used only :py:meth:`ExternalDatabases.create_template_yaml`.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return absolute path to the *template* YAML configuration file.</span>
+
+<span class="sd">        A helper that deterministically builds the filename used by</span>
+<span class="sd">        :py:meth:`ExternalDatabases.create_template_yaml` when it first scaffolds the</span>
+<span class="sd">        external-database configuration for *organism*.  Centralising the logic here</span>
+<span class="sd">        keeps every component of *idtrack* that may need the path (tests, CLI tools,</span>
+<span class="sd">        future maintenance scripts) in perfect sync with a single implementation.  The</span>
+<span class="sd">        method performs **no** I/O; it merely concatenates</span>
+<span class="sd">        :py:attr:`ExternalDatabases.local_repository` and the conventional filename</span>
+<span class="sd">        pattern ``&quot;&lt;organism&gt;_externals_template.yml&quot;`` so callers can decide whether</span>
+<span class="sd">        to create, read, or overwrite the file.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Absolute path for the template yaml file.</span>
+<span class="sd">            str: Absolute path of ``&lt;organism&gt;_externals_template.yml`` located inside</span>
+<span class="sd">            :py:attr:`ExternalDatabases.local_repository`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">local_repository</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">_externals_template.yml&quot;</span><span class="p">)</span></div>
 
@@ -227,17 +303,28 @@
 <div class="viewcode-block" id="ExternalDatabases.file_name_modified_yaml">
 <a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.file_name_modified_yaml">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">file_name_modified_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;File name creator, intended to be used only :py:meth:`ExternalDatabases.load_modified_yaml`.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve the path to a *modified* YAML file customised by the user or shipped with the package.</span>
+
+<span class="sd">        The method supports two *modes* that map to different storage locations:</span>
+
+<span class="sd">        - ``&quot;configured&quot;`` - the user-edited file living in :py:attr:`ExternalDatabases.local_repository`.</span>
+<span class="sd">        - ``&quot;default&quot;`` - the read-only fallback bundled under ``&lt;package_root&gt;/default_config`` for quick starts</span>
+<span class="sd">          and unit tests.</span>
+
+<span class="sd">        By funnelling every lookup through this routine, higher-level helpers such as</span>
+<span class="sd">        :py:meth:`ExternalDatabases.load_modified_yaml` remain agnostic about the</span>
+<span class="sd">        underlying directory structure and can focus on validation and parsing</span>
+<span class="sd">        instead.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            mode: Decide to retrieve whether the `default` yaml file for the given organism</span>
-<span class="sd">                or `configured` yaml file, which is created and modified by the user.</span>
-
-<span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If &#39;mode&#39; is not either &#39;configured&#39; or &#39;default&#39;.</span>
+<span class="sd">            mode (str): Either ``&quot;configured&quot;`` or ``&quot;default&quot;`` selecting the</span>
+<span class="sd">                corresponding search location.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            File name as an absolute path.</span>
+<span class="sd">            str: Absolute path of the requested YAML file.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If *mode* is not one of the recognised values.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">fb</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">_externals_modified.yml&quot;</span>
         <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;configured&quot;</span><span class="p">:</span>
@@ -253,13 +340,21 @@
 <div class="viewcode-block" id="ExternalDatabases.load_modified_yaml">
 <a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.load_modified_yaml">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">load_modified_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reads the modified `yaml` file if created by the user, else read the default for the given organism.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load the user-edited or default YAML configuration and verify release compatibility.</span>
+
+<span class="sd">        This convenience wrapper searches for the *configured* YAML file first; if it</span>
+<span class="sd">        does not exist or lacks read permissions a warning is logged and the</span>
+<span class="sd">        *default* YAML file shipped with the package is tried instead.  Failure to</span>
+<span class="sd">        locate **either** file aborts the process with :py:class:`FileNotFoundError`.</span>
+<span class="sd">        After loading, the method delegates to</span>
+<span class="sd">        :py:meth:`ExternalDatabases.validate_yaml_file_up_to_date` to ensure that the</span>
+<span class="sd">        currently requested Ensembl release is represented in the configuration.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Loaded yaml file as the dictionary</span>
+<span class="sd">            dict: Parsed YAML content keyed by ``{organism → form → database → Assembly → {...}}``.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            FileNotFoundError: When neither default nor configured `yaml` file exist.</span>
+<span class="sd">            FileNotFoundError: If neither the *configured* nor the *default* YAML file can be accessed.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">file_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name_modified_yaml</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;configured&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">):</span>
@@ -284,15 +379,21 @@
 <div class="viewcode-block" id="ExternalDatabases.validate_yaml_file_up_to_date">
 <a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.validate_yaml_file_up_to_date">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">validate_yaml_file_up_to_date</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">read_yaml_file</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validates that the current Ensembl release is present in the YAML configuration file.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Assert that the YAML configuration lists the active Ensembl release.</span>
+
+<span class="sd">        The external-database mapping evolves with each Ensembl release.  This helper</span>
+<span class="sd">        extracts the set of releases encoded in *read_yaml_file*—no matter how deeply</span>
+<span class="sd">        nested—and verifies that :py:attr:`ExternalDatabases.ensembl_release` is</span>
+<span class="sd">        present.  Triggering an exception here prevents downstream graph-construction</span>
+<span class="sd">        logic from silently operating on incomplete or outdated metadata, prompting</span>
+<span class="sd">        users to regenerate or update the YAML file before proceeding.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            read_yaml_file (dict): read_yaml_file (dict): YAML file loaded as a dictionary,</span>
-<span class="sd">                typically from :py:meth:`ExternalDatabases.load_modified_yaml`.</span>
-
+<span class="sd">            read_yaml_file (dict): Dictionary produced by</span>
+<span class="sd">                :py:meth:`ExternalDatabases.load_modified_yaml` containing the loaded YAML structure.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If the current Ensembl release is not found in the YAML configuration.</span>
+<span class="sd">            ValueError: If the current Ensembl release is absent from the YAML configuration.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">ensembl_releases</span> <span class="o">=</span> <span class="p">{</span>
             <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
@@ -314,22 +415,40 @@
 <div class="viewcode-block" id="ExternalDatabases.give_list_for_case">
 <a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.give_list_for_case">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">give_list_for_case</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">give_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve some simple information from `yaml` file.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return database names or assembly codes extracted from the external-DB YAML file.</span>
+
+<span class="sd">        The helper provides a lightweight way for higher-level components (e.g.</span>
+<span class="sd">        :py:class:`~idtrack._database_manager.DatabaseManager`) to discover which</span>
+<span class="sd">        external resources—or which genome assemblies—are currently *eligible*</span>
+<span class="sd">        according to the user-editable YAML configuration created by</span>
+<span class="sd">        :py:meth:`ExternalDatabases.create_template_yaml`.  Instead of forcing the</span>
+<span class="sd">        caller to parse the YAML structure manually, the method filters the entries</span>
+<span class="sd">        for the manager&#39;s *organism*, *form*, *Ensembl release* and</span>
+<span class="sd">        *genome assembly* and returns the requested slice.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            give_type: Either ``&#39;db&#39;`` or ``&#39;assembly&#39;``.</span>
+<span class="sd">            give_type (str): Kind of list to return.  Accepted values are</span>
 
-<span class="sd">                - `db`: the method gives associated external database names in `yaml` file for given</span>
-<span class="sd">                  organism, assembly, Ensembl release and form.</span>
+<span class="sd">                - ``&quot;db&quot;``</span>
+<span class="sd">                  external-database **names** (``str``) whose</span>
+<span class="sd">                  ``Include`` flag is ``true`` for the current organism, form,</span>
+<span class="sd">                  assembly and Ensembl release.</span>
 
-<span class="sd">                - `assembly`: the method gives possible Ensembl assemblies that at least one external database is</span>
-<span class="sd">                  defined in ``yaml`` config file.</span>
+<span class="sd">                - ``&quot;assembly&quot;``</span>
+<span class="sd">                  genome-assembly **codes** (``int``) that</span>
+<span class="sd">                  contain *any* external database entry for the current organism</span>
+<span class="sd">                  and form.  Assemblies are returned even if their ``Include``</span>
+<span class="sd">                  flags are still ``false``.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            List of strings of databases if &#39;db&#39; is `give_type`, or list of integers if &#39;assembly&#39; is `give_type`.</span>
+<span class="sd">            list[str] | list[int]:</span>
+<span class="sd">                - When *give_type* is ``&quot;db&quot;``, a list of database names.</span>
+<span class="sd">                - When *give_type* is ``&quot;assembly&quot;``, a list of assembly codes.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If `give_type` is not in specified format.</span>
+<span class="sd">            ValueError: If *give_type* is not ``&quot;db&quot;`` nor ``&quot;assembly&quot;`` or if an</span>
+<span class="sd">                unexpected internal inconsistency is encountered while traversing</span>
+<span class="sd">                the YAML structure.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">the_dict_loaded</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_modified_yaml</span><span class="p">()</span>
         <span class="n">the_dict</span> <span class="o">=</span> <span class="n">the_dict_loaded</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">form</span><span class="p">]</span>

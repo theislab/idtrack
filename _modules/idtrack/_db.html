@@ -85,11 +85,88 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
+
 
 <div class="viewcode-block" id="DB">
 <a class="viewcode-back" href="../../reference.html#idtrack._db.DB">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">DB</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Keeps some constants shared across different classes.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Store constants shared across IDTrack modules for Ensembl data access and graph construction.</span>
+
+<span class="sd">    This class centralizes every constant that multiple components (e.g. :py:class:`idtrack.graph.GraphMaker`,</span>
+<span class="sd">    :py:class:`idtrack.pathfinder.PathFinder`) rely on when talking to the Ensembl FTP mirror, REST API,</span>
+<span class="sd">    and public MySQL instances. Housing the values in one immutable namespace prevents circular imports,</span>
+<span class="sd">    ensures a single source of truth, and simplifies testing. `DB` is never instantiated; import the class</span>
+<span class="sd">    and reference its attributes directly.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id_ver_delimiter (str): Character separating a stable identifier from its version suffix.</span>
+<span class="sd">        first_version (int): Default version assumed when an ID lacks an explicit version component.</span>
+
+<span class="sd">        connection_timeout (int): TCP connect timeout in seconds used by both FTP and REST clients.</span>
+<span class="sd">        reading_timeout  (int): Socket read timeout in seconds applied to FTP and REST operations.</span>
+
+<span class="sd">        ensembl_ftp_base (str): Hostname of the Ensembl public FTP mirror.</span>
+<span class="sd">        rest_server_api (str): Root URL of the Ensembl REST API.</span>
+<span class="sd">        rest_server_ext (str): Resource path appended to :py:data:`rest_server_api` to query species metadata.</span>
+
+<span class="sd">        mysql_host (str): Hostname of the Ensembl public MySQL server.</span>
+<span class="sd">        myqsl_user (str): Username for anonymous MySQL access.</span>
+<span class="sd">        mysql_togo (str): Placeholder string kept for backward compatibility when assembling connection URLs.</span>
+
+<span class="sd">        assembly_mysqlport_priority (dict[int, dict[str, int]]): Mapping of genome assembly identifiers</span>
+<span class="sd">            (e.g. ``38`` or ``37``) to the port, priority rank (1 = highest), and minimum release available</span>
+<span class="sd">            on that port.</span>
+
+<span class="sd">        assembly_priority (list[int]): Sorted list of priority integers derived from</span>
+<span class="sd">            :py:data:`assembly_mysqlport_priority`, highest priority first.</span>
+
+<span class="sd">        sorted_assemblies (list[tuple[int, dict[str, int]]]): Equivalent information sorted by ascending</span>
+<span class="sd">            priority, making ``sorted_assemblies[0]`` the assembly with rank 1.</span>
+
+<span class="sd">        main_assembly (int): Assembly identifier chosen as the preferred default for queries.</span>
+
+<span class="sd">        synonym_id_nodes_prefix (str): Prefix inserted before node identifiers that represent synonym edges.</span>
+<span class="sd">        no_old_node_id (str): Sentinel used when a historical ID is retired.</span>
+<span class="sd">        no_new_node_id (str): Sentinel used when no future successor exists.</span>
+<span class="sd">        alternative_versions (set[str]): Two sentinels—:py:data:`no_new_node_id` and :py:data:`no_old_node_id`.</span>
+
+<span class="sd">        hyperconnecting_threshold (int): Maximum allowable out-degree before a node is considered</span>
+<span class="sd">            hyper-connected and ignored by breadth-first expansions.</span>
+
+<span class="sd">        node_type_str (str): Edge/Node attribute key holding the node type value.</span>
+<span class="sd">        nts_external (str): Canonical node type assigned to entities originating outside Ensembl.</span>
+<span class="sd">        forms_in_order (list[str]): Stable ordering of Ensembl entity forms (``gene``, ``transcript``,</span>
+<span class="sd">            ``translation``). Order matters when inferring parent/child relationships.</span>
+<span class="sd">        backbone_form (str): Form selected as backbone for graph traversals (always ``gene``).</span>
+
+<span class="sd">        nts_ensembl (dict[str, str]): Map each canonical form to its namespaced node type</span>
+<span class="sd">            (``gene`` → ``ensembl_gene``, etc.).</span>
+<span class="sd">        nts_ensembl_reverse (dict[str, str]): Reverse mapping of :py:data:`nts_ensembl`.</span>
+<span class="sd">        nts_assembly (dict[str, dict[str, str]]): Form-to-assembly-specific node type map.</span>
+<span class="sd">        nts_assembly_reverse (dict[str, dict[str, str]]): Reverse mapping of :py:data:`nts_assembly`.</span>
+<span class="sd">        nts_base_ensembl (dict[str, str]): Reduced node type names stripped of assembly suffixes.</span>
+<span class="sd">        nts_base_ensembl_reverse (dict[str, str]): Reverse mapping of :py:data:`nts_base_ensembl`.</span>
+
+<span class="sd">        nts_bidirectional_synonymous_search (set[str]): Node types for which synonym searches are</span>
+<span class="sd">            performed bidirectionally.</span>
+<span class="sd">        nts_assembly_gene (set[str]): Every node type that represents a gene, regardless of assembly.</span>
+
+<span class="sd">        connection_dict (str): Edge attribute key whose value stores connection metadata dictionaries.</span>
+<span class="sd">        conn_dict_str_ensembl_base (str): Constant placed under :py:data:`connection_dict` when the edge</span>
+<span class="sd">            points to an Ensembl data source.</span>
+
+<span class="sd">        external_search_settings (dict[str, Any]): Default limits for outward traversal into external</span>
+<span class="sd">            databases. Keys are ``jump_limit``, ``synonymous_max_depth``, and ``nts_backbone``.</span>
+
+<span class="sd">        placeholder_na (str): Sentinel stored in HDF5 datasets where a true NA/None value is not</span>
+<span class="sd">            permitted or would break downstream type expectations.</span>
+<span class="sd">        UTF8 (str): The literal string ``&quot;utf-8&quot;``—a canonical spelling of the UTF-8 encoding name</span>
+<span class="sd">            used when writing variable-length strings to HDF5 files.</span>
+<span class="sd">        UTF8_STR (h5py.Datatype): Pre-configured variable-length UTF-8 string dtype created via</span>
+<span class="sd">            :py:func:`h5py.string_dtype`.  Pass this value when creating HDF5 datasets that should</span>
+<span class="sd">            hold arbitrary Unicode text to avoid hard-coding datatypes throughout the codebase.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># Delimiter separating the ID and the version of an ensembl identifier.</span>
     <span class="n">id_ver_delimiter</span> <span class="o">=</span> <span class="s2">&quot;.&quot;</span>
@@ -130,6 +207,8 @@
     <span class="k">for</span> <span class="n">ap1</span> <span class="ow">in</span> <span class="n">assembly_mysqlport_priority</span><span class="p">:</span>
         <span class="n">assembly_priority</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="n">ap1</span><span class="p">][</span><span class="s2">&quot;Priority&quot;</span><span class="p">])</span>
     <span class="n">assembly_priority</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">assembly_priority</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">sorted_assemblies</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">assembly_mysqlport_priority</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">item</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;Priority&quot;</span><span class="p">])</span>
+    <span class="n">main_assembly</span> <span class="o">=</span> <span class="n">sorted_assemblies</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="c1"># Protected Non-int Version Strings/Thresholds</span>
     <span class="n">synonym_id_nodes_prefix</span> <span class="o">=</span> <span class="s2">&quot;synonym_id::&quot;</span>
@@ -142,7 +221,7 @@
     <span class="n">node_type_str</span> <span class="o">=</span> <span class="s2">&quot;node_type&quot;</span>
     <span class="n">nts_external</span> <span class="o">=</span> <span class="s2">&quot;external&quot;</span>
     <span class="n">forms_in_order</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span> <span class="s2">&quot;transcript&quot;</span><span class="p">,</span> <span class="s2">&quot;translation&quot;</span><span class="p">]</span>  <span class="c1"># Warning: the order is important here.</span>
-    <span class="n">backbone_form</span> <span class="o">=</span> <span class="s2">&quot;gene&quot;</span>
+    <span class="n">backbone_form</span> <span class="o">=</span> <span class="s2">&quot;gene&quot;</span>  <span class="c1"># No other choice possible.</span>
 
     <span class="n">nts_ensembl</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;ensembl_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">forms_in_order</span><span class="p">}</span>  <span class="c1"># ensembl_gene</span>
     <span class="n">nts_ensembl_reverse</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">nts_ensembl</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
@@ -158,6 +237,7 @@
             <span class="n">nts_assembly_reverse</span><span class="p">[</span><span class="n">nts_assembly</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]]</span> <span class="o">=</span> <span class="n">nts_ensembl</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
 
     <span class="n">nts_base_ensembl</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;base_ensembl_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">forms_in_order</span><span class="p">}</span>
+    <span class="n">nts_base_ensembl_reverse</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">nts_base_ensembl</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
     <span class="n">nts_bidirectional_synonymous_search</span> <span class="o">=</span> <span class="p">{</span><span class="n">nts_external</span><span class="p">,</span> <span class="n">nts_base_ensembl</span><span class="p">[</span><span class="n">backbone_form</span><span class="p">]}</span>
 
     <span class="c1"># Only gene assembly genes</span>
@@ -174,8 +254,201 @@
         <span class="s2">&quot;jump_limit&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
         <span class="s2">&quot;synonymous_max_depth&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
         <span class="s2">&quot;nts_backbone&quot;</span><span class="p">:</span> <span class="n">nts_ensembl</span><span class="p">[</span><span class="n">backbone_form</span><span class="p">],</span>
-    <span class="p">}</span></div>
+    <span class="p">}</span>
 
+    <span class="c1"># HDF5 Settings</span>
+    <span class="n">placeholder_na</span> <span class="o">=</span> <span class="s2">&quot;_PLACEHOLDER_NA_&quot;</span>
+    <span class="n">UTF8</span> <span class="o">=</span> <span class="s2">&quot;utf-8&quot;</span>  <span class="c1"># Define a UTF-8 string dtype for HDF5</span>
+    <span class="n">UTF8_STR</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">string_dtype</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="n">UTF8</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="EmptyConversionMetricsError">
+<a class="viewcode-back" href="../../reference.html#idtrack._db.EmptyConversionMetricsError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">EmptyConversionMetricsError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Raised when conversion_metrics is empty and no alternative conversion is possible.&quot;&quot;&quot;</span>
+
+    <span class="k">pass</span></div>
+
+
+
+<span class="n">MISSING_VALUES</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;na&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NA&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Na&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n/a&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N/A&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n.a.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N.A.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;na.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Na.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NA.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n-a&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N-A&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Na-&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NA-&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n_a&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N_A&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Na_&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NA_&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;none&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;None&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NONE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;non&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Non&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NON&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;void&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Void&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;VOID&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;blank&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Blank&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;BLANK&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;omitted&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Omitted&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;OMITTED&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NaN&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;nan&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Nan&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NAN&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;-&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;_&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;--&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;__&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;---&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;___&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;null&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Null&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NULL&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;nil&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Nil&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NIL&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;undefined&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Undefined&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;UnDefined&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;UNDEFINED&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;unassigned&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Unassigned&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;UnAssigned&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;UNASSIGNED&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;unspecified&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Unspecified&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;UNSPECIFIED&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot; &quot;</span><span class="p">,</span>
+    <span class="s2">&quot;  &quot;</span><span class="p">,</span>
+    <span class="s2">&quot;   &quot;</span><span class="p">,</span>
+    <span class="s2">&quot;    &quot;</span><span class="p">,</span>
+    <span class="s2">&quot;.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;..&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;...&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;....&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;?&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;??&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;???&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;????&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;missing&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Missing&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;MISSING&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;absent&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Absent&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ABSENT&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;EMPTY&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;empty&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Empty&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;not available&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Not Available&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NOT AVAILABLE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;notavailable&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NotAvailable&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NOTAVAILABLE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;unknown&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Unknown&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;UnKnown&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;UNKNOWN&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;not known&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Not Known&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NOT KNOWN&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;notknown&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NotKnown&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NOTKNOWN&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;undisclosed&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Undisclosed&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;UNDISCLOSED&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;not disclosed&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Not Disclosed&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NOT DISCLOSED&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;notdisclosed&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NotDisclosed&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NOTDISCLOSED&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;not applicable&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Not Applicable&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NOT APPLICABLE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;notapplicable&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NotApplicable&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NOTAPPLICABLE&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;to be filled&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;To Be Filled&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;TO BE FILLED&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;to be determined&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;To Be Determined&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;TO BE DETERMINED&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;tbd&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;TBD&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;tba&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;TBA&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n.k.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N.K.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n.k&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N.K&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n/k&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N/K&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n/k/a&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N/K/A&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n.d.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N.D.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n.d&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N.D&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n/d&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N/D&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n/d/a&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N/D/A&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n.a.p.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N.A.P.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n.a.p&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N.A.P&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n/a/p&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N/A/P&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n/a/p/a&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N/A/P/A&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;xx&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;XX&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;x&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;X&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;xxx&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;XXX&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;xxxx&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;XXXX&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N/M&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n/m&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N.M.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n.m.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n.m&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N.M&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N/C&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n/c&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N.C.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n.c.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n.c&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N.C&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n.s.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N.S.&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n.s&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N.S&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n/s&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N/S&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;n/s/a&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;N/S/A&quot;</span><span class="p">,</span>
+<span class="p">]</span>
 </pre></div>
 
            </div>

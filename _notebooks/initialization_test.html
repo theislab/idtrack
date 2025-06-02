@@ -24,7 +24,7 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Use Case: HLCA Datasets" href="results_preliminary_for_hlca.html" />
+    <link rel="next" title="Manual Identifier Conversion Example" href="example_manual_running.html" />
     <link rel="prev" title="Initialize Graph Object" href="initialization_graph.html" /> 
 </head>
 
@@ -54,8 +54,19 @@
 <li class="toctree-l1 current"><a class="reference internal" href="../usage.html">Usage</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="prepare_new_external_yaml.html">External Database Description Initialization</a></li>
 <li class="toctree-l2"><a class="reference internal" href="initialization_graph.html">Initialize Graph Object</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Initialization and Tests</a></li>
-<li class="toctree-l2"><a class="reference internal" href="results_preliminary_for_hlca.html">Use Case: HLCA Datasets</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Initialization and Tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Structural-Tests">Structural Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Conversion-Tests">Conversion Tests</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#External-conversion">External conversion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#History-travel-only-on-Ensembl-backbone">History travel only on Ensembl backbone</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#History-travel-from-anywhere-to-Ensembl-backbone">History travel from anywhere to Ensembl backbone</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#History-travel-from-anywhere-to-anywhere">History travel from anywhere to anywhere</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="example_manual_running.html">Manual Identifier Conversion Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial_harmonization.html">Multiple Dataset Harmonization Tutorial</a></li>
 <li class="toctree-l2"><a class="reference internal" href="random_data.html">Calculations with Random Data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="comparison.html">Comparison with Available Tools</a></li>
 </ul>
@@ -93,26 +104,57 @@
              
   <section id="Initialization-and-Tests">
 <h1>Initialization and Tests<a class="headerlink" href="#Initialization-and-Tests" title="Link to this heading"></a></h1>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="mi">1</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+1
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
+<span class="o">%</span><span class="k">autoreload</span> 2
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
-<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;/Users/kemalinecik/git_nosync/idtrack&quot;</span><span class="p">)</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;/home/icb/kemal.inecik/work/codes/idtrack&quot;</span><span class="p">)</span>
+
 <span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">local_dir</span> <span class="o">=</span> <span class="s2">&quot;/Users/kemalinecik/Downloads/idtrack_temp&quot;</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">local_dir</span> <span class="o">=</span> <span class="s2">&quot;/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/&quot;</span>
+<span class="n">test_results_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">local_dir</span><span class="p">,</span> <span class="s2">&quot;tests&quot;</span><span class="p">)</span>
+
 <span class="n">idt</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="n">local_dir</span><span class="p">)</span>
 <span class="n">idt</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
 <span class="n">idt</span><span class="o">.</span><span class="n">get_ensembl_organism</span><span class="p">(</span><span class="s2">&quot;homo sapiens&quot;</span><span class="p">)</span>
@@ -124,11 +166,11 @@
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2025-05-28 08:43:35 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
+2025-05-31 17:19:20 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
@@ -136,43 +178,720 @@
 (&#39;homo_sapiens&#39;, 114)
 </pre></div></div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">initialize_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s1">&#39;homo_sapiens&#39;</span><span class="p">,</span> <span class="n">last_ensembl_release</span><span class="o">=</span><span class="mi">114</span><span class="p">,</span> <span class="n">return_test</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># objsize.get_deep_size(idt)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>ls<span class="w"> </span>-l<span class="w"> </span>/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+total 42110132
+-rw-r--r--. 1 kemal.inecik OG-ICB-User   852126351 May 27 20:30 graph_homo_sapiens_min79_max114_narrow.pickle
+-rw-r--r--. 1 kemal.inecik OG-ICB-User 21376563160 May 27 20:28 homo_sapiens_assembly-37.h5
+-rw-r--r--. 1 kemal.inecik OG-ICB-User 20891831455 May 27 20:28 homo_sapiens_assembly-38.h5
+-rw-r--r--. 1 kemal.inecik OG-ICB-User       65514 May 27 17:59 homo_sapiens_externals_modified.yml
+-rw-r--r--. 1 kemal.inecik OG-ICB-User       55077 May 27 17:26 homo_sapiens_externals_template.yml
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">initialize_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s2">&quot;homo_sapiens&quot;</span><span class="p">,</span> <span class="n">last_ensembl_release</span><span class="o">=</span><span class="mi">114</span><span class="p">,</span> <span class="n">return_test</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2025-05-31 17:19:23 INFO:graph_maker: The graph is being read: /lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/graph_homo_sapiens_min79_max114_narrow.pickle
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">calculate_graph_caches</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2025-05-31 17:20:12 INFO:the_graph: Cached properties being calculated: combined_edges
+2025-05-31 17:20:54 INFO:the_graph: Cached properties being calculated: combined_edges_assembly_specific_genes
+2025-05-31 17:20:57 INFO:the_graph: Cached properties being calculated: combined_edges_genes
+2025-05-31 17:21:34 INFO:the_graph: Cached properties being calculated: lower_chars_graph
+2025-05-31 17:21:35 INFO:the_graph: Cached properties being calculated: get_active_ranges_of_id
+2025-05-31 17:21:56 INFO:the_graph: Cached properties being calculated: available_external_databases
+2025-05-31 17:21:57 INFO:the_graph: Cached properties being calculated: available_genome_assemblies
+2025-05-31 17:21:58 INFO:the_graph: Cached properties being calculated: available_external_databases_assembly
+2025-05-31 17:21:59 INFO:the_graph: Cached properties being calculated: node_trios
+2025-05-31 17:22:43 INFO:the_graph: Cached properties being calculated: hyperconnective_nodes
+2025-05-31 17:22:47 INFO:the_graph: Cached properties being calculated (for tests): external_database_connection_form
+2025-05-31 17:23:29 INFO:the_graph: Cached properties being calculated (for tests): available_releases_given_database_assembly
+</pre></div></div>
+</div>
+<section id="Structural-Tests">
+<h2>Structural Tests<a class="headerlink" href="#Structural-Tests" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_id_functions_consistent_ensembl</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+100%|██████████████████████████████████████████████████████████████████████████████████████████████| 36/36 [01:17&lt;00:00,  2.14s/it, Item:114]
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+True
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_id_functions_consistent_ensembl_2</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+100%|█████████████████████████████████████████████████████████████████████████████| 165093/165093 [00:00&lt;00:00, 176122.22it/s, Item:LRG_99.1]
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+True
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_range_functions_robust</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+100%|██████████████████████████████████████████████████████████████████████| 100842/100842 [00:00&lt;00:00, 239189.69it/s, Item:ENSG00000169933]
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+True
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_base_is_range_correct</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+100%|███████████████████████████████████████████████████████████████████████| 100842/100842 [00:03&lt;00:00, 29035.43it/s, Item:ENSG00000169933]
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+True
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_combined_edges_dicts_overlapping_and_complete</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+True
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_edge_with_same_nts_only_at_backbone_nodes</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+True
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_node_consistency_robust</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+100%|██████████████████████████████████████████████████████████████████████████████████████████| 2507048/2507048 [00:08&lt;00:00, 309828.55it/s]
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+True
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_id_functions_consistent_external</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Assembly 37: 100%|█████████████████████████████████████████████████████████████████████████████████| 36/36 [28:41&lt;00:00, 47.81s/it, Item:114]
+Assembly 38: 100%|█████████████████████████████████████████████████████████████████████████████████| 36/36 [34:12&lt;00:00, 57.00s/it, Item:114]
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+True
+</pre></div></div>
+</div>
+</section>
+<section id="Conversion-Tests">
+<h2>Conversion Tests<a class="headerlink" href="#Conversion-Tests" title="Link to this heading"></a></h2>
+<section id="External-conversion">
+<h3>External conversion<a class="headerlink" href="#External-conversion" title="Link to this heading"></a></h3>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># objsize.get_deep_size(idt)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">response</span><span class="p">,</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_final_external_conversion_robust</span><span class="p">(</span>
+        <span class="n">from_fraction</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">output_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="s2">&quot;travel_v0_conversion_results.pkl&quot;</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Results saved to </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
+<p><strong>Note:</strong> the role of <code class="docutils literal notranslate"><span class="pre">prioritize_to_one_filter</span></code> for final external conversion</p>
+<p>Nevertheless, we recommend using the filter to minimize 1-to-n matching.</p>
+<p>To show more in-depth what is happening:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[88]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">release</span> <span class="o">=</span> <span class="mi">81</span>
+<span class="n">database</span> <span class="o">=</span> <span class="s2">&quot;Vega gene&quot;</span>
+
+<span class="n">dm_original</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">db_manager</span>
+<span class="n">dm</span> <span class="o">=</span> <span class="n">dm_original</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">release</span><span class="p">)</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">main_assembly</span><span class="p">)</span>
+<span class="n">df_a</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;external_relevant&quot;</span><span class="p">)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">df_a</span><span class="p">[</span><span class="n">df_a</span><span class="p">[</span><span class="s2">&quot;name_db&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">database</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+<span class="n">base_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;graph_id&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">base_dict</span><span class="p">:</span>
+        <span class="n">base_dict</span><span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;graph_id&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">base_dict</span><span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;graph_id&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;id_db&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[89]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">response</span><span class="p">,</span> <span class="p">(</span><span class="n">issues_t1</span><span class="p">,</span> <span class="n">issues_t2</span><span class="p">,</span> <span class="n">issues_t3</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_final_external_conversion_robust</span><span class="p">(</span>
+    <span class="n">from_fraction</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">database</span><span class="o">=</span><span class="n">database</span><span class="p">,</span>
+    <span class="n">ens_rel</span><span class="o">=</span><span class="n">release</span><span class="p">,</span>
+    <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2025-05-31 09:50:34 INFO:track_tests: Assembly: 38, Database: Vega gene, Release: 81
+Mapping: 100%|█████████████████████████████████████████████████████| 6657/6657 [00:31&lt;00:00, 208.49it/s, Item:LRG_784.1]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[90]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">response</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="s2">&quot;conversion&quot;</span><span class="p">]),</span> <span class="nb">len</span><span class="p">(</span><span class="n">issues_t1</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">issues_t2</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">issues_t3</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;graph_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">issues_t3</span><span class="p">)]</span>
+<span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[90]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(True, 5522, 0, 0, 1135, True)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[91]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span>
+    <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">format_history_travel_testing_report</span><span class="p">(</span>
+        <span class="n">res</span><span class="p">,</span> <span class="n">include_header</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">printable</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">line_separation_at_end</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+╔═ History-Travel-Testing Report ═╗
+Source  : assembly_38_ensembl_gene (Assembly 38, Release 81)
+Target  : Vega gene (Release 81)
+External: True   1→1-pref.: False
+Sample  : 0.1 of source IDs
+Failure / Anomaly Counts:
+  - Voyage failed (graceful)       : 1,135
+  - Voyage failed (unknown)        : 0
+  - Query not in graph             : 0
+  - Lost item                      : 0
+  - Lost item, but ID exists       : 0
+  - Found IDs not accurate         : 0
+Mapping Statistics:
+  - One→one IDs                    : 0
+  - One→many IDs                   : 5,522
+  - One→many (single conv.)        : 5,522
+  - Successfully converted IDs     : 5,522
+  - Clash one→one                  : 0
+  - Clash many→many                : 74
+  - Clash mixed                    : 0
+Total runtime: 31.94 s
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[92]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">response</span><span class="p">,</span> <span class="p">(</span><span class="n">issues_t1</span><span class="p">,</span> <span class="n">issues_t2</span><span class="p">,</span> <span class="n">issues_t3</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_final_external_conversion_robust</span><span class="p">(</span>
+    <span class="n">from_fraction</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">database</span><span class="o">=</span><span class="n">database</span><span class="p">,</span>
+    <span class="n">ens_rel</span><span class="o">=</span><span class="n">release</span><span class="p">,</span>
+    <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2025-05-31 09:51:15 INFO:track_tests: Assembly: 38, Database: Vega gene, Release: 81
+Mapping: 100%|██████████████████████████████████████████████████████| 6657/6657 [00:32&lt;00:00, 203.92it/s, Item:LRG_92.1]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[93]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">response</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="s2">&quot;conversion&quot;</span><span class="p">]),</span> <span class="nb">len</span><span class="p">(</span><span class="n">issues_t1</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">issues_t2</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">issues_t3</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;graph_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">issues_t3</span><span class="p">)]</span>
+<span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[93]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(False, 5498, 510, 0, 1159, True)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[94]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span>
+    <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">format_history_travel_testing_report</span><span class="p">(</span>
+        <span class="n">res</span><span class="p">,</span> <span class="n">include_header</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">printable</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">line_separation_at_end</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+╔═ History-Travel-Testing Report ═╗
+Source  : assembly_38_ensembl_gene (Assembly 38, Release 81)
+Target  : Vega gene (Release 81)
+External: True   1→1-pref.: True
+Sample  : 0.1 of source IDs
+Failure / Anomaly Counts:
+  - Voyage failed (graceful)       : 1,159
+  - Voyage failed (unknown)        : 0
+  - Query not in graph             : 0
+  - Lost item                      : 0
+  - Lost item, but ID exists       : 0
+  - Found IDs not accurate         : 0
+Mapping Statistics:
+  - One→one IDs                    : 510
+  - One→many IDs                   : 4,988
+  - One→many (single conv.)        : 4,988
+  - Successfully converted IDs     : 5,498
+  - Clash one→one                  : 0
+  - Clash many→many                : 66
+  - Clash mixed                    : 0
+Total runtime: 32.65 s
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[95]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">issues_t1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[95]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;database&#39;: &#39;Vega gene&#39;,
+ &#39;asym&#39;: 38,
+ &#39;ens_rel&#39;: 81,
+ &#39;id&#39;: &#39;ENSG00000117242.7&#39;,
+ &#39;converted&#39;: [&#39;OTTHUMG00000002840&#39;],
+ &#39;base_expectation&#39;: {&#39;OTTHUMG00000002840&#39;, &#39;RP11-401M16.7&#39;}}
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[96]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">id_from</span> <span class="o">=</span> <span class="s2">&quot;ENSG00000008197.4&quot;</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[97]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;graph_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">id_from</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[97]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>release</th>
+      <th>graph_id</th>
+      <th>id_db</th>
+      <th>name_db</th>
+      <th>ensembl_identity</th>
+      <th>xref_identity</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>355949</th>
+      <td>81</td>
+      <td>ENSG00000008197.4</td>
+      <td>OTTHUMG00000014832</td>
+      <td>Vega gene</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>355950</th>
+      <td>81</td>
+      <td>ENSG00000008197.4</td>
+      <td>RP3-336H9.2</td>
+      <td>Vega gene</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[98]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
+    <span class="n">id_from</span><span class="p">,</span>
+    <span class="n">to_release</span><span class="o">=</span><span class="n">release</span><span class="p">,</span>
+    <span class="n">from_release</span><span class="o">=</span><span class="n">release</span><span class="p">,</span>
+    <span class="n">final_database</span><span class="o">=</span><span class="n">database</span><span class="p">,</span>
+    <span class="n">return_path</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[98]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;ENSG00000008197.4&#39;: {&#39;from_id&#39;: &#39;ENSG00000008197.4&#39;,
+  &#39;assembly_jump&#39;: 0,
+  &#39;external_jump&#39;: 0,
+  &#39;external_step&#39;: 0,
+  &#39;initial_conversion_conf&#39;: 1,
+  &#39;edge_scores_reduced&#39;: nan,
+  &#39;ensembl_step&#39;: 1,
+  &#39;final_assembly_priority&#39;: ([1, 2], 2),
+  &#39;the_path&#39;: ((None, &#39;ENSG00000008197.4&#39;, None),),
+  &#39;final_conversion&#39;: {&#39;final_conversion_confidence&#39;: 0,
+   &#39;final_database&#39;: &#39;Vega gene&#39;,
+   &#39;final_elements&#39;: {&#39;OTTHUMG00000014832&#39;: {&#39;final_assembly_priority_count&#39;: 2,
+     &#39;final_assembly_min_priority&#39;: 1,
+     &#39;additional_assembly_jump&#39;: 0,
+     &#39;the_path&#39;: ((&#39;ENSG00000008197.4&#39;, &#39;OTTHUMG00000014832&#39;, 0, 81),),
+     &#39;filter_scores&#39;: {&#39;initial_filter&#39;: [0, 1, 0, 0, 1, -2, -2],
+      &#39;same_as_input_filter&#39;: False,
+      &#39;node_importance_filter&#39;: None}}}}}}
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[99]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
+    <span class="n">id_from</span><span class="p">,</span>
+    <span class="n">to_release</span><span class="o">=</span><span class="n">release</span><span class="p">,</span>
+    <span class="n">from_release</span><span class="o">=</span><span class="n">release</span><span class="p">,</span>
+    <span class="n">final_database</span><span class="o">=</span><span class="n">database</span><span class="p">,</span>
+    <span class="n">return_path</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[99]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;ENSG00000008197.4&#39;: {&#39;from_id&#39;: &#39;ENSG00000008197.4&#39;,
+  &#39;assembly_jump&#39;: 0,
+  &#39;external_jump&#39;: 0,
+  &#39;external_step&#39;: 0,
+  &#39;initial_conversion_conf&#39;: 1,
+  &#39;edge_scores_reduced&#39;: nan,
+  &#39;ensembl_step&#39;: 1,
+  &#39;final_assembly_priority&#39;: ([1, 2], 2),
+  &#39;the_path&#39;: ((None, &#39;ENSG00000008197.4&#39;, None),),
+  &#39;final_conversion&#39;: {&#39;final_conversion_confidence&#39;: 0,
+   &#39;final_database&#39;: &#39;Vega gene&#39;,
+   &#39;final_elements&#39;: {&#39;OTTHUMG00000014832&#39;: {&#39;final_assembly_priority_count&#39;: 2,
+     &#39;final_assembly_min_priority&#39;: 1,
+     &#39;additional_assembly_jump&#39;: 0,
+     &#39;the_path&#39;: ((&#39;ENSG00000008197.4&#39;, &#39;OTTHUMG00000014832&#39;, 0, 81),)},
+    &#39;RP3-336H9.2&#39;: {&#39;final_assembly_priority_count&#39;: 1,
+     &#39;final_assembly_min_priority&#39;: 1,
+     &#39;additional_assembly_jump&#39;: 0,
+     &#39;the_path&#39;: ((&#39;ENSG00000008197.4&#39;, &#39;RP3-336H9.2&#39;, 0, 81),)}}}}}
+</pre></div></div>
+</div>
+</section>
+<section id="History-travel-only-on-Ensembl-backbone">
+<h3>History travel only on Ensembl backbone<a class="headerlink" href="#History-travel-only-on-Ensembl-backbone" title="Link to this heading"></a></h3>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>ls<span class="w"> </span>-l<span class="w"> </span>/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">history_results</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">history_travel_testing_random</span><span class="p">(</span>
+        <span class="n">from_fraction</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">include_external_destination</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">include_external_source</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">include_ensembl_destination</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">include_ensembl_source</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">return_result</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">history_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">output_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="s2">&quot;travel_v1_conversion_results.pkl&quot;</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Results saved to </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="History-travel-from-anywhere-to-Ensembl-backbone">
+<h3>History travel from anywhere to Ensembl backbone<a class="headerlink" href="#History-travel-from-anywhere-to-Ensembl-backbone" title="Link to this heading"></a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">history_results</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">history_travel_testing_random</span><span class="p">(</span>
+        <span class="n">from_fraction</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">include_external_destination</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">include_external_source</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">include_ensembl_destination</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">include_ensembl_source</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">return_result</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">history_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">output_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="s2">&quot;travel_v2_conversion_results.pkl&quot;</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Results saved to </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="History-travel-from-anywhere-to-anywhere">
+<h3>History travel from anywhere to anywhere<a class="headerlink" href="#History-travel-from-anywhere-to-anywhere" title="Link to this heading"></a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">history_results</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">history_travel_testing_random</span><span class="p">(</span>
+        <span class="n">from_fraction</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">include_external_destination</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">include_external_source</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">include_ensembl_destination</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">include_ensembl_source</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">return_result</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">history_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">output_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="s2">&quot;travel_v3_conversion_results.pkl&quot;</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Results saved to </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -185,13 +904,15 @@
 </div>
 </div>
 </section>
+</section>
+</section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="initialization_graph.html" class="btn btn-neutral float-left" title="Initialize Graph Object" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="results_preliminary_for_hlca.html" class="btn btn-neutral float-right" title="Use Case: HLCA Datasets" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="example_manual_running.html" class="btn btn-neutral float-right" title="Manual Identifier Conversion Example" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

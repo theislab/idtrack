@@ -263,7 +263,7 @@
         <span class="c1"># Compose all graphs into one. If there is a</span>
         <span class="n">g</span><span class="p">:</span> <span class="n">TheGraph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">compose_all</span><span class="p">([</span><span class="n">graph_s</span><span class="p">[</span><span class="n">f</span><span class="p">]</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">form_list</span><span class="p">])</span>
         <span class="c1"># To make the form_list cached in the object.</span>
-        <span class="n">g</span><span class="o">.</span><span class="n">attach_included_forms</span><span class="p">(</span><span class="n">form_list</span><span class="p">)</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">_attach_included_forms</span><span class="p">(</span><span class="n">form_list</span><span class="p">)</span>
 
         <span class="c1"># Establish connection between different forms</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Establishing connection between different forms.&quot;</span><span class="p">)</span>

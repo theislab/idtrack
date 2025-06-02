@@ -99,18 +99,42 @@
 <div class="viewcode-block" id="TheGraph">
 <a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">TheGraph</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Graph object containing all the information about the relationships between bio-IDs.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Represent a bio-identifier multigraph with IDTrack-specific helpers.</span>
 
-<span class="sd">    It is a subclass of :py:class:`networkx.MultiDiGraph`, with some additional methods to aid the pathfinder</span>
-<span class="sd">    algorithm in :py:class:`Track`. The object is constructed by :py:class:`GraphMaker`.</span>
+<span class="sd">    The class extends :py:class:`networkx.MultiDiGraph` to model historical and</span>
+<span class="sd">    cross-reference relationships between Ensembl identifiers (genes,</span>
+<span class="sd">    transcripts, translations) and third-party database accessions</span>
+<span class="sd">    (UniProt, RefSeq, …).  It is built by</span>
+<span class="sd">    :py:class:`idtrack._graph_maker.GraphMaker`, then queried by</span>
+<span class="sd">    :py:class:`idtrack.Track` for high-performance path-finding across Ensembl</span>
+<span class="sd">    releases and external resources.</span>
+
+<span class="sd">    Additional cached properties (e.g. :py:attr:`rev`,</span>
+<span class="sd">    :py:attr:`combined_edges`, and :py:attr:`hyperconnective_nodes`) collapse</span>
+<span class="sd">    expensive aggregate calculations into single attribute look-ups, while</span>
+<span class="sd">    helpers such as :py:meth:`attach_included_forms` record which biological</span>
+<span class="sd">    forms were merged into a particular instance.  Together these conveniences</span>
+<span class="sd">    allow downstream algorithms to traverse millions of edges without the</span>
+<span class="sd">    memory overhead of duplicating graphs or recomputing summaries.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Class initialization.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Instantiate the multigraph and configure package logging.</span>
+
+<span class="sd">        All positional and keyword arguments are forwarded verbatim to</span>
+<span class="sd">        :py:class:`networkx.MultiDiGraph`, allowing callers to pre-seed the graph</span>
+<span class="sd">        with nodes, edges, or name/metadata attributes exactly as they would with a</span>
+<span class="sd">        vanilla NetworkX constructor.  After delegating to ``super().__init__``,</span>
+<span class="sd">        the method initialises two convenience attributes:</span>
+
+<span class="sd">        - :py:data:`log` — a dedicated ``logging.Logger`` named ``&quot;the_graph&quot;`` for</span>
+<span class="sd">            structured, per-instance diagnostics.</span>
+<span class="sd">        - :py:data:`available_forms` — a placeholder set to ``None`` until</span>
+<span class="sd">            :py:meth:`attach_included_forms` is called by :py:class:`idtrack._graph_maker.GraphMaker`.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            args: Arguments to be passed to :py:class:`networkx.MultiDiGraph`.</span>
-<span class="sd">            kwargs: Keyword arguments to be passed to :py:class:`networkx.MultiDiGraph`.</span>
+<span class="sd">            args (Any): Positional arguments accepted by :py:meth:`networkx.MultiDiGraph.__init__`.</span>
+<span class="sd">            kwargs (Any): Keyword arguments accepted by :py:meth:`networkx.MultiDiGraph.__init__`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>  <span class="c1"># SubClass initialization</span>
 
@@ -118,63 +142,107 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;the_graph&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">available_forms</span> <span class="o">=</span> <span class="kc">None</span>
 
-<div class="viewcode-block" id="TheGraph.attach_included_forms">
-<a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.attach_included_forms">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">attach_included_forms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">available_forms</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the ``available_forms`` variable for the instance.</span>
+<div class="viewcode-block" id="TheGraph._attach_included_forms">
+<a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph._attach_included_forms">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_attach_included_forms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">available_forms</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Record which Ensembl forms are present in the merged graph.</span>
 
-<span class="sd">        This is a separate function and mainly aimed to be used by :py:class:`GraphMaker` during the</span>
-<span class="sd">        process of constructing the graph. Just after the graphs for the forms of interests (typically `gene`,</span>
-<span class="sd">        `transcript`, and `protein`) are merged, this method is called to store which forms are included in the graph.</span>
-<span class="sd">        Setting the variable before merging the graphs causes errors and inconsistencies.</span>
+<span class="sd">        Graphs for *gene*, *transcript*, and *protein* are first built</span>
+<span class="sd">        independently by :py:class:`~idtrack._graph_maker.GraphMaker` and then</span>
+<span class="sd">        merged into a single :py:class:`TheGraph` instance.  This helper runs</span>
+<span class="sd">        **after** that merge to store the subset of forms that actually made it</span>
+<span class="sd">        into the final graph—information required by several cached properties</span>
+<span class="sd">        (e.g. :py:data:`available_external_databases`) for consistency checks</span>
+<span class="sd">        and downstream analyses.  Calling the method **before** the merge would</span>
+<span class="sd">        mis-report available forms and corrupt those caches.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            available_forms: Determine which forms (transcript, translation, gene) are included.</span>
+<span class="sd">            available_forms (list[str]): Exact list of included forms</span>
+<span class="sd">                (typically ``[&quot;gene&quot;, &quot;transcript&quot;, &quot;protein&quot;]``).  Order is</span>
+<span class="sd">                preserved so callers can rely on a deterministic iteration</span>
+<span class="sd">                sequence.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">available_forms</span> <span class="o">=</span> <span class="n">available_forms</span></div>
 
 
 <div class="viewcode-block" id="TheGraph.calculate_caches">
 <a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.calculate_caches">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_caches</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate cached variables using only one method.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_caches</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">for_test</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Eagerly materialise every ``@cached_property`` to prime the cache.</span>
+
+<span class="sd">        Accessing a cached property for the first time triggers an expensive</span>
+<span class="sd">        computation. Batch-loading all of them up-front improves latency for</span>
+<span class="sd">        subsequent graph queries and simplifies unit-test expectations because</span>
+<span class="sd">        no additional properties are computed lazily in the background.</span>
+
+<span class="sd">        The optional *for_test* flag activates a few heavyweight diagnostics</span>
+<span class="sd">        that are normally skipped in production but useful for test suites and</span>
+<span class="sd">        profiling.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            for_test (bool): If ``True`` (default), also compute</span>
+<span class="sd">                caches that exist solely for testing or sanity-check purposes</span>
+<span class="sd">                (e.g. :py:data:`external_database_connection_form`).  Set to</span>
+<span class="sd">                ``False`` to warm only the properties required at run-time.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges</span>
         <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges_assembly_specific_genes</span>
         <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">combined_edges_genes</span>
         <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower_chars_graph</span>
         <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_active_ranges_of_id</span>
         <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_external_databases</span>
-        <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_database_connection_form</span>
         <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_genome_assemblies</span>
         <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_external_databases_assembly</span>
         <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_trios</span>
-        <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hyperconnective_nodes</span></div>
+        <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hyperconnective_nodes</span>
+        <span class="k">if</span> <span class="n">for_test</span><span class="p">:</span>
+            <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_database_connection_form</span>
+            <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_releases_given_database_assembly</span></div>
 
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">rev</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;TheGraph&quot;</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;The same graph but the edges are in reverse orientation.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a view of the same graph with all edge directions reversed.</span>
+
+<span class="sd">        The call delegates to :py:meth:`networkx.MultiDiGraph.reverse` with</span>
+<span class="sd">        ``copy=False``, meaning the returned object re-uses the underlying data</span>
+<span class="sd">        structures and therefore consumes **no additional memory**.  Use this</span>
+<span class="sd">        property whenever a temporal walk must proceed *backwards* in history</span>
+<span class="sd">        (e.g. when resolving identifiers from a newer to an older Ensembl</span>
+<span class="sd">        release).</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            ``TheGraph`` object without copying another one in the memory.</span>
+<span class="sd">            TheGraph: A non-copying, lazily constructed reverse-orientation</span>
+<span class="sd">                view that honours every node and edge attribute of the original graph.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">reverse</span><span class="p">(</span><span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
     <span class="nd">@cached_property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">hyperconnective_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Cached property for hyper-connective nodes as keys and number of connections as values.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">hyperconnective_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return hyper-connective external nodes and their out-degree counts.</span>
 
-<span class="sd">        Hyper-connective nodes are defined as external nodes with more than</span>
-<span class="sd">        :py:attr:`DB.hyperconnecting_threshold`. This nodes creates a huge bottleneck in finding the synonyms</span>
-<span class="sd">        of a node and hence the pathfinder algorithm. The pathfinder algoritm is hence speed-up by ignoring these nodes</span>
-<span class="sd">        in the search process. This is in theory sacrificing the precision of the algorithm a little bit, but</span>
-<span class="sd">        in practice these nodes generally does not have not very precise ID matching. Most of the case, the relavant</span>
-<span class="sd">        IDs are matched via some other external ID, so the performance of the pathfinder algorithm actually improves</span>
-<span class="sd">        if hyper-connective nodes are ignored.</span>
+<span class="sd">        Hyper-connective nodes are external identifiers whose out-degree (number of outgoing edges) exceeds</span>
+<span class="sd">        :py:attr:`idtrack._db.DB.hyperconnecting_threshold`. Because such nodes may participate in tens of thousands</span>
+<span class="sd">        of mappings, they explode the breadth-first frontier of the synonym *pathfinder* algorithm and become a major</span>
+<span class="sd">        performance bottleneck.  The algorithm therefore **ignores** these nodes, sacrificing a small amount of</span>
+<span class="sd">        theoretical precision for a substantial speed-up.</span>
+
+<span class="sd">        In practice the precision penalty is negligible: hyper-connective nodes tend to be coarse-grained identifiers</span>
+<span class="sd">        that already suffer from low mapping specificity (for example, generic protein or transcript accessions</span>
+<span class="sd">        re-used across many unrelated biological entities).  Meaningful, one-to-one synonym relationships are almost</span>
+<span class="sd">        always reachable through alternative external identifiers.  Consequently, ignoring hyper-connective nodes both</span>
+<span class="sd">        accelerates the search and often improves the overall relevance of the results.</span>
+
+<span class="sd">        The value is computed lazily on first access and memoised via :py:meth:`functools.cached_property`, so the</span>
+<span class="sd">        underlying query runs at most once per :py:class:`~idtrack._the_graph.TheGraph` instance.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Dictionary of hyper-connective nodes as keys and number of connections as values.</span>
+<span class="sd">            dict[str, int]: Mapping from external node identifier to its out-degree, limited to nodes whose</span>
+<span class="sd">                out-degree is greater than :py:attr:`idtrack._db.DB.hyperconnecting_threshold` and whose</span>
+<span class="sd">                :py:data:`idtrack._db.DB.node_type_str` equals :py:data:`idtrack._db.DB.nts_external`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached properties being calculated: </span><span class="si">{</span><span class="s1">&#39;hyperconnective_nodes&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
         <span class="n">hcn_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>  <span class="c1"># Initialize a dictionary</span>
 
         <span class="k">for</span> <span class="n">hcn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
@@ -188,13 +256,27 @@
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">combined_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Combines all the edge data for a given node except `Ensembl gene` and `assembly specific Ensembl gene` nodes.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Aggregate outgoing-edge metadata for every non-gene node in the graph.</span>
 
-<span class="sd">        It iterates all the edges of a given node to construct a dictionary with a specified format.</span>
+<span class="sd">        This cached view pre-computes, for each backbone or external identifier, which external databases,</span>
+<span class="sd">        genome assemblies, and Ensembl releases are reachable through *outgoing* edges—while purposely</span>
+<span class="sd">        excluding Ensembl gene and assembly-specific gene nodes.  The summary accelerates synonym search</span>
+<span class="sd">        and other traversal routines in :py:meth:`idtrack.track.Track.pathfinder` because consumers can</span>
+<span class="sd">        consult a compact dictionary instead of repeatedly iterating raw NetworkX edges and attributes.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            A dictionary with following format</span>
-<span class="sd">            ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.</span>
+<span class="sd">            dict: Nested mapping of the form ``{node_name: {database_name: {assembly: set[int]}}}``, where</span>
+
+<span class="sd">                * **node_name** (*str*) - Identifier of the start node whose edges were inspected.</span>
+<span class="sd">                * **database_name** (*str*) - Canonical name of the external database or Ensembl sub-type</span>
+<span class="sd">                    (e.g. ``uniprot``, ``refseq_rna``, ``assembly_x_ensembl_gene``).</span>
+<span class="sd">                * **assembly** (*str*) - UCSC-style assembly label (e.g. ``GRCh38``); ``None`` when the edge</span>
+<span class="sd">                    is not assembly-scoped.</span>
+<span class="sd">                * **set[int]** - Collection of Ensembl release numbers in which the connection is valid.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            *Edges that link two nodes of the **same** node-type are ignored,* ensuring the dictionary</span>
+<span class="sd">            focuses on cross-type relationships that matter for ID translation.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached properties being calculated: </span><span class="si">{</span><span class="s1">&#39;combined_edges&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
@@ -204,14 +286,18 @@
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">combined_edges_genes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Combines all the edge data for a given node for only `Ensembl gene` nodes.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Aggregate incoming-edge metadata for Ensembl gene nodes.</span>
 
-<span class="sd">        It iterates all the edges of a given node to construct a dictionary with a specified format.</span>
+<span class="sd">        Gene nodes only possess **incoming** edges (toward the gene); therefore the calculation traverses</span>
+<span class="sd">        the graph in reverse (``self.rev``) to collect equivalent information to</span>
+<span class="sd">        :py:meth:`~TheGraph.combined_edges`, but restricted solely to nodes whose</span>
+<span class="sd">        :py:data:`idtrack._db.DB.node_type_str` is ``DB.nts_ensembl[&quot;gene&quot;]``.  The result merges edge</span>
+<span class="sd">        data from *all* contributing external databases so that downstream callers receive one consolidated</span>
+<span class="sd">        view per gene.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            A dictionary with following format</span>
-<span class="sd">            ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.</span>
-<span class="sd">            Can have multiple assemblies as some main assembly genes are shared across different assemblies.</span>
+<span class="sd">            dict: Nested mapping ``{gene_id: {database_name: {assembly: set[int]}}}``.</span>
+<span class="sd">                A single gene may appear under multiple assemblies when reference genomes share that transcript locus.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached properties being calculated: </span><span class="si">{</span><span class="s1">&#39;combined_edges_genes&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
@@ -225,14 +311,18 @@
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">combined_edges_assembly_specific_genes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Combines all the edge data for a given node for only `assembly specific Ensembl gene` nodes.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Aggregate incoming‐edge metadata for assembly-specific Ensembl gene nodes.</span>
 
-<span class="sd">        It iterates all the edges of a given node to construct a dictionary with a specified format.</span>
+<span class="sd">        Assembly-specific gene identifiers (e.g. ``GRCh37:ENSG00000123456``) represent loci that differ</span>
+<span class="sd">        between reference builds.  This property mirrors the logic of</span>
+<span class="sd">        :py:meth:`~TheGraph.combined_edges_genes` but targets nodes *not* captured by that property,</span>
+<span class="sd">        ensuring the three cached dictionaries are mutually exclusive and collectively exhaustive.</span>
+<span class="sd">        Because each such gene belongs to exactly **one** assembly, the returned structure always contains</span>
+<span class="sd">        a single assembly key per outer node.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            A dictionary with following format</span>
-<span class="sd">            ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.</span>
-<span class="sd">            But ut has only one assembly, whose hint is given in the database_name.</span>
+<span class="sd">            dict: Mapping ``{assembly_specific_gene_id: {database_name: {assembly: set[int]}}}`` where the sole</span>
+<span class="sd">                *assembly* key matches the assembly implied by the node&#39;s own identifier.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached properties being calculated: </span><span class="si">{</span><span class="s1">&#39;combined_edges_assembly_specific_genes&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
@@ -252,27 +342,31 @@
 <a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph._combined_edges_genes_helper">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_combined_edges_genes_helper</span><span class="p">(</span><span class="n">the_result</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Helper method is called for two methods only.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Merge per-neighbour edge metadata for gene-centric queries.</span>
 
-<span class="sd">        The method is called by :py:meth:`TheGraph.combined_edges_assembly_specific_genes` and</span>
-<span class="sd">        :py:meth:`TheGraph.combined_edges_genes` only. The aim of the method is to merge all the data</span>
-<span class="sd">        coming from multiple external databases.</span>
+<span class="sd">        This helper is used exclusively by :py:meth:`TheGraph.combined_edges_genes` and</span>
+<span class="sd">        :py:meth:`TheGraph.combined_edges_assembly_specific_genes` to post-process</span>
+<span class="sd">        the dictionaries returned by :py:meth:`TheGraph._combined_edges`.</span>
+<span class="sd">        Because backbone *gene* nodes have no outgoing edges except to other gene</span>
+<span class="sd">        nodes, the caller invokes :py:meth:`TheGraph._combined_edges` on a</span>
+<span class="sd">        **reversed** graph and receives one nested dictionary per neighbour.</span>
+<span class="sd">        The present routine</span>
 
-<span class="sd">        Note that the main reason of having a separate methods for these two is basically due to the fact that `gene`</span>
-<span class="sd">        nodes has no outgoing edges except to another `gene` node. For this reason,</span>
-<span class="sd">        :py:meth:`TheGraph._combined_edges` method has been used with reversed graph. In order to have the</span>
-<span class="sd">        information for Ensembl genes or Ensembl assembly genes, the information from all edges should be merged and</span>
-<span class="sd">        the name for the database has to be edited accordingly.</span>
-
-<span class="sd">        Here, `ensembl_gene` is renamed with `assembly_X_ensembl_gene` for more intuitive understanding of the source of</span>
-<span class="sd">        the gene, and also to make the naming consistent.</span>
+<span class="sd">        1. Flattens those per-neighbour sub-dicts so that information from</span>
+<span class="sd">            multiple neighbours of the same external database and assembly is unified.</span>
+<span class="sd">        2. Re-labels the generic ``ensembl_gene`` key to the assembly-qualified</span>
+<span class="sd">            form ``assembly_&lt;N&gt;_ensembl_gene`` so that the provenance of every</span>
+<span class="sd">            entry remains explicit and consistent with the rest of the code base.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            the_result: A dictionary as the output of :py:meth:`TheGraph._combined_edges`.</span>
+<span class="sd">            the_result (dict): Nested mapping produced by</span>
+<span class="sd">                :py:meth:`TheGraph._combined_edges` for a *single* gene node.</span>
+<span class="sd">                The structure is  ``{neighbour: {database: {assembly: set[int]}}}``.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            A dictionary with following format</span>
-<span class="sd">            ``{database_name: {assembly: {ensembl release set}}}``.</span>
+<span class="sd">            dict: Collapsed mapping  ``{database: {assembly: set[int]}}`` where all neighbour-level</span>
+<span class="sd">                dictionaries have been merged and database names have been renamed</span>
+<span class="sd">                to their assembly-specific counterparts when appropriate.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">output</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>  <span class="c1"># Initialize a dict</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">the_result</span><span class="p">:</span>
@@ -293,20 +387,35 @@
 <a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph._combined_edges">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_combined_edges</span><span class="p">(</span><span class="n">node_list</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">nx</span><span class="o">.</span><span class="n">classes</span><span class="o">.</span><span class="n">reportviews</span><span class="o">.</span><span class="n">NodeView</span><span class="p">,</span> <span class="nb">list</span><span class="p">],</span> <span class="n">the_graph</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Combines the database, assembly, ensembl release information from all edges from a given node.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Aggregate database/assembly/release metadata for the edges of *node_list*.</span>
 
-<span class="sd">        The method fills the dictionary with nodes provided as a parameter. The edge data coming from the same node</span>
-<span class="sd">        types (the edge between the same node type can exist only between backbone nodes as tested in</span>
-<span class="sd">        :py:meth:`TrackTest.is_edge_with_same_nts_only_at_backbone_nodes`) are excluded.</span>
+<span class="sd">        The routine is the work-horse behind the</span>
+<span class="sd">        :py:attr:`TheGraph.combined_edges` family of cached properties.</span>
+<span class="sd">        It iterates over every node in *node_list*, inspects each outgoing</span>
+<span class="sd">        (or, when *the_graph* is a reversed view, incoming) edge, and builds a</span>
+<span class="sd">        deterministic description of which external database, genome assembly,</span>
+<span class="sd">        and Ensembl release the connection originates from.</span>
+
+<span class="sd">        Edges that link two nodes of the **same** node-type are ignored so that</span>
+<span class="sd">        backbone history links (gene ↔ gene, transcript ↔ transcript, …) do not</span>
+<span class="sd">        pollute the output (as tested in</span>
+<span class="sd">        :py:meth:`idtrack._track_tests.TrackTest.is_edge_with_same_nts_only_at_backbone_nodes`).</span>
+<span class="sd">        For edges whose database key is one of the generic Ensembl forms</span>
+<span class="sd">        (``ensembl_gene``, ``ensembl_transcript``, …) the key is rewritten to the</span>
+<span class="sd">        assembly-specific variant (e.g. ``assembly_38_ensembl_gene``) to keep</span>
+<span class="sd">        assemblies logically separate in downstream analyses.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            node_list: Node names to be calculated.</span>
-<span class="sd">            the_graph: The graph to be used for the calculation. It is generally `self` or `self.rev` depending on</span>
-<span class="sd">                how it has been wanted to calculate.</span>
+<span class="sd">            node_list (NodeView | list[str]): Nodes whose edge metadata will be</span>
+<span class="sd">                consolidated.  Accepts either a plain list or the</span>
+<span class="sd">                :py:class:`networkx` view returned by ``graph.nodes``.</span>
+<span class="sd">            the_graph (nx.MultiDiGraph): Graph to inspect.  Pass ``self`` for the</span>
+<span class="sd">                native orientation or ``self.rev`` when a reverse walk is</span>
+<span class="sd">                required.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            A dictionary with following format</span>
-<span class="sd">            ``{node_name: {database_name: {assembly: {ensembl release set}}}}``.</span>
+<span class="sd">            dict: Mapping  ``{node: {database: {assembly: set[int]}}}`` that summarises every</span>
+<span class="sd">                admissible edge attached to the requested nodes.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">node_list</span><span class="p">:</span>
@@ -998,7 +1107,7 @@
 <span class="sd">        Raises:</span>
 <span class="sd">            ValueError: If non-Ensembl node is connected.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached properties being calculated: </span><span class="si">{</span><span class="s1">&#39;external_database_connection_form&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached properties being calculated (for tests): </span><span class="si">{</span><span class="s1">&#39;external_database_connection_form&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="c1"># Get the available databases to be matched</span>
         <span class="n">aed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_external_databases</span>
@@ -1045,33 +1154,63 @@
 
         <span class="k">return</span> <span class="n">output</span>
 
-<div class="viewcode-block" id="TheGraph.available_releases_given_database_assembly">
-<a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.available_releases_given_database_assembly">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">available_releases_given_database_assembly</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">database_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Possible Ensembl releases defined for a given database and assembly.</span>
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">available_releases_given_database_assembly</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">set</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cached properties being calculated (for tests): </span><span class="si">{</span><span class="s1">&#39;available_releases_given_database_assembly&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-<span class="sd">        The method uses `node_trios` unnecessarily method, which consumes a lot of memory and hinders high</span>
-<span class="sd">        computational efficiency. However, this method is used only in testing purposes, when the speed and memory is</span>
-<span class="sd">        not of a concern.</span>
+        <span class="c1"># Inline logic from _available_releases_given_database_assembly</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">_inline_available_releases</span><span class="p">(</span><span class="n">database_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;Possible Ensembl releases defined for a given database and assembly.</span>
 
-<span class="sd">        It is important to note that not all databases are defined in all Ensembl release. To see for more information,</span>
-<span class="sd">        have a look at the :py:class:`ExternalDatabases`.</span>
+<span class="sd">            The method uses `node_trios` unnecessarily method, which consumes a lot of memory and hinders high</span>
+<span class="sd">            computational efficiency. However, this method is used only in testing purposes, when the speed and memory</span>
+<span class="sd">            is not of a concern.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            database_name: External database or node type (except `external`) it should be one of the item from</span>
-<span class="sd">                :py:meth:`TheGraph.available_external_databases`. The method also works with `node types`</span>
-<span class="sd">                (except `external`), since they are also defined in `node_trios`. Important to note that the `node type`</span>
-<span class="sd">                for Ensembl should follow :py:attr:`DB.nts_assembly` or :py:attr:`DB.nts_base_ensembl`.</span>
-<span class="sd">            assembly: Assembly, it should be one of the item from</span>
-<span class="sd">                :py:meth:`TheGraph.available_genome_assemblies`.</span>
+<span class="sd">            It is important to note that not all databases are defined in all Ensembl release. To see for more</span>
+<span class="sd">            information, have a look at the :py:class:`ExternalDatabases`.</span>
 
-<span class="sd">        Returns:</span>
-<span class="sd">            Available Ensembl releases as set of integers.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">{</span>
-            <span class="n">j3</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_trios</span> <span class="k">for</span> <span class="n">j1</span><span class="p">,</span> <span class="n">j2</span><span class="p">,</span> <span class="n">j3</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_trios</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="n">j1</span> <span class="o">==</span> <span class="n">database_name</span> <span class="ow">and</span> <span class="n">j2</span> <span class="o">==</span> <span class="n">assembly</span>
-        <span class="p">}</span></div>
+<span class="sd">            Args:</span>
+<span class="sd">                database_name: External database or node type (except `external`) it should be one of the item from</span>
+<span class="sd">                    :py:meth:`TheGraph.available_external_databases`. The method also works with `node types`</span>
+<span class="sd">                    (except `external`), since they are also defined in `node_trios`. Important to note that the</span>
+<span class="sd">                    `node type` for Ensembl should follow :py:attr:`DB.nts_assembly` or :py:attr:`DB.nts_base_ensembl`.</span>
+<span class="sd">                assembly: Assembly, it should be one of the item from</span>
+<span class="sd">                    :py:meth:`TheGraph.available_genome_assemblies`.</span>
 
+<span class="sd">            Returns:</span>
+<span class="sd">                Available Ensembl releases as set of integers.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="n">j3</span>
+                <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_trios</span>
+                <span class="k">for</span> <span class="n">j1</span><span class="p">,</span> <span class="n">j2</span><span class="p">,</span> <span class="n">j3</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_trios</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">j1</span> <span class="o">==</span> <span class="n">database_name</span> <span class="ow">and</span> <span class="n">j2</span> <span class="o">==</span> <span class="n">assembly</span>
+            <span class="p">}</span>
+
+        <span class="n">r</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">database_names</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_external_databases_assembly</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">database_name</span> <span class="ow">in</span> <span class="n">database_names</span><span class="p">:</span>
+                <span class="n">r</span><span class="p">[(</span><span class="n">database_name</span><span class="p">,</span> <span class="n">assembly</span><span class="p">)]</span> <span class="o">=</span> <span class="n">_inline_available_releases</span><span class="p">(</span>
+                    <span class="n">assembly</span><span class="o">=</span><span class="n">assembly</span><span class="p">,</span> <span class="n">database_name</span><span class="o">=</span><span class="n">database_name</span>
+                <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">_inner_dict</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_assembly</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">database_name</span> <span class="ow">in</span> <span class="n">_inner_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">r</span><span class="p">[(</span><span class="n">database_name</span><span class="p">,</span> <span class="n">assembly</span><span class="p">)]</span> <span class="o">=</span> <span class="n">_inline_available_releases</span><span class="p">(</span>
+                    <span class="n">assembly</span><span class="o">=</span><span class="n">assembly</span><span class="p">,</span> <span class="n">database_name</span><span class="o">=</span><span class="n">database_name</span>
+                <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">database_name</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_base_ensembl</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">r</span><span class="p">[(</span><span class="n">database_name</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">main_assembly</span><span class="p">)]</span> <span class="o">=</span> <span class="n">_inline_available_releases</span><span class="p">(</span>
+                <span class="n">assembly</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">main_assembly</span><span class="p">,</span> <span class="n">database_name</span><span class="o">=</span><span class="n">database_name</span>
+            <span class="p">)</span>
+
+        <span class="n">available_release</span> <span class="o">=</span> <span class="p">{</span><span class="n">j</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">r</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">i</span><span class="p">}</span>
+        <span class="k">for</span> <span class="n">database_name</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">r</span><span class="p">[(</span><span class="n">database_name</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">main_assembly</span><span class="p">)]</span> <span class="o">=</span> <span class="n">available_release</span>
+
+        <span class="k">return</span> <span class="n">r</span>
 
 <div class="viewcode-block" id="TheGraph.get_id_list">
 <a class="viewcode-back" href="../../reference.html#idtrack._the_graph.TheGraph.get_id_list">[docs]</a>
@@ -1096,7 +1235,12 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            Node names (identifiers) list.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">the_key</span> <span class="o">=</span> <span class="p">(</span><span class="n">database</span><span class="p">,</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">database</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl_reverse</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">form</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl_reverse</span><span class="p">[</span><span class="n">database</span><span class="p">]</span>
+            <span class="n">the_key</span> <span class="o">=</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;assembly_</span><span class="si">{</span><span class="n">assembly</span><span class="si">}</span><span class="s2">_ensembl_</span><span class="si">{</span><span class="n">form</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">the_key</span> <span class="o">=</span> <span class="p">(</span><span class="n">database</span><span class="p">,</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">release</span><span class="p">)</span>
+
         <span class="n">final_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
             <span class="k">if</span> <span class="p">(</span>

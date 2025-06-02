@@ -1,0 +1,2483 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manual Identifier Conversion Example &mdash; idtrack 0.0.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=15bcc2cf" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Multiple Dataset Harmonization Tutorial" href="tutorial_harmonization.html" />
+    <link rel="prev" title="Initialization and Tests" href="initialization_test.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            idtrack
+              <img src="../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../usage.html">Usage</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="prepare_new_external_yaml.html">External Database Description Initialization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialization_graph.html">Initialize Graph Object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialization_test.html">Initialization and Tests</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Manual Identifier Conversion Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial_harmonization.html">Multiple Dataset Harmonization Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="random_data.html">Calculations with Random Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="comparison.html">Comparison with Available Tools</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../usage.html">Usage</a></li>
+      <li class="breadcrumb-item active">Manual Identifier Conversion Example</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_notebooks/example_manual_running.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Manual-Identifier-Conversion-Example">
+<h1>Manual Identifier Conversion Example<a class="headerlink" href="#Manual-Identifier-Conversion-Example" title="Link to this heading"></a></h1>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="mi">0</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
+<span class="o">%</span><span class="k">autoreload</span> 2
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;/home/icb/kemal.inecik/work/codes/idtrack&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scanpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sc</span>
+</pre></div>
+</div>
+</div>
+<p>Initialize the graph and pathfinder</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">local_dir</span> <span class="o">=</span> <span class="s2">&quot;/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp&quot;</span>
+<span class="n">test_results_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">local_dir</span><span class="p">,</span> <span class="s2">&quot;hlca&quot;</span><span class="p">)</span>
+
+<span class="n">idt</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="n">local_dir</span><span class="p">)</span>
+<span class="n">idt</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
+<span class="n">idt</span><span class="o">.</span><span class="n">initialize_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s2">&quot;homo_sapiens&quot;</span><span class="p">,</span> <span class="n">last_ensembl_release</span><span class="o">=</span><span class="mi">114</span><span class="p">,</span> <span class="n">return_test</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2025-06-01 08:40:55 INFO:graph_maker: The graph is being read: /lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/graph_homo_sapiens_min79_max114_narrow.pickle
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">calculate_graph_caches</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2025-06-01 08:41:47 INFO:the_graph: Cached properties being calculated: combined_edges
+2025-06-01 08:42:19 INFO:the_graph: Cached properties being calculated: combined_edges_assembly_specific_genes
+2025-06-01 08:42:22 INFO:the_graph: Cached properties being calculated: combined_edges_genes
+2025-06-01 08:42:34 INFO:the_graph: Cached properties being calculated: lower_chars_graph
+2025-06-01 08:42:34 INFO:the_graph: Cached properties being calculated: get_active_ranges_of_id
+2025-06-01 08:43:08 INFO:the_graph: Cached properties being calculated: available_external_databases
+2025-06-01 08:43:10 INFO:the_graph: Cached properties being calculated: available_genome_assemblies
+2025-06-01 08:43:11 INFO:the_graph: Cached properties being calculated: available_external_databases_assembly
+2025-06-01 08:43:12 INFO:the_graph: Cached properties being calculated: node_trios
+2025-06-01 08:43:28 INFO:the_graph: Cached properties being calculated: hyperconnective_nodes
+2025-06-01 08:43:31 INFO:the_graph: Cached properties being calculated (for tests): external_database_connection_form
+2025-06-01 08:44:16 INFO:the_graph: Cached properties being calculated (for tests): available_releases_given_database_assembly
+</pre></div></div>
+</div>
+<p>The datasets of HLCA</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">base_path</span> <span class="o">=</span> <span class="s2">&quot;/lustre/groups/ml01/projects/2023_HLCA_LSikkema/HLCA_reproducibility/data&quot;</span>
+<span class="n">dset0_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base_path</span><span class="p">,</span> <span class="s2">&quot;HLCA_extended/extension_datasets/ready/full&quot;</span><span class="p">)</span>
+<span class="n">dset1_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base_path</span><span class="p">,</span> <span class="s2">&quot;HLCA_extended/extension_datasets/raw&quot;</span><span class="p">)</span>
+
+<span class="n">adata_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Kaminski_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/adams.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Meyer_2021&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/meyer_2021.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;MeyerNikolic_unpubl&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/meyer_nikolic_unpubl.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Barbry_unpubl&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/barbry.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Regev_2021&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/delorey_cryo.h5ad&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/delorey_fresh.h5ad&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/delorey_nuclei.h5ad&quot;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;Thienpont_2018&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset1_dir</span><span class="si">}</span><span class="s2">/Lambrechts/lambrechts.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Budinger_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/bharat.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Banovich_Kropski_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/haberman.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Sheppard_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/tsukui.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Wunderink_2021&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/grant_cryo.h5ad&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/grant_fresh.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Lambrechts_2021&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/wouters.h5ad&quot;</span><span class="p">],</span>  <span class="c1"># , f&quot;{dset0_dir}/wouters_labs.h5ad&quot;</span>
+    <span class="s2">&quot;Zhang_2021&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset1_dir</span><span class="si">}</span><span class="s2">/Liao/covid_for_publish.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Duong_lungMAP_unpubl&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/duong.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Janssen_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/mould.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Sun_2020&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/wang_sub_batch1.h5ad&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/wang_sub_batch2.h5ad&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/wang_sub_batch3.h5ad&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/wang_sub_batch4.h5ad&quot;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;Gomperts_2021&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/carraro_ucla.h5ad&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/carraro_cff.h5ad&quot;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/carraro_csmc.h5ad&quot;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="s2">&quot;Eils_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/lukassen.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Schiller_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/mayr.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Misharin_Budinger_2018&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/reyfman_disease.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Shalek_2018&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/ordovasmontanes.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Schiller_2021&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/schiller_discovair.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Peer_Massague_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/laughney.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Lafyatis_2019&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/valenzi.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Tata_unpubl&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/tata_unpubl.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Xu_2020&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/guo.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Sims_2019&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/szabo.h5ad&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;Schultze_unpubl&quot;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s2">/schultze_unpubl.h5ad&quot;</span><span class="p">],</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<p>Run the ID conversion with HGNC Symbol (a.k.a gene name)</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="n">final_database</span> <span class="o">=</span> <span class="s2">&quot;HGNC Symbol&quot;</span>
+
+<span class="k">for</span> <span class="n">dataset_name</span> <span class="ow">in</span> <span class="n">adata_dict</span><span class="p">:</span>
+
+    <span class="n">adata</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">adata_dict</span><span class="p">[</span><span class="n">dataset_name</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">gene_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+
+    <span class="n">matching</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">convert_identifier_multiple</span><span class="p">(</span>
+        <span class="n">gene_list</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="n">final_database</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="mi">107</span><span class="p">,</span> <span class="n">pbar_prefix</span><span class="o">=</span><span class="n">dataset_name</span>
+    <span class="p">)</span>
+    <span class="n">binned_conversions</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">classify_multiple_conversion</span><span class="p">(</span><span class="n">matching</span><span class="p">)</span>
+
+    <span class="n">idt</span><span class="o">.</span><span class="n">print_binned_conversion</span><span class="p">(</span><span class="n">binned_conversions</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source release: </span><span class="si">{</span><span class="n">idt</span><span class="o">.</span><span class="n">infer_identifier_source</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">result</span><span class="p">[</span><span class="n">dataset_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">binned_conversions</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Kaminski_2020:  64%|██████▍   | 29311/45947 [08:17&lt;09:03, 30.59it/s, ID:ENSG00000278817]2025-06-01 08:55:53 WARNING:track_tests: A form of rare event found for &#39;ENSG00000279393.1&#39;.
+Kaminski_2020: 100%|██████████| 45947/45947 [22:55&lt;00:00, 33.41it/s, ID:ENSG00000280139]
+2025-06-01 09:10:30 INFO:api: changed_only_1_to_n: 51
+changed_only_1_to_1: 4244
+alternative_target_1_to_1: 12037
+alternative_target_1_to_n: 117
+matching_1_to_0: 94
+matching_1_to_1: 33648
+matching_1_to_n: 51
+input_identifiers: 45947
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 94)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Meyer_2021: 100%|██████████| 20922/20922 [05:10&lt;00:00, 67.34it/s, ID:AC240274.1]
+2025-06-01 09:15:44 INFO:api: changed_only_1_to_n: 0
+changed_only_1_to_1: 1034
+alternative_target_1_to_1: 349
+alternative_target_1_to_n: 4
+matching_1_to_0: 14
+matching_1_to_1: 20555
+matching_1_to_n: 0
+input_identifiers: 20922
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+MeyerNikolic_unpubl: 100%|██████████| 33582/33582 [05:05&lt;00:00, 109.78it/s, ID:hsa-mir-1253]
+2025-06-01 09:20:54 INFO:api: changed_only_1_to_n: 4
+changed_only_1_to_1: 2650
+alternative_target_1_to_1: 8438
+alternative_target_1_to_n: 16
+matching_1_to_0: 99
+matching_1_to_1: 25025
+matching_1_to_n: 4
+input_identifiers: 33582
+2025-06-01 09:20:54 WARNING:api: Number of unfound IDs: 26.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Barbry_unpubl: 100%|██████████| 16859/16859 [04:11&lt;00:00, 67.02it/s, ID:WHRN]
+2025-06-01 09:25:10 INFO:api: changed_only_1_to_n: 0
+changed_only_1_to_1: 978
+alternative_target_1_to_1: 1687
+alternative_target_1_to_n: 5
+matching_1_to_0: 17
+matching_1_to_1: 15150
+matching_1_to_n: 0
+input_identifiers: 16859
+2025-06-01 09:25:11 WARNING:api: Number of unfound IDs: 1.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 98)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Regev_2021: 100%|██████████| 30983/30983 [05:19&lt;00:00, 97.07it/s, ID:ZZEF1]
+2025-06-01 09:30:30 INFO:api: changed_only_1_to_n: 2
+changed_only_1_to_1: 2456
+alternative_target_1_to_1: 7471
+alternative_target_1_to_n: 14
+matching_1_to_0: 108
+matching_1_to_1: 23388
+matching_1_to_n: 2
+input_identifiers: 30983
+2025-06-01 09:30:31 WARNING:api: Number of unfound IDs: 48.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Thienpont_2018: 100%|██████████| 27958/27958 [05:54&lt;00:00, 78.78it/s, ID:AC240274.1]
+2025-06-01 09:36:27 INFO:api: changed_only_1_to_n: 1
+changed_only_1_to_1: 3721
+alternative_target_1_to_1: 5250
+alternative_target_1_to_n: 40
+matching_1_to_0: 168
+matching_1_to_1: 22499
+matching_1_to_n: 1
+input_identifiers: 27958
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Budinger_2020: 100%|██████████| 26316/26316 [05:17&lt;00:00, 82.83it/s, ID:ZZEF1]
+2025-06-01 09:41:49 INFO:api: changed_only_1_to_n: 2
+changed_only_1_to_1: 2082
+alternative_target_1_to_1: 4866
+alternative_target_1_to_n: 7
+matching_1_to_0: 52
+matching_1_to_1: 21389
+matching_1_to_n: 2
+input_identifiers: 26316
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Banovich_Kropski_2020: 100%|██████████| 33694/33694 [06:06&lt;00:00, 91.96it/s, ID:FAM231B]
+2025-06-01 09:47:58 INFO:api: changed_only_1_to_n: 3
+changed_only_1_to_1: 4644
+alternative_target_1_to_1: 8011
+alternative_target_1_to_n: 53
+matching_1_to_0: 256
+matching_1_to_1: 25371
+matching_1_to_n: 3
+input_identifiers: 33694
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Sheppard_2020: 100%|██████████| 27147/27147 [06:20&lt;00:00, 71.41it/s, ID:AC240274.1]
+2025-06-01 09:54:20 INFO:api: changed_only_1_to_n: 1
+changed_only_1_to_1: 3568
+alternative_target_1_to_1: 4944
+alternative_target_1_to_n: 37
+matching_1_to_0: 163
+matching_1_to_1: 22002
+matching_1_to_n: 1
+input_identifiers: 27147
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Wunderink_2021: 100%|██████████| 21819/21819 [04:39&lt;00:00, 78.14it/s, ID:ZZEF1]
+2025-06-01 09:59:03 INFO:api: changed_only_1_to_n: 1
+changed_only_1_to_1: 1673
+alternative_target_1_to_1: 2956
+alternative_target_1_to_n: 2
+matching_1_to_0: 51
+matching_1_to_1: 18809
+matching_1_to_n: 1
+input_identifiers: 21819
+2025-06-01 09:59:03 WARNING:api: Number of unfound IDs: 12.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Lambrechts_2021: 100%|██████████| 33538/33538 [05:29&lt;00:00, 101.91it/s, ID:FAM231C]
+2025-06-01 10:04:34 INFO:api: changed_only_1_to_n: 4
+changed_only_1_to_1: 2632
+alternative_target_1_to_1: 8438
+alternative_target_1_to_n: 16
+matching_1_to_0: 73
+matching_1_to_1: 25007
+matching_1_to_n: 4
+input_identifiers: 33538
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Zhang_2021: 100%|██████████| 18474/18474 [04:37&lt;00:00, 66.54it/s, ID:DSG1]
+2025-06-01 10:09:15 INFO:api: changed_only_1_to_n: 0
+changed_only_1_to_1: 824
+alternative_target_1_to_1: 90
+alternative_target_1_to_n: 1
+matching_1_to_0: 8
+matching_1_to_1: 18375
+matching_1_to_n: 0
+input_identifiers: 18474
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 87)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Duong_lungMAP_unpubl: 100%|██████████| 27678/27678 [04:49&lt;00:00, 95.57it/s, ID:ZZEF1]
+2025-06-01 10:14:06 INFO:api: changed_only_1_to_n: 2
+changed_only_1_to_1: 2240
+alternative_target_1_to_1: 6062
+alternative_target_1_to_n: 14
+matching_1_to_0: 48
+matching_1_to_1: 21552
+matching_1_to_n: 2
+input_identifiers: 27678
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Janssen_2020: 100%|██████████| 33538/33538 [05:31&lt;00:00, 101.07it/s, ID:FAM231C]
+2025-06-01 10:19:41 INFO:api: changed_only_1_to_n: 4
+changed_only_1_to_1: 2632
+alternative_target_1_to_1: 8438
+alternative_target_1_to_n: 16
+matching_1_to_0: 73
+matching_1_to_1: 25007
+matching_1_to_n: 4
+input_identifiers: 33538
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Sun_2020: 100%|██████████| 26578/26578 [04:43&lt;00:00, 93.73it/s, ID:AP006748.1]
+2025-06-01 10:24:26 INFO:api: changed_only_1_to_n: 2
+changed_only_1_to_1: 2150
+alternative_target_1_to_1: 5477
+alternative_target_1_to_n: 11
+matching_1_to_0: 46
+matching_1_to_1: 21042
+matching_1_to_n: 2
+input_identifiers: 26578
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Gomperts_2021: 100%|██████████| 31229/31229 [06:22&lt;00:00, 81.70it/s, ID:WFDC11]
+2025-06-01 10:30:49 INFO:api: changed_only_1_to_n: 6
+changed_only_1_to_1: 4766
+alternative_target_1_to_1: 5941
+alternative_target_1_to_n: 30
+matching_1_to_0: 326
+matching_1_to_1: 24926
+matching_1_to_n: 6
+input_identifiers: 31229
+2025-06-01 10:30:49 WARNING:api: Number of unfound IDs: 172.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 89)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Eils_2020: 100%|██████████| 32738/32738 [09:36&lt;00:00, 56.77it/s, ID:AC002321.1]
+2025-06-01 10:40:28 INFO:api: changed_only_1_to_n: 5
+changed_only_1_to_1: 5709
+alternative_target_1_to_1: 7325
+alternative_target_1_to_n: 41
+matching_1_to_0: 589
+matching_1_to_1: 24778
+matching_1_to_n: 5
+input_identifiers: 32738
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (37, 110)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Schiller_2020: 100%|██████████| 32104/32104 [14:32&lt;00:00, 36.81it/s, ID:RP11-205K6.1]
+2025-06-01 10:55:01 INFO:api: changed_only_1_to_n: 1
+changed_only_1_to_1: 4537
+alternative_target_1_to_1: 6421
+alternative_target_1_to_n: 23
+matching_1_to_0: 506
+matching_1_to_1: 25153
+matching_1_to_n: 1
+input_identifiers: 32104
+2025-06-01 10:55:01 WARNING:api: Number of unfound IDs: 24.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 89)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Misharin_Budinger_2018: 100%|██████████| 27181/27181 [05:59&lt;00:00, 75.63it/s, ID:AC240274.1]
+2025-06-01 11:01:02 INFO:api: changed_only_1_to_n: 1
+changed_only_1_to_1: 3572
+alternative_target_1_to_1: 4929
+alternative_target_1_to_n: 41
+matching_1_to_0: 174
+matching_1_to_1: 22036
+matching_1_to_n: 1
+input_identifiers: 27181
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Shalek_2018: 100%|██████████| 25328/25328 [14:07&lt;00:00, 29.90it/s, ID:TTTY10]
+2025-06-01 11:15:11 INFO:api: changed_only_1_to_n: 2
+changed_only_1_to_1: 3785
+alternative_target_1_to_1: 3554
+alternative_target_1_to_n: 31
+matching_1_to_0: 468
+matching_1_to_1: 21273
+matching_1_to_n: 2
+input_identifiers: 25328
+2025-06-01 11:15:11 WARNING:api: Number of unfound IDs: 8.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (37, 110)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Schiller_2021: 100%|██████████| 17533/17533 [04:29&lt;00:00, 65.04it/s, ID:AC240274.1]
+2025-06-01 11:19:42 INFO:api: changed_only_1_to_n: 0
+changed_only_1_to_1: 482
+alternative_target_1_to_1: 213
+alternative_target_1_to_n: 0
+matching_1_to_0: 8
+matching_1_to_1: 17312
+matching_1_to_n: 0
+input_identifiers: 17533
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 99)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Peer_Massague_2020: 100%|██████████| 19222/19222 [04:49&lt;00:00, 66.43it/s, ID:ZZZ3]
+2025-06-01 11:24:33 INFO:api: changed_only_1_to_n: 0
+changed_only_1_to_1: 1579
+alternative_target_1_to_1: 1223
+alternative_target_1_to_n: 11
+matching_1_to_0: 60
+matching_1_to_1: 17928
+matching_1_to_n: 0
+input_identifiers: 19222
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 86)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Lafyatis_2019: 100%|██████████| 22164/22164 [04:51&lt;00:00, 75.92it/s, ID:AC213203.1]
+2025-06-01 11:29:26 INFO:api: changed_only_1_to_n: 2
+changed_only_1_to_1: 1078
+alternative_target_1_to_1: 426
+alternative_target_1_to_n: 4
+matching_1_to_0: 17
+matching_1_to_1: 21715
+matching_1_to_n: 2
+input_identifiers: 22164
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Tata_unpubl: 100%|██████████| 31915/31915 [05:25&lt;00:00, 98.06it/s, ID:AC213203.1]
+2025-06-01 11:34:53 INFO:api: changed_only_1_to_n: 4
+changed_only_1_to_1: 1980
+alternative_target_1_to_1: 7636
+alternative_target_1_to_n: 11
+matching_1_to_0: 32
+matching_1_to_1: 24232
+matching_1_to_n: 4
+input_identifiers: 31915
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Xu_2020: 100%|██████████| 32738/32738 [09:45&lt;00:00, 55.95it/s, ID:AC002321.1]
+2025-06-01 11:44:40 INFO:api: changed_only_1_to_n: 5
+changed_only_1_to_1: 5709
+alternative_target_1_to_1: 7325
+alternative_target_1_to_n: 41
+matching_1_to_0: 589
+matching_1_to_1: 24778
+matching_1_to_n: 5
+input_identifiers: 32738
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (37, 110)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Sims_2019:  90%|█████████ | 54782/60725 [6:50:46&lt;24:16,  4.08it/s, ID:Y_RNA-693]    2025-06-01 18:35:28 WARNING:track_tests: A form of rare event found for &#39;ENSG00000279393.1&#39;.
+Sims_2019: 100%|██████████| 60725/60725 [7:32:47&lt;00:00,  2.24it/s, ID:CTD-2062F14.3]
+2025-06-01 19:17:29 INFO:api: changed_only_1_to_n: 156
+changed_only_1_to_1: 9043
+alternative_target_1_to_1: 16375
+alternative_target_1_to_n: 280
+matching_1_to_0: 1441
+matching_1_to_1: 42473
+matching_1_to_n: 156
+input_identifiers: 60725
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 83)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Schultze_unpubl: 100%|██████████| 24532/24532 [04:21&lt;00:00, 93.66it/s, ID:AP001269.4]
+2025-06-01 19:21:57 INFO:api: changed_only_1_to_n: 0
+changed_only_1_to_1: 2036
+alternative_target_1_to_1: 3874
+alternative_target_1_to_n: 13
+matching_1_to_0: 42
+matching_1_to_1: 20603
+matching_1_to_n: 0
+input_identifiers: 24532
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 91)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;results_for_hlca_datasets_</span><span class="si">{</span><span class="n">final_database</span><span class="si">}</span><span class="s2">.pk&quot;</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saved: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Saved: /lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/hlca/results_for_hlca_datasets_HGNC Symbol.pk
+</pre></div></div>
+</div>
+<p>Run the ID conversion with Ensembl gene ID</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="n">final_database</span> <span class="o">=</span> <span class="s2">&quot;ensembl_gene&quot;</span>
+
+<span class="k">for</span> <span class="n">dataset_name</span> <span class="ow">in</span> <span class="n">adata_dict</span><span class="p">:</span>
+
+    <span class="n">adata</span> <span class="o">=</span> <span class="n">sc</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">adata_dict</span><span class="p">[</span><span class="n">dataset_name</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">gene_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+
+    <span class="n">matching</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">convert_identifier_multiple</span><span class="p">(</span>
+        <span class="n">gene_list</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="n">final_database</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="mi">107</span><span class="p">,</span> <span class="n">pbar_prefix</span><span class="o">=</span><span class="n">dataset_name</span>
+    <span class="p">)</span>
+    <span class="n">binned_conversions</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">classify_multiple_conversion</span><span class="p">(</span><span class="n">matching</span><span class="p">)</span>
+
+    <span class="n">idt</span><span class="o">.</span><span class="n">print_binned_conversion</span><span class="p">(</span><span class="n">binned_conversions</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Source release: </span><span class="si">{</span><span class="n">idt</span><span class="o">.</span><span class="n">infer_identifier_source</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">result</span><span class="p">[</span><span class="n">dataset_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">binned_conversions</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Kaminski_2020:  64%|██████▍   | 29360/45947 [06:30&lt;22:58, 12.04it/s, ID:ENSG00000279026]2025-06-01 19:30:18 WARNING:track_tests: A form of rare event found for &#39;ENSG00000279393.1&#39;.
+Kaminski_2020: 100%|██████████| 45947/45947 [20:38&lt;00:00, 37.09it/s, ID:ENSG00000280139]
+2025-06-01 19:44:26 INFO:api: changed_only_1_to_n: 600
+changed_only_1_to_1: 45253
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 94
+matching_1_to_1: 45253
+matching_1_to_n: 600
+input_identifiers: 45947
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 94)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Meyer_2021: 100%|██████████| 20922/20922 [03:43&lt;00:00, 93.77it/s, ID:AC240274.1]
+2025-06-01 19:48:12 INFO:api: changed_only_1_to_n: 220
+changed_only_1_to_1: 20688
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 14
+matching_1_to_1: 20688
+matching_1_to_n: 220
+input_identifiers: 20922
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+MeyerNikolic_unpubl: 100%|██████████| 33582/33582 [03:34&lt;00:00, 156.29it/s, ID:hsa-mir-1253]
+2025-06-01 19:51:53 INFO:api: changed_only_1_to_n: 314
+changed_only_1_to_1: 33169
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 99
+matching_1_to_1: 33169
+matching_1_to_n: 314
+input_identifiers: 33582
+2025-06-01 19:51:53 WARNING:api: Number of unfound IDs: 26.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Barbry_unpubl: 100%|██████████| 16859/16859 [03:22&lt;00:00, 83.15it/s, ID:WHRN]
+2025-06-01 19:55:20 INFO:api: changed_only_1_to_n: 106
+changed_only_1_to_1: 16736
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 17
+matching_1_to_1: 16736
+matching_1_to_n: 106
+input_identifiers: 16859
+2025-06-01 19:55:21 WARNING:api: Number of unfound IDs: 1.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 98)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Regev_2021: 100%|██████████| 30983/30983 [03:46&lt;00:00, 136.96it/s, ID:ZZEF1]
+2025-06-01 19:59:08 INFO:api: changed_only_1_to_n: 231
+changed_only_1_to_1: 30644
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 108
+matching_1_to_1: 30644
+matching_1_to_n: 231
+input_identifiers: 30983
+2025-06-01 19:59:08 WARNING:api: Number of unfound IDs: 48.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Thienpont_2018: 100%|██████████| 27958/27958 [04:47&lt;00:00, 97.30it/s, ID:AC240274.1]
+2025-06-01 20:03:57 INFO:api: changed_only_1_to_n: 242
+changed_only_1_to_1: 27548
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 168
+matching_1_to_1: 27548
+matching_1_to_n: 242
+input_identifiers: 27958
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Budinger_2020: 100%|██████████| 26316/26316 [03:36&lt;00:00, 121.39it/s, ID:ZZEF1]
+2025-06-01 20:07:38 INFO:api: changed_only_1_to_n: 198
+changed_only_1_to_1: 26066
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 52
+matching_1_to_1: 26066
+matching_1_to_n: 198
+input_identifiers: 26316
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Banovich_Kropski_2020: 100%|██████████| 33694/33694 [04:45&lt;00:00, 118.10it/s, ID:FAM231B]
+2025-06-01 20:12:25 INFO:api: changed_only_1_to_n: 344
+changed_only_1_to_1: 33094
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 256
+matching_1_to_1: 33094
+matching_1_to_n: 344
+input_identifiers: 33694
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Sheppard_2020: 100%|██████████| 27147/27147 [04:39&lt;00:00, 97.09it/s, ID:AC240274.1]
+2025-06-01 20:17:07 INFO:api: changed_only_1_to_n: 233
+changed_only_1_to_1: 26751
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 163
+matching_1_to_1: 26751
+matching_1_to_n: 233
+input_identifiers: 27147
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Wunderink_2021: 100%|██████████| 21819/21819 [03:29&lt;00:00, 103.94it/s, ID:ZZEF1]
+2025-06-01 20:20:40 INFO:api: changed_only_1_to_n: 172
+changed_only_1_to_1: 21596
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 51
+matching_1_to_1: 21596
+matching_1_to_n: 172
+input_identifiers: 21819
+2025-06-01 20:20:40 WARNING:api: Number of unfound IDs: 12.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Lambrechts_2021: 100%|██████████| 33538/33538 [03:43&lt;00:00, 150.10it/s, ID:FAM231C]
+2025-06-01 20:24:25 INFO:api: changed_only_1_to_n: 314
+changed_only_1_to_1: 33151
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 73
+matching_1_to_1: 33151
+matching_1_to_n: 314
+input_identifiers: 33538
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Zhang_2021: 100%|██████████| 18474/18474 [03:27&lt;00:00, 88.88it/s, ID:DSG1]
+2025-06-01 20:27:58 INFO:api: changed_only_1_to_n: 163
+changed_only_1_to_1: 18303
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 8
+matching_1_to_1: 18303
+matching_1_to_n: 163
+input_identifiers: 18474
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 87)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Duong_lungMAP_unpubl: 100%|██████████| 27678/27678 [03:33&lt;00:00, 129.65it/s, ID:ZZEF1]
+2025-06-01 20:31:33 INFO:api: changed_only_1_to_n: 187
+changed_only_1_to_1: 27443
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 48
+matching_1_to_1: 27443
+matching_1_to_n: 187
+input_identifiers: 27678
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Janssen_2020: 100%|██████████| 33538/33538 [03:44&lt;00:00, 149.25it/s, ID:FAM231C]
+2025-06-01 20:35:20 INFO:api: changed_only_1_to_n: 314
+changed_only_1_to_1: 33151
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 73
+matching_1_to_1: 33151
+matching_1_to_n: 314
+input_identifiers: 33538
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Sun_2020: 100%|██████████| 26578/26578 [03:10&lt;00:00, 139.28it/s, ID:AP006748.1]
+2025-06-01 20:38:32 INFO:api: changed_only_1_to_n: 166
+changed_only_1_to_1: 26366
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 46
+matching_1_to_1: 26366
+matching_1_to_n: 166
+input_identifiers: 26578
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Gomperts_2021: 100%|██████████| 31229/31229 [04:51&lt;00:00, 107.15it/s, ID:WFDC11]
+2025-06-01 20:43:25 INFO:api: changed_only_1_to_n: 278
+changed_only_1_to_1: 30625
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 326
+matching_1_to_1: 30625
+matching_1_to_n: 278
+input_identifiers: 31229
+2025-06-01 20:43:25 WARNING:api: Number of unfound IDs: 172.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 89)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Eils_2020: 100%|██████████| 32738/32738 [05:57&lt;00:00, 91.51it/s, ID:AC002321.1]
+2025-06-01 20:49:24 INFO:api: changed_only_1_to_n: 279
+changed_only_1_to_1: 31870
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 589
+matching_1_to_1: 31870
+matching_1_to_n: 279
+input_identifiers: 32738
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (37, 110)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Schiller_2020: 100%|██████████| 32104/32104 [11:36&lt;00:00, 46.12it/s, ID:RP11-205K6.1]
+2025-06-01 21:01:02 INFO:api: changed_only_1_to_n: 264
+changed_only_1_to_1: 31334
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 506
+matching_1_to_1: 31334
+matching_1_to_n: 264
+input_identifiers: 32104
+2025-06-01 21:01:02 WARNING:api: Number of unfound IDs: 24.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 89)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Misharin_Budinger_2018: 100%|██████████| 27181/27181 [05:03&lt;00:00, 89.64it/s, ID:AC240274.1]
+2025-06-01 21:06:07 INFO:api: changed_only_1_to_n: 247
+changed_only_1_to_1: 26760
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 174
+matching_1_to_1: 26760
+matching_1_to_n: 247
+input_identifiers: 27181
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Shalek_2018: 100%|██████████| 25328/25328 [11:20&lt;00:00, 37.24it/s, ID:TTTY10]
+2025-06-01 21:17:29 INFO:api: changed_only_1_to_n: 197
+changed_only_1_to_1: 24663
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 468
+matching_1_to_1: 24663
+matching_1_to_n: 197
+input_identifiers: 25328
+2025-06-01 21:17:29 WARNING:api: Number of unfound IDs: 8.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (37, 110)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Schiller_2021: 100%|██████████| 17533/17533 [03:23&lt;00:00, 86.31it/s, ID:AC240274.1]
+2025-06-01 21:20:54 INFO:api: changed_only_1_to_n: 138
+changed_only_1_to_1: 17387
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 8
+matching_1_to_1: 17387
+matching_1_to_n: 138
+input_identifiers: 17533
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 99)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Peer_Massague_2020: 100%|██████████| 19222/19222 [03:40&lt;00:00, 87.33it/s, ID:ZZZ3]
+2025-06-01 21:24:35 INFO:api: changed_only_1_to_n: 153
+changed_only_1_to_1: 19009
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 60
+matching_1_to_1: 19009
+matching_1_to_n: 153
+input_identifiers: 19222
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 86)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Lafyatis_2019: 100%|██████████| 22164/22164 [03:37&lt;00:00, 101.88it/s, ID:AC213203.1]
+2025-06-01 21:28:14 INFO:api: changed_only_1_to_n: 276
+changed_only_1_to_1: 21871
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 17
+matching_1_to_1: 21871
+matching_1_to_n: 276
+input_identifiers: 22164
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 84)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Tata_unpubl: 100%|██████████| 31915/31915 [03:17&lt;00:00, 161.26it/s, ID:AC213203.1]
+2025-06-01 21:31:33 INFO:api: changed_only_1_to_n: 304
+changed_only_1_to_1: 31579
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 32
+matching_1_to_1: 31579
+matching_1_to_n: 304
+input_identifiers: 31915
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 93)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Xu_2020: 100%|██████████| 32738/32738 [05:58&lt;00:00, 91.25it/s, ID:AC002321.1]
+2025-06-01 21:37:33 INFO:api: changed_only_1_to_n: 279
+changed_only_1_to_1: 31870
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 589
+matching_1_to_1: 31870
+matching_1_to_n: 279
+input_identifiers: 32738
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (37, 110)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Sims_2019:  90%|█████████ | 54823/60725 [06:13&lt;00:21, 278.51it/s, ID:TSPAN11]  2025-06-01 21:43:48 WARNING:track_tests: A form of rare event found for &#39;ENSG00000279393.1&#39;.
+Sims_2019: 100%|██████████| 60725/60725 [07:15&lt;00:00, 139.48it/s, ID:CTD-2062F14.3]
+2025-06-01 21:44:50 INFO:api: changed_only_1_to_n: 1030
+changed_only_1_to_1: 58254
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 1441
+matching_1_to_1: 58254
+matching_1_to_n: 1030
+input_identifiers: 60725
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 83)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Schultze_unpubl: 100%|██████████| 24532/24532 [02:58&lt;00:00, 137.78it/s, ID:AP001269.4]
+2025-06-01 21:47:49 INFO:api: changed_only_1_to_n: 202
+changed_only_1_to_1: 24288
+alternative_target_1_to_1: 0
+alternative_target_1_to_n: 0
+matching_1_to_0: 42
+matching_1_to_1: 24288
+matching_1_to_n: 202
+input_identifiers: 24532
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source release: (38, 91)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;results_for_hlca_datasets_</span><span class="si">{</span><span class="n">final_database</span><span class="si">}</span><span class="s2">.pk&quot;</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saved: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Saved: /lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/hlca/results_for_hlca_datasets_ensembl_gene.pk
+</pre></div></div>
+</div>
+<p>Print the processor</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">((</span><span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span><span class="s2">&quot;lscpu&quot;</span><span class="p">,</span> <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Architecture:                       x86_64
+CPU op-mode(s):                     32-bit, 64-bit
+Address sizes:                      52 bits physical, 57 bits virtual
+Byte Order:                         Little Endian
+CPU(s):                             224
+On-line CPU(s) list:                0-223
+Vendor ID:                          GenuineIntel
+Model name:                         Intel(R) Xeon(R) Platinum 8480+
+CPU family:                         6
+Model:                              143
+Thread(s) per core:                 2
+Core(s) per socket:                 56
+Socket(s):                          2
+Stepping:                           8
+CPU(s) scaling MHz:                 100%
+CPU max MHz:                        3800.0000
+CPU min MHz:                        800.0000
+BogoMIPS:                           4000.00
+Flags:                              fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf tsc_known_freq pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb cat_l3 cat_l2 cdp_l3 intel_ppin cdp_l2 ssbd mba ibrs ibpb stibp ibrs_enhanced tpr_shadow flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid cqm rdt_a avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb intel_pt avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local split_lock_detect avx_vnni avx512_bf16 wbnoinvd dtherm ida arat pln pts hwp hwp_act_window hwp_epp hwp_pkg_req vnmi avx512vbmi umip pku ospke waitpkg avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg tme avx512_vpopcntdq la57 rdpid bus_lock_detect cldemote movdiri movdir64b enqcmd fsrm md_clear serialize tsxldtrk pconfig arch_lbr ibt amx_bf16 avx512_fp16 amx_tile amx_int8 flush_l1d arch_capabilities
+Virtualization:                     VT-x
+L1d cache:                          5.3 MiB (112 instances)
+L1i cache:                          3.5 MiB (112 instances)
+L2 cache:                           224 MiB (112 instances)
+L3 cache:                           210 MiB (2 instances)
+NUMA node(s):                       2
+NUMA node0 CPU(s):                  0-55,112-167
+NUMA node1 CPU(s):                  56-111,168-223
+Vulnerability Gather data sampling: Not affected
+Vulnerability Itlb multihit:        Not affected
+Vulnerability L1tf:                 Not affected
+Vulnerability Mds:                  Not affected
+Vulnerability Meltdown:             Not affected
+Vulnerability Mmio stale data:      Not affected
+Vulnerability Retbleed:             Not affected
+Vulnerability Spec rstack overflow: Not affected
+Vulnerability Spec store bypass:    Mitigation; Speculative Store Bypass disabled via prctl
+Vulnerability Spectre v1:           Mitigation; usercopy/swapgs barriers and __user pointer sanitization
+Vulnerability Spectre v2:           Mitigation; Enhanced / Automatic IBRS, IBPB conditional, RSB filling, PBRSB-eIBRS SW sequence
+Vulnerability Srbds:                Not affected
+Vulnerability Tsx async abort:      Not affected
+</pre></div></div>
+</div>
+<p>Plot/Table</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>ls<span class="w"> </span>-lh<span class="w"> </span>/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+total 41G
+-rw-r--r--. 1 kemal.inecik OG-ICB-User 813M May 27 20:30 graph_homo_sapiens_min79_max114_narrow.pickle
+drwxr-xr-x. 2 kemal.inecik OG-ICB-User 4.0K Jun  1 21:47 hlca
+-rw-r--r--. 1 kemal.inecik OG-ICB-User  20G May 27 20:28 homo_sapiens_assembly-37.h5
+-rw-r--r--. 1 kemal.inecik OG-ICB-User  20G May 27 20:28 homo_sapiens_assembly-38.h5
+-rw-r--r--. 1 kemal.inecik OG-ICB-User  64K May 27 17:59 homo_sapiens_externals_modified.yml
+-rw-r--r--. 1 kemal.inecik OG-ICB-User  54K May 27 17:26 homo_sapiens_externals_template.yml
+drwxr-xr-x. 2 kemal.inecik OG-ICB-User 4.0K Jun  1 09:16 tests
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="s2">&quot;results_for_hlca_datasets_ensembl_gene.pk&quot;</span><span class="p">),</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_file_1</span><span class="p">:</span>
+    <span class="n">res_ens</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pickle_file_1</span><span class="p">)</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="s2">&quot;results_for_hlca_datasets_HGNC Symbol.pk&quot;</span><span class="p">),</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_file_2</span><span class="p">:</span>
+    <span class="n">res_hgn</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pickle_file_2</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">r_ens</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">res_ens</span><span class="p">:</span>
+    <span class="n">r_ens</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">res_ens</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+        <span class="n">r_ens</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">res_ens</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">])</span>
+
+<span class="n">r_hgn</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">res_hgn</span><span class="p">:</span>
+    <span class="n">r_hgn</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">res_hgn</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+        <span class="n">r_hgn</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">res_hgn</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">column_order</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;input_identifiers&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;matching_1_to_1&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;changed_only_1_to_1&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;alternative_target_1_to_1&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;matching_1_to_n&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;changed_only_1_to_n&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;alternative_target_1_to_n&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;matching_1_to_0&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+<span class="n">raname_columns</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;input_identifiers&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;matching_1_to_1&quot;</span><span class="p">:</span> <span class="s2">&quot;TDM&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;changed_only_1_to_1&quot;</span><span class="p">:</span> <span class="s2">&quot;CI&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;alternative_target_1_to_1&quot;</span><span class="p">:</span> <span class="s2">&quot;ATM&quot;</span><span class="p">,</span>  <span class="c1"># TDM: target database matching, ATM: alternative target matching</span>
+    <span class="s2">&quot;matching_1_to_n&quot;</span><span class="p">:</span> <span class="s2">&quot;TDM&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;changed_only_1_to_n&quot;</span><span class="p">:</span> <span class="s2">&quot;CI&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;alternative_target_1_to_n&quot;</span><span class="p">:</span> <span class="s2">&quot;ATM&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;matching_1_to_0&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="n">higher_columns</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;Input IDs&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;One-to-One&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;One-to-One&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;One-to-One&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;One-to-Many&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;One-to-Many&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;One-to-Many&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;One-to-None&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df1</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">r_hgn</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">column_order</span><span class="p">]</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">raname_columns</span><span class="p">)</span>
+<span class="n">df1</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[[</span><span class="s2">&quot;&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;Target HGNC Names&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">6</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">],</span> <span class="n">higher_columns</span><span class="p">,</span> <span class="n">df1</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+<span class="n">df2</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">r_ens</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">[</span><span class="n">column_order</span><span class="p">]</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">raname_columns</span><span class="p">)</span>
+<span class="n">df2</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[[</span><span class="s2">&quot;&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;Target Ensembl&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">6</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">],</span> <span class="n">higher_columns</span><span class="p">,</span> <span class="n">df2</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df1</span><span class="p">,</span> <span class="n">df2</span><span class="p">[[</span><span class="s2">&quot;Target Ensembl&quot;</span><span class="p">]]],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span>
+    <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Input IDs&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;Target HGNC Names&quot;</span><span class="p">,</span> <span class="s2">&quot;One-to-One&quot;</span><span class="p">,</span> <span class="s2">&quot;TDM&quot;</span><span class="p">),</span>
+        <span class="c1"># (&#39;Target HGNC Names&#39;,  &#39;One-to-One&#39;,        &#39;CI&#39;),</span>
+        <span class="p">(</span><span class="s2">&quot;Target HGNC Names&quot;</span><span class="p">,</span> <span class="s2">&quot;One-to-One&quot;</span><span class="p">,</span> <span class="s2">&quot;ATM&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;Target HGNC Names&quot;</span><span class="p">,</span> <span class="s2">&quot;One-to-Many&quot;</span><span class="p">,</span> <span class="s2">&quot;TDM&quot;</span><span class="p">),</span>
+        <span class="c1"># (&#39;Target HGNC Names&#39;, &#39;One-to-Many&#39;,        &#39;CI&#39;),</span>
+        <span class="p">(</span><span class="s2">&quot;Target HGNC Names&quot;</span><span class="p">,</span> <span class="s2">&quot;One-to-Many&quot;</span><span class="p">,</span> <span class="s2">&quot;ATM&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;Target Ensembl&quot;</span><span class="p">,</span> <span class="s2">&quot;One-to-One&quot;</span><span class="p">,</span> <span class="s2">&quot;TDM&quot;</span><span class="p">),</span>
+        <span class="c1"># (   &#39;Target Ensembl&#39;,  &#39;One-to-One&#39;,        &#39;CI&#39;),</span>
+        <span class="c1"># (   &#39;Target Ensembl&#39;,  &#39;One-to-One&#39;,       &#39;ATM&#39;),</span>
+        <span class="p">(</span><span class="s2">&quot;Target Ensembl&quot;</span><span class="p">,</span> <span class="s2">&quot;One-to-Many&quot;</span><span class="p">,</span> <span class="s2">&quot;TDM&quot;</span><span class="p">),</span>
+        <span class="c1"># (   &#39;Target Ensembl&#39;, &#39;One-to-Many&#39;,        &#39;CI&#39;),</span>
+        <span class="c1"># (   &#39;Target Ensembl&#39;, &#39;One-to-Many&#39;,       &#39;ATM&#39;),</span>
+        <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;One-to-None&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+    <span class="p">]</span>
+<span class="p">]</span>
+<span class="n">df</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead tr th {
+        text-align: left;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th></th>
+      <th colspan="4" halign="left">Target HGNC Names</th>
+      <th colspan="2" halign="left">Target Ensembl</th>
+      <th></th>
+    </tr>
+    <tr>
+      <th></th>
+      <th>Input IDs</th>
+      <th colspan="2" halign="left">One-to-One</th>
+      <th colspan="2" halign="left">One-to-Many</th>
+      <th>One-to-One</th>
+      <th>One-to-Many</th>
+      <th>One-to-None</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th>TDM</th>
+      <th>ATM</th>
+      <th>TDM</th>
+      <th>ATM</th>
+      <th>TDM</th>
+      <th>TDM</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Kaminski_2020</th>
+      <td>45947</td>
+      <td>33648</td>
+      <td>12037</td>
+      <td>51</td>
+      <td>117</td>
+      <td>45253</td>
+      <td>600</td>
+      <td>94</td>
+    </tr>
+    <tr>
+      <th>Meyer_2021</th>
+      <td>20922</td>
+      <td>20555</td>
+      <td>349</td>
+      <td>0</td>
+      <td>4</td>
+      <td>20688</td>
+      <td>220</td>
+      <td>14</td>
+    </tr>
+    <tr>
+      <th>MeyerNikolic_unpubl</th>
+      <td>33582</td>
+      <td>25025</td>
+      <td>8438</td>
+      <td>4</td>
+      <td>16</td>
+      <td>33169</td>
+      <td>314</td>
+      <td>99</td>
+    </tr>
+    <tr>
+      <th>Barbry_unpubl</th>
+      <td>16859</td>
+      <td>15150</td>
+      <td>1687</td>
+      <td>0</td>
+      <td>5</td>
+      <td>16736</td>
+      <td>106</td>
+      <td>17</td>
+    </tr>
+    <tr>
+      <th>Regev_2021</th>
+      <td>30983</td>
+      <td>23388</td>
+      <td>7471</td>
+      <td>2</td>
+      <td>14</td>
+      <td>30644</td>
+      <td>231</td>
+      <td>108</td>
+    </tr>
+    <tr>
+      <th>Thienpont_2018</th>
+      <td>27958</td>
+      <td>22499</td>
+      <td>5250</td>
+      <td>1</td>
+      <td>40</td>
+      <td>27548</td>
+      <td>242</td>
+      <td>168</td>
+    </tr>
+    <tr>
+      <th>Budinger_2020</th>
+      <td>26316</td>
+      <td>21389</td>
+      <td>4866</td>
+      <td>2</td>
+      <td>7</td>
+      <td>26066</td>
+      <td>198</td>
+      <td>52</td>
+    </tr>
+    <tr>
+      <th>Banovich_Kropski_2020</th>
+      <td>33694</td>
+      <td>25371</td>
+      <td>8011</td>
+      <td>3</td>
+      <td>53</td>
+      <td>33094</td>
+      <td>344</td>
+      <td>256</td>
+    </tr>
+    <tr>
+      <th>Sheppard_2020</th>
+      <td>27147</td>
+      <td>22002</td>
+      <td>4944</td>
+      <td>1</td>
+      <td>37</td>
+      <td>26751</td>
+      <td>233</td>
+      <td>163</td>
+    </tr>
+    <tr>
+      <th>Wunderink_2021</th>
+      <td>21819</td>
+      <td>18809</td>
+      <td>2956</td>
+      <td>1</td>
+      <td>2</td>
+      <td>21596</td>
+      <td>172</td>
+      <td>51</td>
+    </tr>
+    <tr>
+      <th>Lambrechts_2021</th>
+      <td>33538</td>
+      <td>25007</td>
+      <td>8438</td>
+      <td>4</td>
+      <td>16</td>
+      <td>33151</td>
+      <td>314</td>
+      <td>73</td>
+    </tr>
+    <tr>
+      <th>Zhang_2021</th>
+      <td>18474</td>
+      <td>18375</td>
+      <td>90</td>
+      <td>0</td>
+      <td>1</td>
+      <td>18303</td>
+      <td>163</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <th>Duong_lungMAP_unpubl</th>
+      <td>27678</td>
+      <td>21552</td>
+      <td>6062</td>
+      <td>2</td>
+      <td>14</td>
+      <td>27443</td>
+      <td>187</td>
+      <td>48</td>
+    </tr>
+    <tr>
+      <th>Janssen_2020</th>
+      <td>33538</td>
+      <td>25007</td>
+      <td>8438</td>
+      <td>4</td>
+      <td>16</td>
+      <td>33151</td>
+      <td>314</td>
+      <td>73</td>
+    </tr>
+    <tr>
+      <th>Sun_2020</th>
+      <td>26578</td>
+      <td>21042</td>
+      <td>5477</td>
+      <td>2</td>
+      <td>11</td>
+      <td>26366</td>
+      <td>166</td>
+      <td>46</td>
+    </tr>
+    <tr>
+      <th>Gomperts_2021</th>
+      <td>31229</td>
+      <td>24926</td>
+      <td>5941</td>
+      <td>6</td>
+      <td>30</td>
+      <td>30625</td>
+      <td>278</td>
+      <td>326</td>
+    </tr>
+    <tr>
+      <th>Eils_2020</th>
+      <td>32738</td>
+      <td>24778</td>
+      <td>7325</td>
+      <td>5</td>
+      <td>41</td>
+      <td>31870</td>
+      <td>279</td>
+      <td>589</td>
+    </tr>
+    <tr>
+      <th>Schiller_2020</th>
+      <td>32104</td>
+      <td>25153</td>
+      <td>6421</td>
+      <td>1</td>
+      <td>23</td>
+      <td>31334</td>
+      <td>264</td>
+      <td>506</td>
+    </tr>
+    <tr>
+      <th>Misharin_Budinger_2018</th>
+      <td>27181</td>
+      <td>22036</td>
+      <td>4929</td>
+      <td>1</td>
+      <td>41</td>
+      <td>26760</td>
+      <td>247</td>
+      <td>174</td>
+    </tr>
+    <tr>
+      <th>Shalek_2018</th>
+      <td>25328</td>
+      <td>21273</td>
+      <td>3554</td>
+      <td>2</td>
+      <td>31</td>
+      <td>24663</td>
+      <td>197</td>
+      <td>468</td>
+    </tr>
+    <tr>
+      <th>Schiller_2021</th>
+      <td>17533</td>
+      <td>17312</td>
+      <td>213</td>
+      <td>0</td>
+      <td>0</td>
+      <td>17387</td>
+      <td>138</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <th>Peer_Massague_2020</th>
+      <td>19222</td>
+      <td>17928</td>
+      <td>1223</td>
+      <td>0</td>
+      <td>11</td>
+      <td>19009</td>
+      <td>153</td>
+      <td>60</td>
+    </tr>
+    <tr>
+      <th>Lafyatis_2019</th>
+      <td>22164</td>
+      <td>21715</td>
+      <td>426</td>
+      <td>2</td>
+      <td>4</td>
+      <td>21871</td>
+      <td>276</td>
+      <td>17</td>
+    </tr>
+    <tr>
+      <th>Tata_unpubl</th>
+      <td>31915</td>
+      <td>24232</td>
+      <td>7636</td>
+      <td>4</td>
+      <td>11</td>
+      <td>31579</td>
+      <td>304</td>
+      <td>32</td>
+    </tr>
+    <tr>
+      <th>Xu_2020</th>
+      <td>32738</td>
+      <td>24778</td>
+      <td>7325</td>
+      <td>5</td>
+      <td>41</td>
+      <td>31870</td>
+      <td>279</td>
+      <td>589</td>
+    </tr>
+    <tr>
+      <th>Sims_2019</th>
+      <td>60725</td>
+      <td>42473</td>
+      <td>16375</td>
+      <td>156</td>
+      <td>280</td>
+      <td>58254</td>
+      <td>1030</td>
+      <td>1441</td>
+    </tr>
+    <tr>
+      <th>Schultze_unpubl</th>
+      <td>24532</td>
+      <td>20603</td>
+      <td>3874</td>
+      <td>0</td>
+      <td>13</td>
+      <td>24288</td>
+      <td>202</td>
+      <td>42</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">query_ids</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">res_hgn</span><span class="p">:</span>
+    <span class="n">query_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">res_hgn</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;input_identifiers&quot;</span><span class="p">]:</span>
+        <span class="n">query_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="p">[</span><span class="s2">&quot;query_id&quot;</span><span class="p">])</span>
+
+<span class="n">hgnc_ids</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">res_hgn</span><span class="p">:</span>
+    <span class="n">hgnc_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">res_hgn</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;matching_1_to_1&quot;</span><span class="p">]:</span>
+        <span class="n">hgnc_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">res_hgn</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;alternative_target_1_to_1&quot;</span><span class="p">]:</span>
+        <span class="n">hgnc_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+
+<span class="n">ens_ids</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">res_ens</span><span class="p">:</span>
+    <span class="n">ens_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">res_ens</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;matching_1_to_1&quot;</span><span class="p">]:</span>
+        <span class="n">ens_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">query_ids</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">query_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="nb">len</span><span class="p">(</span><span class="n">hgnc_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="nb">len</span><span class="p">(</span><span class="n">ens_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+45947 45685 45253
+20922 20904 20688
+33582 33463 33169
+16859 16837 16736
+30983 30859 30644
+27958 27749 27548
+26316 26255 26066
+33694 33382 33094
+27147 26946 26751
+21819 21765 21596
+33538 33445 33151
+18474 18465 18303
+27678 27614 27443
+33538 33445 33151
+26578 26519 26366
+31229 30867 30625
+32738 32103 31870
+32104 31574 31334
+27181 26965 26760
+25328 24827 24663
+17533 17525 17387
+19222 19151 19009
+22164 22141 21871
+31915 31868 31579
+32738 32103 31870
+60725 58848 58254
+24532 24477 24288
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">a1</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">query_ids</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">v</span><span class="p">]</span>
+<span class="n">a2</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">hgnc_ids</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">v</span><span class="p">]</span>
+<span class="n">a3</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ens_ids</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">v</span><span class="p">]</span>
+<span class="nb">len</span><span class="p">(</span><span class="n">a1</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">a2</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(782442, 775782, 769469)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">b1</span><span class="p">,</span> <span class="n">b2</span><span class="p">,</span> <span class="n">b3</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">a1</span><span class="p">),</span> <span class="nb">set</span><span class="p">(</span><span class="n">a2</span><span class="p">),</span> <span class="nb">set</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>
+<span class="nb">len</span><span class="p">(</span><span class="n">b1</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">b2</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">b3</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(94538, 57115, 56261)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="p">[(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">b3</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="n">b3</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ens_ids</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[(&#39;Kaminski_2020&#39;, 12042, 44219, 56261),
+ (&#39;Meyer_2021&#39;, 35858, 20403, 56261),
+ (&#39;MeyerNikolic_unpubl&#39;, 24102, 32159, 56261),
+ (&#39;Barbry_unpubl&#39;, 39680, 16581, 56261),
+ (&#39;Regev_2021&#39;, 26351, 29910, 56261),
+ (&#39;Thienpont_2018&#39;, 29365, 26896, 56261),
+ (&#39;Budinger_2020&#39;, 30722, 25539, 56261),
+ (&#39;Banovich_Kropski_2020&#39;, 24197, 32064, 56261),
+ (&#39;Sheppard_2020&#39;, 30133, 26128, 56261),
+ (&#39;Wunderink_2021&#39;, 35024, 21237, 56261),
+ (&#39;Lambrechts_2021&#39;, 24102, 32159, 56261),
+ (&#39;Zhang_2021&#39;, 38117, 18144, 56261),
+ (&#39;Duong_lungMAP_unpubl&#39;, 29367, 26894, 56261),
+ (&#39;Janssen_2020&#39;, 24102, 32159, 56261),
+ (&#39;Sun_2020&#39;, 30384, 25877, 56261),
+ (&#39;Gomperts_2021&#39;, 30839, 25422, 56261),
+ (&#39;Eils_2020&#39;, 25684, 30577, 56261),
+ (&#39;Schiller_2020&#39;, 28554, 27707, 56261),
+ (&#39;Misharin_Budinger_2018&#39;, 30132, 26129, 56261),
+ (&#39;Shalek_2018&#39;, 32168, 24093, 56261),
+ (&#39;Schiller_2021&#39;, 39030, 17231, 56261),
+ (&#39;Peer_Massague_2020&#39;, 37486, 18775, 56261),
+ (&#39;Lafyatis_2019&#39;, 34779, 21482, 56261),
+ (&#39;Tata_unpubl&#39;, 25382, 30879, 56261),
+ (&#39;Xu_2020&#39;, 25684, 30577, 56261),
+ (&#39;Sims_2019&#39;, 2359, 53902, 56261),
+ (&#39;Schultze_unpubl&#39;, 32326, 23935, 56261)]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="p">[(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">b2</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="n">b2</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">hgnc_ids</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[(&#39;Kaminski_2020&#39;, 12390, 44725, 57115),
+ (&#39;Meyer_2021&#39;, 36328, 20787, 57115),
+ (&#39;MeyerNikolic_unpubl&#39;, 24393, 32722, 57115),
+ (&#39;Barbry_unpubl&#39;, 40379, 16736, 57115),
+ (&#39;Regev_2021&#39;, 26822, 30293, 57115),
+ (&#39;Thienpont_2018&#39;, 29868, 27247, 57115),
+ (&#39;Budinger_2020&#39;, 31245, 25870, 57115),
+ (&#39;Banovich_Kropski_2020&#39;, 24551, 32564, 57115),
+ (&#39;Sheppard_2020&#39;, 30658, 26457, 57115),
+ (&#39;Wunderink_2021&#39;, 35604, 21511, 57115),
+ (&#39;Lambrechts_2021&#39;, 24393, 32722, 57115),
+ (&#39;Zhang_2021&#39;, 38719, 18396, 57115),
+ (&#39;Duong_lungMAP_unpubl&#39;, 29939, 27176, 57115),
+ (&#39;Janssen_2020&#39;, 24393, 32722, 57115),
+ (&#39;Sun_2020&#39;, 30975, 26140, 57115),
+ (&#39;Gomperts_2021&#39;, 31215, 25900, 57115),
+ (&#39;Eils_2020&#39;, 26120, 30995, 57115),
+ (&#39;Schiller_2020&#39;, 29102, 28013, 57115),
+ (&#39;Misharin_Budinger_2018&#39;, 30630, 26485, 57115),
+ (&#39;Shalek_2018&#39;, 32792, 24323, 57115),
+ (&#39;Schiller_2021&#39;, 39646, 17469, 57115),
+ (&#39;Peer_Massague_2020&#39;, 38108, 19007, 57115),
+ (&#39;Lafyatis_2019&#39;, 35122, 21993, 57115),
+ (&#39;Tata_unpubl&#39;, 25670, 31445, 57115),
+ (&#39;Xu_2020&#39;, 26120, 30995, 57115),
+ (&#39;Sims_2019&#39;, 2298, 54817, 57115),
+ (&#39;Schultze_unpubl&#39;, 32909, 24206, 57115)]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="p">[(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">b1</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">v</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="n">b1</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">query_ids</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[(&#39;Kaminski_2020&#39;, 48591, 45947, 94538),
+ (&#39;Meyer_2021&#39;, 73616, 20922, 94538),
+ (&#39;MeyerNikolic_unpubl&#39;, 60956, 33582, 94538),
+ (&#39;Barbry_unpubl&#39;, 77679, 16859, 94538),
+ (&#39;Regev_2021&#39;, 63555, 30983, 94538),
+ (&#39;Thienpont_2018&#39;, 66580, 27958, 94538),
+ (&#39;Budinger_2020&#39;, 68222, 26316, 94538),
+ (&#39;Banovich_Kropski_2020&#39;, 60844, 33694, 94538),
+ (&#39;Sheppard_2020&#39;, 67391, 27147, 94538),
+ (&#39;Wunderink_2021&#39;, 72719, 21819, 94538),
+ (&#39;Lambrechts_2021&#39;, 61000, 33538, 94538),
+ (&#39;Zhang_2021&#39;, 76064, 18474, 94538),
+ (&#39;Duong_lungMAP_unpubl&#39;, 66860, 27678, 94538),
+ (&#39;Janssen_2020&#39;, 61000, 33538, 94538),
+ (&#39;Sun_2020&#39;, 67960, 26578, 94538),
+ (&#39;Gomperts_2021&#39;, 63309, 31229, 94538),
+ (&#39;Eils_2020&#39;, 61800, 32738, 94538),
+ (&#39;Schiller_2020&#39;, 62434, 32104, 94538),
+ (&#39;Misharin_Budinger_2018&#39;, 67357, 27181, 94538),
+ (&#39;Shalek_2018&#39;, 69210, 25328, 94538),
+ (&#39;Schiller_2021&#39;, 77005, 17533, 94538),
+ (&#39;Peer_Massague_2020&#39;, 75316, 19222, 94538),
+ (&#39;Lafyatis_2019&#39;, 72374, 22164, 94538),
+ (&#39;Tata_unpubl&#39;, 62623, 31915, 94538),
+ (&#39;Xu_2020&#39;, 61800, 32738, 94538),
+ (&#39;Sims_2019&#39;, 33813, 60725, 94538),
+ (&#39;Schultze_unpubl&#39;, 70006, 24532, 94538)]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="mi">1</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+1
+</pre></div></div>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="initialization_test.html" class="btn btn-neutral float-left" title="Initialization and Tests" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="tutorial_harmonization.html" class="btn btn-neutral float-right" title="Multiple Dataset Harmonization Tutorial" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
