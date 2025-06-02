@@ -50,6 +50,46 @@
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#idtrack._api.API"><code class="docutils literal notranslate"><span class="pre">API</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._api.API.available_available_external_databases"><code class="docutils literal notranslate"><span class="pre">API.available_available_external_databases()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._api.API.calculate_graph_caches"><code class="docutils literal notranslate"><span class="pre">API.calculate_graph_caches()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._api.API.classify_multiple_conversion"><code class="docutils literal notranslate"><span class="pre">API.classify_multiple_conversion()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._api.API.configure_logger"><code class="docutils literal notranslate"><span class="pre">API.configure_logger()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._api.API.convert_identifier"><code class="docutils literal notranslate"><span class="pre">API.convert_identifier()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._api.API.convert_identifier_multiple"><code class="docutils literal notranslate"><span class="pre">API.convert_identifier_multiple()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._api.API.get_database_manager"><code class="docutils literal notranslate"><span class="pre">API.get_database_manager()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._api.API.get_ensembl_organism"><code class="docutils literal notranslate"><span class="pre">API.get_ensembl_organism()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._api.API.infer_identifier_source"><code class="docutils literal notranslate"><span class="pre">API.infer_identifier_source()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._api.API.initialize_graph"><code class="docutils literal notranslate"><span class="pre">API.initialize_graph()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._api.API.print_binned_conversion"><code class="docutils literal notranslate"><span class="pre">API.print_binned_conversion()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.idt"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.idt</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.multiple_ensembl_dict"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.multiple_ensembl_dict</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.removed_conversion_failed_identifiers"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.removed_conversion_failed_identifiers</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.kept_conversion_failed_identifiers"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.kept_conversion_failed_identifiers</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.removed_inconsistent_identifier_matching"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.removed_inconsistent_identifier_matching</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures._initialize()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize_idt"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures._initialize_idt()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_but_consistent_identifiers"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.conversion_failed_but_consistent_identifiers</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_identifiers"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.conversion_failed_identifiers</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.create_dataset_conversion_dataframe"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.create_dataset_conversion_dataframe()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.create_intersection_column_values"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.create_intersection_column_values()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.create_multiple_ensembl_dict"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.create_multiple_ensembl_dict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.datataset_conversion_dataframe_issues"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.datataset_conversion_dataframe_issues</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.dict_1_to_not_1"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.dict_1_to_not_1</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.extract_source_identifiers_from_anndata"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.extract_source_identifiers_from_anndata()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.feature_harmonizer"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.feature_harmonizer()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.get_idtrack_matchings_for_all_datasets"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.get_idtrack_matchings_for_all_datasets()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.n_to_1_within_individual_dataset"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.n_to_1_within_individual_dataset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.reporter_dict_creator"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.reporter_dict_creator()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.reporter_dict_creator_helper_reason_finder"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.reporter_dict_creator_helper_reason_finder()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.run_idtrack_for_single_dataset"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.run_idtrack_for_single_dataset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.unified_matching_dict"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.unified_matching_dict</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.unify_multiple_anndatas()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager"><code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._create_relation_helper"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._create_relation_helper()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._determine_usecols_ids"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._determine_usecols_ids()</span></code></a></li>
@@ -275,6 +315,924 @@
              
   <section id="reference">
 <h1>Reference<a class="headerlink" href="#reference" title="Link to this heading"></a></h1>
+<dl class="py class" id="module-idtrack._api">
+<dt class="sig sig-object py" id="idtrack._api.API">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">API</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">local_repository</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_api.html#API"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._api.API" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Application programming interface for simple operations using <code class="docutils literal notranslate"><span class="pre">idtrack</span></code> package.</p>
+<p>Class initialization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>local_repository</strong> (<em>str</em>) – An absolute path in local machine to store downloaded and preprocessed content.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._api.API.available_available_external_databases">
+<span class="sig-name descname"><span class="pre">available_available_external_databases</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_api.html#API.available_available_external_databases"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._api.API.available_available_external_databases" title="Link to this definition"></a></dt>
+<dd><p>Show which organisms are available to be used in the scope of this package.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Set of strings saying which external databases are present in the graph.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>set[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._api.API.calculate_graph_caches">
+<span class="sig-name descname"><span class="pre">calculate_graph_caches</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_api.html#API.calculate_graph_caches"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._api.API.calculate_graph_caches" title="Link to this definition"></a></dt>
+<dd><p>Calculate cached variables of the graph object using only one method.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._api.API.classify_multiple_conversion">
+<span class="sig-name descname"><span class="pre">classify_multiple_conversion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">matchings</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_api.html#API.classify_multiple_conversion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._api.API.classify_multiple_conversion" title="Link to this definition"></a></dt>
+<dd><p>Create a dictionary by classifying the results into different bins.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>matchings</strong> (<em>list</em><em>[</em><em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em><em>]</em>) – The output of <code class="docutils literal notranslate"><span class="pre">convert_identifier_multiple</span></code> method.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – Unexpected program error</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of <code class="docutils literal notranslate"><span class="pre">convert_identifier</span></code> method outputs.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict[str, list[dict]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._api.API.configure_logger">
+<span class="sig-name descname"><span class="pre">configure_logger</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_api.html#API.configure_logger"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._api.API.configure_logger" title="Link to this definition"></a></dt>
+<dd><p>Configure logger in a way that shows the logs in a specified format.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._api.API.convert_identifier">
+<span class="sig-name descname"><span class="pre">convert_identifier</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">identifier</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">from_release</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_release</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">final_database</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prioritize_to_one_filter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_api.html#API.convert_identifier"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._api.API.convert_identifier" title="Link to this definition"></a></dt>
+<dd><p>Finds corresponding identifier in specified target using the constructed graph and pathfinder algorithm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>identifier</strong> (<em>str</em>) – Query ID.</p></li>
+<li><p><strong>from_release</strong> (<em>int</em><em> | </em><em>None</em>) – Query ID is from which Ensembl release, if provided.</p></li>
+<li><p><strong>to_release</strong> (<em>int</em><em> | </em><em>None</em>) – Ensembl release for target gene set.
+Which Ensembl release the user wants to convert the ID into. The default is the latest Ensembl release.</p></li>
+<li><p><strong>final_database</strong> (<em>str</em><em> | </em><em>None</em>) – Database for the target gene set.
+Which database the user wants to convert the ID into. The default is ‘ensembl_gene’.</p></li>
+<li><p><strong>prioritize_to_one_filter</strong> (<em>bool</em>) – Decide to use a series of filters to score the possible paths, and ideally choose
+a single target at the end.</p></li>
+<li><p><strong>return_path</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, returns the path from source to query ID.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A dictionary with following keys</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;target_id&quot;</span></code>: Final IDs after conversion.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;last_node&quot;</span></code>: The last node in history travel, so it is an Ensembl gene ID.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;final_database&quot;</span></code>: Final database of the final IDs.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;graph_id&quot;</span></code>: The corresponding ID in the graph for the query ID.
+For example, if the query ID is ‘actb’, this will be ‘ACTB’.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;query_id&quot;</span></code>: The input query ID.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;no_corresponding&quot;</span></code>: If <code class="docutils literal notranslate"><span class="pre">True</span></code>, there is no such ID in the graph.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;no_conversion&quot;</span></code>: If <code class="docutils literal notranslate"><span class="pre">True</span></code>, it is not possible to convert into the target. It is 1-to-0 matching.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;no_target&quot;</span></code>: If <code class="docutils literal notranslate"><span class="pre">True</span></code>, there is no matching in the described final database, but the history
+travel was successful until ‘last_node’. In other words, ‘final_conversion’ failed, no mathing identifier
+is found in the target database but there is mathing identifier in Ensembl.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;the_path&quot;</span></code>: The path from source to query ID. (If <cite>return_path</cite> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>.)</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._api.API.convert_identifier_multiple">
+<span class="sig-name descname"><span class="pre">convert_identifier_multiple</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">identifier_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pbar_prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_api.html#API.convert_identifier_multiple"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._api.API.convert_identifier_multiple" title="Link to this definition"></a></dt>
+<dd><p>Basically <code class="docutils literal notranslate"><span class="pre">convert_identifier</span></code> method for multiple conversion procedure with progress bar.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>identifier_list</strong> – List of query IDs to feed the <code class="docutils literal notranslate"><span class="pre">convert_identifier</span></code> method.</p></li>
+<li><p><strong>kwargs</strong> – Keyword arguments to pass into <code class="docutils literal notranslate"><span class="pre">convert_identifier</span></code> method.</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, shows the progress.</p></li>
+<li><p><strong>pbar_prefix</strong> (<em>str</em>) – The string to be put before the progress bar.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of <code class="docutils literal notranslate"><span class="pre">convert_identifier</span></code> method outputs.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[dict]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._api.API.get_database_manager">
+<span class="sig-name descname"><span class="pre">get_database_manager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">organism_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_ensembl_release</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_api.html#API.get_database_manager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._api.API.get_database_manager" title="Link to this definition"></a></dt>
+<dd><p>Instantiate and return a DatabaseManager object for a specified organism and Ensembl release.</p>
+<p>This method sets up a DatabaseManager configured to ignore data after a given Ensembl release.
+It uses a deep copy of the default database backbone form and stores data in the local repository
+specified during API initialization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>organism_name</strong> (<em>str</em>) – The formal name of the organism (e.g., ‘homo_sapiens’).</p></li>
+<li><p><strong>last_ensembl_release</strong> (<em>int</em>) – The most recent Ensembl release to include. Data after this release will be ignored.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>An instance of the DatabaseManager class configured with the provided organism and release settings.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._api.API.get_ensembl_organism">
+<span class="sig-name descname"><span class="pre">get_ensembl_organism</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tentative_organism_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_api.html#API.get_ensembl_organism"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._api.API.get_ensembl_organism" title="Link to this definition"></a></dt>
+<dd><p>Make sure the user enters correct organism name and retrieves latest Ensembl release with ease.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>tentative_organism_name</strong> (<em>str</em>) – Organism of interest.
+This does not have to be formal name. For example, ‘human’, ‘hsapiens’ as well as formal name
+‘homo_sapiens’ is accepted by the program.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Formal organism name and associated latest Ensembl release.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[str, int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._api.API.infer_identifier_source">
+<span class="sig-name descname"><span class="pre">infer_identifier_source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'assembly_ensembl_release'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">report_only_winner</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_api.html#API.infer_identifier_source"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._api.API.infer_identifier_source" title="Link to this definition"></a></dt>
+<dd><p>Infer the source of given set of IDs, by comparing which source covers most of the query IDs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>id_list</strong> (<em>list</em>) – List of query IDs.</p></li>
+<li><p><strong>mode</strong> (<em>str</em>) – <ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;complete&quot;</span></code>: Looks for the best match in terms of database, assembly and Ensembl release.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;ensembl_release&quot;</span></code>: Looks for the best match in terms of Ensembl release only.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;assembly&quot;</span></code>: Looks for the best match in terms of genome assembly only.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;assembly_ensembl_release&quot;</span></code>: Looks for the best match in terms of Ensembl release and assembly.</p></li>
+</ul>
+</p></li>
+<li><p><strong>report_only_winner</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, return only the winner. If <code class="docutils literal notranslate"><span class="pre">False</span></code>, return each
+possible source with corresponding scores.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Result based on <cite>mode</cite> parameter.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._api.API.initialize_graph">
+<span class="sig-name descname"><span class="pre">initialize_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">organism_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_ensembl_release</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_api.html#API.initialize_graph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._api.API.initialize_graph" title="Link to this definition"></a></dt>
+<dd><p>Creates a graph and initializes pathfinder class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>organism_name</strong> (<em>str</em>) – Formal organism name as an output of <code class="docutils literal notranslate"><span class="pre">get_ensembl_organism</span></code> method.</p></li>
+<li><p><strong>last_ensembl_release</strong> (<em>int</em>) – Ensembl release of interest. The object will work on only given Ensembl release,
+but some methods does not care which form the DatabaseManager is defined to.
+The latest possible Ensembl release is the best choice for graph building with no drawbacks.</p></li>
+<li><p><strong>return_test</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, return the <code class="docutils literal notranslate"><span class="pre">TrackTest</span></code> object instead, which has some functions to test the
+pathfinder performance and graph integrity.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._api.API.print_binned_conversion">
+<span class="sig-name descname"><span class="pre">print_binned_conversion</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">binned_conversion</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_api.html#API.print_binned_conversion"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._api.API.print_binned_conversion" title="Link to this definition"></a></dt>
+<dd><p>Print the output of <code class="docutils literal notranslate"><span class="pre">classify_multiple_conversion</span></code> method.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>binned_conversion</strong> – The output of <code class="docutils literal notranslate"><span class="pre">classify_multiple_conversion</span></code> method.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class" id="module-idtrack._harmonize_features">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">HarmonizeFeatures</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">project_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_h5ad_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">project_local_repository</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idtrack_local_repository</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_ensembl_release</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">final_database</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'HGNC</span> <span class="pre">Symbol'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">organism_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'homo_sapiens'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph_last_ensembl_release</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">114</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose_level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">debugging_variables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">converted_id_column</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'converted_id'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Harmonize gene/feature identifiers across multiple single-cell expression datasets.</p>
+<p>This manager streamlines the otherwise error-prone task of bringing heterogeneous gene identifiers
+(Ensembl IDs, gene symbols, etc.) into a single, version-controlled namespace before integrated
+downstream analysis.  Under the hood it leverages <code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.api.API</span></code> to resolve identifier
+mappings through a pre-computed Ensembl graph, handles one-to-many and one-to-zero conversions, logs
+any ambiguous or inconsistent matches, and finally produces harmonised
+<code class="xref py py-class docutils literal notranslate"><span class="pre">anndata.AnnData</span></code> objects ready for comparative or joint analysis.</p>
+<p>The public workflow is intentionally simple:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.feature_harmonizer" title="idtrack._harmonize_features.HarmonizeFeatures.feature_harmonizer"><code class="xref py py-meth docutils literal notranslate"><span class="pre">feature_harmonizer()</span></code></a> — convert a single dataset and return the filtered <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> plus
+before/after feature counts.</p></li>
+<li><p><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas" title="idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas"><code class="xref py py-meth docutils literal notranslate"><span class="pre">unify_multiple_anndatas()</span></code></a> — apply harmonisation across <em>all</em> supplied datasets and return
+an integrated object.</p></li>
+<li><p><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.get_idtrack_matchings_for_all_datasets" title="idtrack._harmonize_features.HarmonizeFeatures.get_idtrack_matchings_for_all_datasets"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_idtrack_matchings_for_all_datasets()</span></code></a> — inspect the raw IDTrack matchings used.</p></li>
+</ul>
+<p>Instances keep several diagnostic attributes (e.g. <code class="docutils literal notranslate"><span class="pre">removed_conversion_failed_identifiers</span></code>,
+<code class="docutils literal notranslate"><span class="pre">multiple_ensembl_dict</span></code>) so that users can audit every decision that removed or altered a feature.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>project_name</strong> (<em>str</em>) – Human-readable label used in log messages and derived output file names.</p></li>
+<li><p><strong>data_h5ad_dict</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>str</em><em>]</em>) – Mapping <em>dataset_alias → absolute .h5ad path</em> of the source
+single-cell expression matrices.</p></li>
+<li><p><strong>project_local_repository</strong> (<em>str</em>) – Writable directory where harmonised outputs, logs, and temporary
+artefacts will be stored.</p></li>
+<li><p><strong>idtrack_local_repository</strong> (<em>str</em>) – Local clone or cache directory understood by
+<code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.api.API</span></code>; used to read the pre-built identifier graph.</p></li>
+<li><p><strong>target_ensembl_release</strong> (<em>int</em>) – Ensembl release that all identifiers will be converted <em>to</em>.  Must
+be ≤ <em>graph_last_ensembl_release</em>.</p></li>
+<li><p><strong>final_database</strong> (<em>str</em>) – Canonical namespace kept after conversion (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;HGNC</span> <span class="pre">Symbol&quot;</span></code>).
+Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;HGNC</span> <span class="pre">Symbol&quot;</span></code>.</p></li>
+<li><p><strong>organism_name</strong> (<em>str</em>) – Ensembl-style organism short name (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;homo_sapiens&quot;</span></code>).
+Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;homo_sapiens&quot;</span></code>.</p></li>
+<li><p><strong>graph_last_ensembl_release</strong> (<em>int</em>) – Highest release present in the on-disk IDTrack graph.
+Defaults to <code class="docutils literal notranslate"><span class="pre">114</span></code>.</p></li>
+<li><p><strong>verbose_level</strong> (<em>Literal</em><em>[</em><em>0</em><em>, </em><em>1</em><em>, </em><em>2</em><em>]</em>) – Logging verbosity; 0 = errors only, 1 = warnings, 2 =
+info.  Defaults to <code class="docutils literal notranslate"><span class="pre">2</span></code>.</p></li>
+<li><p><strong>debugging_variables</strong> (<em>bool</em>) – Retain heavy intermediate structures for post-mortem
+inspection.  Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>converted_id_column</strong> (<em>str</em>) – Column name used to store converted identifiers inside the
+resulting <code class="docutils literal notranslate"><span class="pre">AnnData.var</span></code> DataFrame.  Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;converted_id&quot;</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.idt">
+<span class="sig-name descname"><span class="pre">idt</span></span><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.idt" title="Link to this definition"></a></dt>
+<dd><p>Lazily initialised IDTrack interface used for all identifier look-ups.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>idtrack.api.API</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.multiple_ensembl_dict">
+<span class="sig-name descname"><span class="pre">multiple_ensembl_dict</span></span><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.multiple_ensembl_dict" title="Link to this definition"></a></dt>
+<dd><p>Map of collapsed IDs to <em>all</em> Ensembl IDs that were
+originally associated with the same target identifier.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict[str, list[str]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.removed_conversion_failed_identifiers">
+<span class="sig-name descname"><span class="pre">removed_conversion_failed_identifiers</span></span><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.removed_conversion_failed_identifiers" title="Link to this definition"></a></dt>
+<dd><p>Features that failed conversion and
+were dropped from each dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict[str, set[str]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.kept_conversion_failed_identifiers">
+<span class="sig-name descname"><span class="pre">kept_conversion_failed_identifiers</span></span><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.kept_conversion_failed_identifiers" title="Link to this definition"></a></dt>
+<dd><p>Non-convertible features kept because
+they were consistently non-convertible across <em>all</em> datasets.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict[str, set[str]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.removed_inconsistent_identifier_matching">
+<span class="sig-name descname"><span class="pre">removed_inconsistent_identifier_matching</span></span><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.removed_inconsistent_identifier_matching" title="Link to this definition"></a></dt>
+<dd><p>Features whose mappings disagreed
+between datasets and were therefore removed for consistency.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict[str, set[str]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<p>Instantiate the harmoniser and perform lightweight validation.</p>
+<p>The constructor merely <em>prepares</em> the harmonisation context: it validates input paths, configures
+logging, and primes IDTrack.  Heavy work—graph initialisation, identifier matching, gene-symbol
+resolution—happens lazily when the first harmonisation method is called.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>project_name</strong> (<em>str</em>) – See <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures" title="idtrack._harmonize_features.HarmonizeFeatures"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HarmonizeFeatures()</span></code></a>.</p></li>
+<li><p><strong>data_h5ad_dict</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>str</em><em>]</em>) – See <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures" title="idtrack._harmonize_features.HarmonizeFeatures"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HarmonizeFeatures()</span></code></a>.</p></li>
+<li><p><strong>project_local_repository</strong> (<em>str</em>) – See <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures" title="idtrack._harmonize_features.HarmonizeFeatures"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HarmonizeFeatures()</span></code></a>.</p></li>
+<li><p><strong>idtrack_local_repository</strong> (<em>str</em>) – See <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures" title="idtrack._harmonize_features.HarmonizeFeatures"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HarmonizeFeatures()</span></code></a>.</p></li>
+<li><p><strong>target_ensembl_release</strong> (<em>int</em>) – See <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures" title="idtrack._harmonize_features.HarmonizeFeatures"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HarmonizeFeatures()</span></code></a>.</p></li>
+<li><p><strong>final_database</strong> (<em>str</em>) – See <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures" title="idtrack._harmonize_features.HarmonizeFeatures"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HarmonizeFeatures()</span></code></a>.</p></li>
+<li><p><strong>organism_name</strong> (<em>str</em>) – See <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures" title="idtrack._harmonize_features.HarmonizeFeatures"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HarmonizeFeatures()</span></code></a>.</p></li>
+<li><p><strong>graph_last_ensembl_release</strong> (<em>int</em>) – See <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures" title="idtrack._harmonize_features.HarmonizeFeatures"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HarmonizeFeatures()</span></code></a>.</p></li>
+<li><p><strong>verbose_level</strong> (<em>Literal</em><em>[</em><em>0</em><em>, </em><em>1</em><em>, </em><em>2</em><em>]</em>) – See <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures" title="idtrack._harmonize_features.HarmonizeFeatures"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HarmonizeFeatures()</span></code></a>.</p></li>
+<li><p><strong>debugging_variables</strong> (<em>bool</em>) – See <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures" title="idtrack._harmonize_features.HarmonizeFeatures"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HarmonizeFeatures()</span></code></a>.</p></li>
+<li><p><strong>converted_id_column</strong> (<em>str</em>) – See <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures" title="idtrack._harmonize_features.HarmonizeFeatures"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HarmonizeFeatures()</span></code></a>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If <em>verbose_level</em> is not 0, 1, or 2.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures._initialize">
+<span class="sig-name descname"><span class="pre">_initialize</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures._initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize" title="Link to this definition"></a></dt>
+<dd><p>Populate diagnostic structures for failed or ambiguous identifier conversions.</p>
+<p>Called once by <code class="xref py py-meth docutils literal notranslate"><span class="pre">HarmonizeFeatures.__init__()</span></code>, this routine scans every input dataset and
+updates several reporting attributes (for example <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.removed_conversion_failed_identifiers" title="idtrack._harmonize_features.HarmonizeFeatures.removed_conversion_failed_identifiers"><code class="xref py py-attr docutils literal notranslate"><span class="pre">removed_conversion_failed_identifiers</span></code></a>
+or <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.removed_inconsistent_identifier_matching" title="idtrack._harmonize_features.HarmonizeFeatures.removed_inconsistent_identifier_matching"><code class="xref py py-attr docutils literal notranslate"><span class="pre">removed_inconsistent_identifier_matching</span></code></a>).  It also derives
+<a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.multiple_ensembl_dict" title="idtrack._harmonize_features.HarmonizeFeatures.multiple_ensembl_dict"><code class="xref py py-attr docutils literal notranslate"><span class="pre">multiple_ensembl_dict</span></code></a>, a reverse map of ambiguous <em>Ensembl ID → source identifiers</em>,
+enabling downstream inspection of one-to-many relationships.</p>
+<p>Returns <code class="docutils literal notranslate"><span class="pre">None</span></code>: All results are stored on <em>self</em> for later inspection.</p>
+<p>Internally the method:</p>
+<ol class="arabic simple">
+<li><p>Extracts raw feature identifiers from each <code class="xref py py-class docutils literal notranslate"><span class="pre">anndata.AnnData</span></code> file.</p></li>
+<li><p>Classifies identifiers into failure or inconsistency categories.</p></li>
+<li><p>Records per-dataset membership via <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.reporter_dict_creator" title="idtrack._harmonize_features.HarmonizeFeatures.reporter_dict_creator"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reporter_dict_creator()</span></code></a>.</p></li>
+<li><p>Builds the <code class="docutils literal notranslate"><span class="pre">multiple_ensembl_list</span></code> used by
+<a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.create_multiple_ensembl_dict" title="idtrack._harmonize_features.HarmonizeFeatures.create_multiple_ensembl_dict"><code class="xref py py-meth docutils literal notranslate"><span class="pre">HarmonizeFeatures.create_multiple_ensembl_dict()</span></code></a>.</p></li>
+<li><p>Touches <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.datataset_conversion_dataframe_issues" title="idtrack._harmonize_features.HarmonizeFeatures.datataset_conversion_dataframe_issues"><code class="xref py py-meth docutils literal notranslate"><span class="pre">datataset_conversion_dataframe_issues()</span></code></a> so the cached-property is built
+eagerly.</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures._initialize_idt">
+<span class="sig-name descname"><span class="pre">_initialize_idt</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures._initialize_idt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize_idt" title="Link to this definition"></a></dt>
+<dd><p>Instantiate the IDTrack interface on first use.</p>
+<p>The public API defers expensive graph loading until it is actually required.  This helper therefore
+checks whether <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.idt" title="idtrack._harmonize_features.HarmonizeFeatures.idt"><code class="xref py py-attr docutils literal notranslate"><span class="pre">idt</span></code></a> is <code class="docutils literal notranslate"><span class="pre">None</span></code> and, if so, loads the on-disk identifier graph described by
+<em>idtrack_local_repository</em> and <em>graph_last_ensembl_release</em>, then configures release filters so that
+subsequent look-ups always target <em>target_ensembl_release</em>.  Re-invocations are no-ops.</p>
+<p>Returns <code class="docutils literal notranslate"><span class="pre">None</span></code>: The <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.idt" title="idtrack._harmonize_features.HarmonizeFeatures.idt"><code class="xref py py-attr docutils literal notranslate"><span class="pre">idt</span></code></a> attribute is populated and ready for queries.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_but_consistent_identifiers">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">conversion_failed_but_consistent_identifiers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_but_consistent_identifiers" title="Link to this definition"></a></dt>
+<dd><p>Identify non-convertible identifiers that are consistently absent across <em>all</em> datasets.</p>
+<p>An identifier that fails conversion in <em>every</em> dataset can be retained (or at least logged once)
+without jeopardising dataset comparability.  This property computes the set intersection of
+<a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_identifiers" title="idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_identifiers"><code class="xref py py-attr docutils literal notranslate"><span class="pre">conversion_failed_identifiers</span></code></a> across datasets and makes the result available for
+selective retention or downstream visualisation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Identifiers that were never convertible but appeared in every dataset examined.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>set[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_identifiers">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">conversion_failed_identifiers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_identifiers" title="Link to this definition"></a></dt>
+<dd><p>Return identifiers that could not be converted in at least one dataset.</p>
+<p>The property wraps <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.dict_1_to_not_1" title="idtrack._harmonize_features.HarmonizeFeatures.dict_1_to_not_1"><code class="xref py py-meth docutils literal notranslate"><span class="pre">dict_1_to_not_1()</span></code></a> and filters its <code class="docutils literal notranslate"><span class="pre">&quot;1-to-0&quot;</span></code> category so that
+downstream code can quickly query <em>irrecoverable</em> failures without iterating over the entire
+diagnostic structure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Todo.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>set[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.create_dataset_conversion_dataframe">
+<span class="sig-name descname"><span class="pre">create_dataset_conversion_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gene_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initialization_run</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures.create_dataset_conversion_dataframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.create_dataset_conversion_dataframe" title="Link to this definition"></a></dt>
+<dd><p>Build a two-column mapping table for a single dataset’s feature identifiers.</p>
+<p>The routine transforms every source identifier in <em>gene_list</em> into the target namespace defined by
+<code class="docutils literal notranslate"><span class="pre">self.final_database</span></code> and Ensembl gene IDs.  The resulting convertible subset is written into a
+new <code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code> with three columns—<code class="docutils literal notranslate"><span class="pre">&quot;ensembl_gene&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">self.final_database</span></code>,
+and <code class="docutils literal notranslate"><span class="pre">&quot;Query</span> <span class="pre">ID&quot;</span></code>—while problematic identifiers are annotated or filtered according to the rules
+established during <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize" title="idtrack._harmonize_features.HarmonizeFeatures._initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_initialize()</span></code></a>.</p>
+<p>When called by <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize" title="idtrack._harmonize_features.HarmonizeFeatures._initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_initialize()</span></code></a> (<em>initialization_run</em> <code class="docutils literal notranslate"><span class="pre">True</span></code>), the method writes provisional
+mappings without inspecting post-initialisation overrides.  In subsequent calls
+(<em>initialization_run</em> <code class="docutils literal notranslate"><span class="pre">False</span></code>) it resolves single-Ensembl ambiguities via
+<code class="docutils literal notranslate"><span class="pre">self.datataset_conversion_dataframe_issues[&quot;final_database_chosen_single_ensembl_dict&quot;]</span></code> to
+guarantee a one-to-one relation between indices and feature rows.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>gene_list</strong> (<em>Union</em><em>[</em><em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>pd.Index</em><em>]</em>) – Ordered collection of source identifiers to convert for
+the current dataset.</p></li>
+<li><p><strong>initialization_run</strong> (<em>bool</em>) – <code class="docutils literal notranslate"><span class="pre">True</span></code> if invoked from <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize" title="idtrack._harmonize_features.HarmonizeFeatures._initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_initialize()</span></code></a>; disables the
+single-Ensembl disambiguation step applied in later passes.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mapping table ready to become <code class="docutils literal notranslate"><span class="pre">adata.var</span></code>.  Columns are
+<code class="docutils literal notranslate"><span class="pre">&quot;ensembl_gene&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">self.final_database</span></code>, and the original <code class="docutils literal notranslate"><span class="pre">&quot;Query</span> <span class="pre">ID&quot;</span></code> for traceability.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>AssertionError</strong> – If diagnostic sets such as <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_identifiers" title="idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_identifiers"><code class="xref py py-attr docutils literal notranslate"><span class="pre">conversion_failed_identifiers</span></code></a> were not
+    populated—indicating an incorrect call order—or if unexpected duplicate target IDs remain
+    after processing.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.create_intersection_column_values">
+<span class="sig-name descname"><span class="pre">create_intersection_column_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adata_var</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures.create_intersection_column_values"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.create_intersection_column_values" title="Link to this definition"></a></dt>
+<dd><p>Flag features present in <strong>every</strong> study after harmonisation.</p>
+<p>The merged <code class="docutils literal notranslate"><span class="pre">.var</span></code> table produced by <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas" title="idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas"><code class="xref py py-meth docutils literal notranslate"><span class="pre">unify_multiple_anndatas()</span></code></a> contains one gene-symbol column per
+study, each named <code class="docutils literal notranslate"><span class="pre">f&quot;{self.converted_id_column}_{handle}&quot;</span></code> where <em>handle</em> is the dictionary key that
+identifies the originating dataset.  A cell in one of those columns holds the <em>gene symbol</em> originally
+reported by the study, or <a class="reference internal" href="#idtrack._db.DB.placeholder_na" title="idtrack._db.DB.placeholder_na"><code class="xref py py-data docutils literal notranslate"><span class="pre">idtrack._db.DB.placeholder_na</span></code></a> if the gene was absent or could not be
+mapped to the target namespace.</p>
+<p>This helper collapses the per-study presence/absence information into a single boolean <em>intersection</em> flag,
+later exposed to users as <code class="docutils literal notranslate"><span class="pre">adata.var[&quot;intersection&quot;]</span></code>.  A value of <code class="docutils literal notranslate"><span class="pre">1</span></code> indicates that the feature
+survived the <em>intersect</em> filter—i.e., it has a valid symbol in <strong>all</strong> studies—whereas <code class="docutils literal notranslate"><span class="pre">0</span></code> marks features
+missing from at least one dataset.  The resulting NumPy vector is inserted by the caller; this routine is
+intentionally pure and side-effect free.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>adata_var</strong> (<em>pandas.DataFrame</em>) – The <code class="docutils literal notranslate"><span class="pre">.var</span></code> table of the <em>already concatenated</em> <code class="xref py py-class docutils literal notranslate"><span class="pre">anndata.AnnData</span></code>
+object.  It must contain one or more columns whose names start with
+<code class="docutils literal notranslate"><span class="pre">f&quot;{self.converted_id_column}_&quot;</span></code>; each such column is assumed to encode the gene symbol for a
+particular study.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A 1-D array of <code class="docutils literal notranslate"><span class="pre">int</span></code> (values <code class="docutils literal notranslate"><span class="pre">0</span></code> or <code class="docutils literal notranslate"><span class="pre">1</span></code>) with <code class="docutils literal notranslate"><span class="pre">len(adata_var)</span></code> elements.  The
+<em>i</em>-th entry equals <code class="docutils literal notranslate"><span class="pre">1</span></code> if the <em>i</em>-th feature is present (non-
+<a class="reference internal" href="#idtrack._db.DB.placeholder_na" title="idtrack._db.DB.placeholder_na"><code class="xref py py-data docutils literal notranslate"><span class="pre">idtrack._db.DB.placeholder_na</span></code></a>) in <strong>every</strong> per-study symbol column; otherwise it is <code class="docutils literal notranslate"><span class="pre">0</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.create_multiple_ensembl_dict">
+<span class="sig-name descname"><span class="pre">create_multiple_ensembl_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures.create_multiple_ensembl_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.create_multiple_ensembl_dict" title="Link to this definition"></a></dt>
+<dd><p>Reverse map ambiguous Ensembl target IDs to their originating source identifiers.</p>
+<p>During scanning, <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize" title="idtrack._harmonize_features.HarmonizeFeatures._initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_initialize()</span></code></a> collects every <em>(source_id, target_ensembl_id)</em> pair that
+falls outside the <em>consistent one-to-one</em> category into <code class="docutils literal notranslate"><span class="pre">multiple_ensembl_list</span></code>.  This helper
+consolidates that list into a dictionary keyed by <code class="docutils literal notranslate"><span class="pre">target_ensembl_id</span></code> with a <strong>sorted list</strong> of
+associated <code class="docutils literal notranslate"><span class="pre">source_id</span></code> values, allowing auditors to quickly discover all inputs that collapsed
+onto the same Ensembl record.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">{target_ensembl_id:</span> <span class="pre">[source_id₁,</span> <span class="pre">source_id₂,</span> <span class="pre">…]}</span></code> with duplicates
+removed and values sorted alphanumerically.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict[str, list[str]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.datataset_conversion_dataframe_issues">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">datataset_conversion_dataframe_issues</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">DataFrame</span></em><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.datataset_conversion_dataframe_issues" title="Link to this definition"></a></dt>
+<dd><p>Aggregate conversion failures and ambiguities into a tidy diagnostic table.</p>
+<p>The cached DataFrame has one row per <em>source identifier</em> encountered across <strong>all</strong> datasets and
+the following columns:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">dataset</span></code>                — Dataset alias that triggered the row (duplicates possible).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">reason</span></code>                 — Underscore-delimited label from
+<a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.reporter_dict_creator_helper_reason_finder" title="idtrack._harmonize_features.HarmonizeFeatures.reporter_dict_creator_helper_reason_finder"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reporter_dict_creator_helper_reason_finder()</span></code></a>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">target_identifier</span></code>      — The resolved identifier or <code class="docutils literal notranslate"><span class="pre">NaN</span></code> if conversion failed.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">was_removed</span></code> (bool)     — Whether the feature was ultimately dropped from the dataset.</p></li>
+</ul>
+<p>This compact view is ideal for spreadsheet export or in-notebook inspection because it condenses
+the richer nested structures stored on the class into a flat, analysis-friendly format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Combined diagnostic table sorted lexicographically by <em>dataset</em> and <em>reason</em>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.dict_1_to_not_1">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dict_1_to_not_1</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.dict_1_to_not_1" title="Link to this definition"></a></dt>
+<dd><p>Collect identifiers involved in one-to-many or one-to-zero conversions.</p>
+<p>This helper scans <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.unified_matching_dict" title="idtrack._harmonize_features.HarmonizeFeatures.unified_matching_dict"><code class="xref py py-attr docutils literal notranslate"><span class="pre">unified_matching_dict</span></code></a> and extracts every <em>source identifier</em> whose
+conversion to the target namespace is <strong>not</strong> a strict one-to-one mapping.  Two situations are
+considered problematic:</p>
+<ul class="simple">
+<li><p><strong>1 → 0 (conversion failure)</strong> — no target identifier could be resolved.</p></li>
+<li><p><strong>1 → n (ambiguous hit)</strong> — multiple targets share the best score, preventing an unambiguous choice.</p></li>
+</ul>
+<p>The resulting dictionary is later consumed by <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.reporter_dict_creator" title="idtrack._harmonize_features.HarmonizeFeatures.reporter_dict_creator"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reporter_dict_creator()</span></code></a> to populate the
+diagnostic attributes exposed to users and by
+<a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.create_dataset_conversion_dataframe" title="idtrack._harmonize_features.HarmonizeFeatures.create_dataset_conversion_dataframe"><code class="xref py py-meth docutils literal notranslate"><span class="pre">create_dataset_conversion_dataframe()</span></code></a> to decide which features should be dropped or
+flagged in each <code class="xref py py-class docutils literal notranslate"><span class="pre">anndata.AnnData</span></code> object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">{problem_class:</span> <span class="pre">{source_id₁,</span> <span class="pre">source_id₂,</span> <span class="pre">…}}</span></code> where <em>problem_class</em> is</dt><dd><p>either <code class="docutils literal notranslate"><span class="pre">&quot;1-to-0&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;1-to-n&quot;</span></code>.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict[str, set[str]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.extract_source_identifiers_from_anndata">
+<span class="sig-name descname"><span class="pre">extract_source_identifiers_from_anndata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures.extract_source_identifiers_from_anndata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.extract_source_identifiers_from_anndata" title="Link to this definition"></a></dt>
+<dd><p>Load an <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> file and harvest the raw feature identifiers.</p>
+<p>To prepare inputs for ID-Track, this routine opens the single-cell expression matrix at
+<em>dataset_path</em>, reads the <code class="docutils literal notranslate"><span class="pre">.var</span></code> DataFrame, and extracts either the <code class="docutils literal notranslate"><span class="pre">&quot;gene_id&quot;</span></code> field (if
+present) or the index itself as the <em>source identifier</em>.  Identifiers are returned in file order
+so that downstream procedures can preserve the original feature ordering when reconstructing
+matrices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dataset_path</strong> (<em>str</em>) – Absolute or project-relative path to an <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> file containing a valid
+<code class="xref py py-class docutils literal notranslate"><span class="pre">anndata.AnnData</span></code> object.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Ordered list of identifier strings exactly as they appear in the source file.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.feature_harmonizer">
+<span class="sig-name descname"><span class="pre">feature_harmonizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures.feature_harmonizer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.feature_harmonizer" title="Link to this definition"></a></dt>
+<dd><p>Convert one dataset’s feature space into the unified target namespace.</p>
+<p>This convenience wrapper reads a single <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> file, removes identifiers deemed unusable during
+<a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize" title="idtrack._harmonize_features.HarmonizeFeatures._initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_initialize()</span></code></a>, applies the conversion mapping from
+<a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.create_dataset_conversion_dataframe" title="idtrack._harmonize_features.HarmonizeFeatures.create_dataset_conversion_dataframe"><code class="xref py py-meth docutils literal notranslate"><span class="pre">create_dataset_conversion_dataframe()</span></code></a>, and returns a <em>new</em> <code class="xref py py-class docutils literal notranslate"><span class="pre">anndata.AnnData</span></code>
+object with harmonised features.  The function is intentionally side-effect-free: it never alters
+the source file, and large temporary matrices are deleted immediately to minimise memory usage.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dataset_name</strong> (<em>str</em>) – Key from <code class="xref py py-attr docutils literal notranslate"><span class="pre">data_h5ad_dict</span></code> identifying which dataset to load and
+harmonise.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>resulting_adata</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">anndata.AnnData</span></code>) - Dataset whose <code class="docutils literal notranslate"><span class="pre">var</span></code> now contains
+<code class="docutils literal notranslate"><span class="pre">&quot;ensembl_gene&quot;</span></code> as index and <code class="docutils literal notranslate"><span class="pre">self.final_database</span></code> as a column.</p></li>
+<li><p><strong>t0</strong> (int) - Number of features <em>before</em> filtering and harmonisation.</p></li>
+<li><p><strong>t1</strong> (int) - Number of features <em>after</em> the procedure (i.e., retained in
+<em>resulting_adata</em>).</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>AssertionError</strong> – If duplicate Ensembl or target-database IDs slip past the conversion checks,
+    which would break one-to-one mapping assumptions.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.get_idtrack_matchings_for_all_datasets">
+<span class="sig-name descname"><span class="pre">get_idtrack_matchings_for_all_datasets</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures.get_idtrack_matchings_for_all_datasets"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.get_idtrack_matchings_for_all_datasets" title="Link to this definition"></a></dt>
+<dd><p>Return raw ID-Track matchings for every dataset in the project.</p>
+<p>This helper exposes the unfiltered mapping tables produced by ID-Track so that users can inspect
+exactly how each <em>source identifier</em> was converted (or failed to convert) in every individual
+dataset.  Internally it triggers <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.run_idtrack_for_single_dataset" title="idtrack._harmonize_features.HarmonizeFeatures.run_idtrack_for_single_dataset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run_idtrack_for_single_dataset()</span></code></a> for any dataset that
+has not yet been processed, caches the resulting tables in memory, and then assembles a
+<code class="docutils literal notranslate"><span class="pre">{dataset_name:</span> <span class="pre">dataframe}</span></code> dictionary whose keys align one-to-one with <code class="xref py py-data docutils literal notranslate"><span class="pre">data_h5ad_dict</span></code>.</p>
+<p>Each returned <code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code> includes at least the following columns:
+<code class="docutils literal notranslate"><span class="pre">source_id</span></code>, <code class="docutils literal notranslate"><span class="pre">target_id</span></code>, <code class="docutils literal notranslate"><span class="pre">conversion_status</span></code>, <code class="docutils literal notranslate"><span class="pre">reason</span></code>, and any custom
+metadata injected by <code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.api.API</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Mapping of dataset alias to its full, row-level ID-Track
+matching table.  The dictionary order follows the insertion order of
+<code class="xref py py-data docutils literal notranslate"><span class="pre">data_h5ad_dict</span></code>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict[str, pandas.DataFrame]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.n_to_1_within_individual_dataset">
+<span class="sig-name descname"><span class="pre">n_to_1_within_individual_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_matching_list</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures.n_to_1_within_individual_dataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.n_to_1_within_individual_dataset" title="Link to this definition"></a></dt>
+<dd><p>Detect n-to-1 collapses inside one dataset and populate diagnostic caches.</p>
+<p>In the ID-Track context <em>n-to-1</em> means <strong>several source identifiers</strong> (<code class="docutils literal notranslate"><span class="pre">query_id</span></code>) converging on the
+<strong>same target identifier</strong> (<code class="docutils literal notranslate"><span class="pre">matched_id</span></code>).  Such collapses are problematic because they merge
+distinct features when building the harmonised expression matrix.  This helper inspects the raw
+matching rows for a single dataset, discovers all many-to-one events (including those that passed
+through the <em>alternative target database</em>), and records the results in a family of per-project
+dictionaries so that later stages—merging, filtering, and reporting—can make informed decisions.</p>
+<p>The routine never returns a value; instead it mutates the following public attributes:</p>
+<ul class="simple">
+<li><p><code class="xref py py-attr docutils literal notranslate"><span class="pre">dict_n_to_1</span></code> - <code class="docutils literal notranslate"><span class="pre">{matched_id:</span> <span class="pre">[dataset₁,</span> <span class="pre">dataset₂,</span> <span class="pre">…]}</span></code> listing every dataset where the
+collapse occurred.</p></li>
+<li><p><code class="xref py py-attr docutils literal notranslate"><span class="pre">dict_n_to_1_with_query</span></code> - <code class="docutils literal notranslate"><span class="pre">{matched_id:</span> <span class="pre">{(query_id₁,…):</span> <span class="pre">[dataset]}}</span></code> for cases where the
+<code class="docutils literal notranslate"><span class="pre">matched_id</span></code> also appears in the collapsing query set.</p></li>
+<li><p><code class="xref py py-attr docutils literal notranslate"><span class="pre">dict_n_to_1_with_query_reverse</span></code> - <code class="docutils literal notranslate"><span class="pre">{query_id:</span> <span class="pre">{matched_id:</span> <span class="pre">[dataset]}}</span></code> for a
+query-centric view.</p></li>
+<li><p><code class="xref py py-attr docutils literal notranslate"><span class="pre">dict_n_to_1_without_query</span></code> - collapses where the target never appears in its own query set.</p></li>
+</ul>
+<p>Returns <code class="docutils literal notranslate"><span class="pre">None</span></code>: All information is stored on the instance for subsequent pipeline stages.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset_name</strong> (<em>str</em>) – Human-readable alias used throughout the project for <em>this</em> dataset.</p></li>
+<li><p><strong>dataset_matching_list</strong> (<em>list</em><em>[</em><em>dict</em><em>]</em>) – Raw per-feature matchings returned by
+<code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.api.API</span></code>.  Each dictionary must provide at least the keys
+<code class="docutils literal notranslate"><span class="pre">&quot;query_id&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;last_node&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;final_database&quot;</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.reporter_dict_creator">
+<span class="sig-name descname"><span class="pre">reporter_dict_creator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">the_dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">the_set</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures.reporter_dict_creator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.reporter_dict_creator" title="Link to this definition"></a></dt>
+<dd><p>Update or create per-identifier diagnostic entries for a single dataset.</p>
+<p>Each identifier in <em>the_set</em> is ensured to exist as a key inside <em>the_dict</em>.  The entry’s
+<code class="docutils literal notranslate"><span class="pre">&quot;reason&quot;</span></code> field is generated exactly once using
+<a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.reporter_dict_creator_helper_reason_finder" title="idtrack._harmonize_features.HarmonizeFeatures.reporter_dict_creator_helper_reason_finder"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reporter_dict_creator_helper_reason_finder()</span></code></a>; its <code class="docutils literal notranslate"><span class="pre">&quot;datasets_containing&quot;</span></code> list is then
+appended with <em>dataset_name</em>.  This allows quick aggregation of “where did this problematic
+identifier occur?” across all datasets.</p>
+<p>Returns <code class="docutils literal notranslate"><span class="pre">None</span></code>: <em>the_dict</em> is modified in-place.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>the_dict</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>dict</em><em>]</em>) – Target dictionary that stores diagnostic metadata.  Keys are
+source identifiers; values have keys <code class="docutils literal notranslate"><span class="pre">&quot;reason&quot;</span></code> (<code class="docutils literal notranslate"><span class="pre">str</span></code>) and
+<code class="docutils literal notranslate"><span class="pre">&quot;datasets_containing&quot;</span></code> (<code class="docutils literal notranslate"><span class="pre">list[str]</span></code>).</p></li>
+<li><p><strong>the_set</strong> (<em>set</em><em>[</em><em>str</em><em>]</em>) – Identifiers that belong to the diagnostic category represented by
+<em>the_dict</em>.</p></li>
+<li><p><strong>dataset_name</strong> (<em>str</em>) – Human-readable alias of the dataset currently being processed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.reporter_dict_creator_helper_reason_finder">
+<span class="sig-name descname"><span class="pre">reporter_dict_creator_helper_reason_finder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">the_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures.reporter_dict_creator_helper_reason_finder"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.reporter_dict_creator_helper_reason_finder" title="Link to this definition"></a></dt>
+<dd><p>Infer why a particular identifier failed or produced a non-one-to-one conversion.</p>
+<p>The algorithm inspects <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.unified_matching_dict" title="idtrack._harmonize_features.HarmonizeFeatures.unified_matching_dict"><code class="xref py py-attr docutils literal notranslate"><span class="pre">unified_matching_dict</span></code></a> and categorises <em>the_id</em> into one or more
+mutually non-exclusive reasons:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;n-to-1&quot;</span></code>   — The identifier was part of an <em>n → 1</em> collapse within <em>at least one</em> dataset.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;1-to-0&quot;</span></code>   — No target identifier was returned (conversion failure).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;1-to-n&quot;</span></code>   — The conversion yielded multiple targets (ambiguous mapping).</p></li>
+</ul>
+<p>The final label is a single string where multiple reasons are concatenated with underscores, e.g.
+<code class="docutils literal notranslate"><span class="pre">&quot;1-to-0_1-to-n&quot;</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>the_id</strong> (<em>str</em>) – Source identifier whose conversion outcome needs explanation.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Underscore-delimited reason string describing the failure or ambiguity class.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.run_idtrack_for_single_dataset">
+<span class="sig-name descname"><span class="pre">run_idtrack_for_single_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures.run_idtrack_for_single_dataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.run_idtrack_for_single_dataset" title="Link to this definition"></a></dt>
+<dd><p>Convert identifiers for one dataset and cache the raw ID-Track output.</p>
+<p>Given a dataset alias and its on-disk location, this method:</p>
+<ol class="arabic simple">
+<li><p>Calls <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.extract_source_identifiers_from_anndata" title="idtrack._harmonize_features.HarmonizeFeatures.extract_source_identifiers_from_anndata"><code class="xref py py-meth docutils literal notranslate"><span class="pre">extract_source_identifiers_from_anndata()</span></code></a> to obtain the feature list.</p></li>
+<li><p>Feeds those identifiers to <code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.api.API</span></code> and collects the per-feature match
+results.</p></li>
+<li><p>Stores the resulting <code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code> inside the
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">_idtrack_matchings_per_dataset</span></code> cache so repeated calls are O(1).</p></li>
+<li><p>Updates <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.unified_matching_dict" title="idtrack._harmonize_features.HarmonizeFeatures.unified_matching_dict"><code class="xref py py-attr docutils literal notranslate"><span class="pre">unified_matching_dict</span></code></a> so that cross-dataset diagnostics remain consistent.</p></li>
+</ol>
+<p>Users rarely call this directly—<a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.get_idtrack_matchings_for_all_datasets" title="idtrack._harmonize_features.HarmonizeFeatures.get_idtrack_matchings_for_all_datasets"><code class="xref py py-meth docutils literal notranslate"><span class="pre">get_idtrack_matchings_for_all_datasets()</span></code></a> handles the
+orchestration—but it remains public for advanced, dataset-by-dataset debugging.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset_name</strong> (<em>str</em>) – Human-friendly alias used as the key inside diagnostic dictionaries.</p></li>
+<li><p><strong>dataset_path</strong> (<em>str</em>) – Absolute or project-relative <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> path passed straight to
+<a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.extract_source_identifiers_from_anndata" title="idtrack._harmonize_features.HarmonizeFeatures.extract_source_identifiers_from_anndata"><code class="xref py py-meth docutils literal notranslate"><span class="pre">extract_source_identifiers_from_anndata()</span></code></a>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Full ID-Track matching table for <em>dataset_name</em> with columns</dt><dd><p><code class="docutils literal notranslate"><span class="pre">source_id</span></code>, <code class="docutils literal notranslate"><span class="pre">target_id</span></code>, <code class="docutils literal notranslate"><span class="pre">conversion_status</span></code>, and any extra metadata returned by the API.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.unified_matching_dict">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">unified_matching_dict</span></span><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.unified_matching_dict" title="Link to this definition"></a></dt>
+<dd><p>Expose the full source-to-target identifier mapping produced by IDTrack.</p>
+<p>The dictionary is created during <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize" title="idtrack._harmonize_features.HarmonizeFeatures._initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_initialize()</span></code></a> when the IDTrack graph is first queried.
+Keys are <em>source identifiers</em> (as found in input files); values are <strong>all</strong> candidate target IDs
+returned by the graph query, ordered by decreasing score.  A value may therefore be</p>
+<ul class="simple">
+<li><p>a single-element list (unambiguous one-to-one),</p></li>
+<li><p>a multi-element list (ambiguous one-to-n), or</p></li>
+<li><p>an empty list (1-to-0 conversion failure).</p></li>
+</ul>
+<p>Public access to this attribute enables advanced users to perform their own diagnostics or to
+reproduce the algorithm’s decisions outside the class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><dl class="simple">
+<dt>Mapping <code class="docutils literal notranslate"><span class="pre">{source_id:</span> <span class="pre">[target_id₁,</span> <span class="pre">target_id₂,</span> <span class="pre">…]}</span></code> in the order</dt><dd><p>delivered by the IDTrack query.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict[str, list[str]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas">
+<span class="sig-name descname"><span class="pre">unify_multiple_anndatas</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'union'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_columns_to_keep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">numeric_var_columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">numeric_obs_columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">handle_anndata_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'handle_anndata'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures.unify_multiple_anndatas"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas" title="Link to this definition"></a></dt>
+<dd><p>Merge several study-specific <code class="xref py py-class docutils literal notranslate"><span class="pre">anndata.AnnData</span></code> objects into a single, consolidated dataset.</p>
+<p>This helper finalises the <em>feature-harmonisation</em> workflow.  Earlier stages ensure that every source study
+expresses its features (e.g. genes or proteins) in a consistent identifier namespace and that per-cell
+metadata follow a shared schema.  <em>unify_multiple_anndatas</em> takes those already normalised objects—stored in
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">data_h5ad_dict</span></code>—and fuses them into one coherent <code class="xref py py-class docutils literal notranslate"><span class="pre">AnnData</span></code>
+ready for joint analysis (dimensionality reduction, batch correction, integrated clustering, etc.).</p>
+<p>Two strategies govern how the function reconciles mismatched feature sets:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&quot;union&quot;</span></code> (default) preserves the superset of all identifiers.  If a particular study lacks a feature,</dt><dd><p>its expression values are imputed as exact zeros.  This choice maximises information retention at the
+cost of a sparse matrix with assay-dependent missingness.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&quot;intersect&quot;</span></code> retains only the identifiers present in <em>every</em> study, implicitly discarding features</dt><dd><p>unique to a subset.  This yields a denser matrix that is easier to factorise but sacrifices potentially
+informative study-specific biology.</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p>Beyond concatenating the main <code class="xref py py-attr docutils literal notranslate"><span class="pre">X</span></code> matrices, the routine also harmonises associated
+annotations:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><strong>.var (feature annotations)</strong></dt><dd><p>All columns are outer-joined across studies.  Non-shared categorical values are unioned; numeric columns
+specified in <em>numeric_var_columns</em> are cast to floating point and NaNs inserted where data are missing.
+In <em>union</em> mode an additional boolean <code class="docutils literal notranslate"><span class="pre">&quot;intersection&quot;</span></code> column flags whether a feature survived the
+<em>intersect</em> filter, enabling fast subsetting later.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>.obs (cell annotations)</strong></dt><dd><p>Each original column is kept if its name appears in <em>obs_columns_to_keep</em> <strong>or</strong> if it exists in every
+study.  Missing columns are created and populated with <code class="docutils literal notranslate"><span class="pre">pandas.NA</span></code>.  Columns listed in
+<em>numeric_obs_columns</em> are coerced to <code class="docutils literal notranslate"><span class="pre">float64</span></code>.  A new column named <em>handle_anndata_key</em> stores the
+handle (dictionary key) that identifies the originating study, making it trivial to stratify analyses.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>.layers, .obsp, .varp, .uns</strong></dt><dd><p>This method uses <code class="xref py py-meth docutils literal notranslate"><span class="pre">anndata.AnnData.concat()</span></code> for this.</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p>The implementation is mindful of scalability: concatenation leverages SciPy CSR/CSC sparse formats,
+avoiding densification, and streaming allocation prevents double memory use for extremely large datasets.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mode</strong> (<em>Literal</em><em>[</em><em>&quot;union&quot;</em><em>, </em><em>&quot;intersect&quot;</em><em>]</em>) – Strategy for reconciling discordant feature sets.  <code class="docutils literal notranslate"><span class="pre">&quot;union&quot;</span></code>
+keeps every identifier observed across studies (padding absent entries with zeros); <code class="docutils literal notranslate"><span class="pre">&quot;intersect&quot;</span></code>
+restricts the result to identifiers common to <em>all</em> studies.  Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;union&quot;</span></code>.</p></li>
+<li><p><strong>obs_columns_to_keep</strong> (<em>list</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>) – Names of per-cell metadata columns that must survive the merge
+even if they appear in only a subset of studies (e.g. <em>cell_type</em>, <em>donor_age</em>).  When a column is
+missing from a particular study, it is inserted and filled with <code class="docutils literal notranslate"><span class="pre">pandas.NA</span></code>.  Provide an empty
+list to allow the routine to decide purely by intersection; <code class="docutils literal notranslate"><span class="pre">None</span></code> means “no user preference”.</p></li>
+<li><p><strong>numeric_var_columns</strong> (<em>set</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>) – Columns in <code class="docutils literal notranslate"><span class="pre">.var</span></code> that should retain numeric dtype.  The
+function validates that each specified column can be losslessly converted to floating point;
+otherwise it raises <code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code>.  Non-listed columns default to <code class="docutils literal notranslate"><span class="pre">category</span></code> dtype to
+conserve memory.  If <code class="docutils literal notranslate"><span class="pre">None</span></code> an empty set is assumed.</p></li>
+<li><p><strong>numeric_obs_columns</strong> (<em>set</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>) – Analogous to <em>numeric_var_columns</em> but applied to <code class="docutils literal notranslate"><span class="pre">.obs</span></code>.
+Conversions are performed <em>after</em> the table has been unioned, ensuring consistent dtype across the
+final concatenated frame.  If <code class="docutils literal notranslate"><span class="pre">None</span></code> an empty set is assumed.</p></li>
+<li><p><strong>handle_anndata_key</strong> (<em>str</em>) – Name of the column inserted into <code class="docutils literal notranslate"><span class="pre">.obs</span></code> that records the dictionary key of
+the source study.  This provenance tag facilitates stratified visualisation (e.g. UMAP coloured by
+batch) and downstream batch-correction utilities that expect a “batch” column.  Defaults to
+<code class="docutils literal notranslate"><span class="pre">&quot;handle_anndata&quot;</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A fully merged expression matrix whose <code class="docutils literal notranslate"><span class="pre">.X</span></code> contains either the union or intersection</dt><dd><p>of all study features.  Index ordering follows the order in which studies were supplied, ensuring
+deterministic output for reproducible pipelines.  The result inherits sparse/dense representation from
+the first study unless <em>mode</em> forces feature padding, in which case CSR/CSC is chosen automatically to
+keep memory use in check.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>anndata.AnnData</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – If <em>mode</em> is not <code class="docutils literal notranslate"><span class="pre">&quot;union&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;intersect&quot;</span></code>; if any column listed in
+    <em>numeric_var_columns</em> or <em>numeric_obs_columns</em> fails numeric coercion; or if feature identifiers
+    clash across studies after harmonisation (e.g. two studies mapping different genes to the same ID).</p></li>
+<li><p><strong>AssertionError</strong> – If duplicate cell or feature indices are detected post-merge, a condition that would
+    break many Scanpy workflows and indicates upstream validation errors.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p><em>Performance considerations</em>
+The operation is CPU-bound when aligning large sparse matrices.  For
+datasets exceeding ~1 million cells, empirical benchmarks show that running on Python 3.11 with MKL
+yields a 2-3x speed-up over Python 3.8 due to better sparse BLAS threading.  Provide pre-compressed
+datasets (<code class="docutils literal notranslate"><span class="pre">hdf5</span></code>, <code class="docutils literal notranslate"><span class="pre">zarr</span></code>) to further lower I/O overhead.</p>
+<p><em>Thread safety</em>
+The method is re-entrant but <strong>not</strong> thread-safe because it mutates the source
+<code class="xref py py-class docutils literal notranslate"><span class="pre">AnnData</span></code> objects in-place to reduce copying.  Invoke one instance per process or
+deep-copy the inputs beforehand if concurrent harmonisation is required.</p>
+<p><em>Extensibility</em>
+Sub-classes may override private hooks
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">_before_concat()</span></code>, <code class="xref py py-meth docutils literal notranslate"><span class="pre">_after_concat()</span></code>, and <code class="xref py py-meth docutils literal notranslate"><span class="pre">_merge_uns()</span></code> to refine behaviour without
+re-implementing the full algorithm.</p>
+</dd></dl>
+
+</dd></dl>
+
 <dl class="py class" id="module-idtrack._database_manager">
 <dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DatabaseManager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">organism</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">form</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local_repository</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ensembl_release</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_before</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_after</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">store_raw_always</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_assembly</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager" title="Link to this definition"></a></dt>

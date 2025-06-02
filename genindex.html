@@ -89,6 +89,7 @@
  | <a href="#G"><strong>G</strong></a>
  | <a href="#H"><strong>H</strong></a>
  | <a href="#I"><strong>I</strong></a>
+ | <a href="#K"><strong>K</strong></a>
  | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
@@ -121,15 +122,19 @@
 </li>
       <li><a href="reference.html#idtrack._track.Track._external_entrance_placeholder">_external_entrance_placeholder (Track attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack._track.Track._external_entrance_placeholders">_external_entrance_placeholders (Track attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack._track.Track._final_conversion">_final_conversion() (Track method)</a>
 </li>
       <li><a href="reference.html#idtrack._track.Track._final_conversion_dict_prepare">_final_conversion_dict_prepare() (Track static method)</a>
 </li>
       <li><a href="reference.html#idtrack._the_graph.TheGraph._get_active_ranges_of_id">_get_active_ranges_of_id() (TheGraph method)</a>
+</li>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures._initialize">_initialize() (HarmonizeFeatures method)</a>
+</li>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures._initialize_idt">_initialize_idt() (HarmonizeFeatures method)</a>
 </li>
       <li><a href="reference.html#idtrack._track.Track._minimum_assembly_jumps_helper">_minimum_assembly_jumps_helper() (Track static method)</a>
 </li>
@@ -149,16 +154,20 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack._db.DB.alternative_versions">alternative_versions (DB attribute)</a>
 </li>
+      <li><a href="reference.html#idtrack._api.API">API (class in idtrack._api)</a>
+</li>
       <li><a href="reference.html#idtrack._db.DB.assembly_mysqlport_priority">assembly_mysqlport_priority (DB attribute)</a>
 </li>
       <li><a href="reference.html#idtrack._db.DB.assembly_priority">assembly_priority (DB attribute)</a>
 </li>
-      <li><a href="reference.html#idtrack._the_graph.TheGraph.available_external_databases">available_external_databases (TheGraph property)</a>
+      <li><a href="reference.html#idtrack._api.API.available_available_external_databases">available_available_external_databases() (API method)</a>
 </li>
-      <li><a href="reference.html#idtrack._the_graph.TheGraph.available_external_databases_assembly">available_external_databases_assembly (TheGraph property)</a>
+      <li><a href="reference.html#idtrack._the_graph.TheGraph.available_external_databases">available_external_databases (TheGraph property)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack._the_graph.TheGraph.available_external_databases_assembly">available_external_databases_assembly (TheGraph property)</a>
+</li>
       <li><a href="reference.html#idtrack._the_graph.TheGraph.available_genome_assemblies">available_genome_assemblies (TheGraph property)</a>
 </li>
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager.available_releases">available_releases (DatabaseManager property)</a>
@@ -187,6 +196,8 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack._the_graph.TheGraph.calculate_caches">calculate_caches() (TheGraph method)</a>
 </li>
+      <li><a href="reference.html#idtrack._api.API.calculate_graph_caches">calculate_graph_caches() (API method)</a>
+</li>
       <li><a href="reference.html#idtrack._track.Track.calculate_node_scores">calculate_node_scores() (Track method)</a>
 </li>
       <li><a href="reference.html#idtrack._track.Track.calculate_score_and_select">calculate_score_and_select() (Track method)</a>
@@ -203,6 +214,8 @@
 </li>
       <li><a href="reference.html#idtrack._track.Track.choose_relevant_synonym">choose_relevant_synonym() (Track method)</a>
 </li>
+      <li><a href="reference.html#idtrack._api.API.classify_multiple_conversion">classify_multiple_conversion() (API method)</a>
+</li>
       <li><a href="reference.html#idtrack._the_graph.TheGraph.combined_edges">combined_edges (TheGraph property)</a>
 </li>
       <li><a href="reference.html#idtrack._the_graph.TheGraph.combined_edges_assembly_specific_genes">combined_edges_assembly_specific_genes (TheGraph property)</a>
@@ -211,25 +224,37 @@
 </li>
       <li><a href="reference.html#idtrack._the_graph.TheGraph.compact_ranges">compact_ranges() (TheGraph static method)</a>
 </li>
+      <li><a href="reference.html#idtrack._api.API.configure_logger">configure_logger() (API method)</a>
+</li>
       <li><a href="reference.html#idtrack._db.DB.conn_dict_str_ensembl_base">conn_dict_str_ensembl_base (DB attribute)</a>
 </li>
       <li><a href="reference.html#idtrack._db.DB.connection_dict">connection_dict (DB attribute)</a>
 </li>
       <li><a href="reference.html#idtrack._db.DB.connection_timeout">connection_timeout (DB attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack._graph_maker.GraphMaker.construct_graph">construct_graph() (GraphMaker method)</a>
 </li>
       <li><a href="reference.html#idtrack._graph_maker.GraphMaker.construct_graph_form">construct_graph_form() (GraphMaker method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_but_consistent_identifiers">conversion_failed_but_consistent_identifiers (HarmonizeFeatures property)</a>
+</li>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_identifiers">conversion_failed_identifiers (HarmonizeFeatures property)</a>
+</li>
       <li><a href="reference.html#idtrack._track.Track.convert">convert() (Track method)</a>
+</li>
+      <li><a href="reference.html#idtrack._api.API.convert_identifier">convert_identifier() (API method)</a>
+</li>
+      <li><a href="reference.html#idtrack._api.API.convert_identifier_multiple">convert_identifier_multiple() (API method)</a>
 </li>
       <li><a href="reference.html#idtrack._track.Track.convert_optimized_multiple">convert_optimized_multiple() (Track method)</a>
 </li>
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager.create_available_databases">create_available_databases() (DatabaseManager method)</a>
 </li>
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager.create_database_content">create_database_content() (DatabaseManager method)</a>
+</li>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.create_dataset_conversion_dataframe">create_dataset_conversion_dataframe() (HarmonizeFeatures method)</a>
 </li>
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager.create_external_all">create_external_all() (DatabaseManager method)</a>
 </li>
@@ -242,6 +267,10 @@
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager.create_id_history_fixed">create_id_history_fixed() (DatabaseManager method)</a>
 </li>
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager.create_ids">create_ids() (DatabaseManager method)</a>
+</li>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.create_intersection_column_values">create_intersection_column_values() (HarmonizeFeatures method)</a>
+</li>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.create_multiple_ensembl_dict">create_multiple_ensembl_dict() (HarmonizeFeatures method)</a>
 </li>
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager.create_relation_archive">create_relation_archive() (DatabaseManager method)</a>
 </li>
@@ -261,9 +290,13 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager">DatabaseManager (class in idtrack._database_manager)</a>
 </li>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.datataset_conversion_dataframe_issues">datataset_conversion_dataframe_issues (HarmonizeFeatures property)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack._db.DB">DB (class in idtrack._db)</a>
+</li>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.dict_1_to_not_1">dict_1_to_not_1 (HarmonizeFeatures property)</a>
 </li>
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager.download_table">download_table() (DatabaseManager method)</a>
 </li>
@@ -291,22 +324,26 @@
 </li>
       <li><a href="reference.html#idtrack._external_databases.ExternalDatabases">ExternalDatabases (class in idtrack._external_databases)</a>
 </li>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.extract_source_identifiers_from_anndata">extract_source_identifiers_from_anndata() (HarmonizeFeatures method)</a>
+</li>
   </ul></td>
 </tr></table>
 
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.feature_harmonizer">feature_harmonizer() (HarmonizeFeatures method)</a>
+</li>
       <li><a href="reference.html#idtrack._verify_organism.VerifyOrganism.fetch_organism_and_latest_release">fetch_organism_and_latest_release() (VerifyOrganism method)</a>
 </li>
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager.file_name">file_name() (DatabaseManager method)</a>
 </li>
       <li><a href="reference.html#idtrack._external_databases.ExternalDatabases.file_name_modified_yaml">file_name_modified_yaml() (ExternalDatabases method)</a>
 </li>
-      <li><a href="reference.html#idtrack._external_databases.ExternalDatabases.file_name_template_yaml">file_name_template_yaml() (ExternalDatabases method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack._external_databases.ExternalDatabases.file_name_template_yaml">file_name_template_yaml() (ExternalDatabases method)</a>
+</li>
       <li><a href="reference.html#idtrack._db.DB.first_version">first_version (DB attribute)</a>
 </li>
       <li><a href="reference.html#idtrack._track_tests.TrackTests.format_history_travel_testing_report">format_history_travel_testing_report() (TrackTests method)</a>
@@ -327,7 +364,11 @@
 </li>
       <li><a href="reference.html#idtrack._the_graph.TheGraph.get_active_ranges_of_id_ensembl_all_inclusive">get_active_ranges_of_id_ensembl_all_inclusive() (TheGraph method)</a>
 </li>
+      <li><a href="reference.html#idtrack._api.API.get_database_manager">get_database_manager() (API method)</a>
+</li>
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager.get_db">get_db() (DatabaseManager method)</a>
+</li>
+      <li><a href="reference.html#idtrack._api.API.get_ensembl_organism">get_ensembl_organism() (API method)</a>
 </li>
       <li><a href="reference.html#idtrack._the_graph.TheGraph.get_external_database_nodes">get_external_database_nodes() (TheGraph method)</a>
 </li>
@@ -339,10 +380,12 @@
 </li>
       <li><a href="reference.html#idtrack._the_graph.TheGraph.get_id_list">get_id_list() (TheGraph method)</a>
 </li>
-      <li><a href="reference.html#idtrack._the_graph.TheGraph.get_intersecting_ranges">get_intersecting_ranges() (TheGraph static method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.get_idtrack_matchings_for_all_datasets">get_idtrack_matchings_for_all_datasets() (HarmonizeFeatures method)</a>
+</li>
+      <li><a href="reference.html#idtrack._the_graph.TheGraph.get_intersecting_ranges">get_intersecting_ranges() (TheGraph static method)</a>
+</li>
       <li><a href="reference.html#idtrack._verify_organism.VerifyOrganism.get_latest_release">get_latest_release() (VerifyOrganism method)</a>
 </li>
       <li><a href="reference.html#idtrack._the_graph.TheGraph.get_next_edge_releases">get_next_edge_releases() (TheGraph method)</a>
@@ -369,14 +412,16 @@
 <h2 id="H">H</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures">HarmonizeFeatures (class in idtrack._harmonize_features)</a>
+</li>
       <li><a href="reference.html#idtrack._track_tests.TrackTests.history_travel_testing">history_travel_testing() (TrackTests method)</a>
 </li>
       <li><a href="reference.html#idtrack._track_tests.TrackTests.history_travel_testing_random">history_travel_testing_random() (TrackTests method)</a>
 </li>
-      <li><a href="reference.html#idtrack._track_tests.TrackTests.history_travel_testing_random_arguments_generator">history_travel_testing_random_arguments_generator() (TrackTests method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack._track_tests.TrackTests.history_travel_testing_random_arguments_generator">history_travel_testing_random_arguments_generator() (TrackTests method)</a>
+</li>
       <li><a href="reference.html#idtrack._track_tests.TrackTests.how_many_corresponding_path_ensembl">how_many_corresponding_path_ensembl() (TrackTests method)</a>
 </li>
       <li><a href="reference.html#idtrack._db.DB.hyperconnecting_threshold">hyperconnecting_threshold (DB attribute)</a>
@@ -395,6 +440,15 @@
 </li>
       <li><a href="reference.html#idtrack._track.Track.identify_source">identify_source() (Track method)</a>
 </li>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.idt">idt (HarmonizeFeatures attribute)</a>
+</li>
+      <li>
+    idtrack._api
+
+      <ul>
+        <li><a href="reference.html#module-idtrack._api">module</a>
+</li>
+      </ul></li>
       <li>
     idtrack._database_manager
 
@@ -424,12 +478,21 @@
 </li>
       </ul></li>
       <li>
+    idtrack._harmonize_features
+
+      <ul>
+        <li><a href="reference.html#module-idtrack._harmonize_features">module</a>
+</li>
+      </ul></li>
+      <li>
     idtrack._the_graph
 
       <ul>
         <li><a href="reference.html#module-idtrack._the_graph">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     idtrack._track
 
@@ -437,8 +500,6 @@
         <li><a href="reference.html#module-idtrack._track">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     idtrack._track_tests
 
@@ -453,7 +514,11 @@
         <li><a href="reference.html#module-idtrack._verify_organism">module</a>
 </li>
       </ul></li>
+      <li><a href="reference.html#idtrack._api.API.infer_identifier_source">infer_identifier_source() (API method)</a>
+</li>
       <li><a href="reference.html#idtrack._graph_maker.GraphMaker.initialize_downloads">initialize_downloads() (GraphMaker method)</a>
+</li>
+      <li><a href="reference.html#idtrack._api.API.initialize_graph">initialize_graph() (API method)</a>
 </li>
       <li><a href="reference.html#idtrack._track_tests.TrackTests.is_base_is_range_correct">is_base_is_range_correct() (TrackTests method)</a>
 </li>
@@ -474,6 +539,14 @@
       <li><a href="reference.html#idtrack._the_graph.TheGraph.is_point_in_range">is_point_in_range() (TheGraph static method)</a>
 </li>
       <li><a href="reference.html#idtrack._track_tests.TrackTests.is_range_functions_robust">is_range_functions_robust() (TrackTests method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="K">K</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.kept_conversion_failed_identifiers">kept_conversion_failed_identifiers (HarmonizeFeatures attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -503,6 +576,8 @@
     module
 
       <ul>
+        <li><a href="reference.html#module-idtrack._api">idtrack._api</a>
+</li>
         <li><a href="reference.html#module-idtrack._database_manager">idtrack._database_manager</a>
 </li>
         <li><a href="reference.html#module-idtrack._db">idtrack._db</a>
@@ -510,6 +585,8 @@
         <li><a href="reference.html#module-idtrack._external_databases">idtrack._external_databases</a>
 </li>
         <li><a href="reference.html#module-idtrack._graph_maker">idtrack._graph_maker</a>
+</li>
+        <li><a href="reference.html#module-idtrack._harmonize_features">idtrack._harmonize_features</a>
 </li>
         <li><a href="reference.html#module-idtrack._the_graph">idtrack._the_graph</a>
 </li>
@@ -522,6 +599,8 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.multiple_ensembl_dict">multiple_ensembl_dict (HarmonizeFeatures attribute)</a>
+</li>
       <li><a href="reference.html#idtrack._db.DB.myqsl_user">myqsl_user (DB attribute)</a>
 </li>
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager.mysql_database">mysql_database (DatabaseManager property)</a>
@@ -536,6 +615,8 @@
 <h2 id="N">N</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.n_to_1_within_individual_dataset">n_to_1_within_individual_dataset() (HarmonizeFeatures method)</a>
+</li>
       <li><a href="reference.html#idtrack._db.DB.no_new_node_id">no_new_node_id (DB attribute)</a>
 </li>
       <li><a href="reference.html#idtrack._db.DB.no_old_node_id">no_old_node_id (DB attribute)</a>
@@ -550,10 +631,10 @@
 </li>
       <li><a href="reference.html#idtrack._db.DB.node_type_str">node_type_str (DB attribute)</a>
 </li>
-      <li><a href="reference.html#idtrack._db.DB.nts_assembly">nts_assembly (DB attribute)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack._db.DB.nts_assembly">nts_assembly (DB attribute)</a>
+</li>
       <li><a href="reference.html#idtrack._db.DB.nts_assembly_gene">nts_assembly_gene (DB attribute)</a>
 </li>
       <li><a href="reference.html#idtrack._db.DB.nts_assembly_reverse">nts_assembly_reverse (DB attribute)</a>
@@ -578,11 +659,13 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack._track.Track.path_search">path_search() (Track method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack._track.Track.path_step_possible_assembly_jumps">path_step_possible_assembly_jumps() (Track method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack._db.DB.placeholder_na">placeholder_na (DB attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack._api.API.print_binned_conversion">print_binned_conversion() (API method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -598,15 +681,25 @@
 </li>
       <li><a href="reference.html#idtrack._db.DB.reading_timeout">reading_timeout (DB attribute)</a>
 </li>
+      <li><a href="reference.html#idtrack._graph_maker.GraphMaker.remove_non_gene_trees">remove_non_gene_trees() (GraphMaker static method)</a>
+</li>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.removed_conversion_failed_identifiers">removed_conversion_failed_identifiers (HarmonizeFeatures attribute)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="reference.html#idtrack._graph_maker.GraphMaker.remove_non_gene_trees">remove_non_gene_trees() (GraphMaker static method)</a>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.removed_inconsistent_identifier_matching">removed_inconsistent_identifier_matching (HarmonizeFeatures attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.reporter_dict_creator">reporter_dict_creator() (HarmonizeFeatures method)</a>
+</li>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.reporter_dict_creator_helper_reason_finder">reporter_dict_creator_helper_reason_finder() (HarmonizeFeatures method)</a>
 </li>
       <li><a href="reference.html#idtrack._db.DB.rest_server_api">rest_server_api (DB attribute)</a>
 </li>
       <li><a href="reference.html#idtrack._db.DB.rest_server_ext">rest_server_ext (DB attribute)</a>
 </li>
       <li><a href="reference.html#idtrack._the_graph.TheGraph.rev">rev (TheGraph property)</a>
+</li>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.run_idtrack_for_single_dataset">run_idtrack_for_single_dataset() (HarmonizeFeatures method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -648,10 +741,14 @@
 <h2 id="U">U</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="reference.html#idtrack._graph_maker.GraphMaker.update_graph_with_the_new_release">update_graph_with_the_new_release() (GraphMaker method)</a>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.unified_matching_dict">unified_matching_dict (HarmonizeFeatures property)</a>
+</li>
+      <li><a href="reference.html#idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas">unify_multiple_anndatas() (HarmonizeFeatures method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack._graph_maker.GraphMaker.update_graph_with_the_new_release">update_graph_with_the_new_release() (GraphMaker method)</a>
+</li>
       <li><a href="reference.html#idtrack._db.DB.UTF8">UTF8 (DB attribute)</a>
 </li>
       <li><a href="reference.html#idtrack._db.DB.UTF8_STR">UTF8_STR (DB attribute)</a>

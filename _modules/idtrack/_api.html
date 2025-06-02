@@ -1,0 +1,492 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack._api &mdash; idtrack 0.0.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=15bcc2cf" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack._api</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack._api</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+
+<span class="c1"># Kemal Inecik</span>
+<span class="c1"># k.inecik@gmail.com</span>
+
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._database_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">DatabaseManager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._track</span><span class="w"> </span><span class="kn">import</span> <span class="n">Track</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._track_tests</span><span class="w"> </span><span class="kn">import</span> <span class="n">TrackTests</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._verify_organism</span><span class="w"> </span><span class="kn">import</span> <span class="n">VerifyOrganism</span>
+
+
+<div class="viewcode-block" id="API">
+<a class="viewcode-back" href="../../reference.html#idtrack._api.API">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">API</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Application programming interface for simple operations using ``idtrack`` package.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">local_repository</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Class initialization.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            local_repository: An absolute path in local machine to store downloaded and preprocessed content.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Instance attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;api&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger_configured</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">local_repository</span> <span class="o">=</span> <span class="n">local_repository</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">track</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Track</span><span class="p">,</span> <span class="n">TrackTests</span><span class="p">]</span>
+
+<div class="viewcode-block" id="API.configure_logger">
+<a class="viewcode-back" href="../../reference.html#idtrack._api.API.configure_logger">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">configure_logger</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Configure logger in a way that shows the logs in a specified format.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">logger_configured</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span>
+                <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span> <span class="k">if</span> <span class="n">level</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">level</span><span class="p">,</span>
+                <span class="n">datefmt</span><span class="o">=</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">,</span>
+                <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%(asctime)s</span><span class="s2"> </span><span class="si">%(levelname)s</span><span class="s2">:</span><span class="si">%(name)s</span><span class="s2">: </span><span class="si">%(message)s</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger_configured</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;The logger is already configured.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="API.calculate_graph_caches">
+<a class="viewcode-back" href="../../reference.html#idtrack._api.API.calculate_graph_caches">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_graph_caches</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate cached variables of the graph object using only one method.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">calculate_caches</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="API.get_ensembl_organism">
+<a class="viewcode-back" href="../../reference.html#idtrack._api.API.get_ensembl_organism">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_ensembl_organism</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tentative_organism_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Make sure the user enters correct organism name and retrieves latest Ensembl release with ease.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            tentative_organism_name: Organism of interest.</span>
+<span class="sd">                This does not have to be formal name. For example, &#39;human&#39;, &#39;hsapiens&#39; as well as formal name</span>
+<span class="sd">                &#39;homo_sapiens&#39; is accepted by the program.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Formal organism name and associated latest Ensembl release.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">vdf</span> <span class="o">=</span> <span class="n">VerifyOrganism</span><span class="p">(</span><span class="n">tentative_organism_name</span><span class="p">)</span>
+        <span class="n">formal_name</span> <span class="o">=</span> <span class="n">vdf</span><span class="o">.</span><span class="n">get_formal_name</span><span class="p">()</span>
+        <span class="n">latest_release</span> <span class="o">=</span> <span class="n">vdf</span><span class="o">.</span><span class="n">get_latest_release</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">formal_name</span><span class="p">,</span> <span class="n">latest_release</span></div>
+
+
+<div class="viewcode-block" id="API.get_database_manager">
+<a class="viewcode-back" href="../../reference.html#idtrack._api.API.get_database_manager">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_database_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">organism_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">last_ensembl_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Instantiate and return a DatabaseManager object for a specified organism and Ensembl release.</span>
+
+<span class="sd">        This method sets up a DatabaseManager configured to ignore data after a given Ensembl release.</span>
+<span class="sd">        It uses a deep copy of the default database backbone form and stores data in the local repository</span>
+<span class="sd">        specified during API initialization.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            organism_name: The formal name of the organism (e.g., &#39;homo_sapiens&#39;).</span>
+<span class="sd">            last_ensembl_release: The most recent Ensembl release to include. Data after this release will be ignored.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            An instance of the DatabaseManager class configured with the provided organism and release settings.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">DatabaseManager</span><span class="p">(</span>
+            <span class="n">organism</span><span class="o">=</span><span class="n">organism_name</span><span class="p">,</span>
+            <span class="n">ensembl_release</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">ignore_after</span><span class="o">=</span><span class="n">last_ensembl_release</span><span class="p">,</span>
+            <span class="n">form</span><span class="o">=</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">),</span>
+            <span class="n">local_repository</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">local_repository</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="API.initialize_graph">
+<a class="viewcode-back" href="../../reference.html#idtrack._api.API.initialize_graph">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">initialize_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">organism_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">last_ensembl_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">return_test</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates a graph and initializes pathfinder class.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            organism_name: Formal organism name as an output of ``get_ensembl_organism`` method.</span>
+<span class="sd">            last_ensembl_release: Ensembl release of interest. The object will work on only given Ensembl release,</span>
+<span class="sd">                but some methods does not care which form the DatabaseManager is defined to.</span>
+<span class="sd">                The latest possible Ensembl release is the best choice for graph building with no drawbacks.</span>
+<span class="sd">            return_test: If ``True``, return the ``TrackTest`` object instead, which has some functions to test the</span>
+<span class="sd">                pathfinder performance and graph integrity.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_database_manager</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism_name</span><span class="p">,</span> <span class="n">last_ensembl_release</span><span class="o">=</span><span class="n">last_ensembl_release</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">return_test</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">track</span> <span class="o">=</span> <span class="n">TrackTests</span><span class="p">(</span><span class="n">dm</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">track</span> <span class="o">=</span> <span class="n">Track</span><span class="p">(</span><span class="n">dm</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="API.convert_identifier">
+<a class="viewcode-back" href="../../reference.html#idtrack._api.API.convert_identifier">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">convert_identifier</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">from_release</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">to_release</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">final_database</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">prioritize_to_one_filter</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">return_path</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Finds corresponding identifier in specified target using the constructed graph and pathfinder algorithm.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            identifier: Query ID.</span>
+<span class="sd">            from_release: Query ID is from which Ensembl release, if provided.</span>
+<span class="sd">            to_release: Ensembl release for target gene set.</span>
+<span class="sd">                Which Ensembl release the user wants to convert the ID into. The default is the latest Ensembl release.</span>
+<span class="sd">            final_database: Database for the target gene set.</span>
+<span class="sd">                Which database the user wants to convert the ID into. The default is &#39;ensembl_gene&#39;.</span>
+<span class="sd">            prioritize_to_one_filter: Decide to use a series of filters to score the possible paths, and ideally choose</span>
+<span class="sd">                a single target at the end.</span>
+<span class="sd">            return_path: If ``True``, returns the path from source to query ID.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A dictionary with following keys</span>
+
+<span class="sd">            - ``&quot;target_id&quot;``: Final IDs after conversion.</span>
+<span class="sd">            - ``&quot;last_node&quot;``: The last node in history travel, so it is an Ensembl gene ID.</span>
+<span class="sd">            - ``&quot;final_database&quot;``: Final database of the final IDs.</span>
+<span class="sd">            - ``&quot;graph_id&quot;``: The corresponding ID in the graph for the query ID.</span>
+<span class="sd">              For example, if the query ID is &#39;actb&#39;, this will be &#39;ACTB&#39;.</span>
+<span class="sd">            - ``&quot;query_id&quot;``: The input query ID.</span>
+<span class="sd">            - ``&quot;no_corresponding&quot;``: If ``True``, there is no such ID in the graph.</span>
+<span class="sd">            - ``&quot;no_conversion&quot;``: If ``True``, it is not possible to convert into the target. It is 1-to-0 matching.</span>
+<span class="sd">            - ``&quot;no_target&quot;``: If ``True``, there is no matching in the described final database, but the history</span>
+<span class="sd">              travel was successful until &#39;last_node&#39;. In other words, &#39;final_conversion&#39; failed, no mathing identifier</span>
+<span class="sd">              is found in the target database but there is mathing identifier in Ensembl.</span>
+<span class="sd">            - ``&quot;the_path&quot;``: The path from source to query ID. (If `return_path` is set to ``True``.)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Get the graph ID if possible.</span>
+        <span class="n">new_ident</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">node_name_alternatives</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+        <span class="n">no_corresponding</span><span class="p">,</span> <span class="n">no_conversion</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="n">new_ident</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">cnt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
+                <span class="n">from_id</span><span class="o">=</span><span class="n">new_ident</span><span class="p">,</span>
+                <span class="n">from_release</span><span class="o">=</span><span class="n">from_release</span><span class="p">,</span>
+                <span class="n">to_release</span><span class="o">=</span><span class="n">to_release</span><span class="p">,</span>
+                <span class="n">final_database</span><span class="o">=</span><span class="n">final_database</span><span class="p">,</span>
+                <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="n">prioritize_to_one_filter</span><span class="p">,</span>
+                <span class="n">return_path</span><span class="o">=</span><span class="n">return_path</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">cnt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">no_conversion</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">no_corresponding</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="n">final_ids_together</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="nb">list</span><span class="p">({(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">cnt</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">cnt</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;final_conversion&quot;</span><span class="p">][</span><span class="s2">&quot;final_elements&quot;</span><span class="p">]})</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">no_corresponding</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">no_conversion</span>
+            <span class="k">else</span> <span class="p">[]</span>
+        <span class="p">)</span>
+        <span class="n">target_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">({</span><span class="n">i</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">final_ids_together</span><span class="p">})</span>
+
+        <span class="n">final_database_conv_</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">{</span><span class="n">cnt</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;final_conversion&quot;</span><span class="p">][</span><span class="s2">&quot;final_database&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">cnt</span><span class="p">}</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">no_corresponding</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">no_conversion</span>
+            <span class="k">else</span> <span class="p">{</span><span class="kc">None</span><span class="p">}</span>
+        <span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">final_database_conv_</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="n">final_database_conv</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">final_database_conv_</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">final_conf_</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">{</span><span class="n">cnt</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;final_conversion&quot;</span><span class="p">][</span><span class="s2">&quot;final_conversion_confidence&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">cnt</span><span class="p">}</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">no_corresponding</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">no_conversion</span>
+            <span class="k">else</span> <span class="p">{</span><span class="kc">None</span><span class="p">}</span>
+        <span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">final_conf_</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="n">final_conf</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">final_conf_</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;target_id&quot;</span><span class="p">:</span> <span class="n">target_ids</span><span class="p">,</span>
+            <span class="s2">&quot;last_node&quot;</span><span class="p">:</span> <span class="n">final_ids_together</span><span class="p">,</span>
+            <span class="s2">&quot;final_database&quot;</span><span class="p">:</span> <span class="n">final_database_conv</span><span class="p">,</span>
+            <span class="s2">&quot;graph_id&quot;</span><span class="p">:</span> <span class="n">new_ident</span><span class="p">,</span>
+            <span class="s2">&quot;query_id&quot;</span><span class="p">:</span> <span class="n">identifier</span><span class="p">,</span>
+            <span class="s2">&quot;no_corresponding&quot;</span><span class="p">:</span> <span class="n">no_corresponding</span><span class="p">,</span>
+            <span class="s2">&quot;no_conversion&quot;</span><span class="p">:</span> <span class="n">no_conversion</span><span class="p">,</span>
+            <span class="s2">&quot;no_target&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">final_conf</span><span class="p">)</span> <span class="k">if</span> <span class="n">final_conf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="n">return_path</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">&quot;the_path&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span> <span class="nb">tuple</span><span class="p">(</span>
+                        <span class="nb">list</span><span class="p">(</span><span class="n">cnt</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;the_path&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">cnt</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;final_conversion&quot;</span><span class="p">][</span><span class="s2">&quot;final_elements&quot;</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="s2">&quot;the_path&quot;</span><span class="p">])</span>
+                    <span class="p">)</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">cnt</span>
+                    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">cnt</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;final_conversion&quot;</span><span class="p">][</span><span class="s2">&quot;final_elements&quot;</span><span class="p">]</span>
+                <span class="p">}</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">no_corresponding</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">no_conversion</span>
+                <span class="k">else</span> <span class="p">{}</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="API.convert_identifier_multiple">
+<a class="viewcode-back" href="../../reference.html#idtrack._api.API.convert_identifier_multiple">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">convert_identifier_multiple</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">identifier_list</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">pbar_prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Basically ``convert_identifier`` method for multiple conversion procedure with progress bar.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            identifier_list: List of query IDs to feed the ``convert_identifier`` method.</span>
+<span class="sd">            kwargs: Keyword arguments to pass into ``convert_identifier`` method.</span>
+<span class="sd">            verbose: If ``True``, shows the progress.</span>
+<span class="sd">            pbar_prefix: The string to be put before the progress bar.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List of ``convert_identifier`` method outputs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">with</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">identifier_list</span><span class="p">,</span> <span class="n">mininterval</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="n">pbar_prefix</span><span class="p">,</span> <span class="n">ncols</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span> <span class="k">as</span> <span class="n">loop_obj</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">identifier</span> <span class="ow">in</span> <span class="n">loop_obj</span><span class="p">:</span>
+                <span class="n">loop_obj</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ID:</span><span class="si">{</span><span class="n">identifier</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+                <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="n">identifier</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="API.classify_multiple_conversion">
+<a class="viewcode-back" href="../../reference.html#idtrack._api.API.classify_multiple_conversion">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">classify_multiple_conversion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">matchings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a dictionary by classifying the results into different bins.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            matchings: The output of ``convert_identifier_multiple`` method.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: Unexpected program error</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List of ``convert_identifier`` method outputs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">r</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;changed_only_1_to_n&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">&quot;changed_only_1_to_1&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">&quot;alternative_target_1_to_1&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">&quot;alternative_target_1_to_n&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">&quot;matching_1_to_0&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">&quot;matching_1_to_1&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">&quot;matching_1_to_n&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">&quot;input_identifiers&quot;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="p">}</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">matchings</span><span class="p">:</span>
+            <span class="n">r</span><span class="p">[</span><span class="s2">&quot;input_identifiers&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">i</span><span class="p">[</span><span class="s2">&quot;no_corresponding&quot;</span><span class="p">]:</span>
+                <span class="n">r</span><span class="p">[</span><span class="s2">&quot;matching_1_to_0&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">i</span><span class="p">[</span><span class="s2">&quot;no_conversion&quot;</span><span class="p">]:</span>
+                <span class="n">r</span><span class="p">[</span><span class="s2">&quot;matching_1_to_0&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unexpected error.&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">i</span><span class="p">[</span><span class="s2">&quot;no_target&quot;</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">r</span><span class="p">[</span><span class="s2">&quot;alternative_target_1_to_1&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">r</span><span class="p">[</span><span class="s2">&quot;alternative_target_1_to_n&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">i</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">i</span><span class="p">[</span><span class="s2">&quot;query_id&quot;</span><span class="p">]:</span>
+                    <span class="n">r</span><span class="p">[</span><span class="s2">&quot;changed_only_1_to_1&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">([</span><span class="n">i</span><span class="p">[</span><span class="s2">&quot;query_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">i</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">]]):</span>
+                    <span class="n">r</span><span class="p">[</span><span class="s2">&quot;changed_only_1_to_n&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">r</span><span class="p">[</span><span class="s2">&quot;matching_1_to_1&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">r</span><span class="p">[</span><span class="s2">&quot;matching_1_to_n&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">r</span></div>
+
+
+<div class="viewcode-block" id="API.print_binned_conversion">
+<a class="viewcode-back" href="../../reference.html#idtrack._api.API.print_binned_conversion">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">print_binned_conversion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">binned_conversion</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Print the output of ``classify_multiple_conversion`` method.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            binned_conversion: The output of ``classify_multiple_conversion`` method.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">linesep</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="si">}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">binned_conversion</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">binned_conversion</span><span class="p">])</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="API.infer_identifier_source">
+<a class="viewcode-back" href="../../reference.html#idtrack._api.API.infer_identifier_source">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">infer_identifier_source</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">id_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;assembly_ensembl_release&quot;</span><span class="p">,</span> <span class="n">report_only_winner</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Infer the source of given set of IDs, by comparing which source covers most of the query IDs.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            id_list: List of query IDs.</span>
+<span class="sd">            mode:</span>
+<span class="sd">                - ``&quot;complete&quot;``: Looks for the best match in terms of database, assembly and Ensembl release.</span>
+<span class="sd">                - ``&quot;ensembl_release&quot;``: Looks for the best match in terms of Ensembl release only.</span>
+<span class="sd">                - ``&quot;assembly&quot;``: Looks for the best match in terms of genome assembly only.</span>
+<span class="sd">                - ``&quot;assembly_ensembl_release&quot;``: Looks for the best match in terms of Ensembl release and assembly.</span>
+<span class="sd">            report_only_winner: If ``True``, return only the winner. If ``False``, return each</span>
+<span class="sd">                possible source with corresponding scores.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Result based on `mode` parameter.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">found_id_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="n">none_id_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">id_list</span><span class="p">:</span>
+            <span class="n">found_id</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">node_name_alternatives</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">found_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">none_id_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">found_id_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">found_id</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">none_id_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Number of unfound IDs: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">none_id_list</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+        <span class="n">identification</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">identify_source</span><span class="p">(</span><span class="n">found_id_list</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">report_only_winner</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">identification</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">identification</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="API.available_available_external_databases">
+<a class="viewcode-back" href="../../reference.html#idtrack._api.API.available_available_external_databases">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">available_available_external_databases</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Show which organisms are available to be used in the scope of this package.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Set of strings saying which external databases are present in the graph.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">available_external_databases</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
