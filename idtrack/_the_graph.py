@@ -357,15 +357,25 @@ class TheGraph(nx.MultiDiGraph):
         return result
 
     @cached_property
-    def lower_chars_graph(self) -> dict:
-        """A simple dictionary mapping the node name with its lower characters into the original node name.
+    def lower_chars_graph(self) -> dict[str, str]:
+        """Map lowercase node identifiers to their canonical graph node names.
 
-        Raises:
-            ValueError: If there are multiple nodes which becomes the same after lower character conversion.
+        The cached mapping enables **case-insensitive** queries against the graph by translating a
+        lowercase version of every node into the exact identifier stored in :py:attr:`self.nodes`.
+        ID-resolution helpers such as :py:meth:`node_name_alternatives` rely on this cache to
+        recover the intended node even when callers supply mixed-case or lowercase strings.
+
+        During construction the method iterates once over *all* nodes, lowers each identifier, and
+        asserts that no two distinct nodes collide after lower-casing.  The result is memoised via
+        :py:data:`functools.cached_property`, so subsequent accesses are O(1).
 
         Returns:
-            A dictionary with following format
-            ``{lower_char_id: id}``
+            dict[str, str]: ``{lowercase_id: original_id}`` giving a one-to-one mapping from
+                lowercase node identifiers to the exact strings used in the graph.
+
+        Raises:
+            ValueError: If two or more nodes become identical after converting to lowercase,
+                indicating ambiguous casing in the underlying graph.
         """
         self.log.info(f"Cached properties being calculated: {'lower_chars_graph'}")
 
@@ -381,44 +391,62 @@ class TheGraph(nx.MultiDiGraph):
         return result
 
     def node_name_alternatives(self, identifier: str) -> tuple[Optional[str], bool]:
-        """Matching a query ID into the ID found in the graph based on some criteria and priorities.
+        """Resolve a raw query identifier to the *exact* graph node label that ID-Track expects.
 
-        A query ID is sometimes not found exactly in the graph due to the format it has. However, very slight
-        modifications of the string of query ID could help the pathfinder locate the ID of interest. For example,
-        `actb` can be queried for the pathfinder, but nothing is found as upper character version of the query,
-        `ACTB`, is found in the graph instead.
-
-        Priority is as follows: (1) try to find directly in the graph (2) look for lower-char version (3) look for
-        initial substring before separators (4) check all possible variations of dash and underscore for each of which
-        follow the priority list above.
+        The routine shields downstream path-finding code from the myriad ways users may spell or format
+        biological identifiers.  It walks through a well-defined priority list—direct lookup, case-blind
+        match, version-suffix trimming, and dash/underscore substitutions—before finally retrying the whole
+        sequence with the ``synonym:`` prefix used by :py:data:`~idtrack._db.DB.synonym_id_nodes_prefix`.
+        This makes interactive exploration tolerant to typos such as lower-case gene symbols
+        (``actb`` → ``ACTB``) or versioned Ensembl IDs written with underscores
+        (``ENSG00000123456_2`` → ``ENSG00000123456.2``).
 
         Args:
-            identifier: A bio-ID of interest. This could be an ID in the graph or some other ID to be matched
-                with the corresponding ID in the graph.
+            identifier (str): Raw identifier supplied by the caller.  May be an Ensembl ID, external database
+                key, or any variant handled by the heuristics described above.
 
         Returns:
-            A tuple with the first element is the bio-ID in the graph if the query is found somehow, else ``None``.
-                The second element is to show whether the query ID is found without any modifications or not.
+            tuple[Optional[str], bool]:
+                * The canonical node label **or** ``None`` when no match is possible.
+                * ``True`` when *identifier* had to be modified (case change, suffix strip, etc.); ``False``
+                    when an exact graph hit was found.
+
+        Notes:
+            Internally this is a thin wrapper that delegates the heavy lifting to the private
+            :py:meth:`_node_name_alternatives` helper, then retries once with the synonym prefix if the first
+            pass fails.  The helper itself is further decomposed into specialised sub-functions—see their
+            individual docstrings for details.
         """
 
         def _node_name_alternatives(the_id: str) -> tuple[Optional[str], bool]:
-            """Helper function for :py:meth:`TheGraph.node_name_alternatives`.
+            """Apply the heuristic cascade to *one* identifier candidate.
+
+            The helper encapsulates the common logic needed by both the public wrapper and the synonym-prefixed
+            fallback.  Its four-step search order is:
+
+            1. **Exact** match - return immediately if *the_id* is already in :py:attr:`self.nodes`.
+            2. **Case-blind** match - consult :py:attr:`~TheGraph.lower_chars_graph`.
+            3. **Suffix-trim** - strip a trailing version segment introduced by ``'.'``, ``'_'`` or ``'-'`` and
+                test both the trimmed and its lower-case form.
+            4. **Dash/underscore permutations** - substitute every combination of ``'-'`` ⇄ ``'_'`` and repeat
+                steps 2-3 for each synthetic candidate.
 
             Args:
-                the_id: A bio-ID of interest as defined in :py:attr:`TheGraph.node_name_alternatives.identifier`.
+                the_id (str): One potential spelling of the identifier.
 
             Returns:
-                The same as the parental method.
+                tuple[Optional[str], bool]: Same semantics as the public method.
             """
 
             def compare_lowers(id_to_find: str) -> tuple[Optional[str], bool]:
-                """Check whether lower-character ID is found.
+                """Perform a constant-time, case-insensitive lookup via :py:attr:`self.lower_chars_graph`.
 
                 Args:
-                    id_to_find: Query ID.
+                    id_to_find (str): Candidate identifier.
 
                 Returns:
-                    Tuple of found ID (None if unfound) as the first element, and whether it is found as the second.
+                    tuple[Optional[str], bool]: ``(canonical_id, True)`` when a lower-case hit is found;
+                        ``(None, False)`` otherwise.
                 """
                 lower_id_find = id_to_find.lower()
 
@@ -429,23 +457,27 @@ class TheGraph(nx.MultiDiGraph):
                     return None, False  # If cannot return anything, just return None (unfound).
 
             def check_variation(id_str: str) -> tuple[Optional[str], bool]:
-                """Search ID in the graph without flanking substring.
+                r"""Strip terminal *version-like* segments and retry the exact/CI match sequence.
+
+                The regular expression ``r"^(.+)(_|-|\\.)[0-9]+$"`` removes anything that looks like
+                ``<core><sep><digits>``, where *sep* is ``'.'``, ``'_'`` or ``'-'``.  Both the trimmed string and its
+                lower-case counterpart are tested against the graph.
 
                 Args:
-                    id_str: Query ID.
+                    id_str (str): Identifier to normalise.
 
                 Returns:
-                    Tuple of found ID (None if unfound) as the first element, and whether it is found as the second.
+                    tuple[Optional[str], bool]: Match result using the same convention as :py:meth:`compare_lowers`.
                 """
                 # First, try to find the lower character version of the querry.
                 lower_id, is_lower_found = compare_lowers(id_str)
                 if is_lower_found:  # If something is found, just return it.
                     return lower_id, True
 
-                # Them, try to match with the regular-expression pattern. The pattern is basically to remove any flanking
-                # numbers (possibly versions) separated with following characters '-', '_', or '.'. In order to match with
-                # the regex patter, the query has to have these separators, but the subsequent integer is optional. Note
-                # that the last separator is of interest only.
+                # Them, try to match with the regular-expression pattern. The pattern is basically to remove any
+                # flanking numbers (possibly versions) separated with following characters '-', '_', or '.'. In order
+                # to match with the regex patter, the query has to have these separators, but the subsequent integer
+                # is optional. Note that the last separator is of interest only.
                 regex_found = regex_pattern.match(id_str)
                 if regex_found:
                     new_id = regex_found.groups()[
@@ -462,18 +494,18 @@ class TheGraph(nx.MultiDiGraph):
 
                 return None, False  # If cannot return anything, just return None (unfound).
 
-            def possible_alternatives(the_id_pa: str) -> list:
-                """Search a query ID with all possible substitutions of '_' and '-'.
+            def possible_alternatives(the_id_pa: str) -> list[str]:
+                """Enumerate every dash/underscore permutation of *the_id_pa*.
 
-                Sometimes the query ID has a '-' in somewhere but the corresponding ID in the graph has '_', or vice versa.
-                The method here creates all possible combinations of query ID where '_' and '-' characters are replaced.
-                For example, if query ID is "AC-TB_1", the method returns: ["AC_TB_1", "AC-TB-1", "AC-TB_1", "AC_TB-1"].
+                Each ``'-'`` or ``'_'`` is treated as a binary position; the function returns ``2ⁿ`` synthetic IDs
+                where *n* is the number of such positions.  Example: ``"AC-TB_1"`` produces four variants
+                (``"AC_TB_1"``, ``"AC-TB-1"``, ``"AC-TB_1"``, ``"AC_TB-1"``).
 
                 Args:
-                    the_id_pa: Query ID.
+                    the_id_pa (str): Prototype identifier.
 
                 Returns:
-                    All possible versions of query ID.
+                    list[str]: All generated permutations (duplicates are preserved for downstream simplicity).
                 """
                 # Get the indexes of the characters of interests ('_' and '-') in the query ID.
                 char_indices = [ind for ind, i in enumerate(the_id_pa) if i in ["-", "_"]]
@@ -522,33 +554,63 @@ class TheGraph(nx.MultiDiGraph):
 
     @cached_property
     def get_active_ranges_of_id(self) -> dict[str, list[list]]:
-        """Returns the range of active ensembl releases of nodes, ignoring which assembly the release is coming from.
+        """Return inclusive Ensembl-release intervals in which every node in the graph is biologically active.
+
+        The convenience wrapper iterates over all nodes currently stored in this
+        :py:class:`idtrack.the_graph.TheGraph` instance and delegates the heavy
+        lifting to :py:meth:`_get_active_ranges_of_id`.  The latter performs node-type-specific
+        logic (backbone vs. assembly-specific) to determine *contiguous* release
+        windows—at no point does this method examine which genome assembly the
+        release originated from, because for downstream tasks (lifecycle analysis,
+        deprecation reports, etc.) only the presence/absence across release numbers
+        matters.
 
         Returns:
-            A dictionary with following format
-            ``{id: list_of_ranges``.
+            dict[str, list[list[int]]]: Mapping ``{node_id: [[start_rel, end_rel], ...]}``
+                where every inner two-element list is an *inclusive* range.  Ranges
+                are sorted in ascending order and guaranteed not to overlap.
         """
         self.log.info(f"Cached properties being calculated: {'get_active_ranges_of_id'}")
         return {n: self._get_active_ranges_of_id(n) for n in self.nodes}
 
     def _get_active_ranges_of_id(self, input_id: str) -> list[list]:
-        """Calculating the range of active ensembl releases of nodes separately for backbone nodes and others.
+        """Compute Ensembl-release ranges for a single identifier, choosing logic by node type.
+
+        This private helper inspects the ``input_id`` and dispatches to an internal
+        routine tailored to the node's role in the graph:
+
+        * :py:meth:`_get_active_ranges_of_id_backbone` - deals with *backbone* nodes
+            that form the primary versioned lineage.
+        * :py:meth:`_get_active_ranges_of_id_nonbackbone` - handles assembly-specific
+            or auxiliary identifiers recorded in one of the *combined-edges* lookup tables.
 
         Args:
-            input_id: Query ID.
+            input_id (str): Identifier whose life-span across Ensembl releases is
+                requested.  Must exist in :py:attr:`~TheGraph.nodes`.
 
         Returns:
-            Ranges of the ID as list of lists. Outputs should always be increasing, inclusive ranges.
+            list[list[int]]: Ordered, non-overlapping ``[[start_rel, end_rel], …]``
+                where both ends are inclusive.
         """
 
-        def _get_active_ranges_of_id_nonbackbone(the_id: str) -> list[list]:
-            """For the non-backbone nodes, calculates the ranges of IDs using `combined_edges` dictionaries.
+        def _get_active_ranges_of_id_nonbackbone(the_id: str) -> list[list[int]]:
+            """Determine release intervals for non-backbone (assembly-specific) nodes.
+
+            For aliases and assembly-level gene identifiers the graph stores life-span
+            information inside one of two *combined-edge* dictionaries:
+
+            * :py:data:`self.combined_edges_assembly_specific_genes` for per-assembly genes.
+            * :py:data:`self.combined_edges` for all other non-backbone nodes.
+
+            The routine flattens every inner ``set`` of release numbers, sorts them,
+            and converts the resulting sequence into contiguous, inclusive ranges via
+            :py:meth:`TheGraph.list_to_ranges`.
 
             Args:
-                the_id: Query ID.
+                the_id (str): Identifier to resolve (must be non-backbone).
 
             Returns:
-                Ranges of the ID as list of lists. Outputs should always be increasing, inclusive ranges.
+                list[list[int]]: Ascending, inclusive release intervals.
             """
             the_node_type = self.nodes[the_id][DB.node_type_str]
 
@@ -562,17 +624,30 @@ class TheGraph(nx.MultiDiGraph):
             rels = sorted({s for p in rd for r in rd[p] for s in rd[p][r]})
             return TheGraph.list_to_ranges(rels)  # Convert the list of ensembl releases into range.
 
-        def _get_active_ranges_of_id_backbone(the_id: str) -> list[list]:
-            """For the backbone nodes, calculates the ranges of IDs.
+        def _get_active_ranges_of_id_backbone(the_id: str) -> list[list[int]]:
+            """Compute release ranges for backbone nodes via explicit edge traversal.
+
+            A backbone node's activity starts where an *in-edge* appears and stops
+            immediately *before* its next *out-edge* (branching or version bump).
+            The function therefore:
+
+            1. Collects all releases with an incoming edge
+               (``get_next_edge_releases(reverse=False)``).
+            2. Collects all releases with an outgoing edge
+               (``reverse=True``).
+            3. Merges and sorts the two sets, then scans them in ascending order,
+               toggling an *active* flag to build start/stop pairs.
 
             Args:
-                the_id: Query ID.
+                the_id (str): Backbone identifier whose version chain is analysed.
 
             Returns:
-                Ranges of the ID as list of lists. Outputs should always be increasing, inclusive ranges.
+                list[list[int]]: One or more inclusive ``[start, end]`` intervals.
 
             Raises:
-                ValueError: If there is no ID going out and going in to the query ID.
+                ValueError: If the identifier has neither in-edges nor out-edges,
+                    or if graph invariants (e.g., first release must be an in-edge)
+                    are violated, implying a malformed backbone.
             """
             # Get the in- and out-nodes via 'get_next_edge_releases' method.
             t_outs = self.get_next_edge_releases(from_id=the_id, reverse=True)
@@ -634,8 +709,8 @@ class TheGraph(nx.MultiDiGraph):
                         active_state = False  # Set the ID not active.
 
             # Group the results as list of list.
-            narrowed = [narrowed[i : i + 2] for i in range(0, len(narrowed), 2)]
-            return narrowed
+            _narrowed = [narrowed[i : i + 2] for i in range(0, len(narrowed), 2)]
+            return _narrowed
 
         # Use associated function to create the ranges of a node.
         if self.nodes[input_id][DB.node_type_str] == DB.external_search_settings["nts_backbone"]:
@@ -644,22 +719,29 @@ class TheGraph(nx.MultiDiGraph):
             return _get_active_ranges_of_id_nonbackbone(input_id)
 
     def get_active_ranges_of_id_ensembl_all_inclusive(self, the_id: str) -> list[list]:
-        """Generate active ranges of Ensembl gene nodes with all assemblies.
+        """Return the inclusive Ensembl-release ranges during which *the_id* is active across **all** assemblies.
 
-        Note that :py:meth:`TheGraph.get_active_ranges_of_id` method provided the range for main assembly
-        that the graph is build on. This method combines the other assemblies together. Also, it verifies whether
-        the :py:meth:`TheGraph.combined_edges` and :py:meth:`TheGraph.get_active_ranges_of_id`
-        methods provides consistent results.
+        This helper generalises :py:meth:`~TheGraph.get_active_ranges_of_id`, which only reports activity on the
+        graph's **main assembly**, by folding in evidence from every other assembly represented in
+        :py:data:`~TheGraph.combined_edges_genes`.  The resulting timeline therefore reflects *all* times at which
+        the identifier (or any assembly-specific sibling) existed in Ensembl—crucial when downstream analyses
+        must ignore assembly boundaries, e.g. when tracking identifier synonymy across genome builds.  After
+        merging, the routine validates that the main-assembly slice remains consistent with the authoritative
+        backbone cache and aborts with a detailed error if divergence is detected.
 
         Args:
-            the_id: Query ID. Should be either Ensembl gene or assembly specific Ensembl gene IDs.
-
-        Raises:
-            ValueError: If there is inconsistency between the outputs of these two functions.
-                If the query is not one of the specified node type.
+            the_id (str): Ensembl gene identifier—either backbone (``ENSG…``) or assembly-qualified
+                (``assembly_<code>_ensembl_gene``).  The node's :py:data:`DB.node_type_str` **must** be one of
+                ``DB.nts_ensembl["gene"]`` or the set in :py:data:`DB.nts_assembly_gene`.
 
         Returns:
-            Ranges of the ID as list of lists. Outputs should always be increasing, inclusive ranges.
+            list[list[int]]: A list of ``[start, end]`` pairs (inclusive, sorted, non-overlapping) covering every
+            Ensembl release in which *the_id* was present on **any** assembly.
+
+        Raises:
+            ValueError: If (1) activity inferred from :py:data:`~TheGraph.combined_edges_genes` disagrees with
+                :py:meth:`~TheGraph.get_active_ranges_of_id` for the main assembly, or (2) *the_id* is not a
+                recognised Ensembl-gene node type.
         """
         # Use associated function to create the ranges of a node.
         ndt = self.nodes[the_id][DB.node_type_str]
@@ -695,19 +777,29 @@ class TheGraph(nx.MultiDiGraph):
         else:
             raise ValueError(f"Query `{the_id}` isn't `{DB.nts_ensembl['gene']}` or in `{DB.nts_assembly_gene}`.")
 
-    def get_next_edge_releases(self, from_id: str, reverse: bool) -> list:
-        """Retrieves the next edge releases from a node, depending on the directionality of the graph.
+    def get_next_edge_releases(self, from_id: str, reverse: bool) -> list[int]:
+        """List the Ensembl releases reachable by the **next** (or **previous**) edges from *from_id*.
+
+        The method scans the immediate neighbourhood of a **backbone gene node** and extracts the release
+        numbers that mark either the next chronological transition (*reverse* = ``False``) or the previous
+        one (*reverse* = ``True``).  It respects graph directionality, skips non-backbone connections,
+        collapses duplicate multi-edges, and treats infinite self-loops as “still active” when stepping
+        forward in time.  The result is a de-duplicated, easy-to-use list that higher-level path-finding
+        algorithms can feed directly into release-oriented traversals.
 
         Args:
-            from_id: Query ID. Should be with node type of Ensembl gene.
-            reverse: The direction of desired next edges.
-                If ``True``, previous edges are returned. If ``False``, next edges are returned.
+            from_id (str): Ensembl gene identifier that must belong to the backbone
+                (``DB.external_search_settings["nts_backbone"]``).
+            reverse (bool): If ``False`` return *forward* (old → new) transition releases; if ``True`` return
+                *backward* (new → old) releases.
 
         Returns:
-            The Ensembl releases of next (or previous if reverse is ``True``) edges.
+            list[int]: Sorted list of unique Ensembl release numbers adjacent to *from_id* in the chosen temporal
+                direction.
 
         Raises:
-            ValueError: If the query ID is not with the node type of graph backbone.
+            ValueError: If *from_id* is **not** a backbone node—i.e. its ``node_type`` does not match
+                :py:data:`DB.external_search_settings["nts_backbone"]`.
         """
         if self.nodes[from_id][DB.node_type_str] != DB.external_search_settings["nts_backbone"]:
             raise ValueError(f"The method should be called only for backbone nodes: `{from_id}`.")
@@ -740,13 +832,24 @@ class TheGraph(nx.MultiDiGraph):
         )  # (11) Convert into a list at the end.
 
     def get_active_ranges_of_base_id_alternative(self, base_id: str) -> list[list]:
-        """Get the range of an base ID based on the child IDs it is connected to.
+        """Return the Ensembl-release intervals during which a *base* gene identifier is active.
+
+        The routine unifies child-level history into an easy-to-query representation.  A *base* Ensembl ID
+        (e.g. ``ENSG00000123456``) has one or more *versioned* descendants
+        (``ENSG00000123456.1``, ``ENSG00000123456.2``, …) whose lifetimes can never overlap.
+        By walking the immediate neighbours of *base_id* and unioning every child's
+        ``get_active_ranges_of_id_ensembl_all_inclusive`` result, the method derives *exactly* the
+        releases in which **any** descendant existed.  This summary read-out is used by higher-level
+        diagnostics (for example, *range-overlap* sanity checks) and by algorithms that need to
+        reason about the birth and retirement of genes at the stable-ID level.
 
         Args:
-            base_id: Query ID. Should be with node type of Ensembl base ID.
+            base_id (str): Stable Ensembl gene identifier **without** version suffix.  The node must have
+                ``node_type == DB.nts_base_ensembl["gene"]`` inside the graph.
 
         Returns:
-            Ranges of the ID as list of lists. Outputs should always be increasing, inclusive ranges.
+            list[list[int]]: Sorted, non-overlapping ``[start, end]`` slices **inclusive** at both ends.
+                ``end`` may be ``np.inf`` when the gene is still present in the most recent release.
         """
         associated_ids = self.neighbors(base_id)
         all_ranges = [r for ai in associated_ids for r in self.get_active_ranges_of_id_ensembl_all_inclusive(ai)]
@@ -754,14 +857,20 @@ class TheGraph(nx.MultiDiGraph):
 
     @staticmethod
     def list_to_ranges(lst: list[int]) -> list[list]:
-        """Convert sorted non-repeating list of integers into list of inclusive non-overlapping ranges.
+        """Compact a sorted list of releases into minimal inclusive ranges.
+
+        The helper converts monotonically increasing, duplicate-free release numbers into a
+        *run-length* representation (e.g. ``[1, 2, 3, 5] → [[1, 3], [5, 5]]``).  It is the logical
+        inverse of :py:meth:`TheGraph.ranges_to_list` and is frequently used to post-process the raw
+        release sets collected from edge metadata.
 
         Args:
-            lst: List of integers. It should be sorted in increasing order. Repeating element is not allowed.
-                The output of :py:meth:`TheGraph.ranges_to_list` is a perfect input here.
+            lst (list[int]): Releases **strictly increasing** with no repetitions.  Supplying an
+                unsorted or duplicate-containing list leads to undefined behaviour.
 
         Returns:
-            Ranges as list of lists. Outputs should always be increasing, inclusive ranges. With positive integers.
+            list[list[int]]: Non-overlapping ``[start, end]`` intervals covering exactly the input
+                elements.  Each inner list is inclusive; singleton releases become ``[r, r]``.
         """
         res = list()
         for _, a in itertools.groupby(enumerate(lst), lambda pair: pair[1] - pair[0]):
@@ -770,14 +879,20 @@ class TheGraph(nx.MultiDiGraph):
         return res
 
     def ranges_to_list(self, lor: list[list]) -> list[int]:
-        """Convert list of inclusive non-overlapping ranges into sorted sorted non-repeating list of integers.
+        """Explode inclusive ranges back into a sorted list of releases.
+
+        This is the inverse of :py:meth:`TheGraph.list_to_ranges`.  Each ``[start, end]`` slice is
+        expanded **inclusive** of both boundaries; if *end* is ``np.inf`` the interval is closed with
+        ``max(self.graph["confident_for_release"])`` so that downstream numeric operations continue to
+        work on finite integers.  The union of all expanded ranges is returned in ascending order
+        without duplicates.
 
         Args:
-            lor: Ranges as list of lists. Should always be increasing, inclusive ranges. With positive integers.
-                The output of :py:meth:`TheGraph.list_to_ranges` is a perfect input here.
+            lor (list[list[int | float]]): List of inclusive, non-overlapping ``[start, end]`` pairs.
+                ``start`` must be ``> 0``; ``end`` may be ``np.inf`` to denote open-ended activity.
 
         Returns:
-            Sorted non-repeating list of integers.
+            list[int]: Strictly increasing sequence of releases represented by *lor*.
         """
         return sorted(
             {
@@ -789,37 +904,53 @@ class TheGraph(nx.MultiDiGraph):
 
     @cached_property
     def node_trios(self) -> dict[str, set[tuple]]:
-        """Creates a dict for all nodes with `node_trios` calculated by :py:meth:`TheGraph._node_trios`.
+        """Return a full **node → trio-set** cache.
+
+        Builds the complete mapping *once* and stores it as a :py:data:`functools.cached_property`.
+        The mapping is memory-heavy but accelerates downstream helpers that repeatedly need the
+        ``(<database>, <assembly>, <release>)`` origin of many nodes.
 
         Returns:
-            A memory intensive dictionary with node name as the key and calculated `node_trios` as the value.
+            dict[str, set[tuple[str, int, int]]]:  Node identifier → the set of unique
+                ``(database, assembly, release)`` combinations in which that node is active.
+
+        Notes:
+            *The builder simply iterates ``self.nodes`` and delegates the per-node logic to
+            :py:meth:`_node_trios`.  Expect a multi-second start-up on large graphs.*
         """
         self.log.info(f"Cached properties being calculated: {'node_trios'}")
         return {n: self._node_trios(n) for n in self.nodes}
 
     def _node_trios(self, the_id: str) -> set[tuple]:
-        """Calculates the unique tuple called `trios` (database, assembly, Ensembl release) for a given ID.
+        """Compute all origin *trios* for a single node.
+
+        The routine identifies the node-type, chooses the appropriate *combined_edges* cache, and
+        expands any Ensembl *release ranges* so that every individual release is represented.
+        Alternative-assembly backbone genes and assembly-specific genes receive special handling to
+        ensure the correct database label is recorded.
 
         Args:
-            the_id: Query ID.
+            the_id (str): Canonical node name used inside the graph.
 
         Returns:
-            Set of trios.
+            set[tuple[str, int, int]]:  Unique triples ``(<database>, <assembly>, <release>)`` describing
+                every context in which *the_id* occurs.
         """
 
-        def non_inf_range(l1: int, l2: Union[float, int]) -> range:
-            """Convert the np.inf range element into a Ensembl release.
+        def _non_inf_range(l1: int, l2: Union[float, int]) -> range:
+            """Create an inclusive ``range`` while resolving ``np.inf`` upper bounds.
 
             Args:
-                l1: Left hand side of a range.
-                l2: Right hand side of a range.
-                    This item is converted into the max Ensembl release of the graph if this is `np.inf`.
-
-            Raises:
-                ValueError: If not ``0 < l1 <= l2``.
+                l1 (int): Lower bound; must be **> 0**.
+                l2 (Union[float, int]): Upper bound. If ``np.inf``, it is replaced by the highest Ensembl
+                    release stored in ``self.graph["confident_for_release"]``.
 
             Returns:
-                The range instance which iterates from `l1` to `l2`, including both.
+                range: A Python :py:class:`range` covering **all** releases from *l1* to *l2* (after
+                    normalisation), inclusive.
+
+            Raises:
+                ValueError: If *l1* ≤ 0, *l1* > *l2*, or *l2* is neither an integer nor ``np.inf``.
             """
             if not 0 < l1 <= l2:
                 raise ValueError
@@ -842,7 +973,7 @@ class TheGraph(nx.MultiDiGraph):
             return {
                 (DB.nts_assembly[ass]["gene"], ass, k)
                 for i, j in self.get_active_ranges_of_id[the_id]
-                for k in non_inf_range(i, j)
+                for k in _non_inf_range(i, j)
             }
         elif the_node_type == DB.nts_ensembl["gene"]:
             rd = self.combined_edges_genes[the_id]
@@ -854,20 +985,24 @@ class TheGraph(nx.MultiDiGraph):
         return {(p, r, s) for p in rd for r in rd[p] for s in rd[p][r]}
 
     @staticmethod
-    def compact_ranges(list_of_ranges: list[list]) -> list[list]:
-        """Reduce the list of ranges into least possible number of ranges.
+    def compact_ranges(list_of_ranges: list[list[int]]) -> list[list[int]]:
+        """Collapse adjacent or touching integer ranges into the smallest possible set.
 
-        O(n) time and space complexity: a forward in place compaction and copying back the elements,
-        as then each inner step is O(1) (get/set instead of del).
+        In the IDTrack graph every Ensembl identifier is active for one or more contiguous release intervals.
+        Storing those intervals as ``[[start, end], …]`` is convenient but can become redundant when consecutive
+        ranges abut each other.  *compact_ranges* performs an in-place, **O(n)** forward sweep that merges any pair
+        of ranges where the gap between ``end`` of the first and ``start`` of the next is ≤ 1, returning a new
+        list that covers the exact same discrete releases with the fewest possible intervals.  The helper is a
+        cornerstone for many caching utilities (e.g. :py:meth:`TheGraph.get_active_ranges_of_id`) and therefore
+        optimised for speed and minimal allocations.
 
         Args:
-            list_of_ranges: List of increasing, inclusive ranges. The elements are positive integers. Note that there
-                should be no overlapping elements.
-                The output of :py:meth:`TheGraph.list_to_ranges` or
-                :py:meth:`TheGraph._get_active_ranges_of_id` are a perfect input here.
+            list_of_ranges (list[list[int]]): Sorted, non-overlapping, inclusive ranges in the form
+                ``[[start, end], …]``.  All numbers must be positive integers and ``start ≤ end`` for every range.
 
         Returns:
-            List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.
+            list[list[int]]: A new list containing the minimal, non-overlapping, inclusive ranges that exactly
+                cover the union of *list_of_ranges*.
         """
         next_index = 0  # Keeps track of the last used index in our result
         for index in range(len(list_of_ranges) - 1):
@@ -881,17 +1016,25 @@ class TheGraph(nx.MultiDiGraph):
         return list_of_ranges[: next_index + 1]
 
     @staticmethod
-    def get_intersecting_ranges(lor1: list[list], lor2: list[list], compact: bool = True) -> list[list]:
-        """As the name suggest, calculates the intersecting ranges of two list of ranges.
+    def get_intersecting_ranges(lor1: list[list[int]], lor2: list[list[int]], compact: bool = True) -> list[list[int]]:
+        """Return the set of releases common to **both** input range lists.
+
+        The routine computes the pairwise intersection between every range in *lor1* and every range in *lor2*,
+        yielding a list of ranges where the two original lists overlap.  Optionally the result may be passed
+        through :py:meth:`TheGraph.compact_ranges` to merge adjacent slices and guarantee a minimal
+        representation.  Because the helper is frequently used inside path-finding algorithms it trades clarity
+        for raw performance and therefore assumes both inputs are already sorted, non-overlapping, and inclusive
+        as produced elsewhere in the library.
 
         Args:
-            lor1: List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.
-            lor2: List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.
-            compact: If set `True`, returns the reduced list of ranges via
-                :py:meth:`TheGraph.compact_ranges` method.
+            lor1 (list[list[int]]): First list of inclusive, ascending, non-overlapping ranges.
+            lor2 (list[list[int]]): Second list of ranges with the same invariants as *lor1*.
+            compact (bool): When ``True`` (default) the raw intersections are passed to
+                :py:meth:`TheGraph.compact_ranges` before being returned.
 
         Returns:
-            List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.
+            list[list[int]]: Inclusive integer ranges where *lor1* and *lor2* overlap.  The list is empty when
+                no overlap exists.
         """
         result = [
             [max(first[0], second[0]), min(first[1], second[1])]
@@ -904,14 +1047,18 @@ class TheGraph(nx.MultiDiGraph):
 
     @staticmethod
     def is_point_in_range(lor: list[list], p: int) -> bool:
-        """Simple method to determine whether a given integer is covered by list of ranges.
+        """Check whether a single integer lies inside any range in *lor*.
+
+        The helper performs a linear scan over *lor* (assumed sorted and non-overlapping) and returns as soon as
+        *p* falls between a ``[start, end]`` pair.  It is intentionally lightweight because it is called inside
+        tight loops that filter large identifier sets by Ensembl release.
 
         Args:
-            lor: List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.
-            p: A positive integer.
+            lor (list[list[int]]): Inclusive, ascending, non-overlapping ranges against which *p* is tested.
+            p (int): The release number to evaluate.
 
         Returns:
-            ``True`` if it is in the range, ``False`` otherwise.
+            bool: ``True`` when *p* is covered by at least one range in *lor*; ``False`` otherwise.
         """
         for l1, l2 in lor:
             if l1 <= p <= l2:
@@ -919,15 +1066,25 @@ class TheGraph(nx.MultiDiGraph):
         return False
 
     def get_two_nodes_coinciding_releases(self, id1: str, id2: str, compact: bool = True) -> list[list]:
-        """Find the intersecting range of two nodes in the graph.
+        """Determine releases in which **both** graph nodes are simultaneously active.
+
+        Graph nodes (Ensembl genes, transcripts, proteins, or external IDs) exist only for defined release
+        intervals.  When integrating annotations it is often necessary to know the time span where two nodes
+        co-exist—for example, when building an orthogonal mapping table or validating edge chronology.
+        The method retrieves each node's active ranges via :py:meth:`TheGraph.get_active_ranges_of_id`, computes
+        their intersection with :py:meth:`TheGraph.get_intersecting_ranges`, and optionally compacts the result.
+        The returned list therefore represents every Ensembl release in which *id1* **and** *id2* are valid
+        simultaneously.
 
         Args:
-            id1: First Query ID.
-            id2: Second Query ID.
-            compact: Parameter to pass into :py:meth:`TheGraph.get_intersecting_ranges` method.
+            id1 (str): Identifier of the first node (must exist in ``self.nodes``).
+            id2 (str): Identifier of the second node (must exist in ``self.nodes``).
+            compact (bool): Forwarded to :py:meth:`TheGraph.get_intersecting_ranges`.  When ``True``
+                (default) the final ranges are minimised; when ``False`` the raw intersections are returned.
 
         Returns:
-            List of ranges as defined in :py:attr:`TheGraph.compact_ranges.list_of_ranges`.
+            list[list[int]]: Inclusive release intervals ``[[start, end], …]`` where *id1* and *id2* overlap.
+            The list is empty if the nodes never co-occur.
         """
         r1 = self.get_active_ranges_of_id[id1]
         r2 = self.get_active_ranges_of_id[id2]
@@ -937,11 +1094,19 @@ class TheGraph(nx.MultiDiGraph):
         return r
 
     @cached_property
-    def available_external_databases(self) -> set:
-        """Find the available external databases found in the graph.
+    def available_external_databases(self) -> set[str]:
+        """Return the set of external databases represented in the graph.
+
+        This helper inspects every node whose *node-type* flag matches
+        :py:data:`idtrack._db.DB.nts_external` and records the *database name* attached
+        to the outbound edges.  The resulting set is cached so that downstream
+        routines—such as validating user-supplied database names or determining which
+        third-party resources must be fetched—can query the information in **O(1)**
+        time instead of re-scanning the graph.
 
         Returns:
-            Set of all external databases in the graph.
+            set[str]: Unique names of all third-party (non-Ensembl) databases present
+                in the current :py:class:`~TheGraph` instance.
         """
         self.log.info(f"Cached properties being calculated: {'available_external_databases'}")
         return {
@@ -949,11 +1114,20 @@ class TheGraph(nx.MultiDiGraph):
         }
 
     @cached_property
-    def available_external_databases_assembly(self) -> dict[int, set]:
-        """Find the available external databases found in the graph for each assembly separately.
+    def available_external_databases_assembly(self) -> dict[int, set[str]]:
+        """Return external databases available for each genome assembly.
+
+        For every assembly identifier in :py:attr:`~TheGraph.available_genome_assemblies`,
+        this method gathers the subset of external databases that are connected—directly
+        or indirectly—to nodes annotated with that assembly.  The per-assembly view is
+        vital when users need to restrict conversions to genomes with consistent
+        annotation coverage (e.g., choosing GRCh38-only resources for a human data
+        set).
 
         Returns:
-            Dict of all external databases in the graph, assemblies as keys.
+            dict[int, set[str]]: Mapping from *assembly number* (for example ``37`` or
+                ``38``) to the set of external databases that have at least one entry
+                linked to that assembly.
         """
         self.log.info(f"Cached properties being calculated: {'available_external_databases_assembly'}")
         result: dict[int, set] = {i: set() for i in self.available_genome_assemblies}
@@ -967,16 +1141,24 @@ class TheGraph(nx.MultiDiGraph):
 
     @cached_property
     def external_database_connection_form(self) -> dict[str, str]:
-        """Finds which form of Ensembl ID the external database identifiers are connected to.
+        """Infer which Ensembl identifier form each external database connects to.
 
-        Each external database connects to a specific form (gene, transcript, translation) Ensembl ID. The relevant
-        form is chosen by :py:class:`ExternalDatabases` class.
+        External databases link to exactly one “form” of Ensembl identifier—gene,
+        transcript, or translation—determined upstream by :py:class:`idtrack._external_databases.ExternalDatabases`.
+        The method walks the neighborhood of every external-database node, tallies the *node-type* of
+        its Ensembl neighbours, and assigns the majority form.  A mis-annotation that
+        connects an external node directly to a non-Ensembl node is interpreted as a
+        schema violation and aborts with :py:class:`ValueError`.
 
         Returns:
-            Dictionary mapping external database name into the associated form (gene, transcript, translation).
+            dict[str, str]: Dictionary whose keys are external-database names and
+                whose values are one of ``"gene"``, ``"transcript"``, or
+                ``"translation"``, indicating the form of Ensembl ID to which the
+                database links.
 
         Raises:
-            ValueError: If non-Ensembl node is connected.
+            ValueError: If any external-database node is found connected to a node
+                that is *not* an Ensembl identifier, indicating an inconsistent graph state.
         """
         self.log.info(f"Cached properties being calculated (for tests): {'external_database_connection_form'}")
 
@@ -1012,10 +1194,17 @@ class TheGraph(nx.MultiDiGraph):
 
     @cached_property
     def available_genome_assemblies(self) -> set[int]:
-        """Find the genome assemblies found in the graph by iterating through all nodes.
+        """Return the set of genome assemblies represented in the current graph.
+
+        The helper scans every identifier edge table cached on the instance (e.g. ``combined_edges``,
+        ``combined_edges_genes``, ``combined_edges_assembly_specific_genes``) and extracts the
+        assembly component of each edge key.  It therefore answers the question *“Which genome builds
+        does this graph actually know about?”*  Several public utilities depend on this information
+        when validating user-supplied assembly arguments or iterating across assemblies in reproducible
+        order (see :py:attr:`DB.assembly_mysqlport_priority`).
 
         Returns:
-            Genome assemblies, which is also found in :py:attr:`DB.assembly_mysqlport_priority`.
+            set[int]: Unique genome assembly identifiers (e.g. ``104``, ``108``) present anywhere in the graph.
         """
         self.log.info(f"Cached properties being calculated: {'available_genome_assemblies'}")
 
@@ -1027,30 +1216,44 @@ class TheGraph(nx.MultiDiGraph):
 
     @cached_property
     def available_releases_given_database_assembly(self) -> dict[tuple[str, int], set]:
-        """Todo."""
+        """Map *(database, assembly)* pairs to the Ensembl releases in which they occur.
+
+        This expensive, cached property lets callers quickly answer *“Which Ensembl releases contain
+        at least one node from database **D** on assembly **A**?”*  Internally it delegates the
+        per-pair work to the nested
+        :py:meth:`available_releases_given_database_assembly._inline_available_releases`
+        helper, then augments the mapping with additional information gleaned from several
+        :py:data:`idtrack.DB` look-ups (e.g. :py:data:`DB.nts_assembly`,
+        :py:data:`DB.nts_base_ensembl`, :py:data:`DB.nts_ensembl`).  Although heavy, the routine is
+        indispensable for test suites and diagnostic notebooks that must reason about historical
+        coverage across many releases.
+
+        Returns:
+            dict[tuple[str, int], set[int]]: A dictionary whose keys are *(database_name, assembly)*
+                tuples and whose values are the sets of Ensembl release numbers in which that pair is
+                represented.
+        """
         self.log.info(f"Cached properties being calculated (for tests): {'available_releases_given_database_assembly'}")
 
         # Inline logic from _available_releases_given_database_assembly
         def _inline_available_releases(database_name: str, assembly: int) -> set[int]:
-            """Possible Ensembl releases defined for a given database and assembly.
+            """Return Ensembl releases containing *database_name* for *assembly*.
 
-            The method uses `node_trios` unnecessarily method, which consumes a lot of memory and hinders high
-            computational efficiency. However, this method is used only in testing purposes, when the speed and memory
-            is not of a concern.
-
-            It is important to note that not all databases are defined in all Ensembl release. To see for more
-            information, have a look at the :py:class:`ExternalDatabases`.
+            The inline helper loops over :py:data:`TheGraph.node_trios`, filtering for rows whose
+            *(database, assembly)* fields match the inputs and collecting the corresponding release
+            column.  It is purposefully *not* optimised for speed or memory because it is used only in
+            low-frequency contexts such as unit tests or exploratory diagnostics.
 
             Args:
-                database_name: External database or node type (except `external`) it should be one of the item from
-                    :py:meth:`TheGraph.available_external_databases`. The method also works with `node types`
-                    (except `external`), since they are also defined in `node_trios`. Important to note that the
-                    `node type` for Ensembl should follow :py:attr:`DB.nts_assembly` or :py:attr:`DB.nts_base_ensembl`.
-                assembly: Assembly, it should be one of the item from
+                database_name (str): External database identifier or, for Ensembl data, a node-type
+                    string accepted by :py:meth:`TheGraph.available_external_databases`.  Ensembl
+                    node-type strings must follow the conventions in
+                    :py:data:`DB.nts_assembly` or :py:data:`DB.nts_base_ensembl`.
+                assembly (int): Genome assembly to query.  Must be present in
                     :py:meth:`TheGraph.available_genome_assemblies`.
 
             Returns:
-                Available Ensembl releases as set of integers.
+                set[int]: Releases in which *database_name* appears on *assembly*.
             """
             return {
                 j3
@@ -1084,25 +1287,37 @@ class TheGraph(nx.MultiDiGraph):
         return r
 
     def get_id_list(self, database: str, assembly: int, release: int) -> list[str]:
-        """Given a trio (database, assembly, release), generates a list of node names (identifiers).
+        """Return node identifiers for a specific (database, assembly, release) slice of the multigraph.
 
-        Similar to :py:meth:`TheGraph.available_releases_given_database_assembly`, the method uses
-        `node_trios` unnecessarily method, which consumes a lot of memory and hinders high
-        computational efficiency. However, this method is used only in testing purposes, when the speed and memory is
-        not of a concern.
+        This helper exists primarily for *unit-testing and exploratory analysis*.  Internally, the graph stores
+        node metadata in the memory-intensive :py:attr:`~TheGraph.node_trios` cache, keyed by a triple
+        ``(database_or_node_type, assembly, release)``.  :py:meth:`get_id_list` hides that complexity, walking the
+        full node set and extracting only those identifiers whose tuple key matches the requested slice.  Because
+        the traversal touches every node, the method is slow and scales poorly compared with the vectorised access
+        paths used in production code.  It is therefore **not** called in performance-critical workflows; its main
+        purpose is to generate deterministic ground-truth lists that test-suites can compare against.
 
-        It is imporant to note that the Ensembl IDs with versions :py:attr:`DB.alternative_versions` will be also
-        returned if the database is the Ensembl gene with the main assembly, and the assembly is the main assembly.
+        The method also reproduces legacy Ensembl behaviour: when *database* resolves to the canonical Ensembl gene
+        node type on the primary assembly, identifiers whose ``Version`` attribute is one of
+        :py:data:`idtrack._db.DB.alternative_versions` are still included, ensuring that versioned and unversioned
+        IDs appear together—exactly as they do in public Ensembl MySQL dumps.
 
         Args:
-            database: External database name if the `node type` is `external`, else `node type`. The `node type`
-                for Ensembl should follow :py:attr:`DB.nts_assembly` or :py:attr:`DB.nts_base_ensembl`.
-            assembly: Assembly, it should be one of the item from
-                :py:meth:`TheGraph.available_genome_assemblies`.
-            release: Requested Ensembl releases as an integer.
+            database (str): External database name for *external* nodes (e.g. ``"uniprot"``, ``"refseq"``) **or** an
+                Ensembl node-type label such as ``"gene"``, ``"transcript"``, or ``"translation"``.  Ensembl labels must
+                match the keys defined in :py:data:`idtrack._db.DB.nts_ensembl`.
+            assembly (int): Genome assembly identifier (e.g. ``1`` for GRCh38) that must be present in
+                :py:meth:`~TheGraph.available_genome_assemblies`.
+            release (int): Ensembl release number (e.g. ``111``) corresponding to the graph snapshot of interest.
 
         Returns:
-            Node names (identifiers) list.
+            list[str]: A list of **unique** node names (identifiers) in insertion order that belong to the requested
+            ``(database, assembly, release)`` tuple.  The list may include versioned Ensembl genes as noted above.
+
+        Notes:
+            The helper performs a linear scan over :py:data:`networkx.MultiDiGraph.nodes`, so its runtime is
+            ``O(|V|)`` and memory footprint equals that of :py:attr:`~TheGraph.node_trios`.  Prefer dedicated graph
+            queries for production workloads and reserve this method for tests or ad-hoc inspection.
         """
         if database in DB.nts_ensembl_reverse.keys():
             form = DB.nts_ensembl_reverse[database]
@@ -1124,14 +1339,20 @@ class TheGraph(nx.MultiDiGraph):
         return final_list
 
     def get_external_database_nodes(self, database_name: str) -> set[str]:
-        """For a given external database, returns set of all node names defined at least once in that database.
+        """Collect identifiers that appear at least once in the specified external database.
+
+        The graph stores one *node* per identifier and attaches metadata—such as its origin
+        database—to each node via ``self.nodes[node_name]``.  This helper filters that dictionary,
+        returning every node whose metadata marks it as an *external* identifier belonging to
+        *database_name*.  The result is often fed into downstream integrity checks or exported so
+        that analysts can cross-reference original accession lists.
 
         Args:
-            database_name: External database, it should be one of the item from
-                :py:meth:`TheGraph.available_external_databases`.
+            database_name (str): Name of the external resource (e.g. ``"UniProtKB"``).  Must be one of
+                the values returned by :py:meth:`TheGraph.available_external_databases`.
 
         Returns:
-            Node names (identifiers) set.
+            set[str]: All unique node names (accessions) associated with *database_name*.
         """
         return {
             i

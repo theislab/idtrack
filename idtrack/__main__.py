@@ -3,7 +3,7 @@
 # Kemal Inecik
 # k.inecik@gmail.com
 
-"""idtrack command-line interface.
+"""Command-line interface for **idtrack**.
 
 This module exposes a minimal *console-scripts* entry-point for the `idtrack` package so that it
 can be executed directly from the command
