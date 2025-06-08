@@ -12,21 +12,40 @@ from idtrack._db import DB
 
 
 class VerifyOrganism:
-    """Finds the formal organism name and associated latest Ensembl release given a tentative organism name.
+    """Resolve a tentative organism identifier to the formal Ensembl species name and its latest supported release.
 
-    This class is designed to aid the user regarding the organism name accepted by the program and latest Ensembl
-    release possible without manually looking online resources. Every time of use, the class uses Ensembl REST API to
-    get the information regarding the organisms and associated Ensembl releases, so the class requires an active
-    Internet connection.
+    The class shields end-users from the quirks of the Ensembl REST payload by converting any synonym—common name,
+    scientific name, assembly accession, or NCBI taxon ID—into the canonical Ensembl species identifier
+    (e.g. ``homo_sapiens``) and the newest Ensembl release that still hosts that species.  Because the mapping is
+    refreshed on every instantiation through a live call to the Ensembl REST API, downstream workflows in *idtrack*
+    always rely on up-to-date metadata rather than a possibly stale local cache.
+
+    After construction the instance offers two high-level helpers::
+
+        >>> resolver = VerifyOrganism("human")
+        >>> resolver.get_formal_name()      # 'homo_sapiens'
+        >>> resolver.get_latest_release()   # 117  (example)
+
+    Both helpers are backed by two public dataframes created during initialisation:
+
+    * :py:attr:`~VerifyOrganism.name_synonyms_dataframe` — maps every synonym returned by the REST service to the chosen
+      formal name and flags synonyms that are ambiguous across species.
+    * :py:attr:`~VerifyOrganism.ensembl_release_dataframe` — one-row table (indexed by *formal_name*) holding the latest
+      Ensembl release number.
     """
 
     def __init__(self, organism_query: str):
-        """Class initialization.
+        """Initialise the resolver and pre-fetch synonym/release tables from the Ensembl REST API.
+
+        The constructor immediately invokes :py:meth:`~VerifyOrganism.fetch_organism_and_latest_release`, downloading
+        the complete species list from ``{DB.rest_server_api}{DB.rest_server_ext}`` so that all subsequent look-ups run
+        entirely in-memory.  Any exceptions raised during that fetch are allowed to propagate unchanged so that callers
+        can handle network or data-quality issues explicitly.
 
         Args:
-            organism_query: Organism of interest.
-                This does not have to be formal name. For example, 'human', 'hsapiens' as well as formal name
-                'homo_sapiens' is accepted by the program.
+            organism_query (str): Organism identifier supplied by the user—common name (``"human"``),
+                shorthand (``"hsapiens"``), taxon ID (``9606``), or fully qualified Ensembl species name
+                (``"homo_sapiens"``).  The value is converted to lower case before processing.
         """
         # Instance attributes
         self.log = logging.getLogger("verify_organism")
@@ -34,27 +53,39 @@ class VerifyOrganism:
         # Fetch the latest information from the Ensembl resources regarding
         self.organism_query = organism_query.lower()
         self.name_synonyms_dataframe, self.ensembl_release_dataframe = self.fetch_organism_and_latest_release(
-            DB.connection_timeout, DB.reading_timeout
+            connect_timeout=DB.connection_timeout, read_timeout=DB.reading_timeout
         )
 
     def get_latest_release(self) -> int:
-        """Using the API response and queried organism name, find the latest Ensembl release to be used for the program.
+        """Return the latest Ensembl release number associated with the queried organism.
+
+        This helper calls :py:meth:`~VerifyOrganism.get_formal_name` to resolve the user-supplied organism query
+        to the canonical Ensembl species name, then looks up that key in the dataframe prepared at instantiation
+        time.  Down-stream routines (e.g. database connectors, file download helpers) rely on this value to decide
+        which Ensembl release to fetch, ensuring the entire pipeline stays on a single, internally consistent
+        genome build.
 
         Returns:
-            Latest Ensembl release.
+            int: The most recent Ensembl release available for the resolved organism.
         """
         formal_name = self.get_formal_name()
         return int(self.ensembl_release_dataframe.loc[formal_name]["ensembl_release"])
 
     def get_formal_name(self) -> str:
-        """Using the API response and queried organism name, find the formal organism name to be used for the program.
+        """Resolve the user's organism query to the canonical Ensembl species name.
+
+        The method performs an exact match against the *synonym* column of
+        :py:data:`~VerifyOrganism.name_synonyms_dataframe`, which was pre-populated from the Ensembl REST *species*
+        endpoint.  Synonyms include scientific names, common names, NCBI TaxIDs, assembly accessions and other
+        aliases, allowing flexible user input while guaranteeing that only one formally recognised organism is
+        selected before any expensive data retrieval begins.
 
         Returns:
-            Formal organism name.
+            str: The canonical Ensembl species identifier (always lower-case, e.g. ``"homo_sapiens"``).
 
         Raises:
-            KeyError: If the query is not defined in the pre-created dataframes.
-            ValueError: If there are multiple entries for query and hence the query is ambiguous."
+            KeyError: If the query string does not match any synonym in the dataframe.
+            ValueError: If the query matches more than one formal name, indicating an ambiguous synonym.
         """
         the_search = self.name_synonyms_dataframe[self.name_synonyms_dataframe["synonym"] == self.organism_query]
         cm = "Please inspect 'name_synonyms_dataframe' variable of this instance for troubleshooting."
@@ -73,22 +104,32 @@ class VerifyOrganism:
     def fetch_organism_and_latest_release(
         self, connect_timeout: int, read_timeout: int
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Creates a query and process the data to construct two dataframes for Ensembl release and organism names.
+        """Query the Ensembl REST API once and build lookup tables for species synonyms and latest releases.
 
-        The query to get the name of the organisms defined in the database, but also to get the latest
-        ensembl release to go through. This method is actually main functionality of the class; in general uses, the
-        user is not expected to use this method directly.
+        This internal utility performs a single call to ``/info/species`` on the Ensembl REST server, parses the
+        returned JSON, and constructs two pandas dataframes:
+
+        * ``name_synonyms_df`` - one row per synonym, with columns ``synonym``, ``formal_name`` and ``ambiguous``
+            (``True`` if the synonym belongs to more than one species).
+        * ``latest_ensembl_releases_df`` - indexed by ``formal_name`` and holding a single ``ensembl_release``
+            integer column.
+
+        Consolidating the REST query in one place avoids repeated network traffic and provides a cache-friendly
+        structure for subsequent lookups.
 
         Args:
-            connect_timeout: The number of seconds the requests will wait to establish a connection to a remote machine.
-            read_timeout: The number of seconds the client will wait for the server to send a response
+            connect_timeout (int): Seconds to wait while establishing the TCP connection to the Ensembl server.
+            read_timeout (int): Seconds to wait for the server to send the full response after the connection
+                has been established.
 
         Returns:
-            Two dataframes to be used by the instance methods later on.
+            tuple[pandas.DataFrame, pandas.DataFrame]:
+                ``(name_synonyms_df, latest_ensembl_releases_df)`` as described above.
 
         Raises:
-            ValueError: Unexpected error.
-            TimeoutError: If allowed time is passed.
+            TimeoutError: If the combined *(connect_timeout, read_timeout)* limit is exceeded.
+            ValueError: If the JSON schema differs from the expected ``{"species": [...]}`` structure or required
+                keys are missing.
         """
         self.log.info("Ensembl Rest API query to get the organism names and associated releases.")
 

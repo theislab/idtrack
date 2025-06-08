@@ -7,7 +7,8 @@
 import logging
 import os
 import tempfile
-from collections.abc import Iterator
+import types
+from collections.abc import Iterator, Sequence
 from typing import Optional, Union
 
 import h5py
@@ -17,17 +18,30 @@ import pandas as pd
 from idtrack._db import DB
 
 
-def to_hdf(path: str, key: str, df: pd.DataFrame, mode: str = "a", compression=9):
-    """Write a DataFrame to an HDF5 file under the group `key`.
+def to_hdf(path: str, key: str, df: pd.DataFrame, mode: str = "a", compression: Optional[Union[str, int]] = 9):
+    """Persist a :py:class:`pandas.DataFrame` to an HDF5 file while retaining rich pandas metadata.
+
+    This helper exists because :py:meth:`pandas.DataFrame.to_hdf` loses information for complex dtypes
+    (categoricals, strings with ``pd.NA``, multi-level indexes, etc.) across Pandas/HDF5 versions.  The
+    implementation serialises every logical layer—column *labels*, *dtypes*, and the actual *data*—into
+    separate datasets or attributes so that :py:func:`read_hdf` can perform a loss-less round-trip, even on
+    machines with mismatched library versions.
 
     Args:
-        path: Path to HDF5 file.
-        key: Group name under which to store the DataFrame.
-        df: DataFrame to store.
-        mode: File mode.  {'a','w','r+'}, default 'a'.
-        compression: Compression to use for datasets. None or str
+        path (str): Filesystem location of the HDF5 container.  The file is created if it does
+            not yet exist and *mode* permits writing.
+        key (str): Name of the group that will hold the DataFrame inside *path*.  Leading ``"/"`` is stripped
+            for consistency with :py:class:`pandas.HDFStore` behaviour.
+        df (pandas.DataFrame): Table to serialise.  Columns may be numeric, boolean, string/object, datetime,
+            timedelta, or :py:data:`~pandas.api.types.is_categorical_dtype`.  Unsupported dtypes raise
+            :py:class:`ValueError <builtins.ValueError>`.
+        mode (str): File access flag forwarded to :py:class:`pandas.HDFStore`.  Must be one of
+            ``"a"``, ``"w"``, or ``"r+"``; defaults to ``"a"`` (create if missing, otherwise append/replace).
+        compression (Optional[Union[str, int]]): Compression setting forwarded to :py:class:`h5py.File`.
+            Provide an integer (0-9) for gzip-like deflate levels, a string such as ``"lzf"`` or ``"gzip"``,
+            or ``None`` to disable compression.  The default ``9`` maximises file-size reduction.
     """
-    _validate_dataframe(df)  # Validate DataFrame structure
+    validate_dataframe(df)  # Validate DataFrame structure
 
     with HDFStore(path, mode=mode) as store:
         if key in store:
@@ -48,18 +62,25 @@ def to_hdf(path: str, key: str, df: pd.DataFrame, mode: str = "a", compression=9
 
 
 def read_hdf(path: str, key: str, mode: str = "r") -> pd.DataFrame:
-    """Read a DataFrame stored with `to_hdf`.
+    """Load a DataFrame previously written by :py:func:`to_hdf`, restoring all metadata faithfully.
+
+    The function reverses the layered serialisation scheme used by :py:func:`to_hdf`.  It reconstructs
+    column labels, dtypes (including categoricals), index names, and the original ``columns.name`` so that
+    the returned DataFrame is bit-for-bit equivalent to the object that was saved—modulo unavoidable
+    floating-point representation differences.
 
     Args:
-        path : Path to HDF5 file.
-        key: Group name under which DataFrame is stored.
-        mode: File mode.
+        path (str): HDF5 file that contains the stored DataFrame.
+        key (str): Group name under which the DataFrame was stored.  Leading ``"/"`` is ignored.
+        mode (str): File access flag forwarded to :py:class:`pandas.HDFStore`.  Defaults to ``"r"``
+            (read-only).  Supply ``"r+"`` for concurrent reads and writes.
 
     Returns:
-        A pandas dataframe object.
+        pandas.DataFrame: The deserialised table with its original index, column names, dtypes, and metadata
+            fully restored.
 
     Raises:
-        KeyError: When key is not found in the hdf5 file.
+        KeyError: If *key* is not present inside *path*.
     """
     with HDFStore(path, mode=mode) as store:
         clean_key = key.lstrip("/")
@@ -85,8 +106,42 @@ def read_hdf(path: str, key: str, mode: str = "r") -> pd.DataFrame:
         return df
 
 
-def _validate_dataframe(df: pd.DataFrame):
-    """Validate DataFrame structure and dtypes."""
+def validate_dataframe(df: pd.DataFrame):
+    """Validate a :py:class:`pandas.DataFrame` before HDF5 serialization.
+
+    The helper enforces a strictly controlled schema so that data written by
+    :py:func:`idtrack._utils_hdf5.to_hdf` can be loss-lessly restored by its
+    companion :py:func:`idtrack._utils_hdf5.read_hdf`.  It checks every column
+    and index for:
+
+    * allowable dtypes (numeric, boolean, string, various ``datetime64`` /
+      ``timedelta64`` resolutions, or properly formed categoricals);
+    * object columns containing only strings or missing values;
+    * categorical columns whose *categories* are exclusively strings or NA;
+    * index dtype restricted to integer, unsigned integer, float, datetime, or
+      string back-end;
+    * valid column and index *names* (‶str‶, ‶int‶, ‶float‶, or ``None`` only).
+
+    Any deviation raises a descriptive :py:class:`ValueError`, preventing silent
+    corruption at write time and making data contracts explicit.
+
+    Args:
+        df (pandas.DataFrame): DataFrame to inspect—must already be *in-memory*.
+            All columns and the index are validated against the constraints
+            listed above.
+
+    Raises:
+        ValueError: If *any* of the following conditions are met:
+
+            * A column's dtype is outside the supported set.
+            * A categorical column contains categories that are neither strings
+              nor NA.
+            * An object-dtype column contains non-string, non-missing scalars.
+            * The index dtype is unsupported.
+            * A column name is not ``str`` or ``int``.
+            * ``df.columns.name`` or ``df.index.name`` is not ``None``, ``str``,
+              ``int``, or ``float``.
+    """
     # Define exactly supported dtypes (full matching; no 'object' here)
     supported_dtypes = {
         "int8",
@@ -155,7 +210,24 @@ def _validate_dataframe(df: pd.DataFrame):
 
 
 def _save_column_metadata(grp: h5py.Group, df: pd.DataFrame):
-    """Save column names, dtypes, and columns.name."""
+    """Persist column metadata—names, logical dtypes, and :py:attr:`~pandas.Index.name`—to an HDF5 group.
+
+    This helper is part of the private DataFrame ↔ HDF5 round-trip layer used by the IDTrack persistence
+    stack.  It serialises *structural* information about the columns without touching the data values
+    themselves, allowing :py:meth:`_load_column_metadata` and :py:meth:`_load_column_data` to later restore a
+    faithful `pandas.DataFrame`.
+
+    Column names are stored as UTF-8 strings in a dataset called ``"column_names"``.  Logical dtypes are
+    flattened into human-readable strings—primitive NumPy dtypes remain unchanged, while categoricals are
+    encoded as ``"category|<categories>|<ordered>"``—and recorded in ``"column_dtypes"``.  The
+    attribute ``"columns_name"`` preserves the higher-level `DataFrame.columns.name` label if one was set.
+
+    Args:
+        grp (h5py.Group): Writable HDF5 group in which the metadata datasets will be created.  The caller is
+            responsible for opening and closing the parent file or group.
+        df (pandas.DataFrame): Data frame whose *column* metadata (not values) should be saved.  Each column
+            must have a unique, hashable name.
+    """
     # Save column names
     col_names = [str(col) for col in df.columns]
     grp.create_dataset("column_names", data=np.array(col_names, dtype=DB.UTF8_STR))
@@ -180,7 +252,25 @@ def _save_column_metadata(grp: h5py.Group, df: pd.DataFrame):
 
 
 def _save_index_data(grp: h5py.Group, df: pd.DataFrame, compression):
-    """Save index data and metadata."""
+    """Persist the DataFrame index values and associated metadata to an HDF5 group.
+
+    The function serialises both single- and multi-level indexes, converting specialised dtypes into
+    interoperable on-disk representations:
+
+    * **DatetimeIndex** - converted to ISO-8601 strings to avoid platform-specific endianness issues.
+    * **CategoricalIndex** - stored as integer codes plus a UTF-8 encoded ``"index_categories"`` dataset and an
+      ``"index_dtype"`` attribute such as ``"category|True"`` (where the flag indicates ordering).
+    * **Other dtypes** - written verbatim.
+
+    Index names are always written to ``"index_names"``; missing names become empty strings so that the original
+    `None`/string distinction can be restored later.
+
+    Args:
+        grp (h5py.Group): Writable HDF5 group that will receive ``"index_*"`` datasets and attributes.
+        df (pandas.DataFrame): The frame whose index and index-level names are to be serialised.
+        compression: Value forwarded directly to :py:meth:`h5py.Group.create_dataset`.  Accepts anything the
+            HDF5 backend does (e.g., ``"gzip"``, ``"lzf"``, an integer compression level, or *None*).
+    """
     # Save index names
     index_names = [str(name) if name is not None else "" for name in df.index.names]
     grp.create_dataset("index_names", data=np.array(index_names, dtype=DB.UTF8_STR))
@@ -204,8 +294,24 @@ def _save_index_data(grp: h5py.Group, df: pd.DataFrame, compression):
         grp.attrs["index_dtype"] = str(df.index.dtype)
 
 
-def _save_column_data(grp: h5py.Group, df: pd.DataFrame, compression):
-    """Save column data with proper dtype preservation."""
+def _save_column_data(grp: h5py.Group, df: pd.DataFrame, compression: Optional[Union[str, int]]):
+    """Serialise each column's actual values to an HDF5 sub-group while preserving logical dtypes.
+
+    A child group named ``"data"`` is created beneath *grp*, and one or more datasets are generated per column
+    depending on its dtype:
+
+    * **Categorical** → ``"<col>_codes"`` (int32) + ``"<col>_categories"`` (UTF-8 strings).
+    * **Datetime64** → stored as ISO-8601 strings in ``"<col>"``.
+    * **String / object** → strings with :py:data:`DB.placeholder_na` in place of missing values.
+    * **Numeric / boolean** → 1-to-1 binary copy into ``"<col>"``.
+
+    The routine deliberately leaves *grp*'s metadata untouched—see :py:meth:`_save_column_metadata` for that.
+
+    Args:
+        grp (h5py.Group): Parent group that **must not** already contain a child called ``"data"``.
+        df (pandas.DataFrame): Source data frame.  Its columns should match the metadata written earlier.
+        compression (Optional[Union[str, int]]): Compression option to pass straight through to HDF5 dataset creation.
+    """
     data_grp = grp.create_group("data")
 
     for col in df.columns:
@@ -240,8 +346,23 @@ def _save_column_data(grp: h5py.Group, df: pd.DataFrame, compression):
             data_grp.create_dataset(col_key, data=col_data.values, compression=compression)
 
 
-def _load_column_metadata(grp: h5py.Group):
-    """Load column names, dtypes, and columns.name."""
+def _load_column_metadata(grp: h5py.Group) -> tuple[list[str], list[Union[str, pd.CategoricalDtype]], Optional[str]]:
+    """Load column names, logical dtypes, and `DataFrame.columns.name` from an HDF5 group.
+
+    This is the inverse of :py:meth:`_save_column_metadata`.  It reconstructs high-level dtype objects—
+    converting categorical encodings back into :py:class:`pandas.CategoricalDtype` instances—so that
+    :py:meth:`_load_column_data` can re-cast raw numpy arrays into their original pandas dtypes.
+
+    Args:
+        grp (h5py.Group): Group previously populated by :py:meth:`_save_column_metadata`.
+
+    Returns:
+        tuple[list[str], list[Union[str, pandas.CategoricalDtype]], Optional[str]]:
+            * **column_names** - List of column labels in original order.
+            * **dtypes** - Parallel list whose elements are either primitive dtype strings or
+              :py:class:`pandas.CategoricalDtype` objects.
+            * **columns_name** - The ``DataFrame.columns.name`` label, or *None* if it was originally unset.
+    """
     # Load column names
     col_names = [name.decode(DB.UTF8) for name in grp["column_names"][()]]
 
@@ -267,8 +388,21 @@ def _load_column_metadata(grp: h5py.Group):
     return col_names, dtypes, columns_name
 
 
-def _load_index_data(grp: h5py.Group):
-    """Load index data and names."""
+def _load_index_data(grp: h5py.Group) -> tuple[pd.Index, list[Optional[str]]]:
+    """Reconstruct a pandas Index (and its names) from HDF5-serialised form.
+
+    The routine reads the artefacts created by :py:meth:`_save_index_data`, automatically selecting the correct
+    deserialisation path based on the stored ``"index_dtype"`` attribute.
+
+    Args:
+        grp (h5py.Group): Group containing ``"index_*"`` datasets and attributes.
+
+    Returns:
+        tuple[pandas.Index, list[Optional[str]]]:
+            * **index** - The restored :py:class:`pandas.Index`, :py:class:`pandas.DatetimeIndex`, or
+              :py:class:`pandas.CategoricalIndex`, depending on the original type.
+            * **index_names** - List of level names (items may be *None*).
+    """
     # Load index names
     index_names = [name.decode(DB.UTF8) for name in grp["index_names"][()]]
     index_names = [name if name != "" else None for name in index_names]
@@ -295,8 +429,28 @@ def _load_index_data(grp: h5py.Group):
     return index, index_names
 
 
-def _load_column_data(grp: h5py.Group, columns, dtypes):
-    """Load column data with proper dtype restoration."""
+def _load_column_data(
+    grp: h5py.Group, columns: Sequence[str], dtypes: Sequence[Union[str, pd.CategoricalDtype]]
+) -> pd.DataFrame:
+    """Load column datasets and rebuild a DataFrame, honouring the original logical dtypes.
+
+    This complements :py:meth:`_load_column_metadata`.  It expects that *columns* and *dtypes* come straight from
+    that function and therefore align perfectly with the datasets under the ``"data"`` sub-group of *grp*.
+
+    Special-case handling mirrors the rules in :py:meth:`_save_column_data`:
+
+    * **Categorical** - combines stored codes and categories.
+    * **Datetime64** - parses ISO-8601 strings back into pandas nanosecond-resolution timestamps.
+    * **String / object** - replaces :py:data:`DB.placeholder_na` tokens with genuine ``pd.NA`` values.
+
+    Args:
+        grp (h5py.Group): Parent group whose ``"data"`` subgroup contains the column datasets.
+        columns (Sequence[str]): Column labels in the order they should appear in the output frame.
+        dtypes (Sequence[Union[str, pandas.CategoricalDtype]]): Dtype descriptors corresponding 1-to-1 with *columns*.
+
+    Returns:
+        pandas.DataFrame: Reconstructed data frame with all logical dtypes restored.
+    """
     data_grp = grp["data"]
     data_dict = {}
 
@@ -336,90 +490,112 @@ def _load_column_data(grp: h5py.Group, columns, dtypes):
 
 
 class HDFStore:
-    """Context-manager replacement for pandas.HDFStore using h5py.
+    """Provide a context-manager wrapper around :py:class:`h5py.File` that emulates ``pandas.HDFStore``.
 
-    This class provides a context manager API for reading and writing HDF5 files
-    via h5py, mimicking pandas.HDFStore. It supports listing keys, removing
-    groups or datasets by key, and gives direct access to the underlying
-    h5py.File via the `.f` attribute.
+    This helper delivers a lightweight, PyTables-free alternative to :py:class:`pandas.HDFStore` while preserving
+    its familiar, dictionary-like API.  It offers keyed access to *top-level* groups or datasets, convenient
+    helpers such as :py:meth:`~HDFStore.keys`, membership tests, and safe resource handling via the context-
+    manager protocol.  Internally it delegates all I/O to a single :py:class:`h5py.File` instance that becomes
+    available through the public :py:attr:`~HDFStore.f` attribute after entering the context manager.
+
+    The class is primarily intended for *idtrack* utilities that need to read or write HDF5 data but cannot rely
+    on PyTables.  Because only the first level of the hierarchy is exposed, traversal of nested groups must be
+    performed manually through the exposed :py:attr:`~HDFStore.f` handle.
+
+    Attributes:
+        path (str): Absolute or relative path to the ``.h5`` container that will be opened.
+        mode (str): File mode passed verbatim to :py:class:`h5py.File`.  One of ``'r'``, ``'r+'``, ``'w'``,
+            ``'x'``, or ``'a'`` (see *h5py* documentation for semantics).
+        f (Optional[h5py.File]): Live file handle once the context has been
+            entered; ``None`` before entry and after exit.
     """
 
     path: str
     mode: str
     f: h5py.File
 
-    def __init__(self, path: str, mode: str = "r"):
-        """Initialize an HDFStore.
+    def __init__(self, path: str, mode: str = "r") -> None:
+        """Create an unopened :py:class:`~HDFStore` descriptor.
+
+        The constructor records *path* and *mode* only; the actual :py:class:`h5py.File` is opened in
+        :py:meth:`__enter__` to support ``with``-statement usage.
 
         Args:
-            path (str): Path to the HDF5 file.
-            mode (str): File mode, one of:
-                - 'r'  : Readonly, file must exist.
-                - 'r+' : Read/write, file must exist.
-                - 'w'  : Create file, truncate if exists.
-                - 'x'  : Create file, fail if exists.
-                - 'a'  : Read/write if exists, create otherwise.
+            path (str): Filesystem location of the HDF5 container.
+            mode (str): File mode accepted by :py:class:`h5py.File`.  Defaults to ``'r'``.
         """
         self.path = path
         self.mode = mode
         self.f: Optional[h5py.File] = None
 
     def __enter__(self) -> "HDFStore":
-        """Open the HDF5 file and return this HDFStore instance.
+        """Open the file and return *self* for use inside a ``with`` block.
 
         Returns:
-            HDFStore: This instance with an open `h5py.File` in `.f`.
+            HDFStore: The identical instance, now carrying an open :py:class:`h5py.File`
+                in :py:attr:`~HDFStore.f`.
         """
         self.f = h5py.File(self.path, self.mode, libver="latest")
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Flush and close the underlying HDF5 file on exiting the context.
+    def __exit__(
+        self,
+        exc_type: Optional[type],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[types.TracebackType],
+    ) -> None:
+        """Flush and close :py:attr:`~HDFStore.f`, guaranteeing resource release.
+
+        Any exception raised inside the ``with`` block is propagated unchanged; this method performs no additional
+        error handling beyond the unconditional close.
 
         Args:
-            exc_type (type): Exception type if raised within the context.
-            exc_val (Exception): Exception instance if raised.
-            exc_tb (traceback): Traceback object if an exception occurred.
+            exc_type (Optional[type]): Exception class if an exception occurred, else ``None``.
+            exc_val (Optional[BaseException]): Raised exception instance, or ``None``.
+            exc_tb (Optional[types.TracebackType]): Traceback of the exception, or ``None``.
         """
         if self.f is not None:
             self.f.flush()
             self.f.close()
 
     def __contains__(self, key: str) -> bool:
-        """Check for the existence of a key (group or dataset) in the store.
+        """Return ``True`` when *key* exists as a top-level group or dataset.
 
         Args:
-            key (str): The key to test for. May be prefixed with '/'.
+            key (str): Name to probe.  A leading ``'/'`` is ignored to match ``pandas.HDFStore``.
 
         Returns:
-            bool: True if the key exists in the file, False otherwise.
+            bool: ``True`` if the node exists, ``False`` otherwise.
         """
         return key.lstrip("/") in self.f
 
     def __iter__(self) -> Iterator[str]:
-        """Return an iterator over all keys in the store.
+        """Yield every top-level key, each prefixed with ``'/'`` for ``pandas``-style parity.
 
         Yields:
-            str: Next key name, always prefixed with '/'.
+            str: Next key in the order provided by :py:class:`h5py.File`.
         """
         yield from self.keys()
 
     def keys(self) -> list[str]:
-        """List all top-level group or dataset names in the file.
+        """Return a list of all top-level keys currently present in the container.
 
         Returns:
-            List[str]: List of keys, each starting with '/'.
+            list[str]: Sorted list of fully qualified key names, each starting with ``'/'``.
         """
         return [f"/{name}" for name in self.f.keys()]
 
     def remove(self, key: str) -> None:
-        """Remove a group or dataset at the given key from the file.
+        """Delete a group or dataset referenced by *key* from the file.
+
+        The operation is performed immediately and is irreversible.  Attempting to delete a missing key triggers
+        a :py:class:`KeyError` rather than silently failing, mirroring standard dictionary semantics.
 
         Args:
-            key (str): The key to remove, may be prefixed with '/'.
+            key (str): Identifier of the node to remove.  A leading ``'/'`` is stripped before lookup.
 
         Raises:
-            KeyError: If the specified key does not exist in the file.
+            KeyError: If *key* does not exist in the open file.
         """
         name = key.lstrip("/")
         if name not in self.f:
@@ -428,14 +604,23 @@ class HDFStore:
 
 
 def check_h5_key(file_path: str, key: str) -> bool:
-    """Check whether the given key is in the h5 file.
+    """Verify that *key* exists in an HDF5 file.
+
+    This lightweight helper is a safe, read-only probe used throughout the package to decide whether an HDF5
+    group/dataset should be (re)written or removed.  It first checks basic file accessibility with
+    :py:data:`os.R_OK`; if the file cannot be read it short-circuits to ``False`` instead of raising, making it
+    suitable for “does it exist?” flows during automatic cache housekeeping.
 
     Args:
-        file_path: Absolute path for h5 file.
-        key: The key to retrieve the associated table in h5 file.
+        file_path (str): Absolute or relative path to the ``.h5`` file to inspect.
+        key (str): HDF5 node path (e.g. ``"/analysis/results"``) whose presence should be tested.
 
     Returns:
-        If there is such  a key ``True``, else ``False``.
+        bool: ``True`` when *file_path* is readable **and** contains *key*; ``False`` otherwise.
+
+    Notes:
+        The function never raises—failure to read the file or open the store is converted into a ``False``
+        return so that callers can decide how to proceed without a try/except wrapper.
     """
     if not os.access(file_path, os.R_OK):
         return False
@@ -444,14 +629,21 @@ def check_h5_key(file_path: str, key: str) -> bool:
 
 
 def repack_hdf5(path: str) -> None:
-    """Repack the HDF5 file.
+    """Repack an HDF5 file in place to reclaim fragmented space.
 
-    Repack the HDF5 file at `path` to reclaim fragmented space by copying
-    all groups/datasets (including nested ones) into a new file, then
-    atomically replacing the original.
+    The HDF5 “append” write pattern used by pandas and h5py can leave gaps over time.  This utility copies the
+    complete object graph (all groups, datasets, and attributes) into a brand-new temporary file created in the
+    same directory, then atomically replaces the original file.  The operation is lossless; object names,
+    hard/soft links, compression filters, and chunk settings are preserved by relying on
+    :py:meth:`h5py.Group.copy`.
 
     Args:
-        path: Path to the existing .h5 file. Must be writable.
+        path (str): Path to an existing, writable ``.h5`` file that should be compacted.
+
+    Notes:
+        The function creates a file named ``<basename>XXXXXX.repack.h5`` (where ``XXXXXX`` is a random suffix)
+        next to *path*.  The temporary file is removed automatically on success **or** on most errors, but
+        callers running in restricted environments might want to perform an extra cleanup pass.
     """
     base_dir, base_name = os.path.split(path)
     fd, tmp_path = tempfile.mkstemp(prefix=base_name, suffix=".repack.h5", dir=base_dir)
@@ -489,17 +681,24 @@ def repack_hdf5(path: str) -> None:
 def export_disk(
     df: Union[pd.DataFrame, pd.Series], hierarchy: str, file_path: str, overwrite: bool, logger: logging.Logger
 ):
-    """Stored the pandas object into the given h5 file with specified key.
+    """Persist a pandas object to an HDF5 store under a hierarchical key.
 
-    The method is not expected to be used by the user.
+    The helper centralises all on-disk writes so that every table goes through the same “check → optionally
+    delete → write” procedure.  By removing an existing node before rewriting, it prevents the HDF5 file from
+    ballooning due to internal free-space fragmentation—a common issue when tables are frequently refreshed.
 
     Args:
-        df: The table to stor into the disk.
-        hierarchy: The key to retrieve the associated table in h5 file.
-        file_path: Absolute path for h5 file.
-        overwrite: If ``True``, regardless of whether it is already saved in the disk, the program
-            re-saves removing the previous table with the same name.
-        logger: A logger instance used for recording file operations and warnings.
+        df (Union[pandas.DataFrame, pandas.Series]): The table or one-dimensional array to store.
+        hierarchy (str): HDF5 key that uniquely identifies *df* inside *file_path* (e.g. ``"/scores/latest"``).
+        file_path (str): Destination ``.h5`` file.  Created automatically if it does not yet exist.
+        overwrite (bool): If ``True`` the existing node (when present) is dropped before writing.  If ``False``
+            and *hierarchy* already exists, nothing is written.
+        logger (logging.Logger): Application-level logger used to report deletions and writes.
+
+    Notes:
+        The function deliberately opens the store in *append* mode so that other keys remain untouched.  All
+        writes use pandas :py:meth:`pandas.DataFrame.to_hdf` / :py:meth:`pandas.Series.to_hdf` with default
+        settings (tables format, no compression); adjust upstream if different storage parameters are needed.
     """
     base_file_path = os.path.basename(file_path)
 
@@ -520,20 +719,26 @@ def export_disk(
 
 
 def read_exported(hierarchy: str, file_path: str) -> Union[pd.DataFrame, pd.Series]:
-    """Read the data souces saved previously given h5 file path and the 'h5 key'.
+    """Load a previously exported pandas object from an HDF5 store.
 
-    The method is not expected to be used by the user.
+    This read side-kick to :py:func:`export_disk` hides the repetitive boilerplate of access checks and
+    key-existence validation.  By separating the “does it exist?” logic into :py:func:`check_h5_key`, the
+    function ensures a clean, one-line API for callers who only need the data back.
 
     Args:
-        hierarchy: The key to retrieve the associated table in h5 file.
-        file_path: Absolute path for h5 file.
+        hierarchy (str): HDF5 key that identifies the stored table to fetch.
+        file_path (str): Path to the ``.h5`` file created via :py:func:`export_disk`.
 
     Returns:
-        The table of interest as a pandas object.
+        Union[pandas.DataFrame, pandas.Series]: The table referenced by *hierarchy* exactly as written.
 
     Raises:
-        FileNotFoundError: If the file indicated by `file_path` is not exist or not readable.
-        KeyError: If there is no key `hierarchy` in the ``h5`` file defined by `file_path`.
+        FileNotFoundError: If *file_path* cannot be read.
+        KeyError: If the requested *hierarchy* is absent in the store.
+
+    Notes:
+        The call opens the file in *read-only* mode and therefore never modifies timestamps or causes locking
+        conflicts with writers operating on the same file.
     """
     if not os.access(file_path, os.R_OK):
         raise FileNotFoundError("The file is not exist or not readable.")
