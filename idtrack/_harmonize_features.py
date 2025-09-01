@@ -233,10 +233,8 @@ class HarmonizeFeatures:
         Returns ``None``: The :py:attr:`idt` attribute is populated and ready for queries.
         """
         if not self.idt_initialized:
-            organism_formal_name, _ = self.idt.get_ensembl_organism(self.organism_name)
-            self.idt.initialize_graph(
-                organism_name=organism_formal_name, last_ensembl_release=self.graph_last_ensembl_release
-            )
+            organism_formal_name, _ = self.idt.resolve_organism(self.organism_name)
+            self.idt.build_graph(organism_name=organism_formal_name, snapshot_release=self.graph_last_ensembl_release)
             self.idt.calculate_graph_caches()
             self.idt_initialized = True
 

@@ -6,8 +6,7 @@
 
 import copy
 import logging
-import os
-from typing import Any, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 import numpy as np
 from tqdm import tqdm
@@ -20,13 +19,34 @@ from idtrack._verify_organism import VerifyOrganism
 
 
 class API:
-    """Application programming interface for simple operations using ``idtrack`` package."""
+    """Provide a high-level façade for building graphs and converting biological identifiers with IDTrack.
+
+    This class centralises common workflows so users can quickly initialise the underlying graph (for a chosen organism
+    and Ensembl release), configure logging, and run identifier-related operations. Internally it delegates to
+    lower-level components such as :py:class:`idtrack.DatabaseManager` for data access and :py:class:`idtrack.Track` (or
+    :py:class:`idtrack.TrackTests`) for graph traversal and matching. It is intended as the primary entry point for
+    day-to-day tasks like resolving an organism name, constructing the working graph snapshot, converting identifiers
+    between releases or external databases, and inspecting available external data sources.
+    """
 
     def __init__(self, local_repository: str) -> None:
-        """Class initialization.
+        """Bind the interface to a local repository used for data downloads and on-disk caches.
+
+        This initialiser wires up a dedicated logger for the API layer and records the path where IDTrack will keep
+        its working files. The actual graph and tracking objects are created lazily (e.g. by
+        :py:meth:`idtrack.API.build_graph`) so that simply constructing :py:class:`idtrack.API` is inexpensive.
 
         Args:
-            local_repository: An absolute path in local machine to store downloaded and preprocessed content.
+            local_repository (str): Absolute (recommended) or relative path to a writable directory where the package
+                may store downloaded resources and precomputed artefacts. The caller is responsible for ensuring the
+                path exists and is accessible.
+
+        Attributes:
+            log (logging.Logger): Logger named ``"api"`` for progress messages and diagnostics.
+            logger_configured (bool): ``False`` until :py:meth:`idtrack.API.configure_logger` is called.
+            local_repository (str): The given repository path.
+            track (idtrack.Track | idtrack.TrackTests): Placeholder for the active tracker; populated after
+                :py:meth:`idtrack.API.build_graph` is invoked.
         """
         # Instance attributes
         self.log = logging.getLogger("api")
@@ -35,7 +55,21 @@ class API:
         self.track: Union[Track, TrackTests]
 
     def configure_logger(self, level=None):
-        """Configure logger in a way that shows the logs in a specified format."""
+        """Configure process-wide logging with a concise, time-stamped console format.
+
+        This method is idempotent per :py:class:`idtrack.API` instance: the first call sets up a basic configuration
+        for the Python logging system (time, level, logger name, and message). Subsequent calls on the same instance
+        will not reconfigure logging and instead emit an informational message via :py:attr:`idtrack.API.log`.
+
+        Args:
+            level (int | str | None): Desired logging level (e.g. ``logging.INFO``, ``"INFO"``, ``logging.DEBUG``).
+                If ``None``, defaults to :py:data:`logging.INFO`.
+
+        Notes:
+            The configuration applies to the root logger and therefore affects logging for the entire Python process,
+            not only this package. Call this early in your application if you want IDTrack's log output formatted
+            consistently with the rest of your program.
+        """
         if not self.logger_configured:
             logging.basicConfig(
                 level=logging.INFO if level is None else level,
@@ -46,65 +80,114 @@ class API:
         else:
             self.log.info("The logger is already configured.")
 
-    def calculate_graph_caches(self):
-        """Calculate cached variables of the graph object using only one method."""
-        self.track.graph.calculate_caches()
+    def calculate_graph_caches(self, for_test: bool = False):
+        """Prime the working graph by eagerly computing all cached properties.
 
-    def get_ensembl_organism(self, tentative_organism_name: str) -> tuple[str, int]:
-        """Make sure the user enters correct organism name and retrieves latest Ensembl release with ease.
+        This helper reduces first-call latency and makes test runs deterministic by batch-computing every
+        ``@cached_property`` exposed by :py:class:`idtrack._the_graph.TheGraph`. Use it after
+        :py:meth:`idtrack.API.build_graph` has attached a populated
+        :py:class:`idtrack._track.Track` (or :py:class:`idtrack._track_tests.TrackTests`) to
+        :py:attr:`self.track`. Internally it forwards to
+        :py:meth:`idtrack._the_graph.TheGraph.calculate_caches`.
 
         Args:
-            tentative_organism_name: Organism of interest.
-                This does not have to be formal name. For example, 'human', 'hsapiens' as well as formal name
-                'homo_sapiens' is accepted by the program.
+            for_test (bool): If ``True``, also compute heavyweight, test-only caches such as
+                :py:attr:`idtrack._the_graph.TheGraph.external_database_connection_form` and
+                :py:attr:`idtrack._the_graph.TheGraph.available_releases_given_database_assembly`.
+                Defaults to ``False``.
+        """
+        self.track.graph.calculate_caches(for_test=for_test)
+
+    def resolve_organism(self, tentative_organism_name: str) -> tuple[str, int]:
+        """Normalize a tentative organism name and fetch the latest supported Ensembl release.
+
+        This shields callers from Ensembl naming quirks by resolving a user-provided synonym (e.g. common name,
+        shorthand, taxon ID) to the canonical Ensembl species identifier (e.g. ``"homo_sapiens"``) and to the newest
+        Ensembl release that still hosts that species. The lookup delegates to
+        :py:class:`idtrack._verify_organism.VerifyOrganism`, ensuring subsequent graph construction and data access use
+        a consistent, up-to-date pair.
+
+        Args:
+            tentative_organism_name (str): Organism descriptor in any supported synonym form (e.g. ``"human"``,
+                ``"hsapiens"``, ``"9606"``, or ``"homo_sapiens"``). Matching is case-insensitive.
 
         Returns:
-            Formal organism name and associated latest Ensembl release.
+            tuple[str, int]: ``(formal_name, latest_release)`` where ``formal_name`` is the canonical Ensembl species
+                string and ``latest_release`` is the most recent Ensembl release number known for that species.
         """
         vdf = VerifyOrganism(tentative_organism_name)
         formal_name = vdf.get_formal_name()
         latest_release = vdf.get_latest_release()
         return formal_name, latest_release
 
-    def get_database_manager(self, organism_name: str, last_ensembl_release: int):
-        """Instantiate and return a DatabaseManager object for a specified organism and Ensembl release.
+    def get_database_manager(self, organism_name: str, snapshot_release: int) -> "DatabaseManager":
+        """Create a database manager configured for an organism and a release-bounded snapshot.
 
-        This method sets up a DatabaseManager configured to ignore data after a given Ensembl release.
-        It uses a deep copy of the default database backbone form and stores data in the local repository
-        specified during API initialization.
+        Construct and return :py:class:`idtrack._database_manager.DatabaseManager` bound to ``organism_name`` and
+        configured to ignore data newer than ``snapshot_release``. The manager centralizes all download, caching, and
+        version logic for graph builds and identifier conversions. The biological *form* is initialised from
+        :py:data:`idtrack._db.DB.backbone_form`, and all artefacts are stored
+        under :py:attr:`idtrack.API.local_repository`.
 
         Args:
-            organism_name: The formal name of the organism (e.g., 'homo_sapiens').
-            last_ensembl_release: The most recent Ensembl release to include. Data after this release will be ignored.
+            organism_name (str): Canonical Ensembl species name (e.g. ``"homo_sapiens"``).
+            snapshot_release (int): Most recent Ensembl release to include; later releases are ignored for
+                reproducibility.
 
         Returns:
-            An instance of the DatabaseManager class configured with the provided organism and release settings.
+            idtrack._database_manager.DatabaseManager: A manager ready for use by graph-building and
+                conversion routines.
+
+        Notes:
+            Any exceptions raised by :py:class:`idtrack._database_manager.DatabaseManager` propagate unchanged.
         """
         return DatabaseManager(
             organism=organism_name,
             ensembl_release=None,
-            ignore_after=last_ensembl_release,
+            ignore_after=snapshot_release,
             form=copy.deepcopy(DB.backbone_form),
             local_repository=self.local_repository,
         )
 
-    def initialize_graph(self, organism_name: str, last_ensembl_release: int, return_test: bool = False):
-        """Creates a graph and initializes pathfinder class.
+    def build_graph(
+        self, organism_name: str, snapshot_release: int, return_test: bool = False, calculate_caches: bool = True
+    ):
+        """Build the bio-ID graph for an organism and prepare the path-finding engine.
+
+        This method wires together the high-level components used throughout IDTrack. It first creates a
+        :py:class:`idtrack._database_manager.DatabaseManager` that ignores releases newer than ``snapshot_release``.
+        It then instantiates :py:class:`idtrack._track.Track` (or :py:class:`idtrack._track_tests.TrackTests` when
+        testing), which loads or builds the underlying :py:class:`idtrack._the_graph.TheGraph` via
+        :py:class:`idtrack._graph_maker.GraphMaker`. Optionally, it primes all graph caches to improve query latency.
+        The resulting resolver is stored on :py:attr:`self.track` for subsequent conversions and inspections.
 
         Args:
-            organism_name: Formal organism name as an output of ``get_ensembl_organism`` method.
-            last_ensembl_release: Ensembl release of interest. The object will work on only given Ensembl release,
-                but some methods does not care which form the DatabaseManager is defined to.
-                The latest possible Ensembl release is the best choice for graph building with no drawbacks.
-            return_test: If ``True``, return the ``TrackTest`` object instead, which has some functions to test the
-                pathfinder performance and graph integrity.
+            organism_name (str): Canonical Ensembl species name, typically the output of
+                :py:meth:`idtrack.API.resolve_organism`.
+            snapshot_release (int): Ensembl release anchoring this build. Data from later releases are ignored to ensure
+                reproducible results.
+            return_test (bool): If ``True``, initialise :py:class:`idtrack._track_tests.TrackTests` instead of the
+                standard :py:class:`idtrack._track.Track` to enable test and diagnostics helpers. Defaults to ``False``.
+            calculate_caches (bool): If ``True``, eagerly compute the graph’s cached properties. When combined with
+                ``return_test=True``, test-only caches are included. Defaults to ``True``.
+
+        See Also:
+            :py:meth:`idtrack.API.get_database_manager`,
+            :py:meth:`idtrack.API.calculate_graph_caches`,
+            :py:class:`idtrack._track.Track`,
+            :py:class:`idtrack._track_tests.TrackTests`
         """
-        dm = self.get_database_manager(organism_name=organism_name, last_ensembl_release=last_ensembl_release)
+        dm = self.get_database_manager(organism_name=organism_name, snapshot_release=snapshot_release)
 
         if return_test:
             self.track = TrackTests(dm)
         else:
             self.track = Track(dm)
+
+        if calculate_caches and return_test:
+            self.calculate_graph_caches(for_test=True)
+        elif calculate_caches:
+            self.calculate_graph_caches(for_test=False)
 
     def convert_identifier(
         self,
@@ -112,38 +195,91 @@ class API:
         from_release: Optional[int] = None,
         to_release: Optional[int] = None,
         final_database: Optional[str] = None,
-        prioritize_to_one_filter: bool = True,
-        return_path: bool = False,
-    ) -> dict:
-        """Finds corresponding identifier in specified target using the constructed graph and pathfinder algorithm.
+        strategy: Literal["all", "best"] = "best",
+        explain: bool = False,
+    ) -> dict[str, Any]:
+        """Resolve a raw identifier and convert it to a target Ensembl release and (optionally) an external database.
+
+        This high-level helper wraps :py:meth:`idtrack._track.Track.convert` and returns a compact, user-oriented
+        summary of the result. It first normalises *identifier* to the canonical graph node label with
+        :py:meth:`idtrack._the_graph.TheGraph.node_name_alternatives`, then invokes the path-finding and
+        final-conversion pipeline to reach the requested *to_release* and *final_database*. The output is designed for
+        interactive use and downstream tooling: it reports whether the query is present in the graph, whether a
+        conversion could be computed, and (if requested) the full path(s) followed through the Ensembl backbone and
+        the external database hop.
 
         Args:
-            identifier: Query ID.
-            from_release: Query ID is from which Ensembl release, if provided.
-            to_release: Ensembl release for target gene set.
-                Which Ensembl release the user wants to convert the ID into. The default is the latest Ensembl release.
-            final_database: Database for the target gene set.
-                Which database the user wants to convert the ID into. The default is 'ensembl_gene'.
-            prioritize_to_one_filter: Decide to use a series of filters to score the possible paths, and ideally choose
-                a single target at the end.
-            return_path: If ``True``, returns the path from source to query ID.
+            identifier (str): Query identifier to resolve. May be an Ensembl stable ID, gene symbol, or a known synonym;
+                case and common punctuation variations are tolerated by the normaliser.
+            from_release (int | None): Ensembl release the *identifier* originates from. If ``None``, the direction of
+                time travel is inferred automatically. Supplying a value constrains the search to
+                forward/reverse travel.
+            to_release (int | None): Target Ensembl release. If ``None``, the newest release available in
+                the graph is used.
+            final_database (str | None): Name of the external database to convert into (e.g. ``"uniprot"``).
+                If ``None``, the result remains on the Ensembl gene backbone (reported as
+                :py:data:`idtrack._db.DB.nts_ensembl[idtrack._db.DB.backbone_form]`).
+            strategy (Literal["all", "best"]): Selection strategy applied *after* scoring all admissible targets.
+                ``"best"`` keeps a single globally best target; ``"all"`` keeps all scored
+                targets. Defaults to ``"best"``.
+            explain (bool): If ``True``, include the concatenated edge list(s) that show how each result was reached.
 
         Returns:
-            A dictionary with following keys
+            dict[str, Any]: Dictionary describing the conversion outcome with the following keys.
 
-            - ``"target_id"``: Final IDs after conversion.
-            - ``"last_node"``: The last node in history travel, so it is an Ensembl gene ID.
-            - ``"final_database"``: Final database of the final IDs.
-            - ``"graph_id"``: The corresponding ID in the graph for the query ID.
-              For example, if the query ID is 'actb', this will be 'ACTB'.
-            - ``"query_id"``: The input query ID.
-            - ``"no_corresponding"``: If ``True``, there is no such ID in the graph.
-            - ``"no_conversion"``: If ``True``, it is not possible to convert into the target. It is 1-to-0 matching.
-            - ``"no_target"``: If ``True``, there is no matching in the described final database, but the history
-              travel was successful until 'last_node'. In other words, 'final_conversion' failed, no mathing identifier
-              is found in the target database but there is mathing identifier in Ensembl.
-            - ``"the_path"``: The path from source to query ID. (If `return_path` is set to ``True``.)
+                - ``"target_id"`` (list[str]): Unique identifiers in the requested *final_database*. When \
+                    ``strategy="best"`` and a target exists, this list contains exactly one element. \
+                    If *final_database* is ``None``, the list contains the Ensembl gene ID(s).
+                - ``"last_node"`` (list[tuple[str, str]]): Pairs of ``(ensembl_gene_id, target_id)`` for every \
+                    surviving candidate. The first element is the final Ensembl node reached by time travel; the \
+                    second is the chosen target in *final_database* (or the Ensembl gene itself when staying on \
+                    the backbone).
+                - ``"final_database"`` (str | None): The database name the *target_id* values come from. \
+                    ``None`` only when the query was not found at all; otherwise this is either *final_database* or \
+                    the Ensembl backbone label :py:data:`idtrack._db.DB.nts_ensembl[idtrack._db.DB.backbone_form]`.
+                - ``"graph_id"`` (str | None): Canonical node label used internally by the graph for *identifier* \
+                    (e.g. ``"ACTB"`` for the symbol ``"actb"``). ``None`` when the query has no corresponding graph node.
+                - ``"query_id"`` (str): Echo of the original *identifier* argument for bookkeeping.
+                - ``"no_corresponding"`` (bool): ``True`` if the query could not be matched to any graph node (nothing \
+                    to convert). In this case ``"graph_id"`` is ``None`` and the other fields are empty or ``None``.
+                - ``"no_conversion"`` (bool): ``True`` if the query exists in the graph but no admissible path to \
+                    *to_release* and/or *final_database* could be constructed (a 1→0 mapping).
+                - ``"no_target"`` (bool): ``True`` if an Ensembl gene was reached but the requested *final_database* \
+                    yielded no synonym. The result may fall back to returning the Ensembl gene itself; this flag lets \
+                    callers distinguish that fallback from a genuine external match.
+                - ``"the_path"`` (dict[tuple[str, str], tuple[tuple]]): Present only when *explain* is ``True``. Maps \
+                    each ``(target_id, ensembl_gene_id)`` pair to an ordered tuple of edges representing the full \
+                    walk: first the Ensembl *history* segment that reaches the gene, then the *final-conversion* hop \
+                    into the external database. Each edge is expressed in the internal format used by \
+                    :py:class:`idtrack._track.Track` and may include auxiliary fields (e.g. release markers).
+
+        Raises:
+            ValueError: If *strategy* is not ``"all"`` or ``"best"``.
+
+        See Also:
+            :py:meth:`idtrack._the_graph.TheGraph.node_name_alternatives`,
+            :py:meth:`idtrack._track.Track.convert`.
+
+        Notes:
+            - Interactions between the boolean flags:
+
+                * ``no_corresponding=True`` ⇒ no conversion is attempted; ``graph_id`` is ``None``; \
+                    ``target_id`` is ``[]``.
+                * ``no_conversion=True`` ⇒ query exists but path scoring/selecting produced no admissible target.
+                * ``no_target=True`` ⇒ Ensembl history succeeded but the external database lacked a synonym; callers \
+                    may still receive an Ensembl fallback target.\
+
+            - When ``strategy="best"``, the scoring and tie-breakers are those implemented by \
+                :py:meth:`idtrack._track.Track.calculate_score_and_select` and its callers. When ``"all"``, no global \
+                tie-break is applied and all scored targets are returned.
         """
+        if strategy == "best":
+            prioritize_to_one_filter = True
+        elif strategy == "all":
+            prioritize_to_one_filter = False
+        else:
+            raise ValueError("Invalid choice for `strategy`.")
+
         # Get the graph ID if possible.
         new_ident, _ = self.track.graph.node_name_alternatives(identifier)
         no_corresponding, no_conversion = False, False
@@ -155,7 +291,7 @@ class API:
                 to_release=to_release,
                 final_database=final_database,
                 prioritize_to_one_filter=prioritize_to_one_filter,
-                return_path=return_path,
+                return_path=explain,
             )
             if cnt is None:
                 no_conversion = True
@@ -196,7 +332,7 @@ class API:
             "no_target": np.isinf(final_conf) if final_conf is not None else False,
         }
 
-        if return_path:
+        if explain:
             result["the_path"] = (
                 {
                     (j, i): tuple(
@@ -214,16 +350,44 @@ class API:
     def convert_identifier_multiple(
         self, identifier_list, verbose: bool = True, pbar_prefix: str = "", **kwargs
     ) -> list[dict]:
-        """Basically ``convert_identifier`` method for multiple conversion procedure with progress bar.
+        """Convert a batch of identifiers and aggregate per-query conversion metadata.
+
+        This is a thin, progress-enabled wrapper around :py:meth:`idtrack.API.convert_identifier`. It iterates over
+        *identifier_list* in order, forwards ``**kwargs`` to the single-item converter, and collects each per-identifier
+        result. Use this helper for bulk operations where you want progress feedback and a uniform result structure that
+        mirrors the single-call API.
 
         Args:
-            identifier_list: List of query IDs to feed the ``convert_identifier`` method.
-            kwargs: Keyword arguments to pass into ``convert_identifier`` method.
-            verbose: If ``True``, shows the progress.
-            pbar_prefix: The string to be put before the progress bar.
+            identifier_list (list[str]): Input identifiers to resolve and convert. Each element is passed to
+                :py:meth:`idtrack.API.convert_identifier` as its *identifier* argument, in the same order.
+            verbose (bool): If ``True``, display a :py:mod:`tqdm` progress bar (throttled to avoid excessive redraws).
+                Set to ``False`` to disable the progress bar. Defaults to ``True``.
+            pbar_prefix (str): Optional label shown before the progress bar text (for distinguishing concurrent runs).
+                Defaults to an empty string.
+            kwargs: Keyword arguments forwarded verbatim to :py:meth:`idtrack.API.convert_identifier`. Common options
+                include:
+
+                    - ``from_release`` (int | None): Origin Ensembl release of the input identifier.
+                    - ``to_release`` (int | None): Target Ensembl release to which to time-travel.
+                    - ``final_database`` (str | None): Name of the external database to project into (e.g. \
+                        ``"uniprot"``). If ``None``, results stay on the Ensembl backbone and are reported as \
+                        :py:data:`idtrack._db.DB.nts_ensembl[idtrack._db.DB.backbone_form]`.
+                    - ``strategy`` (Literal[``"best"``, ``"all"``]): Selection policy after scoring candidates.
+                    - ``explain`` (bool): If ``True``, include full path details in the result (see \
+                        ``"the_path"`` below).
 
         Returns:
-            List of ``convert_identifier`` method outputs.
+            list[dict[str, Any]]: One element per input identifier, preserving input order. Each dictionary matches the
+            schema returned by :py:meth:`idtrack.API.convert_identifier`.
+
+        See Also:
+            :py:meth:`idtrack.API.convert_identifier`,
+            :py:meth:`idtrack.API.classify_multiple_conversion`,
+            :py:meth:`idtrack.API.print_binned_conversion`.
+
+        Notes:
+            The output list preserves the order of *identifier_list*. Items are independent; failures for one
+            query do not prevent processing of the others.
         """
         result = list()
         with tqdm(identifier_list, mininterval=0.25, disable=not verbose, desc=pbar_prefix, ncols=100) as loop_obj:
@@ -234,18 +398,58 @@ class API:
         return result
 
     def classify_multiple_conversion(self, matchings: list[dict[str, Any]]) -> dict[str, list[dict]]:
-        """Create a dictionary by classifying the results into different bins.
+        """Group batch-conversion results into semantic bins for downstream reporting.
+
+        This post-processing step takes the per-identifier results produced by
+        :py:meth:`idtrack.API.convert_identifier_multiple` (or a compatible list of
+        :py:meth:`idtrack.API.convert_identifier` payloads) and organises them into logically meaningful categories.
+        The bins distinguish between “no match,” one-to-one vs. one-to-many mappings, whether the output differs from
+        the input, and whether a reported target is an Ensembl fallback due to a missing external synonym.
 
         Args:
-            matchings: The output of ``convert_identifier_multiple`` method.
-
-        Raises:
-            ValueError: Unexpected program error
+            matchings (list[dict[str, Any]]): Collection of dictionaries returned by
+                :py:meth:`idtrack.API.convert_identifier_multiple`. Each element must contain, at minimum, the keys
+                ``"query_id"``, ``"target_id"``, ``"no_corresponding"``, ``"no_conversion"``, and ``"no_target"`` as
+                described in :py:meth:`idtrack.API.convert_identifier`.
 
         Returns:
-            List of ``convert_identifier`` method outputs.
+            dict[str, list[dict[str, Any]]]: A dictionary of category → list-of-results. Categories are **not**
+                mutually exclusive; an item can appear in multiple bins (e.g. a changed 1→1 mapping also appears in the
+                general 1→1 bin). Keys are:
+
+                - ``"input_identifiers"``: All input result objects, echoed unchanged (convenient for summary counts).
+                - ``"matching_1_to_0"``: Queries that could not be mapped to any target (either \
+                    ``no_corresponding=True`` or ``no_conversion=True``). Indicates a 1→0 outcome.
+                - ``"matching_1_to_1"``: Queries with exactly one target in ``"target_id"``. Includes both unchanged \
+                    and changed outputs, and may overlap with ``"changed_only_1_to_1"`` or \
+                    ``"alternative_target_1_to_1"``.
+                - ``"matching_1_to_n"``: Queries with more than one target in ``"target_id"`` (n > 1). \
+                    May overlap with ``"changed_only_1_to_n"`` or ``"alternative_target_1_to_n"``.
+                - ``"changed_only_1_to_1"``: Strict subset of 1→1 where the single ``"target_id"[0]`` is \
+                    **different** from ``"query_id"`` (i.e. the identifier changed across releases/databases).
+                - ``"changed_only_1_to_n"``: Strict subset of 1→n where **none** of the ``"target_id"`` \
+                    entries equal ``"query_id"`` (the original identifier is not present among the alternatives).
+                - ``"alternative_target_1_to_1"``: Cases with exactly one ``"target_id"`` and ``no_target=True``. \
+                    This flags Ensembl fallbacks where the external database lacked a synonym; the single reported \
+                    value is not a genuine external match.
+                - ``"alternative_target_1_to_n"``: As above, but with multiple entries in ``"target_id"`` (n > 1) \
+                    while ``no_target=True`` (typically multiple Ensembl-side candidates with no external synonym).
+
+        Raises:
+            ValueError: If any element in *matchings* has an empty ``"target_id"`` list despite
+                ``no_corresponding`` and ``no_conversion`` both being ``False`` (indicates an unexpected upstream state).
+
+        See Also:
+            :py:meth:`idtrack.API.convert_identifier_multiple`,
+            :py:meth:`idtrack.API.print_binned_conversion`,
+            :py:meth:`idtrack.API.convert_identifier`.
+
+        Notes:
+            The function does not mutate input dictionaries. The binning logic is intentionally overlapping so that
+            “summary” buckets (``matching_*``) can be used alongside “diagnostic” buckets (``changed_only_*``,
+            ``alternative_target_*``) without additional passes.
         """
-        r: dict[str, list[dict]] = {
+        result: dict[str, list[dict]] = {
             "changed_only_1_to_n": [],
             "changed_only_1_to_1": [],
             "alternative_target_1_to_1": [],
@@ -257,14 +461,14 @@ class API:
         }
 
         for i in matchings:
-            r["input_identifiers"].append(i)
+            result["input_identifiers"].append(i)
 
             if i["no_corresponding"]:
-                r["matching_1_to_0"].append(i)
+                result["matching_1_to_0"].append(i)
                 continue
 
             if i["no_conversion"]:
-                r["matching_1_to_0"].append(i)
+                result["matching_1_to_0"].append(i)
                 continue
 
             if len(i["target_id"]) == 0:
@@ -272,52 +476,103 @@ class API:
 
             if i["no_target"]:
                 if len(i["target_id"]) == 1:
-                    r["alternative_target_1_to_1"].append(i)
+                    result["alternative_target_1_to_1"].append(i)
                 else:
-                    r["alternative_target_1_to_n"].append(i)
+                    result["alternative_target_1_to_n"].append(i)
 
             else:
                 if len(i["target_id"]) == 1 and i["target_id"][0] != i["query_id"]:
-                    r["changed_only_1_to_1"].append(i)
+                    result["changed_only_1_to_1"].append(i)
 
                 if len(i["target_id"]) > 1 and not any([i["query_id"] == k for k in i["target_id"]]):
-                    r["changed_only_1_to_n"].append(i)
+                    result["changed_only_1_to_n"].append(i)
 
                 if len(i["target_id"]) == 1:
-                    r["matching_1_to_1"].append(i)
+                    result["matching_1_to_1"].append(i)
 
                 if len(i["target_id"]) > 1:
-                    r["matching_1_to_n"].append(i)
+                    result["matching_1_to_n"].append(i)
 
-        return r
+        return result
 
-    def print_binned_conversion(self, binned_conversion):
-        """Print the output of ``classify_multiple_conversion`` method.
+    def print_binned_conversion(self, classified: dict[str, list[dict]]) -> None:
+        """Log a structured multi-line summary of binned conversion results with percentages and rest counts.
 
         Args:
-            binned_conversion: The output of ``classify_multiple_conversion`` method.
+            classified (dict[str, list[dict]]): Output from classify_multiple_conversion.
         """
+        total = len(classified.get("input_identifiers", []))
+        one_to_zero = len(classified.get("matching_1_to_0", []))
+        one_to_one = len(classified.get("matching_1_to_1", []))
+        one_to_n = len(classified.get("matching_1_to_n", []))
+        changed_1_to_1 = len(classified.get("changed_only_1_to_1", []))
+        changed_1_to_n = len(classified.get("changed_only_1_to_n", []))
+        alt_1_to_1 = len(classified.get("alternative_target_1_to_1", []))
+        alt_1_to_n = len(classified.get("alternative_target_1_to_n", []))
+
+        rest_1_to_1 = one_to_one - changed_1_to_1 - alt_1_to_1
+        rest_1_to_n = one_to_n - changed_1_to_n - alt_1_to_n
+
+        no_corresp = sum(x["no_corresponding"] for x in classified.get("input_identifiers", []))
+        no_conv = sum(x["no_conversion"] for x in classified.get("input_identifiers", []))
+        no_target = sum(x["no_target"] for x in classified.get("input_identifiers", []))
+
+        def pct(part, whole):
+            return (part / whole * 100) if whole else 0
+
         self.log.info(
-            os.linesep + f"{os.linesep}".join([f"{i}: {len(binned_conversion[i])}" for i in binned_conversion])
+            f"\nIDTrack conversion summary:\n"
+            f"  Total processed: {total}\n"
+            f"  1→0: {one_to_zero} ({pct(one_to_zero, total):.1f}%)\n"
+            f"  1→1: {one_to_one} ({pct(one_to_one, total):.1f}%)\n"
+            f"    Changed only: {changed_1_to_1} ({pct(changed_1_to_1, one_to_one):.1f}%)\n"
+            f"    Alternative targets: {alt_1_to_1} ({pct(alt_1_to_1, one_to_one):.1f}%)\n"
+            f"    Rest: {rest_1_to_1} ({pct(rest_1_to_1, one_to_one):.1f}%)\n"
+            f"  1→n: {one_to_n} ({pct(one_to_n, total):.1f}%)\n"
+            f"    Changed only: {changed_1_to_n} ({pct(changed_1_to_n, one_to_n):.1f}%)\n"
+            f"    Alternative targets: {alt_1_to_n} ({pct(alt_1_to_n, one_to_n):.1f}%)\n"
+            f"    Rest: {rest_1_to_n} ({pct(rest_1_to_n, one_to_n):.1f}%)\n"
+            f"  Diagnostics:\n"
+            f"    no_corresponding: {no_corresp}\n"
+            f"    no_conversion:   {no_conv}\n"
+            f"    no_target:       {no_target}"
         )
 
     def infer_identifier_source(
-        self, id_list: list, mode: str = "assembly_ensembl_release", report_only_winner: bool = True
+        self, id_list: list[str], mode: str = "assembly_ensembl_release", report_only_winner: bool = True
     ):
-        """Infer the source of given set of IDs, by comparing which source covers most of the query IDs.
+        """Infer the most likely source (database/assembly/release) for a heterogeneous identifier list.
+
+        This helper estimates which origin best explains the given IDs so users can pick a sensible graph configuration
+        before running conversions at scale. Internally it resolves each input to a canonical node (where possible),
+        consults :py:attr:`idtrack._the_graph.TheGraph.node_trios` to recover known origins, and tallies them via
+        :py:meth:`idtrack._track.Track.identify_source`. **Under development:** both the public signature and the
+        scoring details may change in future releases.
 
         Args:
-            id_list: List of query IDs.
-            mode:
-                - ``"complete"``: Looks for the best match in terms of database, assembly and Ensembl release.
-                - ``"ensembl_release"``: Looks for the best match in terms of Ensembl release only.
-                - ``"assembly"``: Looks for the best match in terms of genome assembly only.
-                - ``"assembly_ensembl_release"``: Looks for the best match in terms of Ensembl release and assembly.
-            report_only_winner: If ``True``, return only the winner. If ``False``, return each
-                possible source with corresponding scores.
+            id_list (list[str]): Identifiers to analyse. Each item should be a string; non-existent IDs are safely
+                ignored (and logged) during the tally.
+            report_only_winner (bool): If ``True``, return the single highest-count origin for the requested *mode*.
+                If ``False``, return all candidate origins ranked by descending count.
+            mode (str): Granularity of the origin to infer.
+
+                One of:
+                - ``"complete"`` → return triples ``(database, assembly, release)``.
+                - ``"ensembl_release"`` → return the Ensembl release only (``int``).
+                - ``"assembly"`` → return the genome assembly only (``int``).
+                - ``"assembly_ensembl_release"`` → return pairs ``(assembly, release)``.
 
         Returns:
-            Result based on `mode` parameter.
+            tuple[str, int, int] | tuple[int, int] | int | list[tuple[object, int]]: The inferred origin(s),
+                depending on *report_only_winner*:
+
+                - If *report_only_winner* is ``True``:
+                    - ``mode == "complete"`` → ``(database: str, assembly: int, release: int)``
+                    - ``mode == "ensembl_release"`` → ``release: int``
+                    - ``mode == "assembly"`` → ``assembly: int``
+                    - ``mode == "assembly_ensembl_release"`` → ``(assembly: int, release: int)``
+                - If *report_only_winner* is ``False``:
+                    A list of ``(origin, count)`` pairs where *origin* has the corresponding shape above.
         """
         found_id_list = list()
         none_id_list = list()
@@ -338,10 +593,57 @@ class API:
         else:
             return identification[0][0]
 
-    def available_available_external_databases(self) -> set[str]:
-        """Show which organisms are available to be used in the scope of this package.
+    def list_external_databases(self) -> set[str]:
+        """Return the set of third-party (non-Ensembl) databases represented in the current graph.
 
         Returns:
-            Set of strings saying which external databases are present in the graph.
+            set[str]: Unique external database names discovered via
+                :py:meth:`idtrack._the_graph.TheGraph.available_external_databases`.
         """
         return self.track.graph.available_external_databases
+
+    def list_genome_assemblies(self) -> set[int]:
+        """List genome assemblies represented in the currently loaded graph.
+
+        Exposes the assembly identifiers discovered when the graph was built. This is a thin wrapper over
+        :py:meth:`idtrack._the_graph.TheGraph.available_genome_assemblies` and requires that
+        :py:meth:`idtrack.API.build_graph` has been called.
+
+        Returns:
+            set[int]: Unique genome assembly identifiers present in the graph (e.g., ``38`` for GRCh38).
+        """
+        return self.track.graph.available_genome_assemblies
+
+    def list_external_databases_by_assembly(self) -> dict[int, set[str]]:
+        """Map each genome assembly to the external databases present in that slice of the graph.
+
+        Delegates to :py:meth:`idtrack._the_graph.TheGraph.available_external_databases_assembly` to reveal which
+        third-party resources are available per assembly for the loaded organism/release window.
+
+        Returns:
+            dict[int, set[str]]: Mapping of assembly → set of external database names.
+        """
+        return self.track.graph.available_external_databases_assembly
+
+    def external_database_forms(self) -> dict[str, str]:
+        """Return the Ensembl form each external database connects through.
+
+        Provides a compact view of how third-party databases attach to the Ensembl backbone (``"gene"``,
+        ``"transcript"``, or ``"translation"``) via
+        :py:meth:`idtrack._the_graph.TheGraph.external_database_connection_form`.
+
+        Returns:
+            dict[str, str]: Mapping of external database name → Ensembl form (e.g., ``"gene"``).
+        """
+        return self.track.graph.external_database_connection_form
+
+    def list_ensembl_releases(self) -> list[int]:
+        """List Ensembl releases reachable for the configured organism and assembly.
+
+        Wraps :py:meth:`idtrack._database_manager.DatabaseManager.available_releases`, honoring any ignore window
+        configured in the manager. The result is sorted in ascending order.
+
+        Returns:
+            list[int]: Sorted release numbers that can be queried and cached locally.
+        """
+        return self.track.db_manager.available_releases

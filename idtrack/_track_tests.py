@@ -833,7 +833,7 @@ class TrackTests(Track, ABC):
         )
 
         if verbose:
-            printable1 = os.linesep + os.linesep.join(self.format_history_travel_testing_report_header(parameters))
+            printable1 = os.linesep + os.linesep.join(self._format_history_travel_testing_report_header(parameters))
             self.log.info(printable1)
 
         res = self.history_travel_testing(
@@ -849,7 +849,7 @@ class TrackTests(Track, ABC):
 
         if verbose:
             printable2 = os.linesep + os.linesep.join(
-                self.format_history_travel_testing_report(res, include_header=False)
+                self._format_history_travel_testing_report(res, include_header=False)
             )
             self.log.info(printable2)
 
@@ -1069,7 +1069,7 @@ class TrackTests(Track, ABC):
 
         return True
 
-    def format_history_travel_testing_report_header(self, p: dict[str, Any]) -> list[str]:
+    def _format_history_travel_testing_report_header(self, p: dict[str, Any]) -> list[str]:
         """Todo.
 
         Args:
@@ -1087,7 +1087,7 @@ class TrackTests(Track, ABC):
 
         return header
 
-    def format_history_travel_testing_report(
+    def _format_history_travel_testing_report(
         self, res: dict[str, Any], include_header=False, line_separation_at_end=True
     ) -> list[str]:
         """Todo.
@@ -1111,7 +1111,7 @@ class TrackTests(Track, ABC):
 
         if include_header:
             p = res.get("parameters", {})
-            header = self.format_history_travel_testing_report_header(p)
+            header = self._format_history_travel_testing_report_header(p)
             header_extension = [
                 f"External: {p.get('go_external')}   " f"1→1-pref.: {p.get('prioritize_to_one_filter')}",
                 f"Sample  : {p.get('from_fraction'):g} of source IDs",
