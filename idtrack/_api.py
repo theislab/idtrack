@@ -503,15 +503,18 @@ class API:
         """
         total = len(classified.get("input_identifiers", []))
         one_to_zero = len(classified.get("matching_1_to_0", []))
-        one_to_one = len(classified.get("matching_1_to_1", []))
-        one_to_n = len(classified.get("matching_1_to_n", []))
+        
+        one_to_one_target = len(classified.get("matching_1_to_1", []))
+        one_to_n_target = len(classified.get("matching_1_to_n", []))
         changed_1_to_1 = len(classified.get("changed_only_1_to_1", []))
         changed_1_to_n = len(classified.get("changed_only_1_to_n", []))
         alt_1_to_1 = len(classified.get("alternative_target_1_to_1", []))
         alt_1_to_n = len(classified.get("alternative_target_1_to_n", []))
-
-        rest_1_to_1 = one_to_one - changed_1_to_1 - alt_1_to_1
-        rest_1_to_n = one_to_n - changed_1_to_n - alt_1_to_n
+        
+        one_to_one_total = one_to_one_target + alt_1_to_1
+        one_to_n_total = one_to_n_target + alt_1_to_n
+        
+        rest_1_to_1 = one_to_one_target - changed_1_to_1
 
         no_corresp = sum(x["no_corresponding"] for x in classified.get("input_identifiers", []))
         no_conv = sum(x["no_conversion"] for x in classified.get("input_identifiers", []))
@@ -524,14 +527,13 @@ class API:
             f"\nIDTrack conversion summary:\n"
             f"  Total processed: {total}\n"
             f"  1→0: {one_to_zero} ({pct(one_to_zero, total):.1f}%)\n"
-            f"  1→1: {one_to_one} ({pct(one_to_one, total):.1f}%)\n"
-            f"    Changed only: {changed_1_to_1} ({pct(changed_1_to_1, one_to_one):.1f}%)\n"
-            f"    Alternative targets: {alt_1_to_1} ({pct(alt_1_to_1, one_to_one):.1f}%)\n"
-            f"    Rest: {rest_1_to_1} ({pct(rest_1_to_1, one_to_one):.1f}%)\n"
-            f"  1→n: {one_to_n} ({pct(one_to_n, total):.1f}%)\n"
-            f"    Changed only: {changed_1_to_n} ({pct(changed_1_to_n, one_to_n):.1f}%)\n"
-            f"    Alternative targets: {alt_1_to_n} ({pct(alt_1_to_n, one_to_n):.1f}%)\n"
-            f"    Rest: {rest_1_to_n} ({pct(rest_1_to_n, one_to_n):.1f}%)\n"
+            f"  1→1: {one_to_one_total} ({pct(one_to_one_total, total):.1f}%)\n"
+            f"    Changed only: {changed_1_to_1} ({pct(changed_1_to_1, one_to_one_total):.1f}%)\n"
+            f"    Alternative targets: {alt_1_to_1} ({pct(alt_1_to_1, one_to_one_total):.1f}%)\n"
+            f"    Rest: {rest_1_to_1} ({pct(rest_1_to_1, one_to_one_total):.1f}%)\n"
+            f"  1→n: {one_to_n_total} ({pct(one_to_n_total, total):.1f}%)\n"
+            f"    Changed only: {changed_1_to_n} ({pct(changed_1_to_n, one_to_n_total):.1f}%)\n"
+            f"    Alternative targets: {alt_1_to_n} ({pct(alt_1_to_n, one_to_n_total):.1f}%)\n"
             f"  Diagnostics:\n"
             f"    no_corresponding: {no_corresp}\n"
             f"    no_conversion:   {no_conv}\n"
