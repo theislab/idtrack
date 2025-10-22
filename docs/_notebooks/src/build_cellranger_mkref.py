@@ -32,18 +32,19 @@ import json
 import os
 import shutil
 import subprocess
+from collections.abc import Mapping, MutableMapping
 from pathlib import Path
-from typing import Any, Mapping, MutableMapping, Optional, TypedDict
-
+from typing import Any, Optional, TypedDict
 
 # --------------------------- Utilities ---------------------------
+
 
 def _log(silent: bool, msg: str) -> None:
     if not silent:
         print(msg)
 
 
-def _exists_nonempty(p: Optional[Path]) -> bool:
+def _exists_nonempty(p: Path | None) -> bool:
     if not p:
         return False
     try:
@@ -52,7 +53,7 @@ def _exists_nonempty(p: Optional[Path]) -> bool:
         return False
 
 
-def _run(cmd: list[str], *, cwd: Optional[Path] = None) -> subprocess.CompletedProcess[str]:
+def _run(cmd: list[str], *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
     """
     Run a command and capture output (stdout/stderr). Returns CompletedProcess.
     """
@@ -80,7 +81,7 @@ def _resolve_cellranger(cellranger_bin: Path | str) -> Path:
     return p.resolve()
 
 
-def _threads_from_cpu(eighty_percent: bool = True, override: Optional[int] = None) -> int:
+def _threads_from_cpu(eighty_percent: bool = True, override: int | None = None) -> int:
     if override is not None and override > 0:
         return int(override)
     cpu = os.cpu_count() or 1
@@ -125,6 +126,7 @@ def _is_complete_cellranger_ref(ref_dir: Path) -> bool:
 
 # --------------------------- Job file helpers ---------------------------
 
+
 def _job_file_for(mkref_outdir: Path) -> Path:
     """
     Path to the per-release job status payload.
@@ -133,9 +135,10 @@ def _job_file_for(mkref_outdir: Path) -> Path:
     return mkref_outdir / "job_exit_status_message"
 
 
-def _serialize_result(result: "MkrefResult") -> dict[str, Any]:
-    def p2s(p: Optional[Path]) -> Optional[str]:
+def _serialize_result(result: MkrefResult) -> dict[str, Any]:
+    def p2s(p: Path | None) -> str | None:
         return str(p) if p is not None else None
+
     return {
         "status": result.get("status"),
         "message": result.get("message"),
@@ -146,21 +149,22 @@ def _serialize_result(result: "MkrefResult") -> dict[str, Any]:
     }
 
 
-def _deserialize_result(payload: Mapping[str, Any]) -> "MkrefResult":
-    def s2p(s: Optional[str]) -> Optional[Path]:
+def _deserialize_result(payload: Mapping[str, Any]) -> MkrefResult:
+    def s2p(s: str | None) -> Path | None:
         return Path(s) if s else None
+
     out: MkrefResult = {
         "status": str(payload.get("status") or ""),
         "message": str(payload.get("message") or ""),
-        "release_dir": s2p(payload.get("release_dir")),   # type: ignore[arg-type]
-        "filtered_gtf": s2p(payload.get("filtered_gtf")), # type: ignore[arg-type]
-        "mkref_dir": s2p(payload.get("mkref_dir")),       # type: ignore[arg-type]
+        "release_dir": s2p(payload.get("release_dir")),  # type: ignore[arg-type]
+        "filtered_gtf": s2p(payload.get("filtered_gtf")),  # type: ignore[arg-type]
+        "mkref_dir": s2p(payload.get("mkref_dir")),  # type: ignore[arg-type]
         "threads_used": int(payload.get("threads_used") or 0),
     }
     return out
 
 
-def _read_job_result(job_file: Path) -> Optional["MkrefResult"]:
+def _read_job_result(job_file: Path) -> MkrefResult | None:
     try:
         if not job_file.exists() or job_file.stat().st_size == 0:
             return None
@@ -170,7 +174,7 @@ def _read_job_result(job_file: Path) -> Optional["MkrefResult"]:
         return None  # corrupted/unknown format -> treat as not "fine"
 
 
-def _write_job_result(job_file: Path, result: "MkrefResult") -> None:
+def _write_job_result(job_file: Path, result: MkrefResult) -> None:
     try:
         job_file.parent.mkdir(parents=True, exist_ok=True)
         job_file.write_text(json.dumps(_serialize_result(result), indent=2))
@@ -181,23 +185,25 @@ def _write_job_result(job_file: Path, result: "MkrefResult") -> None:
 
 # --------------------------- Types ---------------------------
 
+
 class MkrefResult(TypedDict, total=False):
-    status: str               # "done", "skipped", or "error"
+    status: str  # "done", "skipped", or "error"
     message: str
-    release_dir: Optional[Path]
-    filtered_gtf: Optional[Path]
-    mkref_dir: Optional[Path]
+    release_dir: Path | None
+    filtered_gtf: Path | None
+    mkref_dir: Path | None
     threads_used: int
 
 
 # --------------------------- Main entrypoint ---------------------------
 
+
 def build_cellranger_mkref(
-    paths_by_release: Mapping[int, Mapping[str, Optional[Path]]],
+    paths_by_release: Mapping[int, Mapping[str, Path | None]],
     cellranger_bin: Path | str,
     *,
     assembly_label: str = "GRCh38",
-    use_threads: Optional[int] = None,   # None => use 80% of available CPUs
+    use_threads: int | None = None,  # None => use 80% of available CPUs
     silent: bool = False,
 ) -> dict[int, MkrefResult]:
     """
@@ -222,21 +228,23 @@ def build_cellranger_mkref(
         fasta_plain = rel_info.get("fasta")
 
         # Best-effort to resolve release_dir early (needed to locate job file)
-        release_dir: Optional[Path] = None
+        release_dir: Path | None = None
         if gtf_plain:
             release_dir = Path(gtf_plain).parent
         elif fasta_plain:
             release_dir = Path(fasta_plain).parent
 
         ref_name = f"reference_{assembly_label}_{release}"
-        mkref_outdir: Optional[Path] = (release_dir / ref_name) if release_dir else None
-        job_file: Optional[Path] = _job_file_for(mkref_outdir) if mkref_outdir else None
+        mkref_outdir: Path | None = (release_dir / ref_name) if release_dir else None
+        job_file: Path | None = _job_file_for(mkref_outdir) if mkref_outdir else None
 
         # --------------- Early restore/skip if a "fine" job file exists ---------------
         if job_file and job_file.exists():
             prior = _read_job_result(job_file)
             if prior is not None:
-                _log(silent, f"[release {release}] Skipping (job_exit_status_message present) — restoring prior result.")
+                _log(
+                    silent, f"[release {release}] Skipping (job_exit_status_message present) — restoring prior result."
+                )
                 results[release] = prior
                 if prior.get("status") == "done":
                     success_count += 1
@@ -250,7 +258,7 @@ def build_cellranger_mkref(
                 f"Skipping."
             )
             _log(silent, msg)
-            filtered_gtf: Optional[Path] = None
+            filtered_gtf: Path | None = None
             if gtf_plain:
                 try:
                     filtered_gtf = _filtered_gtf_path_for(Path(gtf_plain))  # type: ignore[arg-type]
@@ -272,7 +280,7 @@ def build_cellranger_mkref(
             continue
 
         # From here on, both inputs exist and are non-empty
-        gtf_plain = Path(gtf_plain)    # type: ignore[arg-type]
+        gtf_plain = Path(gtf_plain)  # type: ignore[arg-type]
         fasta_plain = Path(fasta_plain)  # type: ignore[arg-type]
         release_dir = gtf_plain.parent  # by construction they live in GRCh38_<release>
         mkref_outdir = release_dir / ref_name

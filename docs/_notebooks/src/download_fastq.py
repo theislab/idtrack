@@ -19,8 +19,9 @@ from __future__ import annotations
 import hashlib
 import shutil
 import subprocess
+from collections.abc import Mapping, MutableMapping
 from pathlib import Path
-from typing import Any, Dict, Mapping, MutableMapping, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 # ---- Config defaults ---------------------------------------------------------
 
@@ -33,6 +34,7 @@ _MD5_CHUNK = 16 * 1024 * 1024  # 16 MiB
 
 # ---- Helpers ----------------------------------------------------------------
 
+
 def _log(silent: bool, msg: str) -> None:
     if not silent:
         print(msg)
@@ -41,9 +43,7 @@ def _log(silent: bool, msg: str) -> None:
 def _ensure_curl_available(curl_bin: str) -> None:
     """Raise RuntimeError if curl is not found/usable."""
     if shutil.which(curl_bin) is None:
-        raise RuntimeError(
-            f"'{curl_bin}' not found on PATH. Please install curl or provide curl_bin."
-        )
+        raise RuntimeError(f"'{curl_bin}' not found on PATH. Please install curl or provide curl_bin.")
 
 
 def _md5_file(path: Path) -> str:
@@ -63,12 +63,12 @@ def _md5_file(path: Path) -> str:
 
 def _curl_download(
     url: str,
-    dest: Path,                 # <-- may be a .part path
+    dest: Path,  # <-- may be a .part path
     curl_bin: str,
     retries: int,
     retry_delay: int,
     resume: bool,
-) -> Tuple[bool, str]:
+) -> tuple[bool, str]:
     """
     Download 'url' to 'dest' using curl with retry and optional resume (-C -).
     Returns (ok, message).
@@ -77,10 +77,12 @@ def _curl_download(
 
     args = [
         curl_bin,
-        "-fL",                  # fail on HTTP errors; follow redirects
-        "-sS",                  # silent transfer but show errors
-        "--retry", str(retries),
-        "--retry-delay", str(retry_delay),
+        "-fL",  # fail on HTTP errors; follow redirects
+        "-sS",  # silent transfer but show errors
+        "--retry",
+        str(retries),
+        "--retry-delay",
+        str(retry_delay),
         "--retry-connrefused",
     ]
 
@@ -109,7 +111,7 @@ def _download_one(
     resume: bool,
     silent: bool,
     checksum_retries: int = 1,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Download a single file described by file_spec into out_dir.
     - If the FINAL file already exists, skip without doing MD5.
@@ -228,16 +230,17 @@ def _download_one(
 
 # ---- Public API --------------------------------------------------------------
 
+
 def download_fastq(
     datasets: Mapping[str, Mapping[str, Any]],
-    working_dir: Optional[str | Path] = None,
+    working_dir: str | Path | None = None,
     *,
     curl_bin: str = _DEFAULT_CURL,
     retries: int = _DEFAULT_RETRIES,
     retry_delay: int = _DEFAULT_RETRY_DELAY,
     resume: bool = _DEFAULT_RESUME,
     silent: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Master function to download FASTQ archives and associated aux files.
 
@@ -256,7 +259,7 @@ def download_fastq(
     root = Path(working_dir).expanduser().resolve()
     root.mkdir(parents=True, exist_ok=True)
 
-    overall: Dict[str, Any] = {}
+    overall: dict[str, Any] = {}
     total = len(datasets)
     completed_ok = 0
 
@@ -297,7 +300,7 @@ def download_fastq(
         ds_result["files"]["fastqs"] = fastqs_res
 
         # Auxiliary files (e.g., CSV)
-        aux_results: Dict[str, Any] = {}
+        aux_results: dict[str, Any] = {}
         aux_spec = ds_spec.get("aux")
         if isinstance(aux_spec, Mapping):
             for aux_name, aux_file_spec in aux_spec.items():

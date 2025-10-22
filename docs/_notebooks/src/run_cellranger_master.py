@@ -86,21 +86,24 @@ import re
 import shutil
 import subprocess
 import tarfile
+from collections.abc import Iterable, Mapping, MutableMapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Mapping, MutableMapping, Optional
+from typing import Any, Optional
 
 # Local modules created previously by you (imported but not executed here)
-from src.fastq_datasets import fastq_datasets, DatasetSpec  # type: ignore
-from src.download_fastq import download_fastq  # type: ignore
+try:
+    from src.download_fastq import download_fastq  # type: ignore
+    from src.fastq_datasets import DatasetSpec, fastq_datasets  # type: ignore
+except Exception:
+    from download_fastq import download_fastq  # type: ignore
+    from fastq_datasets import DatasetSpec, fastq_datasets  # type: ignore
 
 
 # --------------------------- Utilities ---------------------------
 
-def existing_outs_for_release(results_dir: Path,
-                              dataset_key: str,
-                              assembly_label: str,
-                              release: int) -> Optional[Path]:
+
+def existing_outs_for_release(results_dir: Path, dataset_key: str, assembly_label: str, release: int) -> Path | None:
     """
     Return the finished Cell Ranger 'outs' directory for (dataset_key, assembly_label, release)
     or None if not found.
@@ -126,8 +129,8 @@ def existing_outs_for_release(results_dir: Path,
     # Prefer assembly-aware bases; last item is a fallback for legacy layout.
     base_candidates = [
         results_dir / dataset_key / f"{assembly_label}_{release}",  # NEW preferred base
-        results_dir / dataset_key / assembly_label,                 # uncommon transitional layout
-        results_dir / dataset_key,                                  # legacy base
+        results_dir / dataset_key / assembly_label,  # uncommon transitional layout
+        results_dir / dataset_key,  # legacy base
     ]
 
     def _outs_is_finished(outs: Path) -> tuple[bool, float]:
@@ -168,7 +171,7 @@ def existing_outs_for_release(results_dir: Path,
 
         return found, latest
 
-    best_outs: Optional[Path] = None
+    best_outs: Path | None = None
     best_mtime: float = -1.0
 
     for base in base_candidates:
@@ -205,7 +208,7 @@ def existing_outs_for_release(results_dir: Path,
     return best_outs
 
 
-def _exists_nonempty(p: Optional[Path]) -> bool:
+def _exists_nonempty(p: Path | None) -> bool:
     try:
         return bool(p) and Path(p).exists() and Path(p).stat().st_size > 0
     except Exception:
@@ -223,7 +226,7 @@ def _resolve_cellranger(cellranger_bin: Path | str | None = None) -> Path:
 
     Ensures the final path exists and is executable.
     """
-    cand: Optional[Path] = None
+    cand: Path | None = None
 
     def normalize(x: str | Path) -> Path:
         p = Path(x)
@@ -239,9 +242,7 @@ def _resolve_cellranger(cellranger_bin: Path | str | None = None) -> Path:
             cand = Path(which)
 
     if not cand:
-        raise FileNotFoundError(
-            "Could not resolve 'cellranger'. Provide `cellranger_bin` or set CELLRANGER_BIN."
-        )
+        raise FileNotFoundError("Could not resolve 'cellranger'. Provide `cellranger_bin` or set CELLRANGER_BIN.")
     if not cand.exists():
         raise FileNotFoundError(f"cellranger not found at: {cand}")
     if not os.access(str(cand), os.X_OK):
@@ -259,7 +260,8 @@ def _cellranger_version(cellranger: Path) -> str:
         return m.group(0) if m else "unknown"
     except Exception:
         return "unknown"
-    
+
+
 def _needs_create_bam_flag(ver: str) -> bool:
     """
     Return True if we should include the explicit create-bam control (Cell Ranger v8+).
@@ -364,8 +366,8 @@ def _patch_multi_csv(
     *,
     reference_dir: Path,
     fastq_dirs: list[Path],
-    feature_ref: Optional[Path] = None,
-    create_bam: Optional[bool] = None,  # if not None, force create-bam in [gene-expression]
+    feature_ref: Path | None = None,
+    create_bam: bool | None = None,  # if not None, force create-bam in [gene-expression]
 ) -> None:
     """
     Patch a 10x `cellranger multi` config CSV to inject reference and FASTQ locations.
@@ -379,10 +381,10 @@ def _patch_multi_csv(
     """
     lines = src_csv.read_text().splitlines()
     out: list[str] = []
-    section: Optional[str] = None
+    section: str | None = None
     fq_str = ";".join(str(p) for p in fastq_dirs)
 
-    def norm_section(s: Optional[str]) -> str:
+    def norm_section(s: str | None) -> str:
         # normalize: spaces/underscores -> hyphens; lowercase
         return re.sub(r"[\\s_]+", "-", (s or "").strip().lower())
 
@@ -402,14 +404,14 @@ def _patch_multi_csv(
             if in_ge and create_bam is not None and not ge_create_bam_seen:
                 out.append(f"create-bam,{'true' if create_bam else 'false'}")
             section = line[1:-1].strip()
-            in_ge = (norm_section(section) == "gene-expression" or norm_section(section) == "geneexpression")
+            in_ge = norm_section(section) == "gene-expression" or norm_section(section) == "geneexpression"
             ge_create_bam_seen = False
             out.append(raw)
             continue
 
         # Key,Value pairs
         if "," in line:
-            key, val = [t.strip() for t in line.split(",", 1)]
+            key, val = (t.strip() for t in line.split(",", 1))
             lk = norm_key(key)
             # [gene-expression] keys
             if in_ge:
@@ -449,7 +451,7 @@ def _patch_multi_csv(
 
         # default passthrough
         out.append(raw)
-    
+
     # EOF: if we ended inside [gene-expression] and still haven't written create-bam, append it
     if in_ge and create_bam is not None and not ge_create_bam_seen:
         out.append(f"create-bam,{'true' if create_bam else 'false'}")
@@ -498,11 +500,12 @@ class RunSummary:
     returncode: int
     stdout_log: Path
     stderr_log: Path
-    run_dir: Optional[Path] = None
-    outs_dir: Optional[Path] = None
+    run_dir: Path | None = None
+    outs_dir: Path | None = None
 
 
 # --------------------------- Main orchestrator ---------------------------
+
 
 def run_cellranger_master(
     *,
@@ -514,7 +517,7 @@ def run_cellranger_master(
     assembly_label: str = "GRCh38",
     download_if_missing: bool = False,
     resume_downloads: bool = False,
-    use_threads: Optional[int] = None,  # reserved for future (could set --localcores)
+    use_threads: int | None = None,  # reserved for future (could set --localcores)
     silent: bool = False,
 ) -> dict[str, Any]:
     """
@@ -569,9 +572,9 @@ def run_cellranger_master(
     ds_dir = workdir / "fastq_raw" / dataset_key
     ds_dir.mkdir(parents=True, exist_ok=True)
 
-    fastq_archive: Optional[Path] = None
-    multi_csv_path: Optional[Path] = None
-    feature_ref_path: Optional[Path] = None
+    fastq_archive: Path | None = None
+    multi_csv_path: Path | None = None
+    feature_ref_path: Path | None = None
 
     # If requested, attempt to download; otherwise we rely on pre-existing files.
     if download_if_missing:
@@ -767,7 +770,9 @@ def run_cellranger_master(
 
 # Optional CLI
 if __name__ == "__main__":
-    import argparse, sys
+    import argparse
+    import sys
+
     ap = argparse.ArgumentParser(description="Run cellranger (count or multi) for one dataset.")
     ap.add_argument("--dataset-key", required=True, help="Key in fastq_datasets.fastq_datasets")
     ap.add_argument("--release", required=True, type=int, help="Ensembl release (e.g., 110)")

@@ -5,8 +5,9 @@ from __future__ import annotations
 import gzip
 import shutil
 import subprocess
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, Tuple, Optional, TypedDict
+from typing import Optional, Tuple, TypedDict
 
 
 def _run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
@@ -27,7 +28,7 @@ def _exists_nonempty(p: Path) -> bool:
         return False
 
 
-def _curl_download(url: str, dest: Path) -> Tuple[bool, str]:
+def _curl_download(url: str, dest: Path) -> tuple[bool, str]:
     """
     Download URL to dest using curl with resume & retry.
     Returns (ok, message).
@@ -41,10 +42,14 @@ def _curl_download(url: str, dest: Path) -> Tuple[bool, str]:
     cmd = [
         "curl",
         "-fL",
-        "--retry", "3",
-        "--retry-delay", "2",
-        "-C", "-",
-        "-o", str(dest),
+        "--retry",
+        "3",
+        "--retry-delay",
+        "2",
+        "-C",
+        "-",
+        "-o",
+        str(dest),
         url,
     ]
     proc = _run(cmd)
@@ -54,14 +59,14 @@ def _curl_download(url: str, dest: Path) -> Tuple[bool, str]:
     return False, f"FAILED: {dest.name} — {reason}"
 
 
-def _gtf_name_url(release: int) -> Tuple[str, str]:
+def _gtf_name_url(release: int) -> tuple[str, str]:
     """Return (filename, url) for a given Ensembl release GTF."""
     name = f"Homo_sapiens.GRCh38.{release}.gtf.gz"
     url = f"https://ftp.ensembl.org/pub/release-{release}/gtf/homo_sapiens/{name}"
     return name, url
 
 
-def _fasta_name_url(release: int, fasta_name: str) -> Tuple[str, str]:
+def _fasta_name_url(release: int, fasta_name: str) -> tuple[str, str]:
     """Return (filename, url) for the primary assembly FASTA in a given release."""
     url = f"https://ftp.ensembl.org/pub/release-{release}/fasta/homo_sapiens/dna/{fasta_name}"
     return fasta_name, url
@@ -72,7 +77,7 @@ def _versioned_fasta_gz_name(release: int) -> str:
     return f"Homo_sapiens.GRCh38.{release}.dna.primary_assembly.fa.gz"
 
 
-def _decompress_gzip(src_gz: Path, *, keep_gz: bool = True) -> Tuple[bool, str, Optional[Path]]:
+def _decompress_gzip(src_gz: Path, *, keep_gz: bool = True) -> tuple[bool, str, Path | None]:
     """
     Decompress <src_gz> to the same directory.
     If keep_gz is False, delete the .gz after a successful extraction.
@@ -109,10 +114,10 @@ def _decompress_gzip(src_gz: Path, *, keep_gz: bool = True) -> Tuple[bool, str, 
 
 
 class ReleasePaths(TypedDict, total=False):
-    gtf_gz: Optional[Path]
-    gtf: Optional[Path]
-    fasta_gz: Optional[Path]
-    fasta: Optional[Path]
+    gtf_gz: Path | None
+    gtf: Path | None
+    fasta_gz: Path | None
+    fasta: Path | None
 
 
 def download_references(
@@ -173,14 +178,14 @@ def download_references(
             _log(
                 silent,
                 f"[release {r}] Skipped GTF download (already present): "
-                f"{gtf_gz_path.name if _exists_nonempty(gtf_gz_path) else gtf_path.name}"
+                f"{gtf_gz_path.name if _exists_nonempty(gtf_gz_path) else gtf_path.name}",
             )
         else:
             ok, msg = _curl_download(gtf_url, gtf_gz_path)
             _log(silent, f"[release {r}] {msg}")
 
         # Gunzip GTF if requested
-        gtf_unzipped: Optional[Path] = None
+        gtf_unzipped: Path | None = None
         if gunzip:
             if _exists_nonempty(gtf_gz_path):
                 ok2, msg2, dest = _decompress_gzip(gtf_gz_path, keep_gz=keep_gz)
@@ -199,8 +204,8 @@ def download_references(
         # -------------------- FASTA (prefer versioned name B) --------------------
         src_name, fasta_url = _fasta_name_url(r, fasta_name)  # original A
         src_path = rel_dir / src_name
-        dst_gz = rel_dir / _versioned_fasta_gz_name(r)        # versioned B
-        dst_unzipped = dst_gz.with_suffix("")                  # B without .gz
+        dst_gz = rel_dir / _versioned_fasta_gz_name(r)  # versioned B
+        dst_unzipped = dst_gz.with_suffix("")  # B without .gz
 
         # If B (or its unzipped twin) already exists, do NOT try to download A
         if _exists_nonempty(dst_gz) or _exists_nonempty(dst_unzipped):
@@ -219,7 +224,7 @@ def download_references(
                 _log(silent, f"[release {r}] Renamed: {dst_gz.name}")
 
         # Gunzip FASTA if requested
-        fasta_unzipped: Optional[Path] = None
+        fasta_unzipped: Path | None = None
         if gunzip:
             if _exists_nonempty(dst_gz):
                 ok3, msg3, dest = _decompress_gzip(dst_gz, keep_gz=keep_gz)
@@ -238,11 +243,17 @@ def download_references(
         # -------------------- Collect results --------------------
         results[r] = {
             "gtf_gz": gtf_gz_path if _exists_nonempty(gtf_gz_path) else None,
-            "gtf": (gtf_unzipped if (gtf_unzipped and _exists_nonempty(gtf_unzipped))
-                    else (gtf_path if _exists_nonempty(gtf_path) else None)),
+            "gtf": (
+                gtf_unzipped
+                if (gtf_unzipped and _exists_nonempty(gtf_unzipped))
+                else (gtf_path if _exists_nonempty(gtf_path) else None)
+            ),
             "fasta_gz": dst_gz if _exists_nonempty(dst_gz) else None,
-            "fasta": (fasta_unzipped if (fasta_unzipped and _exists_nonempty(fasta_unzipped))
-                      else (dst_unzipped if _exists_nonempty(dst_unzipped) else None)),
+            "fasta": (
+                fasta_unzipped
+                if (fasta_unzipped and _exists_nonempty(fasta_unzipped))
+                else (dst_unzipped if _exists_nonempty(dst_unzipped) else None)
+            ),
         }
 
     return results

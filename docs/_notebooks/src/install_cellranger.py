@@ -47,7 +47,9 @@ def _print(msg: str) -> None:
     print(f"[cellranger] {msg}")
 
 
-def _run(cmd: list[str], *, check: bool = True, capture_output: bool = True, text: bool = True) -> subprocess.CompletedProcess:
+def _run(
+    cmd: list[str], *, check: bool = True, capture_output: bool = True, text: bool = True
+) -> subprocess.CompletedProcess:
     """Run a command via subprocess with sane defaults and helpful error messages."""
     try:
         return subprocess.run(cmd, check=check, capture_output=capture_output, text=text)
@@ -69,7 +71,7 @@ def _python_md5(path: Path, chunk_size: int = 1024 * 1024) -> str:
     return h.hexdigest()
 
 
-def _cli_md5(path: Path) -> Optional[str]:
+def _cli_md5(path: Path) -> str | None:
     """Return MD5 via the `md5sum` CLI if available, else None."""
     exe = shutil.which("md5sum")
     if not exe:
@@ -81,6 +83,7 @@ def _cli_md5(path: Path) -> Optional[str]:
 
 def _safe_extract_tar_gz(archive: Path, dest_dir: Path) -> None:
     """Safely extract a .tar.gz using Python's tarfile (when `tar` is unavailable)."""
+
     def is_within_directory(directory: Path, target: Path) -> bool:
         try:
             directory = directory.resolve(strict=False)
@@ -140,6 +143,7 @@ def install_cellranger(version: str, expected_md5: str, url: str, apps_dir: Path
         else:
             # Fallback: pure Python download
             import urllib.request
+
             _print(f"curl not found; downloading via urllib to {tar_path} ...")
             with urllib.request.urlopen(url) as resp, tar_path.open("wb") as out:
                 shutil.copyfileobj(resp, out)
@@ -160,8 +164,7 @@ def install_cellranger(version: str, expected_md5: str, url: str, apps_dir: Path
         # Final decision
         if py_md5.lower() != expected_md5.lower():
             raise InstallError(
-                f"Checksum mismatch. Expected {expected_md5} but got {py_md5}. "
-                "The URL may be expired or incorrect."
+                f"Checksum mismatch. Expected {expected_md5} but got {py_md5}. " "The URL may be expired or incorrect."
             )
 
     # Verify MD5 (CLI md5sum) if available
@@ -169,9 +172,7 @@ def install_cellranger(version: str, expected_md5: str, url: str, apps_dir: Path
     if cli_md5:
         _print(f"MD5 (md5sum) = {cli_md5}")
         if cli_md5.lower() != expected_md5.lower():
-            raise InstallError(
-                f"md5sum reported {cli_md5}, but expected {expected_md5}. Aborting for safety."
-            )
+            raise InstallError(f"md5sum reported {cli_md5}, but expected {expected_md5}. Aborting for safety.")
     else:
         _print("Warning: 'md5sum' not found; relied on Python MD5 only.")
 
