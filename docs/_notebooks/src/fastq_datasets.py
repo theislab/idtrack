@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from typing import Dict, Optional, Literal, Mapping
+from typing import Dict, Mapping
 
 DatasetSpec = Mapping[str, object]
 
@@ -9,13 +9,16 @@ fastq_datasets: Dict[str, DatasetSpec] = {
         "title": "1k PBMCs from a Healthy Donor (v3 chemistry)",
         "organism": "homo_sapiens",
         "assay": "3p",
-        "chemistry": "3' v3",
+        # Was: "3' v3" -> must be Cell Ranger token:
+        # 3' v3  ==> SC3Pv3  (Next GEM kit) 
+        "chemistry": "SC3Pv3",
         "runner": "cellranger",
         "mode": "count",
         "expected_cells": 1222,
         "mean_reads_per_cell": 54502,
         "params": {
             "expect-cells": "1000",
+            "create-bam": "false"
             # add more when needed (e.g., "transcriptome": "/path/to/ref")
         },
         "fastqs": {
@@ -36,12 +39,14 @@ fastq_datasets: Dict[str, DatasetSpec] = {
         "title": "20k Human PBMCs Multiplex Sample (Donors 1–4, GEM-X 3')",
         "organism": "homo_sapiens",
         "assay": "3p",
-        "chemistry": "3' GEM-X",
+        # GEM‑X 3' corresponds to 3' v4 => SC3Pv4
+        "chemistry": "SC3Pv4",
         "runner": "cellranger",
         "mode": "multi",
         "expected_cells": 20166,
         "mean_reads_per_cell": 53529,
         "params": {
+            "create-bam": "false"
             # For 'multi', params typically come from the CSV; keep CLI params minimal here.
         },
         "fastqs": {
@@ -67,12 +72,15 @@ fastq_datasets: Dict[str, DatasetSpec] = {
         "title": "10k Human PBMCs, Ultima Sequencing",
         "organism": "homo_sapiens",
         "assay": "5p",
-        "chemistry": "5' v3 GEM-X",
+        # 5' v3 GEM‑X on Ultima uses R2‑only alignment => SC5P-R2-v3
+        "chemistry": "SC5P-R2-v3",
         "expected_cells": 9506,
         "mean_reads_per_cell": 42079,
         "runner": "cellranger",
         "mode": "multi",            # per dataset page (Universal 5' uses multi)
-        "params": {},               # provided via multi CSV when available
+        "params": {
+            "create-bam": "false"    
+        },               # provided via multi CSV when available
         "fastqs": {
             "url": "https://s3-us-west-2.amazonaws.com/10x.files/samples/cell-vdj/9.0.1/10k_Human_PBMC_5p_v3_Ultima_Multiplex/10k_Human_PBMC_5p_v3_Ultima_Multiplex_fastqs.tar",
             "md5": "ffde7b5ce12698dedc06580ee73d04b8",
@@ -96,13 +104,15 @@ fastq_datasets: Dict[str, DatasetSpec] = {
         "title": "10k PBMCs (3' v3.1, Single Index)",
         "organism": "homo_sapiens",
         "assay": "3p",
-        "chemistry": "3' v3.1 (Single Index, Next GEM)",
+        # 3' v3.1 (Next GEM SI) is covered by SC3Pv3 in CLI tokens
+        "chemistry": "SC3Pv3",
         "runner": "cellranger",
         "mode": "count",
         "expected_cells": 10985,
         "mean_reads_per_cell": 171996,
         "params": {
             "expect-cells": "10000",
+            "create-bam": "false"
         },
         "fastqs": {
             "url": "https://s3-us-west-2.amazonaws.com/10x.files/samples/cell-exp/4.0.0/SC3_v3_NextGem_SI_PBMC_10K/SC3_v3_NextGem_SI_PBMC_10K_fastqs.tar",
@@ -116,6 +126,3 @@ fastq_datasets: Dict[str, DatasetSpec] = {
         "notes": "",
     }
 }
-
-    
-
