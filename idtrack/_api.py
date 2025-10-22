@@ -503,17 +503,17 @@ class API:
         """
         total = len(classified.get("input_identifiers", []))
         one_to_zero = len(classified.get("matching_1_to_0", []))
-        
+
         one_to_one_target = len(classified.get("matching_1_to_1", []))
         one_to_n_target = len(classified.get("matching_1_to_n", []))
         changed_1_to_1 = len(classified.get("changed_only_1_to_1", []))
         changed_1_to_n = len(classified.get("changed_only_1_to_n", []))
         alt_1_to_1 = len(classified.get("alternative_target_1_to_1", []))
         alt_1_to_n = len(classified.get("alternative_target_1_to_n", []))
-        
+
         one_to_one_total = one_to_one_target + alt_1_to_1
         one_to_n_total = one_to_n_target + alt_1_to_n
-        
+
         rest_1_to_1 = one_to_one_target - changed_1_to_1
 
         no_corresp = sum(x["no_corresponding"] for x in classified.get("input_identifiers", []))
