@@ -38,7 +38,7 @@ def main():
     """Main."""
     # Assuming this script is located at 'idtrack/reproducibility/version/check.py'
     # script_directory = os.path.dirname(os.path.realpath(__file__))
-    idtrack_directory = "/Users/kemalinecik/git_nosync/idtrack"
+    idtrack_directory = "/Users/kemalinecik/git_nosync/master_idtrack/idtrack"
 
     search_string = input("Enter the search string: ")
 

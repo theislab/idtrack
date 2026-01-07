@@ -3,7 +3,7 @@
 # Usage: ./idtrack_dev_menu.sh
 
 # --- constants ---------------------------------------------------------------
-PKG_DIR="/Users/kemalinecik/git_nosync/idtrack"
+PKG_DIR="/Users/kemalinecik/git_nosync/master_idtrack/idtrack"
 
 # Colors (only for our own one-line echos; never color command output)
 if [[ -t 1 ]]; then
