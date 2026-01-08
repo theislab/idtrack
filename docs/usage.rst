@@ -1,58 +1,35 @@
-Tutorials
-=========
+Quickstart
+==========
 
-These tutorials are written for end users (not developers) and are meant to be read **in order**.
+This page is a minimal, copy/pasteable quickstart. For the full learning path (Parts 0–7), see :doc:`tutorials`.
 
-How to read these notebooks:
+Minimal human conversion (Python)
+---------------------------------
 
-1. Start at the top of the series and work downward.
-2. Copy/paste code cells into your own notebook if you prefer (that’s a normal workflow).
-3. Keep your `IDTRACK_LOCAL_REPO` stable within a project so your graphs and caches are reused.
+.. code-block:: python
 
-.. list-table:: Quick map (by task)
-    :header-rows: 1
+    import os
+    from pathlib import Path
 
-    * - Task
-      - Tutorial(s)
-    * - Understand the mental model and workflow
-      - :doc:`_notebooks/00_idtrack_overview`
-    * - Prepare external YAMLs (human/mouse/pig)
-      - :doc:`_notebooks/prepare_new_external_yaml`
-    * - Build graph snapshots (human/mouse/pig)
-      - :doc:`_notebooks/initialization_graph`
-    * - Run sanity checks (human/mouse/pig)
-      - :doc:`_notebooks/initialization_test`
-    * - Convert IDs with the human API (deep dive)
-      - :doc:`_notebooks/api_deep_dive_human`
-    * - Harmonize multiple datasets (HLCA-style)
-      - :doc:`_notebooks/tutorial_harmonization`, :doc:`_notebooks/tutorial_hlca_experiments`
-    * - Humanize mouse/pig to human (advanced)
-      - :doc:`_notebooks/tutorial_humanization_mouse_pig_to_human`
+    import idtrack
 
-..
-    .. click:: idtrack.__main__:main
-       :prog: idtrack
-       :nested: full
+    # Choose a stable cache directory (graphs + downloads + YAML live here)
+    local_repo = Path(os.environ.get("IDTRACK_LOCAL_REPO", "./idtrack_cache")).resolve()
+    local_repo.mkdir(parents=True, exist_ok=True)
 
-.. toctree::
-    :maxdepth: 1
-    :caption: 00–03 — Multi-Organism Setup (Human/Mouse/Pig)
+    api = idtrack.API(local_repository=str(local_repo))
+    organism, latest_release = api.resolve_organism("human")
 
-    _notebooks/00_idtrack_overview
-    _notebooks/prepare_new_external_yaml
-    _notebooks/initialization_graph
-    _notebooks/initialization_test
+    # Build once, then reuse (loads from cache on subsequent runs)
+    api.build_graph(organism_name=organism, snapshot_release=latest_release, calculate_caches=True)
 
-.. toctree::
-    :maxdepth: 1
-    :caption: 04–06 — Human Workflows (Deep Dive + HLCA)
+    # Convert a symbol to Ensembl at the snapshot boundary
+    api.convert_identifier("TP53", to_release=latest_release)
 
-    _notebooks/api_deep_dive_human
-    _notebooks/tutorial_harmonization
-    _notebooks/tutorial_hlca_experiments
+What to do next
+---------------
 
-.. toctree::
-    :maxdepth: 1
-    :caption: 07 — Cross-Species (Advanced)
-
-    _notebooks/tutorial_humanization_mouse_pig_to_human
+- For installation + environment verification: :doc:`_notebooks/01_installation_guide`
+- For external database configuration (YAML): :doc:`_notebooks/prepare_new_external_yaml`
+- For graph builds (human/mouse/pig + cache management): :doc:`_notebooks/initialization_graph`
+- For the full tutorial suite: :doc:`tutorials`

@@ -69,7 +69,7 @@ def _ensure_poetry_export_available() -> None:
 _ensure_poetry_export_available()
 
 package = "idtrack"
-python_versions = ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+python_versions = ["3.9", "3.10", "3.11", "3.12", "3.13"]
 nox.options.sessions = (
     "pre-commit",
     "safety",
