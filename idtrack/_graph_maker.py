@@ -356,7 +356,7 @@ class GraphMaker:
             self.log.info("Versionless Ensembl IDs are being connected.")
 
             added_assemblies.add(self.db_manager.genome_assembly)
-            avail_assemblies = sorted(added_assemblies)
+            avail_assemblies = np.array(sorted(added_assemblies))
 
             for aa in avail_assemblies:
                 for f in ["gene"]:
