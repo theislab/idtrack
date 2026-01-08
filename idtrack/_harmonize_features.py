@@ -3,7 +3,7 @@
 import gc
 import logging
 import os
-import pickle
+import pickle  # noqa: S403
 import warnings
 from functools import cached_property
 from typing import Literal, Optional, Union
@@ -609,7 +609,7 @@ class HarmonizeFeatures:
             switch_inconsistency = None
             if os.path.isfile(dataset_pickle) and os.access(dataset_pickle, os.R_OK):
                 with open(dataset_pickle, "rb") as handle:
-                    matching_list = pickle.load(handle)
+                    matching_list = pickle.load(handle)  # noqa: S301
                 _saved_id_list = sorted([i["query_id"] for i in matching_list])
                 _dataset_id_list = sorted(self.extract_source_identifiers_from_anndata(dataset_path=dataset_path))
 
@@ -626,7 +626,7 @@ class HarmonizeFeatures:
                     )
                 matching_list = self.run_idtrack_for_single_dataset(dataset_name, dataset_path)
                 with open(dataset_pickle, "wb") as handle:
-                    pickle.dump(matching_list, handle)
+                    pickle.dump(matching_list, handle)  # noqa: S301
 
             result_dataset[dataset_name] = matching_list
             if self.verbose_level > 1:

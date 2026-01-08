@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
-from typing import Dict, List, Optional, Sequence, Tuple, Any, TYPE_CHECKING
-
-import tempfile
 import os
+import tempfile
+from dataclasses import asdict, dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -31,14 +30,14 @@ def _require_ortholog_deps():
 
         # Check biopython
         try:
+            from Bio import SeqIO
             from Bio.Align import substitution_matrices as _sm
-            from Bio import SeqIO as _seqio
         except ImportError as e:
             raise_missing_dependency("biopython", feature="ortholog utilities", original_error=e)
 
         _gget = _gget_mod
         _substitution_matrices = _sm
-        _SeqIO = _seqio
+        _SeqIO = SeqIO
     return _gget, _substitution_matrices, _SeqIO
 
 
@@ -47,7 +46,7 @@ def _get_blosum62():
     global _BLOSUM62
     if _BLOSUM62 is None:
         _, substitution_matrices, _ = _require_ortholog_deps()
-        _BLOSUM62 = substitution_matrices.load('BLOSUM62')
+        _BLOSUM62 = substitution_matrices.load("BLOSUM62")
     return _BLOSUM62
 
 
@@ -56,11 +55,19 @@ AA_ALPHABET = "ACDEFGHIKLMNPQRSTVWY"
 
 # ------------------------ species helpers ------------------------ #
 
+
 def _canonical_from_alias(name: str) -> str:
-    """
-    Map strings like 'human', 'Homo sapiens', 'sus_scrofa'
-    to your canonical short codes (hsapiens / mmusculus / sscrofa).
-    If the string is not in _SPECIES_ALIASES, return it unchanged.
+    """Return canonical short-code for a species alias.
+
+    Maps strings like ``"human"``, ``"Homo sapiens"``, ``"sus_scrofa"`` to canonical
+    short codes (``hsapiens``, ``mmusculus``, ``sscrofa``). Unknown inputs are
+    returned unchanged (lowercased/stripped).
+
+    Args:
+        name: Species name or alias.
+
+    Returns:
+        str: Canonical short code (or a normalized fallback if unknown).
     """
     raw = name.strip().lower()
     if raw in _SPECIES_ALIASES:
@@ -74,19 +81,21 @@ def _canonical_from_alias(name: str) -> str:
     return raw
 
 
-def _species_to_genus_species(name: str) -> Tuple[str, str, str]:
-    """
-    Convert a species string to:
-        (canonical_code, genus_for_bgee, species_for_bgee)
+def _species_to_genus_species(name: str) -> tuple[str, str, str]:
+    """Convert a species string to ``(canonical_code, genus, species)`` for Bgee.
 
-    Allowed inputs:
-      - any key in _SPECIES_ALIASES (e.g. "human", "homo sapiens",
-        "mouse", "sus_scrofa", "hsapiens", "mmusculus", "sscrofa", ...)
-      - any canonical species code in _SPECIES_CANONICAL_TO_BGEENAMES
-        (e.g. "hsapiens", "mmusculus", "sscrofa").
+    Inputs may be any key in :py:data:`_SPECIES_ALIASES` or any canonical key in
+    :py:data:`_SPECIES_CANONICAL_TO_BGEENAMES`. Unknown canonical codes raise a
+    helpful error.
 
-    If the resolved canonical code is not in _SPECIES_CANONICAL_TO_BGEENAMES,
-    we raise a helpful error instead of trying to guess.
+    Args:
+        name: Species name or alias.
+
+    Returns:
+        tuple[str, str, str]: ``(canonical_code, genus, species)`` for Bgee.
+
+    Raises:
+        ValueError: If the species cannot be resolved to a supported canonical code.
     """
     canonical = _canonical_from_alias(name)
 
@@ -94,7 +103,7 @@ def _species_to_genus_species(name: str) -> Tuple[str, str, str]:
         known_canonical = ", ".join(sorted(_SPECIES_CANONICAL_TO_BGEENAMES.keys()))
         known_aliases = ", ".join(sorted(_SPECIES_ALIASES.keys()))
         raise ValueError(
-            f"Species '{name}' could not be resolved to a canonical code in "
+            f"Species {name!r} could not be resolved to a canonical code in "
             f"_SPECIES_CANONICAL_TO_BGEENAMES.\n"
             f"Known canonical codes: {known_canonical}\n"
             f"Known aliases: {known_aliases}\n"
@@ -108,8 +117,11 @@ def _species_to_genus_species(name: str) -> Tuple[str, str, str]:
 
 # ------------------------ dataclasses ------------------------ #
 
+
 @dataclass
 class AlignmentScores:
+    """Alignment-derived scalar metrics for a pairwise protein alignment."""
+
     alignment_length: int
     identity_fraction: float
     positive_fraction: float
@@ -127,6 +139,8 @@ class AlignmentScores:
 
 @dataclass
 class EmbeddingFeatures:
+    """Embedding-derived similarity features for two protein sequences."""
+
     model_name: str
     dim: int
     cosine_similarity: float
@@ -136,64 +150,40 @@ class EmbeddingFeatures:
 
 # ------------------------ Bgee / IDs ------------------------ #
 
+
 def get_ortholog_ids_for_species(
     ortholog_df: pd.DataFrame,
     target_species: str,
-) -> List[str]:
-    """
-    Return *all* ortholog Ensembl IDs in `ortholog_df` that belong
-    to the given `target_species`.
-
-    Uses the same species resolution logic as other helpers, but
-    returns a list of gene_ids (possibly length > 1).
-    """
+) -> list[str]:
+    """Return all ortholog Ensembl IDs in ``ortholog_df`` for a target species."""
     _, genus, species = _species_to_genus_species(target_species)
 
-    mask = (
-        ortholog_df["genus"].str.lower().eq(genus.lower())
-        & ortholog_df["species"].str.lower().eq(species.lower())
-    )
+    mask = ortholog_df["genus"].str.lower().eq(genus.lower()) & ortholog_df["species"].str.lower().eq(species.lower())
     subset = ortholog_df[mask]
 
     if subset.empty:
         return []
 
     # unique gene_ids, converted to str just in case
-    gene_ids = (
-        subset["gene_id"]
-        .dropna()
-        .astype(str)
-        .unique()
-        .tolist()
-    )
+    gene_ids = subset["gene_id"].dropna().astype(str).unique().tolist()
     return gene_ids
 
 
 def pick_ortholog_for_species(
     ortholog_df: pd.DataFrame,
     target_species: str,
-) -> Optional[str]:
-    """
-    Backwards-compatible helper: pick just one ortholog gene_id
-    (the first) for the requested target species.
-
-    New code should prefer `get_ortholog_ids_for_species`, but this
-    remains for any existing usage.
-    """
+) -> str | None:
+    """Backward-compatible helper that returns only the first ortholog ID."""
     gene_ids = get_ortholog_ids_for_species(ortholog_df, target_species)
     return gene_ids[0] if gene_ids else None
+
 
 def get_ortholog_table(
     query_ensembl_id: str,
     *,
     verbose: bool = True,
 ) -> pd.DataFrame:
-    """
-    Wrapper around gget.bgee(type='orthologs').
-
-    Returns a DataFrame with columns like:
-      gene_id, gene_name, species_id, genus, species
-    """
+    """Return Bgee ortholog table for a query Ensembl gene ID via gget.bgee."""
     gget, _, _ = _require_ortholog_deps()
     df = gget.bgee(
         query_ensembl_id,
@@ -206,24 +196,20 @@ def get_ortholog_table(
 
     expected = {"gene_id", "genus", "species"}
     if not expected.issubset(df.columns):
-        raise RuntimeError(
-            f"Unexpected Bgee columns {df.columns}. "
-            f"Expected at least {expected}."
-        )
+        raise RuntimeError(f"Unexpected Bgee columns {df.columns}. " f"Expected at least {expected}.")
     return df
 
 
 # ------------------------ sequences & MUSCLE ------------------------ #
 
+
 def fetch_aa_sequence(ensembl_id: str) -> str:
-    """
-    Fetch amino-acid sequence for a gene using gget.seq(translate=True).
-    """
+    """Fetch amino-acid sequence for a gene using gget.seq(translate=True)."""
     gget, _, _ = _require_ortholog_deps()
     header, seq = gget.seq(ensembl_id, translate=True)
     seq = str(seq)
     if not seq:
-        raise RuntimeError(f"Empty sequence returned for {ensembl_id}")
+        raise RuntimeError(f"Empty sequence returned for {ensembl_id!r}.")
     return seq
 
 
@@ -234,12 +220,21 @@ def run_muscle_pairwise(
     name1: str,
     name2: str,
     super5: bool = False,
-) -> Tuple[str, str, str]:
-    """
-    Align two AA sequences via gget.muscle.
+) -> tuple[str, str, str]:
+    """Align two AA sequences via gget.muscle.
 
-    Implementation: build a temporary FASTA with explicit headers,
-    run gget.muscle on the file path, parse the ClustalW output.
+    Args:
+        seq1: Amino-acid sequence for the first protein.
+        seq2: Amino-acid sequence for the second protein.
+        name1: Sequence name for the first protein (used in FASTA headers).
+        name2: Sequence name for the second protein (used in FASTA headers).
+        super5: Whether to enable MUSCLE super5 mode.
+
+    Returns:
+        tuple[str, str, str]: ``(aligned_seq1, aligned_seq2, raw_clustal_text)``.
+
+    Raises:
+        RuntimeError: If MUSCLE output cannot be parsed or does not contain the expected sequence names.
     """
     fasta_text = f">{name1}\n{seq1}\n>{name2}\n{seq2}\n"
 
@@ -258,19 +253,21 @@ def run_muscle_pairwise(
 
     aligned = parse_clustal_alignment(clustal)
     if name1 not in aligned or name2 not in aligned:
-        raise RuntimeError(
-            f"Could not find {name1}/{name2} sequences in MUSCLE output."
-        )
+        raise RuntimeError(f"Could not find {name1}/{name2} sequences in MUSCLE output.")
 
     return aligned[name1], aligned[name2], clustal
 
 
-def parse_clustal_alignment(clustal_text: str) -> Dict[str, str]:
+def parse_clustal_alignment(clustal_text: str) -> dict[str, str]:
+    """Parse a minimal ClustalW/MUSCLE text alignment.
+
+    Args:
+        clustal_text: Raw ClustalW/MUSCLE text output.
+
+    Returns:
+        Mapping of ``{sequence_name: aligned_sequence}``.
     """
-    Minimal ClustalW parser.
-    Returns dict[name] -> aligned_sequence (with '-').
-    """
-    seqs: Dict[str, list[str]] = {}
+    seqs: dict[str, list[str]] = {}
 
     for line in clustal_text.splitlines():
         line = line.rstrip()
@@ -295,10 +292,11 @@ def parse_clustal_alignment(clustal_text: str) -> Dict[str, str]:
 
 # ------------------------ scoring ------------------------ #
 
+
 def _aa_composition_vector(seq: str) -> np.ndarray:
     seq = seq.replace("-", "")
-    L = len(seq) or 1
-    return np.array([seq.count(a) / L for a in AA_ALPHABET], dtype=float)
+    length = len(seq) or 1
+    return np.array([seq.count(a) / length for a in AA_ALPHABET], dtype=float)
 
 
 def compute_alignment_scores(
@@ -306,12 +304,13 @@ def compute_alignment_scores(
     seq2: str,
     aligned1: str,
     aligned2: str,
-) -> Tuple[AlignmentScores, np.ndarray]:
+) -> tuple[AlignmentScores, np.ndarray]:
+    """Compute alignment-derived scores and the AA composition-difference vector."""
     if len(aligned1) != len(aligned2):
         raise ValueError("Aligned sequences must have the same length.")
 
-    L = len(aligned1)
-    if L == 0:
+    alignment_length = len(aligned1)
+    if alignment_length == 0:
         raise ValueError("Empty alignment.")
 
     blosum62 = _get_blosum62()
@@ -323,8 +322,8 @@ def compute_alignment_scores(
     blosum_sum = 0.0
 
     for a, b in zip(aligned1, aligned2):
-        gap_q = (a == "-")
-        gap_t = (b == "-")
+        gap_q = a == "-"
+        gap_t = b == "-"
 
         if gap_q:
             gaps_q += 1
@@ -355,12 +354,12 @@ def compute_alignment_scores(
         if score <= -3:
             very_negative += 1
 
-    identity_fraction = matches / L
-    positive_fraction = positives / L
-    very_negative_fraction = very_negative / L
-    blosum_mean = blosum_sum / L
-    gap_fraction_query = gaps_q / L
-    gap_fraction_target = gaps_t / L
+    identity_fraction = matches / alignment_length
+    positive_fraction = positives / alignment_length
+    very_negative_fraction = very_negative / alignment_length
+    blosum_mean = blosum_sum / alignment_length
+    gap_fraction_query = gaps_q / alignment_length
+    gap_fraction_target = gaps_t / alignment_length
 
     cov1 = len(aligned1.replace("-", "")) / (len(seq1) or 1)
     cov2 = len(aligned2.replace("-", "")) / (len(seq2) or 1)
@@ -371,7 +370,7 @@ def compute_alignment_scores(
     comp_l2 = float(np.linalg.norm(comp_diff))
 
     scores = AlignmentScores(
-        alignment_length=L,
+        alignment_length=alignment_length,
         identity_fraction=float(identity_fraction),
         positive_fraction=float(positive_fraction),
         very_negative_fraction=float(very_negative_fraction),
@@ -393,27 +392,28 @@ def compute_alignment_scores(
 
 try:
     import torch
-    from transformers import AutoTokenizer, AutoModel
+    from transformers import AutoModel, AutoTokenizer
+
     _HAS_TRANSFORMERS = True
 except Exception:
     _HAS_TRANSFORMERS = False
 
-_MODEL_CACHE: Dict[Tuple[str, str], Tuple[Any, Any]] = {}
+_MODEL_CACHE: dict[tuple[str, str, str], tuple[Any, Any]] = {}
 
 
-def _load_protein_model(model_name: str, device: str):
+def _load_protein_model(model_name: str, device: str, *, revision: str = "main"):
     if not _HAS_TRANSFORMERS:
         raise ImportError(
             "transformers / torch not installed. "
             "Install them or call align_ortholog_pair_with_features(..., "
             "embedding_model_name=None)."
         )
-    key = (model_name, device)
+    key = (model_name, device, revision)
     if key in _MODEL_CACHE:
         return _MODEL_CACHE[key]
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=False)
-    model = AutoModel.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=False, revision=revision)  # noqa: S615
+    model = AutoModel.from_pretrained(model_name, revision=revision)  # noqa: S615
     model.to(device)
     model.eval()
     _MODEL_CACHE[key] = (tokenizer, model)
@@ -425,9 +425,24 @@ def get_protein_embedding(
     *,
     model_name: str,
     device: str = "cpu",
+    revision: str = "main",
     max_len: int = 1022,
 ) -> np.ndarray:
-    tokenizer, model = _load_protein_model(model_name, device)
+    """Return a pooled protein embedding for a sequence via a transformer model.
+
+    The embedding is obtained by mean pooling the per-residue representations.
+
+    Args:
+        sequence: Protein sequence (amino-acid string).
+        model_name: Hugging Face model name for the embedding model.
+        device: Device for the transformer model (e.g. ``"cpu"``, ``"cuda"``).
+        revision: Model revision for ``from_pretrained``.
+        max_len: Maximum tokenized sequence length (including special tokens).
+
+    Returns:
+        np.ndarray: 1D embedding vector.
+    """
+    tokenizer, model = _load_protein_model(model_name, device, revision=revision)
 
     tokens = tokenizer(
         sequence,
@@ -457,9 +472,22 @@ def compute_embedding_features(
     *,
     model_name: str,
     device: str = "cpu",
+    revision: str = "main",
 ) -> EmbeddingFeatures:
-    emb1 = get_protein_embedding(seq1, model_name=model_name, device=device)
-    emb2 = get_protein_embedding(seq2, model_name=model_name, device=device)
+    """Compute embedding-based similarity features for two sequences.
+
+    Args:
+        seq1: First protein sequence.
+        seq2: Second protein sequence.
+        model_name: Hugging Face model name for embeddings.
+        device: Device for the transformer model (e.g. ``"cpu"``, ``"cuda"``).
+        revision: Model revision for ``from_pretrained``.
+
+    Returns:
+        EmbeddingFeatures: Scalar similarities plus the difference vector.
+    """
+    emb1 = get_protein_embedding(seq1, model_name=model_name, device=device, revision=revision)
+    emb2 = get_protein_embedding(seq2, model_name=model_name, device=device, revision=revision)
 
     diff = emb1 - emb2
     dot = float(np.dot(emb1, emb2))
@@ -479,77 +507,33 @@ def compute_embedding_features(
 
 # ------------------------ main entrypoint (string species only) ------------------------ #
 
+
 def align_ortholog_pair_with_features(
     query_ensembl_id: str,
     target_species: str,
     *,
     use_super5: bool = False,
-    embedding_model_name: Optional[str] = "facebook/esm2_t12_35M_UR50D",
+    embedding_model_name: str | None = "facebook/esm2_t12_35M_UR50D",
     embedding_device: str = "cpu",
+    embedding_revision: str = "main",
     verbose: bool = True,
-) -> Dict[str, Dict[str, Any]]:
-    """
-    High-level entry point.
+) -> dict[str, dict[str, Any]]:
+    """Compute ortholog alignment features for a query gene and target species.
 
-    Given a query Ensembl ID (in some organism) and a target organism,
-    find all Bgee orthologs in the target organism and, for each
-    ortholog, compute:
+    Args:
+        query_ensembl_id: Ensembl gene ID in the query organism.
+        target_species: Target species alias, interpreted via :py:data:`_SPECIES_ALIASES`.
+        use_super5: Passed through to ``gget.muscle(super5=...)``.
+        embedding_model_name: Hugging Face model name for embeddings. Set to ``None`` to disable embeddings.
+        embedding_device: Device for the transformer model (e.g. ``"cpu"``, ``"cuda"``).
+        embedding_revision: Model revision for ``from_pretrained`` (pin to a commit hash for reproducibility).
+        verbose: Print progress/warnings.
 
-      - multiple scalar alignment scores (identity, positives, gaps,
-        BLOSUM sums/means, coverage, etc.)
-      - an AA-composition difference vector (fixed length = 20)
-      - an optional protein-embedding difference vector (fixed
-        embedding dim for the chosen model)
-      - alignment strings (aligned query / target / raw Clustal text)
+    Returns:
+        Mapping from target ortholog Ensembl IDs to feature dictionaries.
 
-    Parameters
-    ----------
-    query_ensembl_id : str
-        Ensembl gene ID in the query organism.
-    target_species : str
-        Species string interpreted via _SPECIES_ALIASES /
-        _SPECIES_CANONICAL_TO_BGEENAMES. Examples:
-        "human", "homo sapiens", "hsapiens",
-        "mouse", "mus musculus", "mmusculus",
-        "pig", "sus_scrofa", "sscrofa".
-    use_super5 : bool, default False
-        Passed through to gget.muscle(super5=...).
-    embedding_model_name : Optional[str], default "facebook/esm2_t12_35M_UR50D"
-        HuggingFace model name for embeddings. If None, embeddings
-        are not computed.
-    embedding_device : str, default "cpu"
-        Device for the transformer model ("cpu", "cuda", etc.).
-    verbose : bool, default True
-        Print progress / warnings.
-
-    Returns
-    -------
-    Dict[str, Dict[str, Any]]
-        Outer dict keys = ortholog Ensembl IDs in the target species.
-        Inner dict keys are annotated feature names, e.g.:
-
-            {
-              "query_id": ...,
-              "target_id": ...,
-              "target_species": ...,
-              "alignment_aligned_query": "...",
-              "alignment_aligned_target": "...",
-              "alignment_raw_clustal": "...",
-              "score_identity_fraction": ...,
-              "score_positive_fraction": ...,
-              ...,
-              "compdiff_A": ...,
-              ...,
-              "composition_diff_vector": [... 20 floats ...],
-              "emb_model": ... or None,
-              "emb_dim": ... or None,
-              "emb_cosine": ... or None,
-              "emb_euclid": ... or None,
-              "emb_diff": [... embedding_dim floats ...] or None,
-            }
-
-        The number and type of features are identical for all orthologs,
-        so you can stack them directly into an autoencoder input matrix.
+    Raises:
+        ValueError: If no orthologs are available for the query/target species pair.
     """
     # 1) Get the ortholog table from Bgee
     ortho_df = get_ortholog_table(query_ensembl_id, verbose=verbose)
@@ -561,30 +545,26 @@ def align_ortholog_pair_with_features(
 
     if len(target_gene_ids) == 0:
         raise ValueError(
-            f"No orthologs found in Bgee for query gene '{query_ensembl_id}' "
-            f"and target species '{target_species}' "
-            f"(canonical: '{canonical_target}', genus: '{genus}', species: '{species}')."
+            f"No orthologs found in Bgee for query gene {query_ensembl_id!r} and target species {target_species!r} "
+            f"(canonical: {canonical_target!r}, genus: {genus!r}, species: {species!r})."
         )
 
     if verbose:
         print(
             f"[INFO] Found {len(target_gene_ids)} ortholog(s) for "
-            f"{query_ensembl_id} in target species '{target_species}' "
-            f"(canonical='{canonical_target}', genus='{genus}', species='{species}')."
+            f"{query_ensembl_id!r} in target species {target_species!r} "
+            f"(canonical={canonical_target!r}, genus={genus!r}, species={species!r})."
         )
 
     # 3) Fetch query AA sequence once
     query_seq_aa = fetch_aa_sequence(query_ensembl_id)
 
     # 4) For each ortholog gene_id in the target species, compute features
-    results: Dict[str, Dict[str, Any]] = {}
+    results: dict[str, dict[str, Any]] = {}
 
     for target_gene_id in target_gene_ids:
         if verbose:
-            print(
-                f"[INFO] Aligning {query_ensembl_id} -> {target_gene_id} "
-                f"({target_species})"
-            )
+            print(f"[INFO] Aligning {query_ensembl_id!r} -> {target_gene_id!r} ({target_species!r})")
 
         try:
             target_seq_aa = fetch_aa_sequence(target_gene_id)
@@ -628,6 +608,7 @@ def align_ortholog_pair_with_features(
                     target_seq_aa,
                     model_name=embedding_model_name,
                     device=embedding_device,
+                    revision=embedding_revision,
                 )
                 diff_vec = emb_feats.diff_embedding.astype(float)
             except Exception as e:
@@ -640,7 +621,7 @@ def align_ortholog_pair_with_features(
             diff_vec = None
 
         # Build feature dict for this ortholog
-        feat: Dict[str, Any] = {
+        feat: dict[str, Any] = {
             "query_id": query_ensembl_id,
             "target_id": target_gene_id,
             "target_species": target_species,

@@ -4,6 +4,7 @@
 # k.inecik@gmail.com
 
 
+import ast
 import logging
 import os
 import tempfile
@@ -388,7 +389,7 @@ def _load_column_metadata(grp: h5py.Group) -> tuple[list[str], list[Union[str, p
         if dtype_str.startswith("category|"):
             # Parse category information
             parts = dtype_str.split("|", 2)
-            categories = eval(parts[1])  # Safe here as we control the format
+            categories = ast.literal_eval(parts[1])
             ordered = parts[2] == "True"
             dtypes.append(pd.CategoricalDtype(categories=categories, ordered=ordered))
         else:

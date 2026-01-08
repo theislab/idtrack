@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
-"""
-Unit tests for idtrack._track module.
+"""Unit tests for idtrack._track module.
 
 Tests the Track class path-finding algorithms with mocked graph.
 """
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
-
 import networkx as nx
-import numpy as np
 import pytest
 
 
@@ -20,6 +16,7 @@ class TestTrackImport:
     def test_import_track(self):
         """Test Track import."""
         from idtrack._track import Track
+
         assert Track is not None
 
 
@@ -29,6 +26,7 @@ class TestTrackInitialization:
     def test_track_class_exists(self):
         """Test Track class exists."""
         from idtrack._track import Track
+
         assert Track is not None
 
 
@@ -62,12 +60,15 @@ class TestTrackPathFinding:
 
         # Add an orphaned node with no edges
         orphaned_id = "ORPHAN_GENE.1"
-        mock_the_graph.add_node(orphaned_id, **{
-            DB.node_type_str: DB.nts_ensembl["gene"],
-            "ID": "ORPHAN_GENE",
-            "Version": "1",
-            "is_latest": False,
-        })
+        mock_the_graph.add_node(
+            orphaned_id,
+            **{
+                DB.node_type_str: DB.nts_ensembl["gene"],
+                "ID": "ORPHAN_GENE",
+                "Version": "1",
+                "is_latest": False,
+            },
+        )
 
         # Verify the node exists but has no connections
         assert orphaned_id in mock_the_graph.nodes()
@@ -86,6 +87,7 @@ class TestTrackNodeResolution:
         """Test exact node match resolution."""
         # Add a known node
         from idtrack._db import DB
+
         mock_the_graph.add_node("TEST_NODE", **{DB.node_type_str: "external"})
         _ = mock_the_graph.lower_chars_graph  # Build cache
 
@@ -96,6 +98,7 @@ class TestTrackNodeResolution:
     def test_resolves_case_insensitive(self, mock_the_graph):
         """Test case-insensitive resolution."""
         from idtrack._db import DB
+
         mock_the_graph.add_node("ACTB", **{DB.node_type_str: "external"})
         _ = mock_the_graph.lower_chars_graph  # Build cache
 
@@ -129,8 +132,7 @@ class TestTrackExternalDatabaseSearch:
 
         # Check for external nodes
         external_nodes = [
-            n for n in mock_the_graph.nodes()
-            if mock_the_graph.nodes[n].get(DB.node_type_str) == DB.nts_external
+            n for n in mock_the_graph.nodes() if mock_the_graph.nodes[n].get(DB.node_type_str) == DB.nts_external
         ]
         assert len(external_nodes) > 0
 
@@ -197,21 +199,25 @@ class TestTrackConversionTypes:
         from idtrack._db import DB
 
         # Add nodes that form a 1:1 mapping path
-        mock_the_graph.add_node("UNIQUE_GENE.1", **{
-            DB.node_type_str: DB.nts_ensembl["gene"],
-            "ID": "UNIQUE_GENE",
-            "Version": "1",
-        })
-        mock_the_graph.add_node("UNIQUE_SYMBOL", **{
-            DB.node_type_str: DB.nts_external,
-            "database": "HGNC Symbol",
-        })
+        mock_the_graph.add_node(
+            "UNIQUE_GENE.1",
+            **{
+                DB.node_type_str: DB.nts_ensembl["gene"],
+                "ID": "UNIQUE_GENE",
+                "Version": "1",
+            },
+        )
+        mock_the_graph.add_node(
+            "UNIQUE_SYMBOL",
+            **{
+                DB.node_type_str: DB.nts_external,
+                "database": "HGNC Symbol",
+            },
+        )
 
         # Create edge between them
         mock_the_graph.add_edge(
-            "UNIQUE_SYMBOL", "UNIQUE_GENE.1",
-            connection={"HGNC Symbol": {38: {110}}},
-            available_releases={110}
+            "UNIQUE_SYMBOL", "UNIQUE_GENE.1", connection={"HGNC Symbol": {38: {110}}}, available_releases={110}
         )
 
         # Verify the 1:1 relationship exists
@@ -224,31 +230,36 @@ class TestTrackConversionTypes:
         from idtrack._db import DB
 
         # Add a symbol that maps to multiple genes (gene family)
-        mock_the_graph.add_node("FAMILY_GENE.1", **{
-            DB.node_type_str: DB.nts_ensembl["gene"],
-            "ID": "FAMILY_GENE",
-            "Version": "1",
-        })
-        mock_the_graph.add_node("FAMILY_GENE.2", **{
-            DB.node_type_str: DB.nts_ensembl["gene"],
-            "ID": "FAMILY_GENE",
-            "Version": "2",
-        })
-        mock_the_graph.add_node("AMBIGUOUS_SYMBOL", **{
-            DB.node_type_str: DB.nts_external,
-            "database": "HGNC Symbol",
-        })
+        mock_the_graph.add_node(
+            "FAMILY_GENE.1",
+            **{
+                DB.node_type_str: DB.nts_ensembl["gene"],
+                "ID": "FAMILY_GENE",
+                "Version": "1",
+            },
+        )
+        mock_the_graph.add_node(
+            "FAMILY_GENE.2",
+            **{
+                DB.node_type_str: DB.nts_ensembl["gene"],
+                "ID": "FAMILY_GENE",
+                "Version": "2",
+            },
+        )
+        mock_the_graph.add_node(
+            "AMBIGUOUS_SYMBOL",
+            **{
+                DB.node_type_str: DB.nts_external,
+                "database": "HGNC Symbol",
+            },
+        )
 
         # Create edges to multiple genes
         mock_the_graph.add_edge(
-            "AMBIGUOUS_SYMBOL", "FAMILY_GENE.1",
-            connection={"HGNC Symbol": {38: {100}}},
-            available_releases={100}
+            "AMBIGUOUS_SYMBOL", "FAMILY_GENE.1", connection={"HGNC Symbol": {38: {100}}}, available_releases={100}
         )
         mock_the_graph.add_edge(
-            "AMBIGUOUS_SYMBOL", "FAMILY_GENE.2",
-            connection={"HGNC Symbol": {38: {110}}},
-            available_releases={110}
+            "AMBIGUOUS_SYMBOL", "FAMILY_GENE.2", connection={"HGNC Symbol": {38: {110}}}, available_releases={110}
         )
 
         # Verify 1:N relationship
@@ -262,10 +273,13 @@ class TestTrackConversionTypes:
         from idtrack._db import DB
 
         # Add an isolated node with no edges
-        mock_the_graph.add_node("ISOLATED_ID", **{
-            DB.node_type_str: DB.nts_external,
-            "database": "Unknown",
-        })
+        mock_the_graph.add_node(
+            "ISOLATED_ID",
+            **{
+                DB.node_type_str: DB.nts_external,
+                "database": "Unknown",
+            },
+        )
 
         # Verify zero outgoing connections
         neighbors = list(mock_the_graph.neighbors("ISOLATED_ID"))
@@ -345,10 +359,13 @@ class TestTrackEdgeCases:
 
         for special_id in special_ids:
             # Add node with special character ID
-            mock_the_graph.add_node(special_id, **{
-                DB.node_type_str: DB.nts_external,
-                "database": "test",
-            })
+            mock_the_graph.add_node(
+                special_id,
+                **{
+                    DB.node_type_str: DB.nts_external,
+                    "database": "test",
+                },
+            )
 
             # Verify node can be retrieved
             assert special_id in mock_the_graph.nodes()
@@ -371,16 +388,19 @@ class TestTrackDBConstants:
     def test_uses_node_type_str(self):
         """Test uses correct node type string."""
         from idtrack._db import DB
+
         assert DB.node_type_str == "node_type"
 
     def test_uses_connection_dict(self):
         """Test uses correct connection dict key."""
         from idtrack._db import DB
+
         assert DB.connection_dict == "connection"
 
     def test_uses_backbone_form(self):
         """Test uses correct backbone form."""
         from idtrack._db import DB
+
         assert DB.backbone_form == "gene"
 
 
@@ -421,8 +441,9 @@ class TestTrackLogging:
 
     def test_has_logger(self):
         """Test Track class has logger setup in __init__."""
-        from idtrack._track import Track
         import inspect
+
+        from idtrack._track import Track
 
         # Verify __init__ sets up a logger
         source = inspect.getsource(Track.__init__)
@@ -451,16 +472,22 @@ class TestTrackErrorHandling:
         from idtrack._db import DB
 
         # Add two disconnected subgraphs
-        mock_the_graph.add_node("DISCONNECTED_A.1", **{
-            DB.node_type_str: DB.nts_ensembl["gene"],
-            "ID": "DISCONNECTED_A",
-            "Version": "1",
-        })
-        mock_the_graph.add_node("DISCONNECTED_B.1", **{
-            DB.node_type_str: DB.nts_ensembl["gene"],
-            "ID": "DISCONNECTED_B",
-            "Version": "1",
-        })
+        mock_the_graph.add_node(
+            "DISCONNECTED_A.1",
+            **{
+                DB.node_type_str: DB.nts_ensembl["gene"],
+                "ID": "DISCONNECTED_A",
+                "Version": "1",
+            },
+        )
+        mock_the_graph.add_node(
+            "DISCONNECTED_B.1",
+            **{
+                DB.node_type_str: DB.nts_ensembl["gene"],
+                "ID": "DISCONNECTED_B",
+                "Version": "1",
+            },
+        )
 
         # Verify no path exists between disconnected nodes
         assert not nx.has_path(mock_the_graph, "DISCONNECTED_A.1", "DISCONNECTED_B.1")
@@ -480,8 +507,7 @@ class TestTrackErrorHandling:
         # Verify the mock graph structure
         # In idtrack, the backbone (ensembl_gene history) should be acyclic
         backbone_nodes = [
-            n for n in mock_the_graph.nodes()
-            if mock_the_graph.nodes[n].get(DB.node_type_str) == DB.nts_ensembl["gene"]
+            n for n in mock_the_graph.nodes() if mock_the_graph.nodes[n].get(DB.node_type_str) == DB.nts_ensembl["gene"]
         ]
 
         # Create a subgraph of backbone nodes to check for cycles

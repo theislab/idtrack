@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-"""
-Functional tests for idtrack._the_graph module.
+"""Functional tests for idtrack._the_graph module.
 
 These tests actually execute code paths to increase coverage.
 """
 
 from __future__ import annotations
 
-import pytest
 import networkx as nx
+import pytest
 
 from idtrack._db import DB
 from idtrack._the_graph import TheGraph
@@ -31,11 +30,17 @@ class TestTheGraphCachedPropertiesFunctional:
 
         # Add backbone gene nodes (ensembl_gene type). Include the "Void" sentinel so active-range logic works.
         gene_nodes = [
-            ("ENSG00000141510.Void", {DB.node_type_str: DB.nts_ensembl["gene"], "ID": "ENSG00000141510", "Version": DB.no_old_node_id}),
+            (
+                "ENSG00000141510.Void",
+                {DB.node_type_str: DB.nts_ensembl["gene"], "ID": "ENSG00000141510", "Version": DB.no_old_node_id},
+            ),
             ("ENSG00000141510.1", {DB.node_type_str: DB.nts_ensembl["gene"], "ID": "ENSG00000141510", "Version": 1}),
             ("ENSG00000141510.2", {DB.node_type_str: DB.nts_ensembl["gene"], "ID": "ENSG00000141510", "Version": 2}),
             ("ENSG00000141510.15", {DB.node_type_str: DB.nts_ensembl["gene"], "ID": "ENSG00000141510", "Version": 15}),
-            ("ENSG00000012048.Void", {DB.node_type_str: DB.nts_ensembl["gene"], "ID": "ENSG00000012048", "Version": DB.no_old_node_id}),
+            (
+                "ENSG00000012048.Void",
+                {DB.node_type_str: DB.nts_ensembl["gene"], "ID": "ENSG00000012048", "Version": DB.no_old_node_id},
+            ),
             ("ENSG00000012048.1", {DB.node_type_str: DB.nts_ensembl["gene"], "ID": "ENSG00000012048", "Version": 1}),
             ("ENSG00000012048.11", {DB.node_type_str: DB.nts_ensembl["gene"], "ID": "ENSG00000012048", "Version": 11}),
         ]
@@ -70,47 +75,27 @@ class TestTheGraphCachedPropertiesFunctional:
 
         # Add edges from base to versioned genes
         graph.add_edge(
-            "ENSG00000141510", "ENSG00000141510.1",
-            **{DB.connection_dict: {DB.nts_base_ensembl["gene"]: {38: {100}}}}
+            "ENSG00000141510", "ENSG00000141510.1", **{DB.connection_dict: {DB.nts_base_ensembl["gene"]: {38: {100}}}}
         )
         graph.add_edge(
-            "ENSG00000141510", "ENSG00000141510.2",
-            **{DB.connection_dict: {DB.nts_base_ensembl["gene"]: {38: {105}}}}
+            "ENSG00000141510", "ENSG00000141510.2", **{DB.connection_dict: {DB.nts_base_ensembl["gene"]: {38: {105}}}}
         )
         graph.add_edge(
-            "ENSG00000141510", "ENSG00000141510.15",
-            **{DB.connection_dict: {DB.nts_base_ensembl["gene"]: {38: {110}}}}
+            "ENSG00000141510", "ENSG00000141510.15", **{DB.connection_dict: {DB.nts_base_ensembl["gene"]: {38: {110}}}}
         )
         graph.add_edge(
-            "ENSG00000012048", "ENSG00000012048.1",
-            **{DB.connection_dict: {DB.nts_base_ensembl["gene"]: {38: {100}}}}
+            "ENSG00000012048", "ENSG00000012048.1", **{DB.connection_dict: {DB.nts_base_ensembl["gene"]: {38: {100}}}}
         )
         graph.add_edge(
-            "ENSG00000012048", "ENSG00000012048.11",
-            **{DB.connection_dict: {DB.nts_base_ensembl["gene"]: {38: {110}}}}
+            "ENSG00000012048", "ENSG00000012048.11", **{DB.connection_dict: {DB.nts_base_ensembl["gene"]: {38: {110}}}}
         )
 
         # Add edges from external to versioned genes
-        graph.add_edge(
-            "TP53", "ENSG00000141510.15",
-            **{DB.connection_dict: {"HGNC Symbol": {38: {110}}}}
-        )
-        graph.add_edge(
-            "P04637", "ENSG00000141510.15",
-            **{DB.connection_dict: {"UniProtKB": {38: {105, 110}}}}
-        )
-        graph.add_edge(
-            "7157", "ENSG00000141510.15",
-            **{DB.connection_dict: {"EntrezGene": {38: {110}}}}
-        )
-        graph.add_edge(
-            "BRCA1", "ENSG00000012048.11",
-            **{DB.connection_dict: {"HGNC Symbol": {38: {110}}}}
-        )
-        graph.add_edge(
-            "P38398", "ENSG00000012048.11",
-            **{DB.connection_dict: {"UniProtKB": {38: {110}}}}
-        )
+        graph.add_edge("TP53", "ENSG00000141510.15", **{DB.connection_dict: {"HGNC Symbol": {38: {110}}}})
+        graph.add_edge("P04637", "ENSG00000141510.15", **{DB.connection_dict: {"UniProtKB": {38: {105, 110}}}})
+        graph.add_edge("7157", "ENSG00000141510.15", **{DB.connection_dict: {"EntrezGene": {38: {110}}}})
+        graph.add_edge("BRCA1", "ENSG00000012048.11", **{DB.connection_dict: {"HGNC Symbol": {38: {110}}}})
+        graph.add_edge("P38398", "ENSG00000012048.11", **{DB.connection_dict: {"UniProtKB": {38: {110}}}})
 
         # Attach included forms
         graph._attach_included_forms(["gene"])
@@ -258,7 +243,9 @@ class TestGetActiveRangesOfId:
         graph.graph["confident_for_release"] = [100, 105, 110]
 
         # Add backbone nodes with a valid birth edge and a "still active" self-loop.
-        graph.add_node("GENE.Void", **{DB.node_type_str: DB.nts_ensembl["gene"], "ID": "GENE", "Version": DB.no_old_node_id})
+        graph.add_node(
+            "GENE.Void", **{DB.node_type_str: DB.nts_ensembl["gene"], "ID": "GENE", "Version": DB.no_old_node_id}
+        )
         graph.add_node("GENE.1", **{DB.node_type_str: DB.nts_ensembl["gene"], "ID": "GENE", "Version": 1})
         graph.add_node("GENE.2", **{DB.node_type_str: DB.nts_ensembl["gene"], "ID": "GENE", "Version": 2})
 
@@ -349,7 +336,9 @@ class TestNodeTrios:
 
         # Add nodes
         graph.add_node("EXT1", **{DB.node_type_str: DB.nts_external})
-        graph.add_node("GENE.Void", **{DB.node_type_str: DB.nts_ensembl["gene"], "ID": "GENE", "Version": DB.no_old_node_id})
+        graph.add_node(
+            "GENE.Void", **{DB.node_type_str: DB.nts_ensembl["gene"], "ID": "GENE", "Version": DB.no_old_node_id}
+        )
         graph.add_node("GENE.1", **{DB.node_type_str: DB.nts_ensembl["gene"], "ID": "GENE", "Version": 1})
 
         # Temporal edges to make the backbone valid

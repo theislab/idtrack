@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-External ID mapping backends for idtrack.
+"""External ID mapping backends for idtrack.
 
 This module provides interfaces to external ID mapping services:
 - g:Profiler (gprofiler-official)
@@ -60,5 +59,6 @@ def __getattr__(name: str):
     }
     if name in ortholog_exports:
         from idtrack._external_mappers import _ortholog
+
         return getattr(_ortholog, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

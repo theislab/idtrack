@@ -18,7 +18,6 @@ from idtrack._external_mappers._backend_pybiomart import map_with_pybiomart
 from idtrack._external_mappers._constants import SUPPORTED_METHODS
 from idtrack._external_mappers._utils import _empty_result, canonical_db, logger
 
-
 _VERBOSE_LEVELS = {
     1: logging.WARNING,
     2: logging.INFO,
@@ -34,7 +33,7 @@ _VERBOSE_NAMES = {
 }
 
 
-def _normalize_verbose_level(value: typing.Union[int, str, bool]) -> int:
+def _normalize_verbose_level(value: int | str | bool) -> int:
     if isinstance(value, bool):
         return 3 if value else 2
     if isinstance(value, str):
@@ -45,7 +44,9 @@ def _normalize_verbose_level(value: typing.Union[int, str, bool]) -> int:
     try:
         level = int(value)
     except (TypeError, ValueError) as exc:
-        raise ValueError(f"Unknown verbose level {value!r}. Use 1, 2, 3 or 'error', 'warning', 'info', 'debug'.") from exc
+        raise ValueError(
+            f"Unknown verbose level {value!r}. Use 1, 2, 3 or 'error', 'warning', 'info', 'debug'."
+        ) from exc
     if level not in _VERBOSE_LEVELS:
         raise ValueError(f"Unknown verbose level {value!r}. Use 1, 2, 3 or 'error', 'warning', 'info', 'debug'.")
     return level
@@ -67,8 +68,32 @@ def convert_ids(
     suppress_method_verbosity: bool = True,
     verbose: int | str | bool = 2,
 ) -> pd.DataFrame:
-    """
-    High-level flexible converter.
+    """Convert identifiers using an external mapper backend.
+
+    Args:
+        ids: Input identifiers to map.
+        input_db: Source database type.
+        output_db: Target database type.
+        method: Backend method name (one of :py:data:`~idtrack._external_mappers._constants.SUPPORTED_METHODS`).
+        species: Species code (e.g. ``"hsapiens"``).
+        drop_metadata_json_column: If ``True``, drop the ``metadata_json`` column from the returned DataFrame.
+        chunk_size: Number of IDs per API request.
+        pause: Pause in seconds between requests.
+        max_retries: Maximum retry attempts per chunk on failure (for backends that support it).
+        strip_versions: Strip version suffixes from Ensembl/RefSeq IDs.
+        release_for_pybiomart: Ensembl release/key for the pybiomart backend. Must be ``None`` unless
+            ``method="pybiomart"``.
+        strict_input_db_gprofiler: If ``True``, enforce strict input-db filtering in the gprofiler backend.
+        suppress_method_verbosity: Suppress stdout/stderr from the underlying backend library.
+        verbose: Verbosity level (``1``/``2``/``3``) or string alias (``"error"``, ``"warning"``, ``"info"``,
+            ``"debug"``).
+
+    Returns:
+        pd.DataFrame: Standardized mapping DataFrame.
+
+    Raises:
+        ValueError: If ``method``/``verbose`` is invalid, or if ``release_for_pybiomart`` is used with a
+            non-pybiomart backend.
     """
     verbose_level = _normalize_verbose_level(verbose)
     logger.setLevel(_VERBOSE_LEVELS[verbose_level])

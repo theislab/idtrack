@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-High-value unit tests for `idtrack._track_tests.TrackTests`.
+"""High-value unit tests for `idtrack._track_tests.TrackTests`.
 
 The goal is to exercise the developer-facing test harness on a tiny synthetic
 graph (2 releases) without requiring large MySQL downloads.
@@ -17,7 +16,6 @@ import pandas as pd
 import pytest
 
 from idtrack._database_manager import DatabaseManager
-from idtrack._db import DB
 from idtrack._graph_maker import GraphMaker
 from idtrack._track_tests import TrackTests
 
@@ -77,6 +75,7 @@ def _synthetic_graph_mysql() -> _SyntheticGraphMySQL:
 
 @pytest.fixture
 def synthetic_track_tests(tmp_path, monkeypatch) -> TrackTests:
+    """Create a TrackTests instance backed by a tiny synthetic 2-release graph."""
     synthetic = _synthetic_graph_mysql()
 
     def _available_releases_versions(self: DatabaseManager, **kwargs) -> list[int]:
@@ -138,6 +137,7 @@ def synthetic_track_tests(tmp_path, monkeypatch) -> TrackTests:
 
 
 def test_track_tests_basic_invariants(synthetic_track_tests):
+    """Ensure basic TrackTests invariants hold for the synthetic graph."""
     assert synthetic_track_tests.is_node_consistency_robust(verbose=False)
     assert synthetic_track_tests.is_range_functions_robust(verbose=False)
     assert synthetic_track_tests.is_base_is_range_correct(verbose=False)
@@ -146,6 +146,7 @@ def test_track_tests_basic_invariants(synthetic_track_tests):
 
 
 def test_track_tests_history_travel_testing_smoke(synthetic_track_tests):
+    """Smoke-test history_travel_testing on the synthetic graph."""
     random.seed(0)
     graph = synthetic_track_tests.graph
     assembly = int(graph.graph["genome_assembly"])
@@ -174,6 +175,7 @@ def test_track_tests_history_travel_testing_smoke(synthetic_track_tests):
 
 
 def test_track_tests_history_travel_testing_random_smoke(synthetic_track_tests):
+    """Smoke-test history_travel_testing_random on the synthetic graph."""
     random.seed(0)
     res = synthetic_track_tests.history_travel_testing_random(
         from_fraction=1.0,

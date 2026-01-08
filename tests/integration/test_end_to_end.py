@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-High-value end-to-end integration tests for idtrack.
+"""High-value end-to-end integration tests for idtrack.
 
 These tests intentionally avoid genome-wide graph builds (which can require tens of GB of RAM).
 Instead they use a tiny but real gene-only snapshot spanning a bounded Ensembl-release window,
@@ -9,7 +8,7 @@ generated from targeted MySQL queries and cached on disk.
 
 from __future__ import annotations
 
-import pickle
+import pickle  # noqa: S403
 from pathlib import Path
 
 import pytest
@@ -44,7 +43,10 @@ def _stable_ids_active_at_release(graph: TheGraph, *, release: int) -> set[str]:
 
 
 def _pick_stable_id_active_in_both(graph: TheGraph, *, release_a: int, release_b: int) -> str:
-    common = sorted(_stable_ids_active_at_release(graph, release=release_a) & _stable_ids_active_at_release(graph, release=release_b))
+    common = sorted(
+        _stable_ids_active_at_release(graph, release=release_a)
+        & _stable_ids_active_at_release(graph, release=release_b)
+    )
     if not common:
         pytest.skip(f"No stable IDs active in both releases {release_a} and {release_b}.")
     return common[0]
@@ -75,7 +77,9 @@ def _pick_gene_with_multiple_external_dbs(
     for gene in _active_gene_nodes(graph, release=release):
         by_db = {
             db: ids
-            for db, ids in _external_ids_by_database_for_gene(graph, gene_node=gene, assembly=assembly, release=release).items()
+            for db, ids in _external_ids_by_database_for_gene(
+                graph, gene_node=gene, assembly=assembly, release=release
+            ).items()
             if ids
         }
         if len(by_db) >= min_dbs:
@@ -100,7 +104,10 @@ def _pick_any_external_node(graph: TheGraph, *, release: int) -> str:
 
 @pytest.mark.integration
 class TestRealGraphSnapshot:
+    """Sanity-check the real snapshot build and cache."""
+
     def test_graph_shape_and_metadata(self, real_gene_graph, organism_under_test):
+        """Validate graph metadata and basic node types."""
         graph, fixtures = real_gene_graph
 
         assert isinstance(graph, TheGraph)
@@ -115,6 +122,7 @@ class TestRealGraphSnapshot:
         assert graph.available_external_databases
 
     def test_snapshot_is_cached_on_disk(self, real_gene_graph, real_graph_cache_root: Path, organism_under_test):
+        """Ensure the snapshot is cached and reloadable."""
         graph, fixtures = real_gene_graph
         min_rel = min(graph.graph["confident_for_release"])
         max_rel = max(graph.graph["confident_for_release"])
@@ -126,7 +134,7 @@ class TestRealGraphSnapshot:
         )
         assert path.exists()
 
-        payload = pickle.loads(path.read_bytes())
+        payload = pickle.loads(path.read_bytes())  # noqa: S301
         assert isinstance(payload, dict)
         assert "graph" in payload and "fixtures" in payload
         cached = payload["graph"]
@@ -135,6 +143,7 @@ class TestRealGraphSnapshot:
         assert payload["fixtures"].get("seed_gene_ids") == fixtures.get("seed_gene_ids")
 
     def test_graph_caches_compute(self, real_gene_graph):
+        """Exercise cache computation on the snapshot."""
         graph, _ = real_gene_graph
         graph.calculate_caches(for_test=True)
 
@@ -144,6 +153,7 @@ class TestRealGraphSnapshot:
         assert isinstance(graph.node_trios, dict)
 
     def test_connection_edges_have_release_sets(self, real_gene_graph):
+        """Ensure connection edges expose an `available_releases` set."""
         graph, _ = real_gene_graph
 
         for _u, _v, _k, data in graph.edges(keys=True, data=True):
@@ -156,7 +166,10 @@ class TestRealGraphSnapshot:
 
 @pytest.mark.integration
 class TestTimeTravelAndExternalDatabases:
+    """Integration checks for conversion, time travel, and externals."""
+
     def test_time_travel_on_base_id(self, real_track, real_gene_graph):
+        """Convert a stable ID forward/backward across the snapshot window."""
         graph, _ = real_gene_graph
         releases = graph.graph["confident_for_release"]
         min_rel, max_rel = min(releases), max(releases)
@@ -179,6 +192,7 @@ class TestTimeTravelAndExternalDatabases:
             )
 
     def test_versioned_gene_node_time_travel(self, real_track, real_gene_graph):
+        """Convert a versioned gene node across releases."""
         graph, _ = real_gene_graph
         releases = graph.graph["confident_for_release"]
         min_rel, max_rel = min(releases), max(releases)
@@ -201,6 +215,7 @@ class TestTimeTravelAndExternalDatabases:
         )
 
     def test_external_database_roundtrip(self, real_track, real_gene_graph):
+        """Roundtrip conversion across two external databases."""
         graph, _ = real_gene_graph
         release = int(graph.graph["ensembl_release"])
         assembly = int(graph.graph["genome_assembly"])
@@ -231,6 +246,7 @@ class TestTimeTravelAndExternalDatabases:
         assert ext1 in _flatten_final_targets(converted_back)
 
     def test_stable_id_change_is_traversable(self, real_track, real_gene_graph):
+        """Ensure a discovered stable-id change event is traversable."""
         graph, fixtures = real_gene_graph
 
         old_node = fixtures.get("changed_old_node")
@@ -252,6 +268,7 @@ class TestTimeTravelAndExternalDatabases:
         assert new_node in converted
 
     def test_synonymous_nodes_finds_gene_from_external(self, real_track, real_gene_graph):
+        """Ensure synonymous_nodes can reach a gene from an external node."""
         graph, _ = real_gene_graph
         release = int(graph.graph["ensembl_release"])
 
@@ -264,11 +281,11 @@ class TestTimeTravelAndExternalDatabases:
         )
         assert paths
         assert any(
-            p[0][-1] in graph.nodes and graph.nodes[p[0][-1]][DB.node_type_str] == DB.nts_ensembl["gene"]
-            for p in paths
+            p[0][-1] in graph.nodes and graph.nodes[p[0][-1]][DB.node_type_str] == DB.nts_ensembl["gene"] for p in paths
         )
 
     def test_unknown_identifier_returns_none(self, real_track, real_gene_graph):
+        """Unknown identifiers should not resolve or convert."""
         graph, _ = real_gene_graph
         release = int(graph.graph["ensembl_release"])
 
@@ -291,7 +308,10 @@ class TestTimeTravelAndExternalDatabases:
 
 @pytest.mark.integration
 class TestTrackTestsHarness:
+    """Run TrackTests invariants against the real snapshot."""
+
     def test_invariants_hold_on_real_snapshot(self, real_track_tests, real_gene_graph):
+        """Ensure the TrackTests harness passes on the snapshot graph."""
         graph, _fixtures = real_gene_graph
         graph.calculate_caches(for_test=True)
 
@@ -303,7 +323,10 @@ class TestTrackTestsHarness:
 
 @pytest.mark.integration
 class TestAPIIntegration:
+    """Integration checks for the high-level API."""
+
     def test_api_convert_identifier_works_end_to_end(self, tmp_path, real_track, real_gene_graph):
+        """Run API.convert_identifier against the real snapshot."""
         from idtrack._api import API
 
         graph, _ = real_gene_graph

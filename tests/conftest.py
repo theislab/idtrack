@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Shared pytest fixtures for idtrack test suite.
+"""Shared pytest fixtures for idtrack test suite.
 
 This module provides:
 - Session-scoped fixtures for expensive operations (graph construction, mock data)
@@ -11,26 +10,20 @@ This module provides:
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import re
-import sys
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import networkx as nx
-import numpy as np
 import pandas as pd
 import pytest
 
-# Add idtrack to path for imports
-_IDTRACK_PKG_DIR = Path(__file__).parent.parent / "idtrack"
-if str(_IDTRACK_PKG_DIR) not in sys.path:
-    sys.path.insert(0, str(_IDTRACK_PKG_DIR))
-
 from idtrack._db import DB
-
 
 # =============================================================================
 # PYTEST CONFIGURATION
@@ -64,7 +57,7 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture
-def temp_dir() -> Generator[str, None, None]:
+def temp_dir() -> Generator[str]:
     """Provide a temporary directory that is cleaned up after the test."""
     with tempfile.TemporaryDirectory() as tmpdir:
         yield tmpdir
@@ -121,67 +114,93 @@ def versioned_ensembl_ids() -> list[str]:
 @pytest.fixture
 def mock_ensembl_gene_table() -> pd.DataFrame:
     """Mock Ensembl gene table for testing without database access."""
-    return pd.DataFrame({
-        "stable_id": ["ENSG00000141510", "ENSG00000012048", "ENSG00000139618"],
-        "version": [15, 11, 12],
-        "biotype": ["protein_coding", "protein_coding", "protein_coding"],
-        "analysis_id": [1, 1, 1],
-        "seq_region_id": [1, 17, 13],
-        "seq_region_start": [7661779, 43044295, 32315474],
-        "seq_region_end": [7687538, 43170245, 32400266],
-        "seq_region_strand": [-1, -1, 1],
-    })
+    return pd.DataFrame(
+        {
+            "stable_id": ["ENSG00000141510", "ENSG00000012048", "ENSG00000139618"],
+            "version": [15, 11, 12],
+            "biotype": ["protein_coding", "protein_coding", "protein_coding"],
+            "analysis_id": [1, 1, 1],
+            "seq_region_id": [1, 17, 13],
+            "seq_region_start": [7661779, 43044295, 32315474],
+            "seq_region_end": [7687538, 43170245, 32400266],
+            "seq_region_strand": [-1, -1, 1],
+        }
+    )
 
 
 @pytest.fixture
 def mock_ensembl_transcript_table() -> pd.DataFrame:
     """Mock Ensembl transcript table for testing."""
-    return pd.DataFrame({
-        "stable_id": ["ENST00000269305", "ENST00000357654", "ENST00000380152"],
-        "version": [8, 7, 7],
-        "gene_id": ["ENSG00000141510", "ENSG00000012048", "ENSG00000139618"],
-        "biotype": ["protein_coding", "protein_coding", "protein_coding"],
-    })
+    return pd.DataFrame(
+        {
+            "stable_id": ["ENST00000269305", "ENST00000357654", "ENST00000380152"],
+            "version": [8, 7, 7],
+            "gene_id": ["ENSG00000141510", "ENSG00000012048", "ENSG00000139618"],
+            "biotype": ["protein_coding", "protein_coding", "protein_coding"],
+        }
+    )
 
 
 @pytest.fixture
 def mock_xref_table() -> pd.DataFrame:
     """Mock external reference table for testing."""
-    return pd.DataFrame({
-        "ensembl_id": [
-            "ENSG00000141510", "ENSG00000141510", "ENSG00000141510",
-            "ENSG00000012048", "ENSG00000012048",
-            "ENSG00000139618", "ENSG00000139618",
-        ],
-        "external_id": [
-            "TP53", "P04637", "7157",
-            "BRCA1", "P38398",
-            "BRCA2", "P51587",
-        ],
-        "external_db": [
-            "HGNC Symbol", "UniProtKB", "EntrezGene",
-            "HGNC Symbol", "UniProtKB",
-            "HGNC Symbol", "UniProtKB",
-        ],
-    })
+    return pd.DataFrame(
+        {
+            "ensembl_id": [
+                "ENSG00000141510",
+                "ENSG00000141510",
+                "ENSG00000141510",
+                "ENSG00000012048",
+                "ENSG00000012048",
+                "ENSG00000139618",
+                "ENSG00000139618",
+            ],
+            "external_id": [
+                "TP53",
+                "P04637",
+                "7157",
+                "BRCA1",
+                "P38398",
+                "BRCA2",
+                "P51587",
+            ],
+            "external_db": [
+                "HGNC Symbol",
+                "UniProtKB",
+                "EntrezGene",
+                "HGNC Symbol",
+                "UniProtKB",
+                "HGNC Symbol",
+                "UniProtKB",
+            ],
+        }
+    )
 
 
 @pytest.fixture
 def mock_stable_id_event_table() -> pd.DataFrame:
     """Mock stable_id_event table for ID history tracking."""
-    return pd.DataFrame({
-        "old_stable_id": [
-            "ENSG00000141510.1", "ENSG00000141510.2", "ENSG00000141510.3",
-            "ENSG00000012048.1", "ENSG00000012048.2",
-        ],
-        "new_stable_id": [
-            "ENSG00000141510.2", "ENSG00000141510.3", "ENSG00000141510.15",
-            "ENSG00000012048.2", "ENSG00000012048.11",
-        ],
-        "old_release": [70, 80, 90, 70, 85],
-        "new_release": [80, 90, 110, 85, 110],
-        "type": ["gene", "gene", "gene", "gene", "gene"],
-    })
+    return pd.DataFrame(
+        {
+            "old_stable_id": [
+                "ENSG00000141510.1",
+                "ENSG00000141510.2",
+                "ENSG00000141510.3",
+                "ENSG00000012048.1",
+                "ENSG00000012048.2",
+            ],
+            "new_stable_id": [
+                "ENSG00000141510.2",
+                "ENSG00000141510.3",
+                "ENSG00000141510.15",
+                "ENSG00000012048.2",
+                "ENSG00000012048.11",
+            ],
+            "old_release": [70, 80, 90, 70, 85],
+            "new_release": [80, 90, 110, 85, 110],
+            "type": ["gene", "gene", "gene", "gene", "gene"],
+        }
+    )
 
 
 # =============================================================================
@@ -192,7 +211,7 @@ def mock_stable_id_event_table() -> pd.DataFrame:
 @pytest.fixture
 def minimal_multigraph() -> nx.MultiDiGraph:
     """Create a minimal NetworkX MultiDiGraph for testing TheGraph operations."""
-    G = nx.MultiDiGraph()
+    graph = nx.MultiDiGraph()
 
     # Add gene nodes with proper attributes
     gene_nodes = [
@@ -201,14 +220,14 @@ def minimal_multigraph() -> nx.MultiDiGraph:
         ("ENSG00000141510.15", {"node_type": "ensembl_gene", "Version": 15}),
         ("ENSG00000012048.1", {"node_type": "ensembl_gene", "Version": 1}),
     ]
-    G.add_nodes_from(gene_nodes)
+    graph.add_nodes_from(gene_nodes)
 
     # Add base ID nodes
     base_nodes = [
         ("ENSG00000141510", {"node_type": "base_ensembl_gene", "Version": None}),
         ("ENSG00000012048", {"node_type": "base_ensembl_gene", "Version": None}),
     ]
-    G.add_nodes_from(base_nodes)
+    graph.add_nodes_from(base_nodes)
 
     # Add external nodes
     external_nodes = [
@@ -216,29 +235,39 @@ def minimal_multigraph() -> nx.MultiDiGraph:
         ("P04637", {"node_type": "external", "database": "UniProtKB"}),
         ("BRCA1", {"node_type": "external", "database": "HGNC Symbol"}),
     ]
-    G.add_nodes_from(external_nodes)
+    graph.add_nodes_from(external_nodes)
 
     # Add edges between versions (temporal edges)
-    G.add_edge("ENSG00000141510.1", "ENSG00000141510.2",
-               old_release=70, new_release=80, connection={"ensembl_gene": {38: {70, 80}}})
-    G.add_edge("ENSG00000141510.2", "ENSG00000141510.15",
-               old_release=80, new_release=110, connection={"ensembl_gene": {38: {80, 110}}})
+    graph.add_edge(
+        "ENSG00000141510.1",
+        "ENSG00000141510.2",
+        old_release=70,
+        new_release=80,
+        connection={"ensembl_gene": {38: {70, 80}}},
+    )
+    graph.add_edge(
+        "ENSG00000141510.2",
+        "ENSG00000141510.15",
+        old_release=80,
+        new_release=110,
+        connection={"ensembl_gene": {38: {80, 110}}},
+    )
 
     # Add edges from base to versioned
-    G.add_edge("ENSG00000141510", "ENSG00000141510.1", connection={"base_ensembl_gene": {38: {70}}})
-    G.add_edge("ENSG00000141510", "ENSG00000141510.2", connection={"base_ensembl_gene": {38: {80}}})
-    G.add_edge("ENSG00000141510", "ENSG00000141510.15", connection={"base_ensembl_gene": {38: {110}}})
+    graph.add_edge("ENSG00000141510", "ENSG00000141510.1", connection={"base_ensembl_gene": {38: {70}}})
+    graph.add_edge("ENSG00000141510", "ENSG00000141510.2", connection={"base_ensembl_gene": {38: {80}}})
+    graph.add_edge("ENSG00000141510", "ENSG00000141510.15", connection={"base_ensembl_gene": {38: {110}}})
 
     # Add external edges
-    G.add_edge("TP53", "ENSG00000141510.15", connection={"HGNC Symbol": {38: {110}}})
-    G.add_edge("P04637", "ENSG00000141510.15", connection={"UniProtKB": {38: {110}}})
+    graph.add_edge("TP53", "ENSG00000141510.15", connection={"HGNC Symbol": {38: {110}}})
+    graph.add_edge("P04637", "ENSG00000141510.15", connection={"UniProtKB": {38: {110}}})
 
     # Add graph-level metadata
-    G.graph["genome_assembly"] = 38
-    G.graph["confident_for_release"] = [70, 80, 90, 100, 110]
-    G.graph["organism"] = "homo_sapiens"
+    graph.graph["genome_assembly"] = 38
+    graph.graph["confident_for_release"] = [70, 80, 90, 100, 110]
+    graph.graph["organism"] = "homo_sapiens"
 
-    return G
+    return graph
 
 
 @pytest.fixture
@@ -387,6 +416,7 @@ def mock_database_manager(
     mock_ensembl_transcript_table,
     mock_xref_table,
     mock_stable_id_event_table,
+    tmp_path: Path,
 ):
     """Create a mock DatabaseManager that returns pre-defined tables."""
     mock_dm = MagicMock()
@@ -406,7 +436,9 @@ def mock_database_manager(
     mock_dm.form = "gene"
     mock_dm.ensembl_release = 110
     mock_dm.genome_assembly = 38
-    mock_dm.local_repository = "/tmp/mock_repo"
+    local_repo = tmp_path / "mock_repo"
+    local_repo.mkdir(parents=True, exist_ok=True)
+    mock_dm.local_repository = str(local_repo)
     mock_dm.available_releases = [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110]
 
     return mock_dm
@@ -428,13 +460,13 @@ def mock_anndata():
 
     # Create sample AnnData with gene expression data
     n_obs, n_vars = 100, 50
-    X = sp.random(n_obs, n_vars, density=0.3, format="csr")
+    x = sp.random(n_obs, n_vars, density=0.3, format="csr")
 
     # Gene IDs as var names
     var_names = [f"ENSG{str(i).zfill(11)}" for i in range(n_vars)]
 
     adata = ad.AnnData(
-        X=X,
+        X=x,
         obs=pd.DataFrame(index=[f"cell_{i}" for i in range(n_obs)]),
         var=pd.DataFrame(index=var_names),
     )
@@ -495,45 +527,35 @@ def compare_graphs():
 @pytest.fixture
 def skip_if_no_mygene():
     """Skip test if mygene is not installed."""
-    try:
-        import mygene
-    except ImportError:
+    if importlib.util.find_spec("mygene") is None:
         pytest.skip("mygene not installed")
 
 
 @pytest.fixture
 def skip_if_no_gprofiler():
     """Skip test if gprofiler-official is not installed."""
-    try:
-        import gprofiler
-    except ImportError:
+    if importlib.util.find_spec("gprofiler") is None:
         pytest.skip("gprofiler-official not installed")
 
 
 @pytest.fixture
 def skip_if_no_pybiomart():
     """Skip test if pybiomart is not installed."""
-    try:
-        import pybiomart
-    except ImportError:
+    if importlib.util.find_spec("pybiomart") is None:
         pytest.skip("pybiomart not installed")
 
 
 @pytest.fixture
 def skip_if_no_gget():
     """Skip test if gget is not installed."""
-    try:
-        import gget
-    except ImportError:
+    if importlib.util.find_spec("gget") is None:
         pytest.skip("gget not installed")
 
 
 @pytest.fixture
 def skip_if_no_anndata():
     """Skip test if anndata is not installed."""
-    try:
-        import anndata
-    except ImportError:
+    if importlib.util.find_spec("anndata") is None:
         pytest.skip("anndata not installed")
 
 
@@ -555,6 +577,9 @@ def _selected_real_graph_organisms() -> list[str]:
 
     Defaults to organisms that ship a `*_externals_modified.yml` under `idtrack/default_config`.
     Override via `IDTRACK_TEST_ORGANISM=...` or `IDTRACK_TEST_ORGANISMS=a,b,c`.
+
+    Returns:
+        list[str]: Organism names to exercise in network-backed tests.
     """
     env = os.environ.get("IDTRACK_TEST_ORGANISMS") or os.environ.get("IDTRACK_TEST_ORGANISM")
     if env:
@@ -599,11 +624,18 @@ def organism_under_test(request) -> str:
 
 
 @pytest.fixture(scope="session")
-def real_gene_graph(real_graph_cache_root: Path, organism_under_test: str) -> tuple["Any", dict[str, str]]:
+def real_gene_graph(real_graph_cache_root: Path, organism_under_test: str) -> tuple[Any, dict[str, str]]:
     """Small, real gene graph for Ensembl releases 100–103 (cached on disk).
 
     Builds the graph via targeted MySQL queries for a curated set of genes and external IDs, so it stays tiny and
     avoids multi-GB genome-wide builds.
+
+    Args:
+        real_graph_cache_root: Root directory for the on-disk cache.
+        organism_under_test: Organism name to build the graph for.
+
+    Returns:
+        tuple[Any, dict[str, str]]: ``(graph, fixtures)`` where fixtures contains stable example identifiers.
     """
     from tests._real_graph_builder import RealGraphSpec, load_or_build_real_gene_graph
 
@@ -666,7 +698,7 @@ def real_gene_graph(real_graph_cache_root: Path, organism_under_test: str) -> tu
 
 
 @pytest.fixture(scope="session")
-def real_track(real_gene_graph) -> "Any":
+def real_track(real_gene_graph) -> Any:
     """`Track` instance wired to the session-scoped real graph (no DatabaseManager required)."""
     import logging
 
@@ -674,7 +706,7 @@ def real_track(real_gene_graph) -> "Any":
 
     graph, _fixtures = real_gene_graph
     graph.calculate_caches(for_test=True)
-    track = Track.__new__(Track)
+    track: Any = Track.__new__(Track)
     track.log = logging.getLogger("track")
     track.db_manager = None
     track.graph = graph
@@ -686,7 +718,7 @@ def real_track(real_gene_graph) -> "Any":
 
 
 @pytest.fixture(scope="session")
-def real_track_tests(real_gene_graph) -> "Any":
+def real_track_tests(real_gene_graph) -> Any:
     """`TrackTests` instance wired to the session-scoped real graph (no DatabaseManager required)."""
     import logging
 
@@ -694,7 +726,7 @@ def real_track_tests(real_gene_graph) -> "Any":
 
     graph, _fixtures = real_gene_graph
     graph.calculate_caches(for_test=True)
-    tests = TrackTests.__new__(TrackTests)
+    tests: Any = TrackTests.__new__(TrackTests)
     tests.log = logging.getLogger("track_tests")
     tests.db_manager = None
     tests.graph = graph

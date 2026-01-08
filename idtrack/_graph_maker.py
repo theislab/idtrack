@@ -200,8 +200,7 @@ class GraphMaker:
                         if e1 and e2:
                             if e1 not in g.nodes or e2 not in g.nodes:
                                 raise ValueError(
-                                    f"Missing graph node(s) while adding edge: "
-                                    f"{e1_str}={e1!r} → {e2_str}={e2!r}"
+                                    f"Missing graph node(s) while adding edge: " f"{e1_str}={e1!r} → {e2_str}={e2!r}"
                                 )
 
                             sly = self.db_manager.genome_assembly
@@ -209,9 +208,7 @@ class GraphMaker:
 
         # Establish connection between different databases
         graph_nodes_before_external = set(g.nodes)
-        graph_nodes_added_assembly: dict = {
-            i: set() for i in DB.all_assemblies if i != self.db_manager.genome_assembly
-        }
+        graph_nodes_added_assembly: dict = {i: set() for i in DB.all_assemblies if i != self.db_manager.genome_assembly}
         misplaced_external_entry = list()
         establish_form_connection = list()
         min_ens_release = dict()

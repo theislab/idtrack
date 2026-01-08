@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Unit tests for `idtrack._harmonize_features`.
+"""Unit tests for `idtrack._harmonize_features`.
 
 These tests run the real harmonisation logic on tiny `.h5ad` files while patching
 the expensive IDTrack mapping step to deterministic synthetic results.
@@ -69,6 +68,7 @@ def _synthetic_matchings() -> _SyntheticMatchings:
 
 @pytest.fixture
 def harmonizer(tmp_path, monkeypatch) -> HarmonizeFeatures:
+    """Create a HarmonizeFeatures instance backed by synthetic matchings."""
     synthetic = _synthetic_matchings()
 
     d1_path = tmp_path / "d1.h5ad"
@@ -79,8 +79,9 @@ def harmonizer(tmp_path, monkeypatch) -> HarmonizeFeatures:
 
     def _adata(var_names: list[str], handle: str) -> ad.AnnData:
         x = csr_matrix(np.arange(12, dtype=np.float32).reshape(2, 6))
+        cell_type: list[str | None] = ["T", "nan"] if handle == "d1" else ["B", None]
         obs = {
-            "cell_type": ["T", "nan"] if handle == "d1" else ["B", None],
+            "cell_type": cell_type,
             "age": ["10", "20"] if handle == "d1" else ["30", "40"],
         }
         return ad.AnnData(X=x, obs=pd.DataFrame(obs), var=pd.DataFrame(index=var_names))
@@ -121,10 +122,12 @@ def harmonizer(tmp_path, monkeypatch) -> HarmonizeFeatures:
 
 
 def test_import_harmonize_features():
+    """Import smoke test for HarmonizeFeatures."""
     assert HarmonizeFeatures is not None
 
 
 def test_initialization_builds_diagnostics(harmonizer):
+    """Ensure HarmonizeFeatures computes diagnostic sets on init."""
     assert harmonizer.conversion_failed_identifiers == {"FAIL_ONLY_D1", "FAIL_ONLY_D2"}
     assert {"FAIL_ALL", "TP53_ALIAS"}.issubset(harmonizer.conversion_failed_but_consistent_identifiers)
 
@@ -137,6 +140,7 @@ def test_initialization_builds_diagnostics(harmonizer):
 
 
 def test_feature_harmonizer_removes_inconsistent_failures(harmonizer):
+    """Ensure inconsistent failures are removed from the feature set."""
     adata, t0, t1 = harmonizer.feature_harmonizer("d1")
 
     assert t0 == 6
@@ -148,6 +152,7 @@ def test_feature_harmonizer_removes_inconsistent_failures(harmonizer):
 
 
 def test_unify_multiple_anndatas_union_adds_intersection_flag(harmonizer):
+    """Union mode should add an `intersection` column."""
     adata = harmonizer.unify_multiple_anndatas(
         mode="union",
         obs_columns_to_keep=["cell_type", "age"],
@@ -178,6 +183,7 @@ def test_unify_multiple_anndatas_union_adds_intersection_flag(harmonizer):
 
 
 def test_unify_multiple_anndatas_intersect_keeps_shared_features(harmonizer):
+    """Intersect mode should keep only shared features."""
     adata = harmonizer.unify_multiple_anndatas(
         mode="intersect",
         obs_columns_to_keep=["cell_type", "age"],

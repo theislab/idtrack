@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Ensembl BioMart backend for ID mapping.
+"""Ensembl BioMart backend for ID mapping.
 
 This module provides the map_with_pybiomart() function for querying
 Ensembl BioMart to convert biological identifiers. Supports historical
@@ -26,8 +25,8 @@ from idtrack._external_mappers._constants import (
     _BM_ATTR_CANDIDATES,
     _BM_FILTER_CANDIDATES,
     _ENSEMBL_ARCHIVE_BY_RELEASE,
-    _ENSEMBL_SPECIAL_RELEASE_HOSTS,
     _ENSEMBL_INPUT_DB,
+    _ENSEMBL_SPECIAL_RELEASE_HOSTS,
 )
 from idtrack._external_mappers._utils import (
     _chunker,
@@ -47,9 +46,16 @@ from idtrack._external_mappers._utils import (
 def _ensembl_archive_host_for_release(
     release: int | str | None,
 ) -> str | None:
-    """
-    Resolve an Ensembl release (e.g. 104) or string key (e.g. 'GRCh37')
-    to an archive host like 'may2021.archive.ensembl.org'.
+    """Resolve an Ensembl release or key to an archive host.
+
+    Examples include an integer release (e.g. ``104``) or a special string key
+    (e.g. ``"GRCh37"``) mapping to hosts like ``"may2021.archive.ensembl.org"``.
+
+    Args:
+        release: Ensembl release number or key (e.g. ``104``, ``"v104"``, ``"GRCh37"``), or ``None``.
+
+    Returns:
+        Archive host for the requested release, or ``None`` if unknown.
     """
     if release is None:
         return None
@@ -83,9 +89,7 @@ def _ensembl_archive_host_for_release(
 
 
 def _biomart_dataset_for_species(species: str, explicit: str | None = None) -> str:
-    """
-    Return the Ensembl BioMart dataset name for the given species.
-    """
+    """Return the Ensembl BioMart dataset name for the given species."""
     if explicit:
         return explicit
     s = canonical_species(species)
@@ -93,13 +97,18 @@ def _biomart_dataset_for_species(species: str, explicit: str | None = None) -> s
 
 
 def _normalize_biomart_host(host: str | None) -> str:
-    """
-    Normalize Ensembl BioMart host for pybiomart.
+    """Normalize an Ensembl BioMart host for pybiomart.
 
     Examples of valid outputs:
         "http://www.ensembl.org"
         "http://nov2020.archive.ensembl.org"
         "http://grch37.ensembl.org"
+
+    Args:
+        host: Hostname or URL (scheme optional). If ``None``, defaults to ``"http://www.ensembl.org"``.
+
+    Returns:
+        str: Normalized base URL suitable for pybiomart.
     """
     if not host:
         return "http://www.ensembl.org"
@@ -167,10 +176,20 @@ def _bm_list_filter_names(ds) -> list[str]:
 
 
 def _bm_pick_attribute(canonical_db_name: str, available_attrs: list[str]) -> str:
-    """
-    Choose a BioMart attribute name for a given canonical DB, based on:
-      1. Explicit candidates in _BM_ATTR_CANDIDATES
-      2. Fuzzy matching on common substrings if needed
+    """Choose a BioMart attribute name for a canonical DB.
+
+    The helper first tries explicit candidates from :py:data:`_BM_ATTR_CANDIDATES` and
+    falls back to fuzzy matching on common substrings.
+
+    Args:
+        canonical_db_name: Canonical database key (see :py:func:`~idtrack._external_mappers._utils.canonical_db`).
+        available_attrs: Attribute names provided by the BioMart dataset.
+
+    Returns:
+        str: Selected attribute name.
+
+    Raises:
+        RuntimeError: If no compatible attribute is available on the dataset.
     """
     cdb = canonical_db(canonical_db_name)
     attrs = list(dict.fromkeys(available_attrs))  # dedupe, preserve order
@@ -217,8 +236,20 @@ def _bm_pick_filter(
     attr_name: str,
     available_filters: list[str],
 ) -> str:
-    """
-    Choose a BioMart filter name for a given canonical DB and chosen attribute.
+    """Choose a BioMart filter name.
+
+    The selection depends on the canonical database and chosen attribute.
+
+    Args:
+        canonical_db_name: Canonical database key for the input IDs.
+        attr_name: Attribute name chosen for the input IDs.
+        available_filters: Filter names provided by the BioMart dataset.
+
+    Returns:
+        str: Selected filter name.
+
+    Raises:
+        RuntimeError: If no compatible filter is available on the dataset.
     """
     cdb = canonical_db(canonical_db_name)
     filt_list = list(dict.fromkeys(available_filters))  # dedupe, preserve order
@@ -291,49 +322,31 @@ def map_with_pybiomart(
     show_progress: bool = True,
     suppress_method_verbosity: bool = True,
 ) -> pd.DataFrame:
-    """
-    Map identifiers using Ensembl BioMart via pybiomart.
+    """Map identifiers using Ensembl BioMart via pybiomart.
 
     Note: BioMart can only filter by Ensembl IDs (gene, transcript, protein).
     Other ID types can be used as output_db but not input_db.
 
-    Parameters
-    ----------
-    ids : Iterable[str]
-        Input Ensembl identifiers to map.
-    input_db : str
-        Source database type. Must be an Ensembl type: 'ensembl_gene',
-        'ensembl_transcript', or 'ensembl_protein'.
-    output_db : str
-        Target database type (e.g., 'hgnc_symbol', 'uniprot', 'entrez_gene').
-    species : str, default 'hsapiens'
-        Species code (e.g., 'hsapiens', 'mmusculus', 'sscrofa').
-    chunk_size : int, default 1000
-        Number of IDs per BioMart query.
-    pause : float, default 0.2
-        Pause in seconds between queries.
-    strip_versions : bool, default True
-        Strip version suffixes from Ensembl/RefSeq IDs.
-    release : str | int | None, default None
-        Ensembl release number (e.g., 104) or special key (e.g., 'grch37').
-        If None, uses the current Ensembl release.
-    show_progress : bool, default True
-        Display progress bar.
-    suppress_method_verbosity : bool, default True
-        Suppress stdout/stderr from pybiomart.
+    Args:
+        ids: Input Ensembl identifiers to map.
+        input_db: Source database type. Must be one of ``"ensembl_gene"``, ``"ensembl_transcript"``,
+            or ``"ensembl_protein"``.
+        output_db: Target database type (e.g. ``"hgnc_symbol"``, ``"uniprot"``, ``"entrez_gene"``).
+        species: Species code (e.g. ``"hsapiens"``, ``"mmusculus"``, ``"sscrofa"``).
+        chunk_size: Number of IDs per BioMart query.
+        pause: Pause in seconds between queries.
+        strip_versions: Strip version suffixes from Ensembl/RefSeq IDs.
+        release: Ensembl release number (e.g. ``104``) or special key (e.g. ``"grch37"``). If ``None``, uses
+            the current Ensembl release.
+        show_progress: Display progress bar.
+        suppress_method_verbosity: Suppress stdout/stderr from pybiomart.
 
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with columns: input_id, input_db, mapping, output_id,
-        output_db, method, release_used, metadata_json.
+    Returns:
+        pd.DataFrame: Standardized mapping DataFrame.
 
-    Raises
-    ------
-    RuntimeError
-        If pybiomart is not installed or BioMart connection fails.
-    ValueError
-        If input_db is not an Ensembl type.
+    Raises:
+        RuntimeError: If the BioMart connection fails or required dataset metadata cannot be retrieved.
+        ValueError: If ``input_db`` is not an Ensembl type.
     """
     try:
         from pybiomart import Dataset  # type: ignore
@@ -347,7 +360,7 @@ def map_with_pybiomart(
     # It can still *return* HGNC/UniProt/etc. as attributes, but input_db
     # must be one of the Ensembl IDs.
     if inp not in _ENSEMBL_INPUT_DB:
-        allowed_str = ', '.join(sorted(_ENSEMBL_INPUT_DB))
+        allowed_str = ", ".join(sorted(_ENSEMBL_INPUT_DB))
         raise ValueError(
             f"pybiomart input_db must be one of {{{allowed_str}}}, got {inp!r}. "
             "BioMart cannot filter by HGNC/UniProt directly; keep them as output_db "

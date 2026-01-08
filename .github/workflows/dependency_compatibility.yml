@@ -114,8 +114,11 @@ jobs:
                     # -------------------------------------------------------------------------
                     # Python 3.10
                     # -------------------------------------------------------------------------
+                    # NOTE: PyYAML 5.x does not ship manylinux wheels for Python 3.10+ and its sdist build fails
+                    # under modern setuptools (AttributeError: cython_sources). Keep the "legacy" stacks here focused
+                    # on the scientific stack (numpy/pandas/scipy/anndata/networkx) and pin PyYAML>=6.
                     - python-version: "3.10"
-                      dependency-set: "legacy stack (nx<3, yaml<6, pandas<2, numpy<2)"
+                      dependency-set: "legacy stack (nx<3, yaml>=6, pandas<2, numpy<2)"
                       constraints: |
                           numpy<2
                           pandas<2
@@ -123,9 +126,9 @@ jobs:
                           sparse<0.15
                           anndata<0.10
                           networkx<3
-                          PyYAML<6
+                          PyYAML>=6,<7
                     - python-version: "3.10"
-                      dependency-set: "legacy stack (nx>=3, yaml<6, pandas<2, numpy<2)"
+                      dependency-set: "legacy stack (nx>=3, yaml>=6, pandas<2, numpy<2)"
                       constraints: |
                           numpy<2
                           pandas<2
@@ -133,7 +136,7 @@ jobs:
                           sparse<0.15
                           anndata<0.10
                           networkx>=3,<4
-                          PyYAML<6
+                          PyYAML>=6,<7
                     - python-version: "3.10"
                       dependency-set: "pandas>=2 / numpy<2 (modern deps)"
                       constraints: |
@@ -161,7 +164,7 @@ jobs:
                     # Python 3.11
                     # -------------------------------------------------------------------------
                     - python-version: "3.11"
-                      dependency-set: "legacy stack (nx<3, yaml<6, pandas<2, numpy<2)"
+                      dependency-set: "legacy stack (nx<3, yaml>=6, pandas<2, numpy<2)"
                       constraints: |
                           numpy<2
                           pandas<2
@@ -169,9 +172,9 @@ jobs:
                           sparse<0.15
                           anndata<0.10
                           networkx<3
-                          PyYAML<6
+                          PyYAML>=6,<7
                     - python-version: "3.11"
-                      dependency-set: "legacy stack (nx>=3, yaml<6, pandas<2, numpy<2)"
+                      dependency-set: "legacy stack (nx>=3, yaml>=6, pandas<2, numpy<2)"
                       constraints: |
                           numpy<2
                           pandas<2
@@ -179,7 +182,7 @@ jobs:
                           sparse<0.15
                           anndata<0.10
                           networkx>=3,<4
-                          PyYAML<6
+                          PyYAML>=6,<7
                     - python-version: "3.11"
                       dependency-set: "pandas>=2 / numpy<2 (modern deps)"
                       constraints: |
@@ -275,16 +278,6 @@ jobs:
                           sparse>=0.15,<1
 
         steps:
-            # NOTE: No checkout is necessary here. We only install the built wheel artifact.
-            - name: Set up Python ${{ matrix.python-version }}
-              uses: actions/setup-python@v5
-              with:
-                  python-version: ${{ matrix.python-version }}
-                  allow-prereleases: true
-
-            - name: Upgrade pip
-              run: python -m pip install --upgrade pip
-
             - name: Download wheel
               uses: actions/download-artifact@v4
               with:
@@ -294,6 +287,19 @@ jobs:
             # Convert the multi-line YAML string into a real constraints file.
             - name: Write constraints file
               run: printf '%s\n' "${{ matrix.constraints }}" > constraints.txt
+
+            # NOTE: No checkout is necessary here. We only install the built wheel artifact.
+            - name: Set up Python ${{ matrix.python-version }}
+              uses: actions/setup-python@v5
+              with:
+                  python-version: ${{ matrix.python-version }}
+                  allow-prereleases: true
+                  cache: pip
+                  cache-dependency-path: |
+                      constraints.txt
+
+            - name: Upgrade pip
+              run: python -m pip install --upgrade pip
 
             # Install with constraints and verify the resolved environment is consistent.
             - name: Install wheel and verify dependencies

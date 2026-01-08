@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Functional tests for idtrack._api module.
+"""Functional tests for idtrack._api module.
 
 These tests actually execute code paths to increase coverage.
 """
@@ -167,11 +166,29 @@ class TestClassifyMultipleConversion:
             # No corresponding
             {"query_id": "A", "target_id": [], "no_corresponding": True, "no_conversion": False, "no_target": False},
             # 1:1 same
-            {"query_id": "B", "target_id": ["B"], "no_corresponding": False, "no_conversion": False, "no_target": False},
+            {
+                "query_id": "B",
+                "target_id": ["B"],
+                "no_corresponding": False,
+                "no_conversion": False,
+                "no_target": False,
+            },
             # 1:1 changed
-            {"query_id": "C", "target_id": ["D"], "no_corresponding": False, "no_conversion": False, "no_target": False},
+            {
+                "query_id": "C",
+                "target_id": ["D"],
+                "no_corresponding": False,
+                "no_conversion": False,
+                "no_target": False,
+            },
             # 1:n all changed
-            {"query_id": "E", "target_id": ["F", "G"], "no_corresponding": False, "no_conversion": False, "no_target": False},
+            {
+                "query_id": "E",
+                "target_id": ["F", "G"],
+                "no_corresponding": False,
+                "no_conversion": False,
+                "no_target": False,
+            },
             # Alternative target
             {"query_id": "H", "target_id": ["I"], "no_corresponding": False, "no_conversion": False, "no_target": True},
         ]
@@ -255,18 +272,48 @@ class TestPrintBinnedConversion:
 
         classified = {
             "input_identifiers": [
-                {"query_id": "A", "target_id": ["B"], "no_corresponding": False, "no_conversion": False, "no_target": False},
-                {"query_id": "C", "target_id": [], "no_corresponding": True, "no_conversion": False, "no_target": False},
+                {
+                    "query_id": "A",
+                    "target_id": ["B"],
+                    "no_corresponding": False,
+                    "no_conversion": False,
+                    "no_target": False,
+                },
+                {
+                    "query_id": "C",
+                    "target_id": [],
+                    "no_corresponding": True,
+                    "no_conversion": False,
+                    "no_target": False,
+                },
             ],
             "matching_1_to_0": [
-                {"query_id": "C", "target_id": [], "no_corresponding": True, "no_conversion": False, "no_target": False},
+                {
+                    "query_id": "C",
+                    "target_id": [],
+                    "no_corresponding": True,
+                    "no_conversion": False,
+                    "no_target": False,
+                },
             ],
             "matching_1_to_1": [
-                {"query_id": "A", "target_id": ["B"], "no_corresponding": False, "no_conversion": False, "no_target": False},
+                {
+                    "query_id": "A",
+                    "target_id": ["B"],
+                    "no_corresponding": False,
+                    "no_conversion": False,
+                    "no_target": False,
+                },
             ],
             "matching_1_to_n": [],
             "changed_only_1_to_1": [
-                {"query_id": "A", "target_id": ["B"], "no_corresponding": False, "no_conversion": False, "no_target": False},
+                {
+                    "query_id": "A",
+                    "target_id": ["B"],
+                    "no_corresponding": False,
+                    "no_conversion": False,
+                    "no_target": False,
+                },
             ],
             "changed_only_1_to_n": [],
             "alternative_target_1_to_1": [],

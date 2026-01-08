@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Comprehensive tests for the idtrack._external_mappers package.
+"""Comprehensive tests for the idtrack._external_mappers package.
 
 This module tests:
 - Utility functions (unit tests, no network calls)
@@ -18,7 +17,6 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -31,22 +29,20 @@ if str(_IDTRACK_DIR) not in sys.path:
     sys.path.insert(0, str(_IDTRACK_DIR))
 
 # Import utility functions and constants from the standalone subpackage
-from _external_mappers._constants import (
-    SUPPORTED_DBS,
-    SUPPORTED_METHODS,
+from _external_mappers._constants import (  # noqa: E402
     _BM_ATTR_CANDIDATES,
-    _BM_FILTER_CANDIDATES,
     _DB_ALIASES,
     _ENSEMBL_ARCHIVE_BY_RELEASE,
     _ENSEMBL_INPUT_DB,
-    _GP_INPUT_NAMESPACES,
     _GP_NS,
-    _MG_FIELDS_SUPERSET,
     _MG_SCOPES,
     _SPECIES_ALIASES,
     _SPECIES_CANONICAL_TO_BGEENAMES,
+    SUPPORTED_DBS,
+    SUPPORTED_METHODS,
 )
-from _external_mappers._utils import (
+from _external_mappers._utils import (  # noqa: E402
+    OPTIONAL_DEPENDENCIES,
     _add_mapping_column,
     _as_list,
     _chunker,
@@ -62,9 +58,7 @@ from _external_mappers._utils import (
     check_optional_dependencies,
     raise_missing_dependency,
     strip_version,
-    OPTIONAL_DEPENDENCIES,
 )
-
 
 # =============================================================================
 # FIXTURES
@@ -144,7 +138,7 @@ class TestConstants:
             assert code in _SPECIES_CANONICAL_TO_BGEENAMES, f"Missing Bgee mapping for {code!r}"
 
     def test_mygene_scopes_cover_common_dbs(self):
-        """MyGene scopes should cover common input databases."""
+        """Ensure MyGene scopes cover common input databases."""
         expected = {"ensembl_gene", "hgnc_symbol", "entrez_gene", "uniprot"}
         assert expected.issubset(set(_MG_SCOPES.keys()))
 
@@ -154,7 +148,7 @@ class TestConstants:
         assert expected.issubset(set(_GP_NS.keys()))
 
     def test_biomart_attributes_cover_common_dbs(self):
-        """BioMart attribute candidates should cover common databases."""
+        """Ensure BioMart attribute candidates cover common databases."""
         expected = {"ensembl_gene", "hgnc_symbol", "entrez_gene", "uniprot"}
         assert expected.issubset(set(_BM_ATTR_CANDIDATES.keys()))
 
@@ -572,9 +566,7 @@ class TestEnsureAllInputs:
 
     def test_empty_dataframe_handling(self):
         """Test empty DataFrame is handled correctly."""
-        result = _ensure_all_inputs(
-            pd.DataFrame(), ["ID1", "ID2"], "inp", "outp", "test", None
-        )
+        result = _ensure_all_inputs(pd.DataFrame(), ["ID1", "ID2"], "inp", "outp", "test", None)
         assert set(result["input_id"]) == {"ID1", "ID2"}
         assert all(result["output_id"].isna())
 
@@ -614,7 +606,7 @@ class TestOptionalDependencies:
         assert isinstance(OPTIONAL_DEPENDENCIES, dict)
         assert len(OPTIONAL_DEPENDENCIES) > 0
 
-        for dep_key, info in OPTIONAL_DEPENDENCIES.items():
+        for _dep_key, info in OPTIONAL_DEPENDENCIES.items():
             assert "import_name" in info
             assert "pip_name" in info
             assert "features" in info
@@ -630,6 +622,7 @@ class TestOptionalDependencies:
     def test_check_optional_dependencies_returns_dict(self):
         """Test check_optional_dependencies returns a status dict."""
         import warnings
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             status = check_optional_dependencies(warn=False)
@@ -642,6 +635,7 @@ class TestOptionalDependencies:
     def test_check_optional_dependencies_no_warning_when_disabled(self):
         """Test no warning emitted when warn=False."""
         import warnings
+
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             check_optional_dependencies(warn=False)
@@ -811,9 +805,7 @@ class TestPybiomartBackend:
 
     def test_ensembl_archive_host_resolution(self):
         """Test Ensembl archive host resolution."""
-        from _external_mappers._backend_pybiomart import (
-            _ensembl_archive_host_for_release,
-        )
+        from _external_mappers._backend_pybiomart import _ensembl_archive_host_for_release
 
         # Known release
         assert _ensembl_archive_host_for_release(104) == "may2021.archive.ensembl.org"
@@ -880,9 +872,7 @@ class TestConvertIds:
         from _external_mappers._convert import convert_ids
 
         # Mock the backend to avoid network calls
-        with patch(
-            "_external_mappers._convert.map_with_gprofiler"
-        ) as mock_gp:
+        with patch("_external_mappers._convert.map_with_gprofiler") as mock_gp:
             mock_gp.return_value = _empty_result()
             result = convert_ids(
                 [],
@@ -964,15 +954,12 @@ class TestOrthologModule:
         try:
             __getattr__("get_ortholog_table")
         except (ImportError, RuntimeError):
-            pass  # Expected if dependencies not installed
+            pytest.skip("Ortholog optional dependencies not installed")
 
     def test_species_resolution(self):
         """Test species resolution in ortholog module."""
         # Import the helper directly from constants
-        from _external_mappers._constants import (
-            _SPECIES_ALIASES,
-            _SPECIES_CANONICAL_TO_BGEENAMES,
-        )
+        from _external_mappers._constants import _SPECIES_ALIASES, _SPECIES_CANONICAL_TO_BGEENAMES
 
         # Verify human
         assert _SPECIES_ALIASES["human"] == "hsapiens"
@@ -994,13 +981,9 @@ class TestIntegrationGprofiler:
 
     @pytest.fixture
     def gprofiler_available(self):
-        """Check if gprofiler is available."""
-        try:
-            from gprofiler import GProfiler
-
-            return True
-        except ImportError:
-            pytest.skip("gprofiler-official not installed")
+        """Skip if gprofiler-official is not installed."""
+        pytest.importorskip("gprofiler", reason="gprofiler-official not installed")
+        return True
 
     def test_real_gprofiler_query(self, gprofiler_available, sample_ids):
         """Test real g:Profiler query."""
@@ -1025,13 +1008,9 @@ class TestIntegrationMygene:
 
     @pytest.fixture
     def mygene_available(self):
-        """Check if mygene is available."""
-        try:
-            import mygene
-
-            return True
-        except ImportError:
-            pytest.skip("mygene not installed")
+        """Skip if mygene is not installed."""
+        pytest.importorskip("mygene", reason="mygene not installed")
+        return True
 
     def test_real_mygene_query(self, mygene_available, sample_ids):
         """Test real MyGene query."""
@@ -1055,13 +1034,9 @@ class TestIntegrationPybiomart:
 
     @pytest.fixture
     def pybiomart_available(self):
-        """Check if pybiomart is available."""
-        try:
-            from pybiomart import Dataset
-
-            return True
-        except ImportError:
-            pytest.skip("pybiomart not installed")
+        """Skip if pybiomart is not installed."""
+        pytest.importorskip("pybiomart", reason="pybiomart not installed")
+        return True
 
     def test_real_pybiomart_query(self, pybiomart_available, sample_ids):
         """Test real pybiomart query."""
@@ -1085,13 +1060,9 @@ class TestIntegrationGget:
 
     @pytest.fixture
     def gget_available(self):
-        """Check if gget is available."""
-        try:
-            from gget import info
-
-            return True
-        except ImportError:
-            pytest.skip("gget not installed")
+        """Skip if gget is not installed."""
+        pytest.importorskip("gget", reason="gget not installed")
+        return True
 
     def test_real_gget_query(self, gget_available, sample_ids):
         """Test real gget query."""
@@ -1225,11 +1196,13 @@ class TestGgetExtract:
         """Test extracting HGNC symbol from gget output."""
         from _external_mappers._backend_gget import _gget_extract
 
-        df = pd.DataFrame({
-            "query": ["ENSG00000141510"],
-            "name": ["TP53"],
-            "entrezgene": [7157],
-        })
+        df = pd.DataFrame(
+            {
+                "query": ["ENSG00000141510"],
+                "name": ["TP53"],
+                "entrezgene": [7157],
+            }
+        )
         result = _gget_extract(df, "hgnc_symbol")
         assert "input_id" in result.columns
         assert "output_id" in result.columns
@@ -1238,10 +1211,12 @@ class TestGgetExtract:
         """Test extracting Ensembl gene from gget output."""
         from _external_mappers._backend_gget import _gget_extract
 
-        df = pd.DataFrame({
-            "id": ["ENSG00000141510"],
-            "name": ["TP53"],
-        })
+        df = pd.DataFrame(
+            {
+                "id": ["ENSG00000141510"],
+                "name": ["TP53"],
+            }
+        )
         result = _gget_extract(df, "ensembl_gene")
         assert len(result) == 1
 
@@ -1249,10 +1224,12 @@ class TestGgetExtract:
         """Test extraction when target column is missing."""
         from _external_mappers._backend_gget import _gget_extract
 
-        df = pd.DataFrame({
-            "query": ["ENSG00000141510"],
-            "name": ["TP53"],
-        })
+        df = pd.DataFrame(
+            {
+                "query": ["ENSG00000141510"],
+                "name": ["TP53"],
+            }
+        )
         result = _gget_extract(df, "uniprot")
         # Should return empty output_id
         assert "output_id" in result.columns
@@ -1397,7 +1374,7 @@ class TestOrthologHelpers:
 
     def test_aa_composition_vector(self):
         """Test amino acid composition vector calculation."""
-        from _external_mappers._ortholog import _aa_composition_vector, AA_ALPHABET
+        from _external_mappers._ortholog import AA_ALPHABET, _aa_composition_vector
 
         # Simple sequence with known composition
         seq = "AAACCC"
@@ -1472,8 +1449,9 @@ class TestAlignmentScoresDataclass:
 
     def test_alignment_scores_asdict(self):
         """Test converting AlignmentScores to dict."""
-        from _external_mappers._ortholog import AlignmentScores
         from dataclasses import asdict
+
+        from _external_mappers._ortholog import AlignmentScores
 
         scores = AlignmentScores(
             alignment_length=100,
@@ -1582,20 +1560,14 @@ class TestIntegrationKnownGene:
     @pytest.fixture
     def skip_if_no_mygene(self):
         """Skip if mygene not available."""
-        try:
-            import mygene
-            return True
-        except ImportError:
-            pytest.skip("mygene not installed")
+        pytest.importorskip("mygene", reason="mygene not installed")
+        return True
 
     @pytest.fixture
     def skip_if_no_gprofiler(self):
         """Skip if gprofiler not available."""
-        try:
-            from gprofiler import GProfiler
-            return True
-        except ImportError:
-            pytest.skip("gprofiler-official not installed")
+        pytest.importorskip("gprofiler", reason="gprofiler-official not installed")
+        return True
 
     def test_mygene_ensembl_to_symbol(self, skip_if_no_mygene):
         """Test MyGene Ensembl to symbol mapping for TP53."""
@@ -1657,11 +1629,8 @@ class TestIntegrationMultipleIds:
     @pytest.fixture
     def skip_if_no_mygene(self):
         """Skip if mygene not available."""
-        try:
-            import mygene
-            return True
-        except ImportError:
-            pytest.skip("mygene not installed")
+        pytest.importorskip("mygene", reason="mygene not installed")
+        return True
 
     def test_batch_mapping_preserves_all_inputs(self, skip_if_no_mygene):
         """Test that all input IDs appear in output."""
@@ -1707,12 +1676,9 @@ class TestOrthologIntegration:
     @pytest.fixture
     def skip_if_no_ortholog_deps(self):
         """Skip if ortholog dependencies not available."""
-        try:
-            import gget
-            from Bio import SeqIO
-            return True
-        except ImportError:
-            pytest.skip("Ortholog dependencies (gget, biopython) not installed")
+        pytest.importorskip("gget", reason="Ortholog dependencies (gget, biopython) not installed")
+        pytest.importorskip("Bio.SeqIO", reason="Ortholog dependencies (gget, biopython) not installed")
+        return True
 
     def test_get_ortholog_table(self, skip_if_no_ortholog_deps):
         """Test fetching ortholog table from Bgee."""
@@ -1728,10 +1694,7 @@ class TestOrthologIntegration:
 
     def test_get_ortholog_ids_for_species(self, skip_if_no_ortholog_deps):
         """Test getting ortholog IDs for a specific species."""
-        from _external_mappers._ortholog import (
-            get_ortholog_table,
-            get_ortholog_ids_for_species,
-        )
+        from _external_mappers._ortholog import get_ortholog_ids_for_species, get_ortholog_table
 
         df = get_ortholog_table("ENSG00000141510", verbose=False)
         mouse_ids = get_ortholog_ids_for_species(df, "mouse")
@@ -1741,10 +1704,7 @@ class TestOrthologIntegration:
 
     def test_pick_ortholog_for_species(self, skip_if_no_ortholog_deps):
         """Test picking a single ortholog for a species."""
-        from _external_mappers._ortholog import (
-            get_ortholog_table,
-            pick_ortholog_for_species,
-        )
+        from _external_mappers._ortholog import get_ortholog_table, pick_ortholog_for_species
 
         df = get_ortholog_table("ENSG00000141510", verbose=False)
         mouse_ortholog = pick_ortholog_for_species(df, "mouse")

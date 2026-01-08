@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Unit tests for idtrack._database_manager module.
+"""Unit tests for idtrack._database_manager module.
 
 These tests avoid heavy MySQL downloads by patching `DatabaseManager.download_table`
 to return tiny synthetic tables, while still exercising the real caching and
@@ -10,12 +9,11 @@ data-processing logic.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import pytest
-
 
 from idtrack._database_manager import DatabaseManager
 from idtrack._db import DB
@@ -137,7 +135,7 @@ def _synthetic_mysql_tables() -> _SyntheticMySQL:
 
 @pytest.fixture
 def synthetic_dm(tmp_path, monkeypatch) -> DatabaseManager:
-    """DatabaseManager using tiny synthetic MySQL tables (no real MySQL access)."""
+    """Create a DatabaseManager backed by tiny synthetic MySQL tables."""
     synthetic = _synthetic_mysql_tables()
 
     def _available_releases_versions(self: DatabaseManager, **kwargs) -> list[int]:
@@ -168,10 +166,12 @@ def synthetic_dm(tmp_path, monkeypatch) -> DatabaseManager:
 
 
 def test_import_database_manager():
+    """Import smoke test for DatabaseManager."""
     assert DatabaseManager is not None
 
 
 def test_init_rejects_unsupported_organism(tmp_path):
+    """Unsupported organisms should raise NotImplementedError."""
     with pytest.raises(NotImplementedError):
         DatabaseManager(
             organism="drosophila_melanogaster",
@@ -258,6 +258,7 @@ def test_init_infers_assembly_that_supports_requested_release(tmp_path, monkeypa
 
 
 def test_get_table_downloads_and_caches(synthetic_dm, monkeypatch):
+    """get_table should download once and cache subsequent calls."""
     calls: list[tuple[str, list[str] | None]] = []
 
     original_download = DatabaseManager.download_table
@@ -276,6 +277,7 @@ def test_get_table_downloads_and_caches(synthetic_dm, monkeypatch):
 
 
 def test_create_ids_and_release_id(synthetic_dm):
+    """create_ids should produce ids and idsraw_gene tables."""
     idsraw = synthetic_dm.get_db("idsraw_gene")
     assert set(idsraw.columns) == {"gene_id", "gene_stable_id", "gene_version"}
     assert idsraw["gene_id"].dtype.kind in {"i", "u"}
@@ -287,6 +289,7 @@ def test_create_ids_and_release_id(synthetic_dm):
 
 
 def test_create_relation_current_builds_three_node_columns(synthetic_dm):
+    """create_relation_current should yield (gene, transcript, translation) columns."""
     rel = synthetic_dm.get_db("relationcurrent")
     assert list(rel.columns) == ["gene", "transcript", "translation"]
     assert rel["gene"].str.startswith("ENSG").all()
@@ -295,6 +298,7 @@ def test_create_relation_current_builds_three_node_columns(synthetic_dm):
 
 
 def test_create_id_history_narrow_and_full(synthetic_dm):
+    """create_id_history should support both narrow and full modes."""
     full = synthetic_dm.get_db("idhistory")
     narrow = synthetic_dm.get_db("idhistory_narrow")
 
@@ -305,6 +309,7 @@ def test_create_id_history_narrow_and_full(synthetic_dm):
 
 
 def test_create_id_history_fixed_repairs_reappearing_versions(synthetic_dm, monkeypatch):
+    """create_id_history_fixed should repair version regressions."""
     df = pd.DataFrame(
         {
             "old_stable_id": ["ENSG00000000001", "ENSG00000000001", "ENSG00000000001"],
@@ -325,14 +330,19 @@ def test_create_id_history_fixed_repairs_reappearing_versions(synthetic_dm, monk
 
 
 def test_external_db_all_and_filter_modes(synthetic_dm):
+    """create_external_db should support all/relevant/database filter modes."""
     synthetic_dm.external_inst = type(
         "_External",
         (),
-        {"give_list_for_case": staticmethod(lambda give_type: ["UniProt", "EntrezGene", f"{DB.synonym_id_nodes_prefix}UniProt"])},
+        {
+            "give_list_for_case": staticmethod(
+                lambda give_type: ["UniProt", "EntrezGene", f"{DB.synonym_id_nodes_prefix}UniProt"]
+            )
+        },
     )()
 
     all_rows = synthetic_dm.create_external_db(filter_mode="all")
-    assert set(["release", "graph_id", "id_db", "name_db", "ensembl_identity", "xref_identity"]).issubset(all_rows.columns)
+    assert {"release", "graph_id", "id_db", "name_db", "ensembl_identity", "xref_identity"}.issubset(all_rows.columns)
     assert (all_rows["release"] == 100).all()
     assert all_rows["graph_id"].str.startswith("ENSG").all()
 
@@ -352,6 +362,7 @@ def test_external_db_all_and_filter_modes(synthetic_dm):
 
 
 def test_release_discovery_and_mysql_database_from_server_catalog(tmp_path, monkeypatch):
+    """available_releases/mysql_database should be discovered from server catalog."""
     import pymysql
 
     class _Cursor:

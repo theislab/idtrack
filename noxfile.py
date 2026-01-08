@@ -3,7 +3,7 @@
 import os
 import shlex
 import shutil
-import subprocess
+import subprocess  # noqa: S404
 import sys
 import tempfile
 from pathlib import Path
@@ -25,6 +25,9 @@ def _ensure_poetry_export_available() -> None:
 
     `nox-poetry` relies on `poetry export`, which is provided by the
     `poetry-plugin-export` plugin for newer Poetry versions.
+
+    Raises:
+        SystemExit: If Poetry is missing or `poetry export` is unavailable.
     """
     poetry = shutil.which("poetry")
     if poetry is None:
@@ -37,7 +40,7 @@ def _ensure_poetry_export_available() -> None:
         )
         raise SystemExit(1)
 
-    proc = subprocess.run(
+    proc = subprocess.run(  # noqa: S603
         [poetry, "export", "--help"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -231,6 +234,9 @@ def tests_external_mappers(session: Session) -> None:
     This session installs the optional external-mappers extras (gget, mygene,
     pybiomart, gprofiler-official) and runs the external_mappers tests including
     any tests marked as slow/integration that require these dependencies.
+
+    Args:
+        session: The nox session.
     """
     # Install package with external-mappers extras
     session.install(".[external-mappers]")

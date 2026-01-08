@@ -574,7 +574,7 @@ class TrackTests(Track, ABC):
             pass
         elif 0.0 < from_fraction < 1.0:
             from_faction_count = ceil(len(ids_from) * from_fraction)
-            ids_from = sorted(random.sample(ids_from, from_faction_count))
+            ids_from = sorted(random.sample(ids_from, from_faction_count))  # noqa: S311
         else:
             raise ValueError
 
@@ -724,7 +724,7 @@ class TrackTests(Track, ABC):
         metrics["time"] = t2 - t1
         return metrics
 
-    def history_travel_testing_random_arguments_generator(self, strict_forward: bool, include_exclude_list: list):
+    def history_travel_testing_random_arguments_generator(self, strict_forward: bool, include_exclude_list: list[bool]):
         """Generate a plausible random parameter set for :py:meth:`history_travel_testing`.
 
         The helper picks **compatible** source/target assemblies, releases and
@@ -749,7 +749,7 @@ class TrackTests(Track, ABC):
 
         main_assembly = int(self.graph.graph["genome_assembly"])
         from_assembly = (
-            random.choice(sorted(self.graph.available_genome_assemblies))
+            random.choice(sorted(self.graph.available_genome_assemblies))  # noqa: S311
             if not only_backbone_tests_1
             else main_assembly
         )
@@ -1033,13 +1033,13 @@ class TrackTests(Track, ABC):
         else:
             all_possible_sources = [DB.nts_ensembl[DB.backbone_form]]
 
-        selected_database = random.choice(all_possible_sources)
+        selected_database = random.choice(all_possible_sources)  # noqa: S311
         possible_releases = self.graph.available_releases_given_database_assembly[(selected_database, assembly)]
         if release_lower_limit is not None:
             possible_releases = {i for i in possible_releases if i >= release_lower_limit}
 
         if len(possible_releases) > 1:
-            selected_release = random.choice(list(possible_releases))
+            selected_release = random.choice(list(possible_releases))  # noqa: S311
             the_key = (selected_database, assembly, selected_release)
             return the_key
         else:

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-gget backend for ID mapping.
+"""gget backend for ID mapping.
 
 This module provides the map_with_gget() function for querying
 the gget.info API (Ensembl REST-backed) to convert biological identifiers.
@@ -36,20 +35,14 @@ from idtrack._external_mappers._utils import (
 
 
 def _gget_extract(df: pd.DataFrame, outp: str) -> pd.DataFrame:
-    """
-    Normalize gget.info() output into standardized (input_id, output_id) format.
+    """Normalize gget.info() output into standardized (input_id, output_id) format.
 
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Raw DataFrame from gget.info().
-    outp : str
-        Target database type.
+    Args:
+        df: Raw DataFrame from gget.info().
+        outp: Target database type.
 
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with 'input_id' and 'output_id' columns.
+    Returns:
+        DataFrame with ``input_id`` and ``output_id`` columns.
     """
     rename = {
         "id": "gene_id",
@@ -94,19 +87,22 @@ def _gget_extract(df: pd.DataFrame, outp: str) -> pd.DataFrame:
     else:
         src = df.iloc[:, 0].astype(str).tolist()
 
+    outs: list[str | None]
     if out_col in df.columns:
-        outs = [strip_version(i) for i in df[out_col].astype(object).tolist()]
+        outs = []
+        for raw in df[out_col].astype(object).tolist():
+            if raw is None:
+                outs.append(None)
+                continue
+            raw_s = str(raw)
+            if raw_s.lower() in {"nan", "none", "null"}:
+                outs.append(None)
+            else:
+                outs.append(strip_version(raw_s))
     else:
         outs = [None] * len(src)
 
-    have_in, have_out = [], []
-    for s, o in zip(src, outs):
-        have_in.append(s)
-        if o is None or str(o).lower() in {"nan", "none", "null"}:
-            have_out.append(None)
-        else:
-            have_out.append(str(o))
-    return pd.DataFrame({"input_id": have_in, "output_id": have_out})
+    return pd.DataFrame({"input_id": src, "output_id": outs})
 
 
 def map_with_gget(
@@ -122,48 +118,29 @@ def map_with_gget(
     show_progress: bool = True,
     suppress_method_verbosity: bool = True,
 ) -> pd.DataFrame:
-    """
-    Map identifiers using gget.info (Ensembl REST API-backed).
+    """Map identifiers using gget.info (Ensembl REST API-backed).
 
     Note: gget is Ensembl-centric, so input_db must be an Ensembl ID type.
     For non-Ensembl inputs, use 'mygene' or 'gprofiler' methods.
 
-    Parameters
-    ----------
-    ids : Iterable[str]
-        Input Ensembl identifiers to map.
-    input_db : str
-        Source database type. Must be an Ensembl type: 'ensembl_gene',
-        'ensembl_transcript', or 'ensembl_protein'.
-    output_db : str
-        Target database type (e.g., 'hgnc_symbol', 'uniprot', 'entrez_gene').
-    species : str, default 'hsapiens'
-        Species code (e.g., 'hsapiens', 'mmusculus', 'sscrofa').
-    chunk_size : int, default 1000
-        Number of IDs per API request.
-    pause : float, default 0.2
-        Pause in seconds between requests.
-    max_retries : int, default 3
-        Maximum retry attempts per chunk on failure.
-    strip_versions : bool, default True
-        Strip version suffixes from Ensembl/RefSeq IDs.
-    show_progress : bool, default True
-        Display progress bar.
-    suppress_method_verbosity : bool, default True
-        Suppress stdout/stderr from gget.
+    Args:
+        ids: Input Ensembl identifiers to map.
+        input_db: Source database type. Must be one of ``"ensembl_gene"``, ``"ensembl_transcript"``,
+            or ``"ensembl_protein"``.
+        output_db: Target database type (e.g. ``"hgnc_symbol"``, ``"uniprot"``, ``"entrez_gene"``).
+        species: Species code (e.g. ``"hsapiens"``, ``"mmusculus"``, ``"sscrofa"``).
+        chunk_size: Number of IDs per API request.
+        pause: Pause in seconds between requests.
+        max_retries: Maximum retry attempts per chunk on failure.
+        strip_versions: Strip version suffixes from Ensembl/RefSeq IDs.
+        show_progress: Display progress bar.
+        suppress_method_verbosity: Suppress stdout/stderr from gget.
 
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with columns: input_id, input_db, mapping, output_id,
-        output_db, method, release_used, metadata_json.
+    Returns:
+        pd.DataFrame: Standardized mapping DataFrame.
 
-    Raises
-    ------
-    RuntimeError
-        If gget is not installed.
-    ValueError
-        If input_db is not an Ensembl type.
+    Raises:
+        ValueError: If ``input_db`` is not an Ensembl type.
     """
     try:
         from gget import info as gget_info  # type: ignore
@@ -176,7 +153,7 @@ def map_with_gget(
     # Accept multiple input ID types (Ensembl gene/transcript/protein) and
     # common gene-centric IDs that gget can resolve (HGNC symbol, UniProt, Entrez).
     if inp not in _ENSEMBL_INPUT_DB:
-        allowed_str = ', '.join(sorted(_ENSEMBL_INPUT_DB))
+        allowed_str = ", ".join(sorted(_ENSEMBL_INPUT_DB))
         raise ValueError(
             f"gget input_db must be one of {{{allowed_str}}}, got {inp!r}. "
             "Tip: gget is Ensembl-centric; for other inputs try method='mygene' or 'gprofiler'."

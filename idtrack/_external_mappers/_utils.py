@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Utility functions for the _external_mappers module.
+"""Utility functions for the _external_mappers module.
 
 This module provides:
 - Database and species name canonicalization
@@ -21,7 +20,8 @@ import json
 import logging
 import re
 import typing
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 import pandas as pd
 
@@ -97,18 +97,13 @@ def _check_dependency(dep_key: str) -> bool:
 
 
 def check_optional_dependencies(warn: bool = True) -> dict[str, bool]:
-    """
-    Check which optional dependencies are installed.
+    """Check which optional dependencies are installed.
 
-    Parameters
-    ----------
-    warn : bool, default True
-        If True, emit a warning for each missing dependency.
+    Args:
+        warn: When ``True``, emit a warning summarizing missing packages.
 
-    Returns
-    -------
-    dict[str, bool]
-        Dictionary mapping dependency names to availability status.
+    Returns:
+        Mapping from dependency key to availability.
     """
     import warnings
 
@@ -154,22 +149,15 @@ def raise_missing_dependency(
     feature: str | None = None,
     original_error: BaseException | None = None,
 ) -> typing.NoReturn:
-    """
-    Raise a detailed error for a missing optional dependency.
+    """Raise a detailed error for a missing optional dependency.
 
-    Parameters
-    ----------
-    dep_key : str
-        Key in OPTIONAL_DEPENDENCIES (e.g., "gget", "mygene").
-    feature : str, optional
-        Description of the feature that requires this dependency.
-    original_error : BaseException, optional
-        The original ImportError to chain.
+    Args:
+        dep_key: Key in :py:data:`OPTIONAL_DEPENDENCIES` (e.g. ``"gget"``, ``"mygene"``).
+        feature: Description of the feature that requires the dependency.
+        original_error: Optional original ImportError to chain.
 
-    Raises
-    ------
-    RuntimeError
-        Always raises with detailed installation instructions.
+    Raises:
+        RuntimeError: Always, with detailed installation instructions.
     """
     if dep_key not in OPTIONAL_DEPENDENCIES:
         # Fallback for unknown dependencies
@@ -199,7 +187,7 @@ def raise_missing_dependency(
         f"Missing optional dependency: {pip_name}\n"
         f"{'=' * 70}\n"
         f"\n"
-        f"The '{feature}' feature requires '{pip_name}'.\n"
+        f"The {feature!r} feature requires {pip_name!r}.\n"
         f"\n"
         f"Package info:\n"
         f"  - Name: {pip_name}\n"
@@ -266,13 +254,15 @@ def canonical_db(db: str) -> str:
 
 
 def canonical_species(species: str | None) -> str:
-    """
-    Canonical organism code (g:Profiler / Ensembl style).
+    """Return canonical organism code (g:Profiler / Ensembl style).
 
-    Supported out-of-the-box:
-        - human: hsapiens
-        - mouse: mmusculus
-        - pig:   sscrofa
+    Supported out-of-the-box: human → ``hsapiens``, mouse → ``mmusculus``, pig → ``sscrofa``.
+
+    Args:
+        species: Species code/alias. If ``None`` or empty, defaults to ``"hsapiens"``.
+
+    Returns:
+        str: Canonical organism code.
     """
     if not species:
         return "hsapiens"
@@ -281,7 +271,7 @@ def canonical_species(species: str | None) -> str:
 
 
 def _species_for_mygene(species: str | None) -> str:
-    """MyGene expects common names like 'human' / 'mouse' / 'pig'."""
+    """Return the MyGene-compatible common name for a canonical species code."""
     cs = canonical_species(species)
     if cs == "hsapiens":
         return "human"
@@ -299,31 +289,18 @@ _ENS_RE = re.compile(r"^(ENS[A-Z]*\d+)")
 _REFSEQ_VER_RE = re.compile(r"^([NX][MRP]_\d+)")
 
 
-def strip_version(id_: str) -> str:
+def strip_version(ididid: str) -> str:
+    r"""Strip version suffixes from Ensembl and RefSeq identifiers.
+
+    Args:
+        ididid: Identifier to strip.
+
+    Returns:
+        Identifier without a version suffix (or unchanged if none is present).
     """
-    Strip version suffixes from Ensembl and RefSeq identifiers.
-
-    Examples:
-        >>> strip_version("ENSG00000141510.15")
-        'ENSG00000141510'
-        >>> strip_version("NM_000546.6")
-        'NM_000546'
-        >>> strip_version("TP53")  # Non-versioned IDs pass through
-        'TP53'
-
-    Parameters
-    ----------
-    id_ : str
-        The identifier to strip version from.
-
-    Returns
-    -------
-    str
-        The identifier without version suffix.
-    """
-    if not isinstance(id_, str):
-        return id_  # type: ignore[return-value]
-    x = id_.strip()
+    if not isinstance(ididid, str):
+        return ididid  # type: ignore[return-value]
+    x = ididid.strip()
 
     m = _ENS_RE.match(x)
     if m:
@@ -337,12 +314,17 @@ def strip_version(id_: str) -> str:
 
 
 def _as_list(v: Any) -> list[Any]:
-    """
-    Coerce a value to a list.
+    """Coerce a value to a list.
 
-    - None returns []
-    - list/tuple/set returns list(v)
-    - Scalar values return [v]
+    - ``None`` returns ``[]``
+    - list/tuple/set returns ``list(v)``
+    - scalar values return ``[v]``
+
+    Args:
+        v: Value to coerce.
+
+    Returns:
+        list[Any]: ``v`` represented as a list.
     """
     if v is None:
         return []
@@ -352,23 +334,18 @@ def _as_list(v: Any) -> list[Any]:
 
 
 def _unique_not_null(seq: Iterable[Any]) -> list[str]:
-    """
-    Return unique non-null string values from a sequence, preserving order.
+    """Return unique non-null string values from a sequence, preserving order.
 
     Filters out:
-    - None values
-    - Empty strings or whitespace-only strings
-    - String representations of null values: 'nan', 'none', 'null' (case-insensitive)
+    - ``None`` values
+    - empty / whitespace-only strings
+    - stringified null values (``"nan"``, ``"none"``, ``"null"``; case-insensitive)
 
-    Parameters
-    ----------
-    seq : Iterable[Any]
-        Input sequence of values.
+    Args:
+        seq: Sequence of values to normalize and filter.
 
-    Returns
-    -------
-    list[str]
-        List of unique non-null string values, preserving first occurrence order.
+    Returns:
+        list[str]: Unique non-null string values in first-seen order.
     """
     seen: set[str] = set()
     out: list[str] = []
@@ -385,56 +362,18 @@ def _unique_not_null(seq: Iterable[Any]) -> list[str]:
 
 
 def _chunker(items: list[Any], size: int) -> typing.Iterator[list[Any]]:
-    """
-    Yield successive chunks of a given size from a list.
-
-    Parameters
-    ----------
-    items : list
-        The list to chunk.
-    size : int
-        Maximum size of each chunk.
-
-    Yields
-    ------
-    list
-        Successive chunks of the input list.
-    """
+    """Yield successive chunks of a list."""
     for i in range(0, len(items), size):
         yield items[i : i + size]
 
 
 def _json(obj: Any) -> str:
-    """
-    Serialize object to compact JSON string with unicode preserved.
-
-    Parameters
-    ----------
-    obj : Any
-        Object to serialize.
-
-    Returns
-    -------
-    str
-        Compact JSON string representation.
-    """
+    """Serialize an object to a compact JSON string (unicode preserved)."""
     return json.dumps(obj, separators=(",", ":"), ensure_ascii=False)
 
 
 def _is_bare_numeric(s: str) -> bool:
-    """
-    Check if a string consists entirely of digits.
-
-    Parameters
-    ----------
-    s : str
-        String to check.
-
-    Returns
-    -------
-    bool
-        True if the string is a bare numeric (all digits), False otherwise.
-    """
+    """Return ``True`` if a string consists entirely of digits."""
     return bool(re.fullmatch(r"\d+", str(s).strip()))
 
 
@@ -442,6 +381,7 @@ def _is_bare_numeric(s: str) -> bool:
 
 
 def _empty_result() -> pd.DataFrame:
+    """Return an empty standardized mapping result DataFrame."""
     return pd.DataFrame(
         columns=[
             "input_id",
@@ -457,14 +397,16 @@ def _empty_result() -> pd.DataFrame:
 
 
 def _add_mapping_column(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Add / recompute the `mapping` column on a DataFrame with at least
-    `input_id` and `output_id` columns.
+    """Add or recompute the ``mapping`` column on a standardized mapping DataFrame.
 
-    mapping is per-input cardinality of the mapping:
-        1:0  -> no non-null output_id
-        1:1  -> exactly one unique non-null output_id
-        1:n  -> more than one unique non-null output_id
+    The ``mapping`` value is the per-input cardinality:
+    ``1:0`` (no outputs), ``1:1`` (one unique output), ``1:n`` (multiple outputs).
+
+    Args:
+        df: Standardized mapping DataFrame.
+
+    Returns:
+        pd.DataFrame: DataFrame with a (re)computed ``mapping`` column.
     """
     if df is None:
         return _empty_result()
@@ -515,10 +457,21 @@ def _ensure_all_inputs(
     method: str,
     release_used: str | None,
 ) -> pd.DataFrame:
-    """
-    Guarantee that each input appears at least once in the output
-    (with output_id=None if unmapped). Preserve input order and add
-    the `mapping` column.
+    """Ensure each input appears at least once in the output.
+
+    Missing inputs are appended with ``output_id=None``. Input order is preserved and the
+    ``mapping`` column is (re)computed.
+
+    Args:
+        df: Partially populated standardized mapping DataFrame.
+        original_inputs: Original input identifiers (order is preserved).
+        inp: Canonical input database key.
+        outp: Canonical output database key.
+        method: Backend method name.
+        release_used: Backend-provided release/host label (if any).
+
+    Returns:
+        pd.DataFrame: Standardized mapping DataFrame containing at least one row per input.
     """
     if df is None or df.empty:
         base = pd.DataFrame(

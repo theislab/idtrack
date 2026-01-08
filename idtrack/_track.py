@@ -1358,7 +1358,8 @@ class Track:
             if len(the_path) == 1 and (the_path[0][0] is None or the_path[0][2] is None):
                 # Happens when the path is like following: ((None, 'ENSG00000170558.10', None),)
                 # Just check whether this Ensembl ID exist in both assemblies
-                assert the_path[0][1] is not None and the_path[0][0] is None and the_path[0][2] is None
+                if not (the_path[0][1] is not None and the_path[0][0] is None and the_path[0][2] is None):
+                    raise ValueError(f"Unexpected singleton path shape: {the_path!r}")
                 assemblies = list(
                     {
                         j
@@ -1424,7 +1425,8 @@ class Track:
             edge_key = (n1, n2, n3)
         else:
             edge_key = (n2, n1, n3)
-            assert self.graph.has_edge(*edge_key), edge_key
+            if not self.graph.has_edge(*edge_key):
+                raise AssertionError(edge_key)
 
         return edge_key
 
@@ -1521,13 +1523,12 @@ class Track:
             current_priority (int): Priority value inherited from previous steps.
             priorities (list[list[int]]): Priority lists for the *rest* of the path,
                 **already sorted** for correct bisecting.
+            assembly_priority (list[int] | None): Optional global priority lattice.
+                If ``None``, it is computed from ``step_pri``, ``current_priority``, and ``priorities``.
 
         Returns:
             tuple[int, list[int], int]: Same three-tuple as documented in
             :py:meth:`minimum_assembly_jumps`.
-
-        Raises:
-            ValueError: If the priority lattice enters an impossible state.
         """
         if assembly_priority is None:
             priority_values = set(step_pri)
@@ -1639,6 +1640,7 @@ class Track:
                 `final_elements[*]['filter_scores']` sub-dict that records the filters applied.
 
         Raises:
+            AssertionError: If node-score tie-breaking results in an empty candidate set.
             ValueError: If `dict_of_dict` is empty.
         """
         importance_order = (
@@ -1698,7 +1700,8 @@ class Track:
             best_score_key_ns = min(minimum_scores_ns, key=the_min_key_ns)
             best_score_value_ns = minimum_scores_ns[best_score_key_ns]
             best_scoring_targets_ns = {i for i in minimum_scores_ns if best_score_value_ns == minimum_scores_ns[i]}
-            assert len(best_scoring_targets_ns) > 0
+            if not best_scoring_targets_ns:
+                raise AssertionError("Expected at least one best scoring target after node score filtering.")
             best_scoring_targets = [(i, j) for i, j in best_scoring_targets if i in best_scoring_targets_ns]
             node_score_switch = True
 
@@ -2292,4 +2295,6 @@ class Track:
         Raises:
             NotImplementedError: Always - the optimisation strategy is not yet implemented.
         """
-        raise NotImplementedError("Batch-optimised converter is not yet implemented. Use API.convert_identifier_multiple instead.")
+        raise NotImplementedError(
+            "Batch-optimised converter is not yet implemented. Use API.convert_identifier_multiple instead."
+        )

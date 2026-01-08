@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Unit tests for idtrack._graph_maker module.
+"""Unit tests for idtrack._graph_maker module.
 
 These tests exercise real GraphMaker logic using tiny synthetic Ensembl tables to
 avoid multi-GB downloads while still validating important graph-building
@@ -11,7 +10,6 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -140,10 +138,12 @@ def synthetic_graph_dm(tmp_path, monkeypatch) -> DatabaseManager:
 
 
 def test_import_graph_maker():
+    """Import smoke test for GraphMaker."""
     assert GraphMaker is not None
 
 
 def test_construct_graph_form_builds_time_travel_edges(synthetic_graph_dm):
+    """Construct a per-form graph and validate backbone edges."""
     gm = GraphMaker(synthetic_graph_dm)
     g = gm.construct_graph_form(narrow=False, db_manager=synthetic_graph_dm.change_form("gene"))
 
@@ -175,6 +175,7 @@ def test_construct_graph_form_builds_time_travel_edges(synthetic_graph_dm):
 
 
 def test_construct_graph_adds_base_nodes_and_merges_case_insensitive_externals(synthetic_graph_dm):
+    """Ensure base nodes exist and externals are case-insensitive."""
     gm = GraphMaker(synthetic_graph_dm)
     g = gm.construct_graph(narrow=True, form_list=["gene"], narrow_external=True)
 
@@ -196,7 +197,9 @@ def test_construct_graph_adds_base_nodes_and_merges_case_insensitive_externals(s
     assert "available_releases" in edge_data
     assert 100 in edge_data["available_releases"] or 101 in edge_data["available_releases"]
 
+
 def test_get_graph_roundtrips_pickle_cache(synthetic_graph_dm):
+    """Ensure get_graph writes and reloads a cached pickle."""
     gm = GraphMaker(synthetic_graph_dm)
 
     file_path = gm.create_file_name(narrow=True, form_list=["gene"])
@@ -223,6 +226,7 @@ def test_get_graph_roundtrips_pickle_cache(synthetic_graph_dm):
 
 
 def test_remove_non_gene_trees_prunes_transcript_history():
+    """Ensure non-gene temporal trees are pruned."""
     g = TheGraph()
     t1 = "ENST00000000010.1"
     t2 = "ENST00000000020.1"
@@ -242,12 +246,17 @@ def test_remove_non_gene_trees_prunes_transcript_history():
     assert not pruned.has_edge(t1, t2)
     assert pruned.has_edge(t1, gene)
 
+
 def test_graph_maker_requires_latest_release(synthetic_graph_dm):
+    """Ensure GraphMaker requires constructing from the latest release."""
+    import inspect
+
     older = synthetic_graph_dm.change_release(100)
     with pytest.raises(ValueError):
         GraphMaker(older)
-        source = inspect.getsource(GraphMaker.update_graph_with_the_new_release)
-        assert "raise NotImplementedError" in source
+
+    source = inspect.getsource(GraphMaker.update_graph_with_the_new_release)
+    assert "raise NotImplementedError" in source
 
 
 class TestGraphMakerPerformance:
@@ -255,8 +264,9 @@ class TestGraphMakerPerformance:
 
     def test_uses_efficient_data_structures(self):
         """Test efficient data structures are used."""
-        from idtrack._the_graph import TheGraph
         import networkx as nx
+
+        from idtrack._the_graph import TheGraph
 
         graph = TheGraph()
         # MultiDiGraph is appropriate for this use case
@@ -273,10 +283,12 @@ class TestGraphMakerIntegrationPoints:
     def test_produces_the_graph(self):
         """Test produces TheGraph instance."""
         from idtrack._the_graph import TheGraph
+
         graph = TheGraph()
         assert isinstance(graph, TheGraph)
 
     def test_uses_db_constants(self):
         """Test uses DB constants."""
         from idtrack._db import DB
+
         assert DB.node_type_str == "node_type"

@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-"""
-Functional tests for idtrack._track module static methods.
+"""Functional tests for idtrack._track module static methods.
 
 These tests actually execute code paths to increase coverage.
 """
 
 from __future__ import annotations
 
-import pytest
 import numpy as np
+import pytest
 
 from idtrack._track import Track
 

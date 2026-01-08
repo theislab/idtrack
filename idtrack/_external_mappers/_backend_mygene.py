@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-MyGene.info backend for ID mapping.
+"""MyGene.info backend for ID mapping.
 
 This module provides the map_with_mygene() function for querying
 the MyGene.info API to convert biological identifiers.
@@ -26,8 +25,8 @@ from idtrack._external_mappers._utils import (
     _empty_result,
     _ensure_all_inputs,
     _json,
-    _suppress_stdout_stderr,
     _species_for_mygene,
+    _suppress_stdout_stderr,
     _unique_not_null,
     canonical_db,
     logger,
@@ -37,20 +36,14 @@ from idtrack._external_mappers._utils import (
 
 
 def _mg_extract(rec: dict[str, _t.Any], target: str) -> list[str]:
-    """
-    Extract target identifiers from a MyGene.info record.
+    """Extract target identifiers from a MyGene.info record.
 
-    Parameters
-    ----------
-    rec : dict
-        A single record from MyGene.info querymany response.
-    target : str
-        The target database type to extract (e.g., 'hgnc_symbol', 'uniprot').
+    Args:
+        rec: One record from the MyGene.info ``querymany`` response.
+        target: Canonical target database name (e.g. ``"hgnc_symbol"``, ``"uniprot"``).
 
-    Returns
-    -------
-    list[str]
-        List of extracted target identifiers, or empty list if not found.
+    Returns:
+        Extracted target identifiers (may be empty).
     """
     target = canonical_db(target)
     if target == "hgnc_symbol":
@@ -136,44 +129,25 @@ def map_with_mygene(
     show_progress: bool = True,
     suppress_method_verbosity: bool = True,
 ) -> pd.DataFrame:
-    """
-    Map identifiers using the MyGene.info API.
+    """Map identifiers using the MyGene.info API.
 
-    Parameters
-    ----------
-    ids : Iterable[str]
-        Input identifiers to map.
-    input_db : str
-        Source database type (e.g., 'ensembl_gene', 'hgnc_symbol', 'entrez_gene').
-    output_db : str
-        Target database type (e.g., 'uniprot', 'hgnc_symbol', 'entrez_gene').
-    species : str, default 'hsapiens'
-        Species code (e.g., 'hsapiens', 'mmusculus', 'sscrofa').
-    chunk_size : int, default 1000
-        Number of IDs per API request.
-    pause : float, default 0.2
-        Pause in seconds between API requests.
-    max_retries : int, default 3
-        Maximum retry attempts per chunk on failure.
-    strip_versions : bool, default True
-        Strip version suffixes from Ensembl/RefSeq IDs.
-    show_progress : bool, default True
-        Display progress bar.
-    suppress_method_verbosity : bool, default True
-        Suppress stdout/stderr from the mygene library.
+    Args:
+        ids: Input identifiers to map.
+        input_db: Source database type (e.g. ``"ensembl_gene"``, ``"hgnc_symbol"``, ``"entrez_gene"``).
+        output_db: Target database type (e.g. ``"uniprot"``, ``"hgnc_symbol"``, ``"entrez_gene"``).
+        species: Species code (e.g. ``"hsapiens"``, ``"mmusculus"``, ``"sscrofa"``).
+        chunk_size: Number of IDs per API request.
+        pause: Pause in seconds between API requests.
+        max_retries: Maximum retry attempts per chunk on failure.
+        strip_versions: Strip version suffixes from Ensembl/RefSeq IDs.
+        show_progress: Display progress bar.
+        suppress_method_verbosity: Suppress stdout/stderr from the mygene library.
 
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with columns: input_id, input_db, mapping, output_id,
-        output_db, method, release_used, metadata_json.
+    Returns:
+        pd.DataFrame: Standardized mapping DataFrame.
 
-    Raises
-    ------
-    RuntimeError
-        If mygene is not installed.
-    ValueError
-        If input_db is not supported by MyGene.info.
+    Raises:
+        ValueError: If ``input_db`` is not supported by MyGene.info.
     """
     try:
         import mygene  # type: ignore

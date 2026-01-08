@@ -1,20 +1,30 @@
 from __future__ import annotations
 
-import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Any
 
 import numpy as np
 import pymysql
 
-from idtrack._db import DB
 from idtrack._database_manager import DatabaseManager
+from idtrack._db import DB
 from idtrack._the_graph import TheGraph
 
 
 @dataclass(frozen=True)
 class RealGraphSpec:
+    """Parameters for building a tiny, real gene graph snapshot.
+
+    Attributes:
+        organism: Ensembl species name (e.g. ``"homo_sapiens"``).
+        genome_assembly: Genome assembly integer used by idtrack (e.g. 38).
+        releases: Ensembl releases to include in the snapshot.
+        seed_gene_ids: Optional seed gene stable IDs to include.
+        external_databases: Optional external databases to attach to gene nodes.
+    """
+
     organism: str
     genome_assembly: int
     releases: tuple[int, ...]
@@ -23,10 +33,12 @@ class RealGraphSpec:
 
     @property
     def min_release(self) -> int:
+        """Minimum Ensembl release included in the snapshot."""
         return min(self.releases)
 
     @property
     def max_release(self) -> int:
+        """Maximum Ensembl release included in the snapshot."""
         return max(self.releases)
 
 
@@ -35,11 +47,11 @@ def _mysql_connect(
     organism: str,
     genome_assembly: int,
     ensembl_release: int,
-    database: Optional[str] = None,
+    database: str | None = None,
 ) -> pymysql.connections.Connection:
     core_index = DatabaseManager._get_core_db_index(organism=organism, genome_assembly=genome_assembly)
     port = core_index["port_for_release"][int(ensembl_release)]
-    which_mysql_server = {
+    which_mysql_server: dict[str, Any] = {
         "host": DB.mysql_host,
         "user": DB.myqsl_user,
         "password": DB.mysql_togo,
@@ -69,7 +81,7 @@ def _resolve_core_db_name(*, organism: str, release: int, genome_assembly: int) 
 
 def _discover_gene_id_change(
     *, conn: pymysql.connections.Connection, min_release: int, max_release: int
-) -> Optional[tuple[str, int, str, int, int, int, float]]:
+) -> tuple[str, int, str, int, int, int, float] | None:
     """Return one stable-id change event within [min_release, max_release] (old_id != new_id)."""
     sql = """
         SELECT
@@ -115,16 +127,14 @@ def _iter_chunks(items: list[str], size: int) -> Iterable[list[str]]:
         yield items[i : i + size]
 
 
-def _fetch_gene_versions(
-    *, conn: pymysql.connections.Connection, stable_ids: list[str]
-) -> dict[str, int]:
+def _fetch_gene_versions(*, conn: pymysql.connections.Connection, stable_ids: list[str]) -> dict[str, int]:
     """Return `{stable_id: version}` for genes present in the current DB."""
     if not stable_ids:
         return {}
     result: dict[str, int] = {}
     for chunk in _iter_chunks(stable_ids, 200):
         placeholders = ",".join(["%s"] * len(chunk))
-        sql = f"SELECT stable_id, version FROM gene WHERE stable_id IN ({placeholders})"
+        sql = f"SELECT stable_id, version FROM gene WHERE stable_id IN ({placeholders})"  # noqa: S608
         with conn.cursor() as cur:
             cur.execute(sql, chunk)
             rows = cur.fetchall()
@@ -170,7 +180,7 @@ def _fetch_external_mappings(
     for chunk in _iter_chunks(stable_ids, 100):
         placeholders = ",".join(["%s"] * len(chunk))
         # Pull both db_display_name (display_label) and db_name (dbprimary_acc), mirroring DatabaseManager.create_external_db.
-        sql = f"""
+        sql = f"""  # noqa: S608
             SELECT
                 g.stable_id,
                 g.version,
@@ -249,22 +259,33 @@ def _add_connection_edge(g: TheGraph, n1: str, n2: str, db_name: str, assembly: 
 def build_real_gene_graph(spec: RealGraphSpec) -> tuple[TheGraph, dict[str, str]]:
     """Build a small, real homo_sapiens gene-only graph for the selected Ensembl releases.
 
+    Args:
+        spec: Real-graph build specification (organism, assembly, releases, and seed identifiers).
+
     Returns:
-        (graph, fixtures) where fixtures contains stable example identifiers discovered during build.
+        tuple[TheGraph, dict[str, str]]: ``(graph, fixtures)`` where fixtures contains stable example identifiers
+        discovered during build.
+
+    Raises:
+        ValueError: If ``spec.releases`` is empty.
     """
     releases = list(spec.releases)
     if not releases:
         raise ValueError("spec.releases cannot be empty")
 
-    db_for_max = _resolve_core_db_name(organism=spec.organism, release=spec.max_release, genome_assembly=spec.genome_assembly)
-    change_event: Optional[tuple[str, int, str, int, int, int, float]]
+    db_for_max = _resolve_core_db_name(
+        organism=spec.organism, release=spec.max_release, genome_assembly=spec.genome_assembly
+    )
+    change_event: tuple[str, int, str, int, int, int, float] | None
     with _mysql_connect(
         organism=spec.organism,
         genome_assembly=spec.genome_assembly,
         ensembl_release=spec.max_release,
         database=db_for_max,
     ) as conn_max:
-        change_event = _discover_gene_id_change(conn=conn_max, min_release=spec.min_release, max_release=spec.max_release)
+        change_event = _discover_gene_id_change(
+            conn=conn_max, min_release=spec.min_release, max_release=spec.max_release
+        )
 
     seed_ids = list(spec.seed_gene_ids)
     fixtures: dict[str, str] = {}
@@ -291,7 +312,10 @@ def build_real_gene_graph(spec: RealGraphSpec) -> tuple[TheGraph, dict[str, str]
 
     stable_ids = sorted(set(seed_ids))
     fixtures["seed_gene_ids"] = ",".join(stable_ids)
-    db_by_release = {rel: _resolve_core_db_name(organism=spec.organism, release=rel, genome_assembly=spec.genome_assembly) for rel in releases}
+    db_by_release = {
+        rel: _resolve_core_db_name(organism=spec.organism, release=rel, genome_assembly=spec.genome_assembly)
+        for rel in releases
+    }
 
     g = TheGraph(
         name=f"{spec.organism}_{spec.max_release}_gene_small",
@@ -448,11 +472,12 @@ def build_real_gene_graph(spec: RealGraphSpec) -> tuple[TheGraph, dict[str, str]
 
 
 def load_or_build_real_gene_graph(path: Path, spec: RealGraphSpec) -> tuple[TheGraph, dict[str, str]]:
-    import pickle
+    """Load a cached snapshot from `path`, or build and cache a new one."""
+    import pickle  # noqa: S403
 
     if path.exists():
         try:
-            payload = pickle.loads(path.read_bytes())
+            payload = pickle.loads(path.read_bytes())  # noqa: S301
         except Exception:
             # Treat corrupted / incompatible caches as a cache miss.
             # This keeps integration tests robust across dependency/Python upgrades.

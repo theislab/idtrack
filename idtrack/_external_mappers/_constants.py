@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Constants and configuration for the _external_mappers module.
+"""Constants and configuration for the _external_mappers module.
 
 This module provides:
 - Database alias mappings to canonical database names
@@ -275,4 +274,3 @@ _GP_INPUT_NAMESPACES: dict[str, set[str]] = {
     "wormbase": {"WORMBASE"},
     "flybase": {"FLYBASE"},
 }
-

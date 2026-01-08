@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Unit tests for idtrack._external_databases module.
+"""Unit tests for idtrack._external_databases module.
 
 Tests the ExternalDatabases class for YAML configuration management.
 """
@@ -8,9 +7,6 @@ Tests the ExternalDatabases class for YAML configuration management.
 from __future__ import annotations
 
 import os
-import tempfile
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -135,13 +131,15 @@ class TestCreateTemplateYaml:
         )
 
         # Create sample DataFrame
-        df = pd.DataFrame({
-            "organism": ["homo_sapiens", "homo_sapiens"],
-            "form": ["gene", "gene"],
-            "name_db": ["HGNC Symbol", "UniProtKB"],
-            "assembly": [38, 38],
-            "release": [110, 110],
-        })
+        df = pd.DataFrame(
+            {
+                "organism": ["homo_sapiens", "homo_sapiens"],
+                "form": ["gene", "gene"],
+                "name_db": ["HGNC Symbol", "UniProtKB"],
+                "assembly": [38, 38],
+                "release": [110, 110],
+            }
+        )
 
         edb.create_template_yaml(df)
 
@@ -160,13 +158,15 @@ class TestCreateTemplateYaml:
             genome_assembly=38,
         )
 
-        df = pd.DataFrame({
-            "organism": ["homo_sapiens", "homo_sapiens"],
-            "form": ["gene", "gene"],
-            "name_db": ["HGNC Symbol", "UniProtKB"],
-            "assembly": [38, 38],
-            "release": [109, 110],
-        })
+        df = pd.DataFrame(
+            {
+                "organism": ["homo_sapiens", "homo_sapiens"],
+                "form": ["gene", "gene"],
+                "name_db": ["HGNC Symbol", "UniProtKB"],
+                "assembly": [38, 38],
+                "release": [109, 110],
+            }
+        )
 
         edb.create_template_yaml(df)
 
@@ -190,13 +190,15 @@ class TestCreateTemplateYaml:
             genome_assembly=38,
         )
 
-        df = pd.DataFrame({
-            "organism": ["homo_sapiens"],
-            "form": ["gene"],
-            "name_db": ["HGNC Symbol"],
-            "assembly": [38],
-            "release": [110],
-        })
+        df = pd.DataFrame(
+            {
+                "organism": ["homo_sapiens"],
+                "form": ["gene"],
+                "name_db": ["HGNC Symbol"],
+                "assembly": [38],
+                "release": [110],
+            }
+        )
 
         edb.create_template_yaml(df)
 
@@ -418,7 +420,7 @@ class TestGiveListForCase:
                                 "Include": False,
                             }
                         }
-                    }
+                    },
                 }
             }
         }
@@ -460,7 +462,7 @@ class TestMultipleAssemblies:
                             "38": {
                                 "Ensembl release": "110",
                                 "Include": True,
-                            }
+                            },
                         }
                     }
                 }
@@ -509,13 +511,15 @@ class TestDatabaseIndex:
             genome_assembly=38,
         )
 
-        df = pd.DataFrame({
-            "organism": ["homo_sapiens"] * 3,
-            "form": ["gene"] * 3,
-            "name_db": ["DB_A", "DB_B", "DB_C"],
-            "assembly": [38] * 3,
-            "release": [110] * 3,
-        })
+        df = pd.DataFrame(
+            {
+                "organism": ["homo_sapiens"] * 3,
+                "form": ["gene"] * 3,
+                "name_db": ["DB_A", "DB_B", "DB_C"],
+                "assembly": [38] * 3,
+                "release": [110] * 3,
+            }
+        )
 
         edb.create_template_yaml(df)
 

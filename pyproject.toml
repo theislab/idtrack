@@ -34,7 +34,12 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.9,<4.0"
 # dependencies are versioned based on their version on 19 October 2019, when Python 3.8 was released.
-PyYAML = ">=5.2"
+# PyYAML<6 has no manylinux wheels for Python 3.10+ and its sdist build fails under modern setuptools
+# (AttributeError: cython_sources). Keep PyYAML 5.x support only where wheels exist (py3.9).
+PyYAML = [
+    { version = ">=5.2,<7", python = "<3.10" },
+    { version = ">=6,<7", python = ">=3.10" },
+]
 h5py = ">=2.10.0"
 pandas = ">=0.25.3"
 numpy = ">=1.17.4"
@@ -106,7 +111,7 @@ pyupgrade = ">=2.31.0"
 bandit = ">=1.7.4"
 flake8-builtins = ">=1.5.3"
 flake8-colors = ">=0.1.9"
-nbsphinx = ">=0.8.9"
+nbsphinx = ">=0.9.8"
 types-PyMySQL = ">=1.0.19"
 types-PyYAML = ">=6.0.11"
 ipython = ">=8.4.0"

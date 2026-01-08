@@ -1,27 +1,26 @@
 #!/usr/bin/env python3
-"""
-Functional tests for idtrack._external_mappers._utils module.
+"""Functional tests for idtrack._external_mappers._utils module.
 
 These tests exercise the utility functions without requiring network access.
 """
 
 from __future__ import annotations
 
-import pytest
 import pandas as pd
+import pytest
 
 from idtrack._external_mappers._utils import (
-    canonical_db,
-    canonical_species,
-    strip_version,
     _as_list,
-    _unique_not_null,
     _chunker,
-    _json,
-    _is_bare_numeric,
     _empty_result,
     _ensure_all_inputs,
+    _is_bare_numeric,
+    _json,
+    _unique_not_null,
+    canonical_db,
+    canonical_species,
     check_optional_dependencies,
+    strip_version,
 )
 
 
@@ -240,8 +239,7 @@ class TestEnsureAllInputs:
         """Test adds rows for missing input IDs."""
         df = pd.DataFrame({"input_id": ["A", "B"], "output_id": ["X", "Y"]})
         result = _ensure_all_inputs(
-            df, ["A", "B", "C"], inp="ensembl_gene", outp="hgnc_symbol",
-            method="test", release_used=None
+            df, ["A", "B", "C"], inp="ensembl_gene", outp="hgnc_symbol", method="test", release_used=None
         )
 
         assert len(result) == 3
@@ -251,8 +249,7 @@ class TestEnsureAllInputs:
         """Test when all IDs present."""
         df = pd.DataFrame({"input_id": ["A", "B"], "output_id": ["X", "Y"]})
         result = _ensure_all_inputs(
-            df, ["A", "B"], inp="ensembl_gene", outp="hgnc_symbol",
-            method="test", release_used=None
+            df, ["A", "B"], inp="ensembl_gene", outp="hgnc_symbol", method="test", release_used=None
         )
 
         assert len(result) == 2

@@ -33,3 +33,10 @@ Key Features
 * Reproducible, cache-backed graph snapshots anchored to a chosen release boundary
 * Batch conversion utilities and conversion outcome classification (1:0, 1:1, 1:n)
 * Optional feature harmonization workflows for multi-dataset integration
+
+Start Here (Tutorials)
+----------------------
+
+If you are new to idtrack, start with the tutorial notebooks:
+
+* :doc:`usage` (structured, step-by-step notebooks for end users)

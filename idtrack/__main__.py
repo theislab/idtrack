@@ -22,7 +22,6 @@ import importlib
 import os
 import sys
 from importlib import metadata
-from typing import Any
 
 
 def _resolve_version() -> str:

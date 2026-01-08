@@ -1274,7 +1274,9 @@ class TheGraph(nx.MultiDiGraph):
 
         main_assembly = int(self.graph["genome_assembly"])
         for database_name in DB.nts_base_ensembl.values():
-            r[(database_name, main_assembly)] = _inline_available_releases(assembly=main_assembly, database_name=database_name)
+            r[(database_name, main_assembly)] = _inline_available_releases(
+                assembly=main_assembly, database_name=database_name
+            )
 
         available_release = {j for i in r.values() for j in i}
         for database_name in DB.nts_ensembl.values():

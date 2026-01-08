@@ -2,3 +2,14 @@
 .wy-nav-content {
     max-width: none;
 }
+
+/* nbsphinx: hide In[ ] / Out[ ] prompt gutters for a cleaner, doc-like look */
+div.nbinput div.prompt,
+div.nboutput div.prompt {
+    display: none;
+}
+
+div.nbinput div.input_area,
+div.nboutput div.output_area {
+    margin-left: 0;
+}

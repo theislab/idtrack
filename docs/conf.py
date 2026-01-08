@@ -42,6 +42,23 @@ else:
 # Users can still run them locally in Jupyter.
 nbsphinx_execute = "never"
 
+# Make notebooks read like documentation: don't show "In [x]:" / "Out [x]:"
+# (nbsphinx expects a %-template; most of our notebooks are unexecuted so the count is blank anyway).
+nbsphinx_input_prompt = "%s"
+nbsphinx_output_prompt = "%s"
+
+# Add a small, consistent banner to every rendered notebook page.
+nbsphinx_prolog = r"""
+{% set docname = env.docname %}
+.. raw:: html
+
+   <div class="admonition note">
+     <p class="admonition-title">Notebook tutorial</p>
+     <p>This page is generated from a Jupyter notebook. Code cells are not executed during the documentation build.</p>
+     <p><a href="../_sources/{{ docname }}.ipynb">Download the notebook</a> to run it locally.</p>
+   </div>
+"""
+
 # If this option is true (the default option), users will start in dark mode when first visiting the site.
 # If this option is false, users will start in light mode when they first visit the site.
 # default_dark_mode = False

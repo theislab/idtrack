@@ -85,22 +85,26 @@ import hashlib
 import os
 import re
 import shutil
-import subprocess
+import subprocess  # noqa: S404
 import sys
 import textwrap
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Sequence
 
 
 @dataclass(frozen=True)
 class PythonInterp:
+    """Resolved Python interpreter for local CI runs."""
+
     version: str
     executable: str
 
 
 @dataclass(frozen=True)
 class CompatCase:
+    """One dependency-compatibility matrix entry."""
+
     python_version: str
     name: str
     constraints: tuple[str, ...]
@@ -128,14 +132,14 @@ def _run(
 
     if stdout_path is None:
         print(f"+ {' '.join(cmd)}", flush=True)
-        return subprocess.run(cmd, cwd=str(cwd), env=env_merged, text=True, check=check)
+        return subprocess.run(cmd, cwd=str(cwd), env=env_merged, text=True, check=check)  # noqa: S603
 
     stdout_path.parent.mkdir(parents=True, exist_ok=True)
     mode = "a" if stdout_path.exists() else "w"
     with stdout_path.open(mode, encoding="utf-8") as fh:
         fh.write(f"+ {' '.join(cmd)}\n")
         fh.flush()
-        return subprocess.run(
+        return subprocess.run(  # noqa: S603
             cmd,
             cwd=str(cwd),
             env=env_merged,
@@ -148,7 +152,9 @@ def _run(
 
 def _python_version(python_exe: str) -> str | None:
     try:
-        out = subprocess.check_output([python_exe, "-c", "import sys; print(f'{sys.version_info[0]}.{sys.version_info[1]}')"])
+        out = subprocess.check_output(  # noqa: S603
+            [python_exe, "-c", "import sys; print(f'{sys.version_info[0]}.{sys.version_info[1]}')"]
+        )
     except (OSError, subprocess.CalledProcessError):
         return None
     return out.decode().strip()
@@ -173,7 +179,7 @@ def _find_python(version: str) -> PythonInterp | None:
         env = os.environ.copy()
         env["PYENV_VERSION"] = version
         try:
-            pyenv_python = subprocess.check_output([pyenv, "which", "python"], env=env, text=True).strip()
+            pyenv_python = subprocess.check_output([pyenv, "which", "python"], env=env, text=True).strip()  # noqa: S603
         except (OSError, subprocess.CalledProcessError):
             pyenv_python = ""
         if pyenv_python and _python_version(pyenv_python) == version:
@@ -205,7 +211,7 @@ def _create_venv(venv_dir: Path, python_exe: str, *, recreate: bool) -> None:
         else:
             return
     venv_dir.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run([python_exe, "-m", "venv", str(venv_dir)], check=True)
+    subprocess.run([python_exe, "-m", "venv", str(venv_dir)], check=True)  # noqa: S603
 
 
 def _write_lines(path: Path, lines: Iterable[str]) -> None:
@@ -302,7 +308,7 @@ def _parse_compat_cases_from_workflow(workflow_path: Path) -> list[CompatCase]:
 
     entry_re = re.compile(r'^\s*-\s*python-version:\s*["\']?([^"\']+)["\']?\s*$')
     name_re = re.compile(r'^\s*dependency-set:\s*["\']?(.+?)["\']?\s*$')
-    constraints_start_re = re.compile(r'^\s*constraints:\s*\|\s*$')
+    constraints_start_re = re.compile(r"^\s*constraints:\s*\|\s*$")
 
     def flush() -> None:
         nonlocal current_py, current_name, current_constraints, in_constraints, constraints_indent
@@ -455,7 +461,7 @@ def _run_compat_case(
     keep_venvs: bool,
 ) -> tuple[CompatCase, bool, Path]:
     safe_name = re.sub(r"[^a-zA-Z0-9._-]+", "_", f"py{case.python_version}-{case.name}").strip("_")
-    case_hash = hashlib.sha1(
+    case_hash = hashlib.sha256(
         ("\n".join([case.python_version, case.name, *case.constraints])).encode("utf-8")
     ).hexdigest()[:10]
     max_prefix_len = 180 - (len(case_hash) + 1)
@@ -480,7 +486,11 @@ def _run_compat_case(
         # build isolation with `AttributeError: cython_sources`. Work around by ensuring
         # Cython is present and disabling build isolation for this install.
         if sys.platform == "darwin" and any(re.match(r"(?i)^pyyaml\s*<\s*6\b", c.strip()) for c in case.constraints):
-            _run([vpy, "-m", "pip", "install", "--upgrade", "setuptools", "wheel", "Cython<3"], cwd=repo, stdout_path=log_path)
+            _run(
+                [vpy, "-m", "pip", "install", "--upgrade", "setuptools", "wheel", "Cython<3"],
+                cwd=repo,
+                stdout_path=log_path,
+            )
             pip_install = [vpy, "-m", "pip", "install", "--no-build-isolation", "-c", str(constraints_path), str(wheel)]
         else:
             pip_install = [vpy, "-m", "pip", "install", "-c", str(constraints_path), str(wheel)]
@@ -501,6 +511,7 @@ def _run_compat_case(
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Run the local CI CLI and return an exit status."""
     parser = argparse.ArgumentParser(
         prog="local_ci.py",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -540,7 +551,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
 
     sub = parser.add_subparsers(dest="cmd", required=True)
-    all_cmd = sub.add_parser("all", help="Run build + dependency compatibility checks.")
+    sub.add_parser("all", help="Run build + dependency compatibility checks.")
 
     clean_cmd = sub.add_parser("clean", help="Remove the local CI workdir (default: .local-ci).")
     clean_cmd.add_argument(
@@ -598,7 +609,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"Nothing to clean (missing): {workdir}", flush=True)
             return 0
         if not args.yes:
-            answer = input(f"Delete local CI workdir '{workdir}'? [y/N] ").strip().lower()
+            answer = input(f"Delete local CI workdir {workdir}? [y/N] ").strip().lower()
             if answer not in {"y", "yes"}:
                 print("Canceled.", flush=True)
                 return 1

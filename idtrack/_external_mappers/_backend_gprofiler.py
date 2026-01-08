@@ -14,7 +14,7 @@ from inspect import signature
 import pandas as pd
 from tqdm import tqdm
 
-from idtrack._external_mappers._constants import _GP_NS, _GP_INPUT_NAMESPACES
+from idtrack._external_mappers._constants import _GP_INPUT_NAMESPACES, _GP_NS
 from idtrack._external_mappers._utils import (
     _add_mapping_column,
     _chunker,
@@ -31,7 +31,6 @@ from idtrack._external_mappers._utils import (
     strip_version,
 )
 
-
 # UniProt target namespace candidates in priority order
 _UNIPROT_TARGET_CANDIDATES = (
     "UNIPROTSPTREMBL_ACC",
@@ -42,9 +41,15 @@ _UNIPROT_TARGET_CANDIDATES = (
 
 
 def _gp_target_candidates(outp: str) -> list[str]:
-    """
-    Return an ordered list of g:Profiler target_namespace candidates
-    for a given canonical output DB.
+    """Return g:Profiler target_namespace candidates for a canonical output database.
+
+    The returned list is ordered by preference (first hit wins).
+
+    Args:
+        outp: Canonical output database name.
+
+    Returns:
+        list[str]: Target namespace candidates in preference order.
     """
     outp = canonical_db(outp)
     if outp == "uniprot":
@@ -88,9 +93,14 @@ def _extract_namespace_tokens(raw: _t.Any) -> set[str]:
 
 
 def _build_metadata_column(df: pd.DataFrame, extra_cols: list[str]) -> pd.Series:
-    """
-    Build a metadata_json column from extra columns.
-    Returns a Series aligned with df's index.
+    """Build a metadata_json column from extra columns.
+
+    Args:
+        df: Input DataFrame containing columns referenced by ``extra_cols``.
+        extra_cols: Column names to include in the JSON metadata per row.
+
+    Returns:
+        pd.Series: JSON-encoded metadata aligned with ``df.index``.
     """
     if not extra_cols:
         return pd.Series([_json({})] * len(df), index=df.index)
@@ -106,11 +116,18 @@ def _process_gprofiler_response(
     df: pd.DataFrame | None,
     namespace_filter: _t.Callable[[_t.Any], bool] | None,
 ) -> tuple[pd.DataFrame, bool]:
-    """
-    Process a g:Profiler convert() response into standardized format.
+    """Process a g:Profiler convert() response into standardized format.
+
+    Args:
+        df: Raw g:Profiler response DataFrame (or ``None``).
+        namespace_filter: Optional predicate to filter the ``namespaces`` column when enforcing
+            strict input-db behavior.
 
     Returns:
-        (processed_df, has_non_null_outputs)
+        tuple[pd.DataFrame, bool]: ``(processed_df, has_non_null_outputs)``.
+
+    Raises:
+        RuntimeError: If ``namespace_filter`` is provided but the response lacks a ``namespaces`` column.
     """
     if df is None or df.empty:
         return pd.DataFrame(columns=["input_id", "output_id", "metadata_json"]), False
@@ -118,9 +135,7 @@ def _process_gprofiler_response(
     # Apply namespace filter if strict_input_db is enabled
     if namespace_filter is not None:
         if "namespaces" not in df.columns:
-            raise RuntimeError(
-                "strict_input_db requires g:Profiler to return a 'namespaces' column"
-            )
+            raise RuntimeError("strict_input_db requires g:Profiler to return a 'namespaces' column")
         mask = df["namespaces"].apply(namespace_filter)
         df = df[mask]
         if df.empty:
@@ -165,41 +180,27 @@ def map_with_gprofiler(
     suppress_method_verbosity: bool = True,
     strict_input_db: bool = False,
 ) -> pd.DataFrame:
-    """
-    Map IDs via g:Profiler (gprofiler-official).
+    """Map IDs via g:Profiler (gprofiler-official).
 
-    Parameters
-    ----------
-    ids : Iterable[str]
-        Input identifiers to map.
-    input_db : str
-        The database/namespace of input IDs (e.g., "ensembl_gene", "hgnc_symbol").
-    output_db : str
-        The target database/namespace (e.g., "uniprot", "entrez_gene").
-    species : str, default "hsapiens"
-        Species code (e.g., "hsapiens", "mmusculus", "sscrofa").
-    chunk_size : int, default 1000
-        Number of IDs per API request.
-    pause : float, default 0.2
-        Seconds to pause between requests.
-    max_retries : int, default 3
-        Maximum retry attempts per chunk on failure.
-    strip_versions : bool, default True
-        Strip version suffixes from Ensembl/RefSeq IDs.
-    show_progress : bool, default True
-        Display progress bar.
-    suppress_method_verbosity : bool, default True
-        Suppress stdout/stderr from the gprofiler library.
-    strict_input_db : bool, default False
-        If True, filter results to only include mappings where the input
-        namespace matches the expected input_db. This is useful when input
-        IDs could be ambiguous across namespaces.
+    Args:
+        ids: Input identifiers to map.
+        input_db: Database/namespace of input IDs (e.g. ``"ensembl_gene"``, ``"hgnc_symbol"``).
+        output_db: Target database/namespace (e.g. ``"uniprot"``, ``"entrez_gene"``).
+        species: Species code (e.g. ``"hsapiens"``, ``"mmusculus"``, ``"sscrofa"``).
+        chunk_size: Number of IDs per API request.
+        pause: Seconds to pause between requests.
+        max_retries: Maximum retry attempts per chunk on failure.
+        strip_versions: Strip version suffixes from Ensembl/RefSeq IDs.
+        show_progress: Display progress bar.
+        suppress_method_verbosity: Suppress stdout/stderr from the gprofiler library.
+        strict_input_db: If True, filter results to only include mappings where the input namespace matches
+            the expected ``input_db``.
 
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with columns: input_id, input_db, mapping, output_id,
-        output_db, method, release_used, metadata_json.
+    Returns:
+        pd.DataFrame: Standardized mapping DataFrame.
+
+    Raises:
+        ValueError: If ``strict_input_db`` is enabled for an unsupported input database.
     """
     try:
         from gprofiler import GProfiler  # type: ignore
@@ -215,13 +216,13 @@ def map_with_gprofiler(
     if strict_input_db:
         allowed = _GP_INPUT_NAMESPACES.get(inp)
         if not allowed:
-            raise ValueError(
-                f"strict_input_db is not supported for input database {inp!r}"
-            )
+            raise ValueError(f"strict_input_db is not supported for input database {inp!r}")
         allowed_upper = {a.upper() for a in allowed}
-        namespace_filter = lambda ns, allowed=allowed_upper: bool(
-            _extract_namespace_tokens(ns) & allowed
-        )
+
+        def _namespace_filter(ns: _t.Any, *, allowed: set[str] = allowed_upper) -> bool:
+            return bool(_extract_namespace_tokens(ns) & allowed)
+
+        namespace_filter = _namespace_filter
 
     # Validate output namespace
     target_candidates = _gp_target_candidates(outp)
@@ -234,9 +235,7 @@ def map_with_gprofiler(
 
     # Handle empty input
     if not uniq_ids:
-        return _ensure_all_inputs(
-            _empty_result(), clean_ids, inp, outp, "gprofiler", release_used=None
-        )
+        return _ensure_all_inputs(_empty_result(), clean_ids, inp, outp, "gprofiler", release_used=None)
 
     # Initialize g:Profiler client
     gp = GProfiler(return_dataframe=True)
@@ -252,20 +251,14 @@ def map_with_gprofiler(
     numeric_param = (
         "numeric_namespace"
         if "numeric_namespace" in sig_params
-        else "numeric_ns"
-        if "numeric_ns" in sig_params
-        else None
+        else "numeric_ns" if "numeric_ns" in sig_params else None
     )
 
     # Base kwargs for all requests
     base_kwargs: dict[str, _t.Any] = {"organism": species}
 
     # Handle numeric Entrez IDs
-    if (
-        numeric_param is not None
-        and inp == "entrez_gene"
-        and all(_is_bare_numeric(x) for x in uniq_ids)
-    ):
+    if numeric_param is not None and inp == "entrez_gene" and all(_is_bare_numeric(x) for x in uniq_ids):
         base_kwargs[numeric_param] = "ENTREZGENE_ACC"
 
     # Try each target namespace candidate until one returns results
@@ -302,9 +295,7 @@ def map_with_gprofiler(
                         with _suppress_stdout_stderr(suppress_method_verbosity):
                             df = gp.convert(**kwargs)
 
-                        result, has_outputs = _process_gprofiler_response(
-                            df, namespace_filter
-                        )
+                        result, has_outputs = _process_gprofiler_response(df, namespace_filter)
                         frames.append(result)
                         if has_outputs:
                             any_non_null = True
@@ -321,9 +312,7 @@ def map_with_gprofiler(
                         )
                         if attempt >= max_retries:
                             # Record failure for this chunk
-                            err_meta = _json(
-                                {"error": str(e), "target_namespace": target_ns}
-                            )
+                            err_meta = _json({"error": str(e), "target_namespace": target_ns})
                             frames.append(
                                 pd.DataFrame(
                                     {
@@ -374,9 +363,7 @@ def map_with_gprofiler(
                 ]
             ]
         # Empty results
-        return _ensure_all_inputs(
-            _empty_result(), clean_ids, inp, outp, "gprofiler", release_used=None
-        )
+        return _ensure_all_inputs(_empty_result(), clean_ids, inp, outp, "gprofiler", release_used=None)
 
     # Combine all frames
     out = pd.concat(selected_frames, ignore_index=True)
@@ -395,9 +382,7 @@ def map_with_gprofiler(
     out = _ensure_all_inputs(out, clean_ids, inp, outp, "gprofiler", release_used=None)
 
     # Remove duplicates
-    out = out.drop_duplicates(
-        ["input_id", "output_id", "input_db", "output_db", "method", "release_used"]
-    )
+    out = out.drop_duplicates(["input_id", "output_id", "input_db", "output_db", "method", "release_used"])
 
     return out[
         [

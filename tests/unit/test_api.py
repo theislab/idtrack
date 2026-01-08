@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""
-Unit tests for idtrack._api module.
+"""Unit tests for idtrack._api module.
 
 Tests the API class which provides the high-level facade.
 """
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -18,6 +17,7 @@ class TestAPIInitialization:
     def test_api_import(self):
         """Test API can be imported."""
         from idtrack._api import API
+
         assert API is not None
 
     def test_init_with_local_repository(self, temp_dir):
@@ -32,6 +32,7 @@ class TestAPIInitialization:
     def test_has_logger_setup_method(self):
         """Test API has configure_logger method."""
         from idtrack._api import API
+
         assert hasattr(API, "configure_logger")
 
 
@@ -41,6 +42,7 @@ class TestAPIConfigureLogger:
     def test_configure_logger_exists(self):
         """Test configure_logger is callable."""
         from idtrack._api import API
+
         assert callable(getattr(API, "configure_logger", None))
 
 
@@ -50,11 +52,13 @@ class TestAPIBuildGraph:
     def test_build_graph_method_exists(self):
         """Test build_graph method exists."""
         from idtrack._api import API
+
         assert hasattr(API, "build_graph")
 
     def test_build_graph_is_callable(self):
         """Test build_graph is callable."""
         from idtrack._api import API
+
         assert callable(getattr(API, "build_graph", None))
 
 
@@ -64,6 +68,7 @@ class TestAPILazyLoading:
     def test_api_has_track_property(self):
         """Test API has track property."""
         from idtrack._api import API
+
         # Check if there's some form of track access
         assert hasattr(API, "__init__")
 
@@ -74,14 +79,14 @@ class TestAPICalculateCaches:
     def test_calculate_graph_caches_exists(self):
         """Test calculate_graph_caches method exists or similar method."""
         from idtrack._api import API
+
         # Check for calculate_graph_caches or alternative method names
         has_cache_method = (
-            hasattr(API, "calculate_graph_caches") or
-            hasattr(API, "_calculate_caches") or
-            hasattr(API, "build_caches")
+            hasattr(API, "calculate_graph_caches") or hasattr(API, "_calculate_caches") or hasattr(API, "build_caches")
         )
-        assert has_cache_method or hasattr(API, "build_graph"), \
-            "API should have cache calculation method or build_graph"
+        assert has_cache_method or hasattr(
+            API, "build_graph"
+        ), "API should have cache calculation method or build_graph"
 
 
 class TestAPIWithMockedDependencies:
@@ -114,8 +119,9 @@ class TestAPIWithMockedDependencies:
 
     def test_api_configure_logger(self, temp_dir):
         """Test configure_logger can be called."""
-        from idtrack._api import API
         import logging
+
+        from idtrack._api import API
 
         api = API(local_repository=temp_dir)
 
@@ -152,13 +158,15 @@ class TestAPIPublicInterface:
     def test_class_docstring_exists(self):
         """Test API has a docstring."""
         from idtrack._api import API
+
         assert API.__doc__ is not None
         assert len(API.__doc__) > 0
 
     def test_init_accepts_parameters(self):
         """Test __init__ accepts expected parameters."""
-        from idtrack._api import API
         import inspect
+
+        from idtrack._api import API
 
         sig = inspect.signature(API.__init__)
         params = list(sig.parameters.keys())
@@ -175,6 +183,7 @@ class TestAPIExportedFromPackage:
         """Test API is importable from idtrack package."""
         try:
             from idtrack import API
+
             assert API is not None
         except ImportError:
             # May fail if dependencies not installed
@@ -183,6 +192,7 @@ class TestAPIExportedFromPackage:
     def test_api_class_name(self):
         """Test API class has correct name."""
         from idtrack._api import API
+
         assert API.__name__ == "API"
 
 
@@ -192,6 +202,7 @@ class TestAPIIntegrationPoints:
     def test_imports_db(self):
         """Test API module can access DB constants."""
         from idtrack._db import DB
+
         # Verify DB is importable and has expected attributes
         assert DB is not None
         assert hasattr(DB, "forms_in_order")
@@ -200,6 +211,7 @@ class TestAPIIntegrationPoints:
         """Test API module can import Track."""
         try:
             from idtrack._track import Track
+
             assert Track is not None
         except ImportError:
             pass
@@ -208,6 +220,7 @@ class TestAPIIntegrationPoints:
         """Test API module can import GraphMaker."""
         try:
             from idtrack._graph_maker import GraphMaker
+
             assert GraphMaker is not None
         except ImportError:
             pass
@@ -230,15 +243,9 @@ class TestAPIErrorHandling:
                 )
 
     def test_invalid_repository_handling(self):
-        """Test handling of invalid repository path."""
+        """API should not validate `local_repository` during initialization."""
         from idtrack._api import API
 
-        # This test depends on implementation - may or may not raise
-        try:
-            with patch("idtrack._api.VerifyOrganism"):
-                API(
-                    local_repository="/nonexistent/path/that/does/not/exist",
-                    organism="homo_sapiens",
-                )
-        except (FileNotFoundError, OSError, ValueError, Exception):
-            pass  # Expected to fail in some way
+        local_repository = "/nonexistent/path/that/does/not/exist"
+        api = API(local_repository=local_repository)
+        assert api.local_repository == local_repository

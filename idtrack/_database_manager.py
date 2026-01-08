@@ -70,6 +70,16 @@ class DatabaseManager:
         - `releases`: sorted union of all releases across ports
         - `port_for_release`: deterministic choice of port for each release (first configured port that has it)
         - `db_for_release`: chosen schema name for each release (matching `port_for_release`, includes patch-letter suffixes)
+
+        Args:
+            organism: Canonical Ensembl organism name (e.g. ``"homo_sapiens"``).
+            genome_assembly: Genome assembly version (e.g. ``38`` for GRCh38).
+
+        Returns:
+            dict[str, Any]: Mapping describing reachable releases/ports for this organism/assembly.
+
+        Raises:
+            ValueError: If *organism* or *genome_assembly* is not configured.
         """
         key = (organism, int(genome_assembly))
         cached = cls._core_db_index_cache.get(key)
@@ -91,11 +101,7 @@ class DatabaseManager:
         # Treat these as part of the same "base assembly" (37) for configuration and graph-level purposes.
         pattern = re.compile(rf"^{re.escape(organism)}_core_([0-9]+)_{int(genome_assembly)}[a-z]*$")
         # Use an information_schema filter to avoid `SHOW DATABASES` timeouts on busy ports.
-        escaped_organism = (
-            organism.replace("\\", "\\\\")
-            .replace("%", "\\%")
-            .replace("_", "\\_")
-        )
+        escaped_organism = organism.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         like_pattern = f"{escaped_organism}\\_core\\_%\\_{int(genome_assembly)}%"
 
         releases_by_port: dict[int, set[int]] = {}
@@ -132,7 +138,7 @@ class DatabaseManager:
                 continue
 
             rels: set[int] = set()
-            db_for_release: dict[int, str] = {}
+            db_for_release_on_port: dict[int, str] = {}
             for (db_name,) in results_query:
                 if isinstance(db_name, bytes):
                     db_name = db_name.decode("utf-8")
@@ -141,16 +147,16 @@ class DatabaseManager:
                 if m:
                     rel = int(m.group(1))
                     rels.add(rel)
-                    if rel not in db_for_release:
-                        db_for_release[rel] = db_name
+                    if rel not in db_for_release_on_port:
+                        db_for_release_on_port[rel] = db_name
                     else:
                         # Extremely rare: multiple schema suffixes for the same (release, base-assembly).
                         # Prefer the shortest name (e.g. `_37` over `_37a`) for determinism.
-                        if len(db_name) < len(db_for_release[rel]):
-                            db_for_release[rel] = db_name
+                        if len(db_name) < len(db_for_release_on_port[rel]):
+                            db_for_release_on_port[rel] = db_name
 
             releases_by_port[int(port)] = rels
-            db_by_port_release[int(port)] = db_for_release
+            db_by_port_release[int(port)] = db_for_release_on_port
 
         releases_union = sorted({r for rs in releases_by_port.values() for r in rs})
         port_for_release: dict[int, int] = {}
@@ -217,6 +223,7 @@ class DatabaseManager:
         Raises:
             ValueError: If *form* is not in the supported list or *local_repository* fails basic
                 path/read/write checks.
+            RuntimeError: If internal port/release configuration is inconsistent.
             NotImplementedError: If *organism* is not yet supported by the package.
         """
         if organism not in DB.supported_organisms:
@@ -271,9 +278,7 @@ class DatabaseManager:
 
         configured_assemblies = DB.assembly_mysqlport_priority[organism]
         if ensembl_release is not None and float(ensembl_release) != int(ensembl_release):
-            raise ValueError(
-                "Floating-point Ensembl releases (e.g. 18.2) are not supported; pass an integer release."
-            )
+            raise ValueError("Floating-point Ensembl releases (e.g. 18.2) are not supported; pass an integer release.")
 
         if genome_assembly is None:
             # Pick the highest-priority assembly that is *actually available* on the public MySQL service.
@@ -349,7 +354,7 @@ class DatabaseManager:
             )
         selected_port = int(core_index["port_for_release"][ensembl_release])
 
-        self.mysql_settings = {
+        self.mysql_settings: dict[str, Any] = {
             "host": DB.mysql_host,
             "user": DB.myqsl_user,
             "password": DB.mysql_togo,
@@ -386,10 +391,13 @@ class DatabaseManager:
 
         releases_in_window = sorted(r for r in core_index["releases"] if self.ignore_after >= r >= self.ignore_before)
         if not releases_in_window:
-            raise ValueError(
-                f"No Ensembl releases remain after applying ignore_before={self.ignore_before} and ignore_after={self.ignore_after} "
-                f"for {self.organism!r} assembly {int(self.genome_assembly)}. Available releases: {core_index['releases']}"
+            msg = (
+                "No Ensembl releases remain after applying "
+                f"ignore_before={self.ignore_before} and ignore_after={self.ignore_after} "
+                f"for {self.organism!r} assembly {int(self.genome_assembly)}. "
+                f"Available releases: {core_index['releases']}"
             )
+            raise ValueError(msg)
         if self.ensembl_release not in releases_in_window:
             raise ValueError(
                 f"ensembl_release={self.ensembl_release} is outside the ignore window "
@@ -487,16 +495,10 @@ class DatabaseManager:
 
         Returns:
             list[int]: Sorted list of release numbers that exist on the mirror and comply with the ignore window.
-
-        Raises:
-            ValueError: If a database name does not match the expected regex, if floating-point release
-                labels are encountered, or if other inconsistencies arise while parsing server results.
         """
         # Use the pre-built core-DB index (union across ports) so multi-port assemblies work correctly.
         core_index = self._get_core_db_index(organism=self.organism, genome_assembly=self.genome_assembly)
-        releases_final = sorted(
-            r for r in core_index["releases"] if self.ignore_after >= r >= self.ignore_before
-        )
+        releases_final = sorted(r for r in core_index["releases"] if self.ignore_after >= r >= self.ignore_before)
         return releases_final
 
     @cached_property
@@ -737,14 +739,26 @@ class DatabaseManager:
             ValueError: If any element of *usecols* is missing from *table_key*, or if the query returns
                 binary payloads that cannot be coerced into native Python types.
         """
+        if usecols == []:
+            usecols = None
+
+        def _quote_identifier(identifier: str) -> str:
+            if not isinstance(identifier, str):
+                raise ValueError(f"Unsafe SQL identifier type: {type(identifier)!r}")
+            if not re.fullmatch(r"[0-9A-Za-z_]+", identifier):
+                raise ValueError(f"Unsafe SQL identifier: {identifier!r}")
+            return f"`{identifier}`"
+
         # Base settings for MYSQL server.
         which_mysql_server = dict(**self.mysql_settings, **{"database": self.mysql_database})
 
         # Connect to the MYSQL server, close the connection after the code block
         with pymysql.connect(**which_mysql_server) as connection:
+            table_sql = _quote_identifier(table_key)
+
             # Create a cursor to be able to make some queries: First get the associated column names.
             with connection.cursor() as cur1:
-                cur1.execute(f"SHOW columns FROM {table_key}")
+                cur1.execute(f"SHOW columns FROM {table_sql}")  # noqa: S608
                 column_names = pd.DataFrame(cur1.fetchall())[0]
 
                 if pd.isna(column_names).any():
@@ -761,9 +775,16 @@ class DatabaseManager:
 
             # Create a cursor to be able to make some queries: Second get the associated table content.
             with connection.cursor() as cur2:
-                # Convert the list of column names into string to be used in MYSQL query
-                usecol_sql = ", ".join(usecols) if usecols else ""
-                cur2.execute(f"SELECT {'*' if usecols is None else usecol_sql} FROM {table_key}")
+                if usecols is None:
+                    select_sql = "*"
+                else:
+                    col_set = {str(c) for c in column_names.tolist()}
+                    missing = [c for c in usecols if not isinstance(c, str) or c not in col_set]
+                    if missing:
+                        raise ValueError(f"Missing columns in {table_key!r}: {missing}")
+                    select_sql = ", ".join(_quote_identifier(col) for col in usecols)
+
+                cur2.execute(f"SELECT {select_sql} FROM {table_sql}")  # noqa: S608
                 # Fetch all the content and save as a tuple file.
                 results_content = cur2.fetchall()
 

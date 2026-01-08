@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Unit tests for idtrack._verify_organism module.
+"""Unit tests for idtrack._verify_organism module.
 
 Tests the VerifyOrganism class for organism name resolution.
 """
@@ -30,6 +29,7 @@ class TestVerifyOrganismInitialization:
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
             from idtrack._verify_organism import VerifyOrganism
+
             resolver = VerifyOrganism("HOMO_SAPIENS")
             assert resolver.organism_query == "homo_sapiens"
 
@@ -47,6 +47,7 @@ class TestVerifyOrganismInitialization:
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
             from idtrack._verify_organism import VerifyOrganism
+
             resolver = VerifyOrganism("homo_sapiens")
 
             assert hasattr(resolver, "name_synonyms_dataframe")
@@ -72,6 +73,7 @@ class TestGetFormalName:
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
             from idtrack._verify_organism import VerifyOrganism
+
             resolver = VerifyOrganism("homo_sapiens")
 
             formal_name = resolver.get_formal_name()
@@ -91,6 +93,7 @@ class TestGetFormalName:
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
             from idtrack._verify_organism import VerifyOrganism
+
             resolver = VerifyOrganism("human")
 
             formal_name = resolver.get_formal_name()
@@ -110,6 +113,7 @@ class TestGetFormalName:
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
             from idtrack._verify_organism import VerifyOrganism
+
             resolver = VerifyOrganism("unknown_organism")
 
             with pytest.raises(KeyError):
@@ -133,6 +137,7 @@ class TestGetLatestRelease:
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
             from idtrack._verify_organism import VerifyOrganism
+
             resolver = VerifyOrganism("homo_sapiens")
 
             release = resolver.get_latest_release()
@@ -256,6 +261,7 @@ class TestSynonymDataframe:
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
             from idtrack._verify_organism import VerifyOrganism
+
             resolver = VerifyOrganism("homo_sapiens")
 
             df = resolver.name_synonyms_dataframe
@@ -277,6 +283,7 @@ class TestSynonymDataframe:
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
             from idtrack._verify_organism import VerifyOrganism
+
             resolver = VerifyOrganism("homo_sapiens")
 
             df = resolver.name_synonyms_dataframe
@@ -303,6 +310,7 @@ class TestReleaseDataframe:
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
             from idtrack._verify_organism import VerifyOrganism
+
             resolver = VerifyOrganism("homo_sapiens")
 
             df = resolver.ensembl_release_dataframe
@@ -323,6 +331,7 @@ class TestReleaseDataframe:
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
             from idtrack._verify_organism import VerifyOrganism
+
             resolver = VerifyOrganism("homo_sapiens")
 
             df = resolver.ensembl_release_dataframe
@@ -374,6 +383,7 @@ class TestAmbiguousSynonyms:
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
             from idtrack._verify_organism import VerifyOrganism
+
             resolver = VerifyOrganism("species_one")
 
             df = resolver.name_synonyms_dataframe
@@ -423,6 +433,7 @@ class TestAmbiguousSynonyms:
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
             from idtrack._verify_organism import VerifyOrganism
+
             resolver = VerifyOrganism("shared_name")
 
             with pytest.raises(ValueError, match="ambiguous"):
