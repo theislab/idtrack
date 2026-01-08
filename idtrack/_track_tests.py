@@ -574,7 +574,7 @@ class TrackTests(Track, ABC):
             pass
         elif 0.0 < from_fraction < 1.0:
             from_faction_count = ceil(len(ids_from) * from_fraction)
-            ids_from = sorted(random.sample(ids_from, from_faction_count))
+            ids_from = sorted(random.sample(ids_from, from_faction_count))  # noqa: S311
         else:
             raise ValueError
 
@@ -724,7 +724,7 @@ class TrackTests(Track, ABC):
         metrics["time"] = t2 - t1
         return metrics
 
-    def history_travel_testing_random_arguments_generator(self, strict_forward: bool, include_exclude_list: list):
+    def history_travel_testing_random_arguments_generator(self, strict_forward: bool, include_exclude_list: list[bool]):
         """Generate a plausible random parameter set for :py:meth:`history_travel_testing`.
 
         The helper picks **compatible** source/target assemblies, releases and
@@ -733,8 +733,10 @@ class TrackTests(Track, ABC):
         guaranteed to be **≥** the source release (no time-travel back).
 
         Args:
-            strict_forward: Enforce a non-decreasing release direction.
-            include_exclude_list: Todo.
+            strict_forward (bool): Enforce a non-decreasing release direction.
+            include_exclude_list (list[bool]): A 4-element list of booleans controlling
+                inclusion of ``[include_ensembl_source, include_external_source,
+                include_ensembl_destination, include_external_destination]``.
 
         Returns:
             dict: Keys ``from_assembly``, ``from_release``, ``to_release``,
@@ -745,13 +747,14 @@ class TrackTests(Track, ABC):
         only_backbone_tests_1 = True if not any([include_ensembl_1, include_external_1]) else False
         only_backbone_tests_2 = True if not any([include_ensembl_2, include_external_2]) else False
 
+        main_assembly = int(self.graph.graph["genome_assembly"])
         from_assembly = (
-            random.choice(list(DB.assembly_mysqlport_priority.keys()))
+            random.choice(sorted(self.graph.available_genome_assemblies))  # noqa: S311
             if not only_backbone_tests_1
-            else DB.main_assembly
+            else main_assembly
         )
-        # as the final release should be always the main assembly
-        to_assembly = self.graph.graph["genome_assembly"] if not only_backbone_tests_2 else DB.main_assembly
+        # Final conversions are always evaluated on the graph's primary assembly.
+        to_assembly = main_assembly
         the_key1, the_key2 = None, None
         while the_key1 is None or the_key2 is None:
             the_key1 = self.random_dataset_source_generator(
@@ -809,13 +812,13 @@ class TrackTests(Track, ABC):
                 :py:meth:`history_travel_testing`.
             prioritize_to_one_filter: Forwarded to
                 :py:meth:`history_travel_testing`.
-            verbose: Show coarse progress information.
-            verbose_detailed: Include extended per-ID counters in the progress bar.
-            return_result: Todo.
-            include_ensembl_source: Todo.
-            include_external_source: Todo.
-            include_ensembl_destination: Todo.
-            include_external_destination: Todo.
+            verbose (bool): Show coarse progress information.
+            verbose_detailed (bool): Include extended per-ID counters in the progress bar.
+            return_result (bool): If ``True``, return the metrics dictionary.
+            include_ensembl_source (bool): Include Ensembl databases as valid sources.
+            include_external_source (bool): Include external databases as valid sources.
+            include_ensembl_destination (bool): Include Ensembl databases as valid destinations.
+            include_external_destination (bool): Include external databases as valid destinations.
 
         Returns:
             dict: The *metrics* dictionary returned by
@@ -833,7 +836,7 @@ class TrackTests(Track, ABC):
         )
 
         if verbose:
-            printable1 = os.linesep + os.linesep.join(self.format_history_travel_testing_report_header(parameters))
+            printable1 = os.linesep + os.linesep.join(self._format_history_travel_testing_report_header(parameters))
             self.log.info(printable1)
 
         res = self.history_travel_testing(
@@ -849,7 +852,7 @@ class TrackTests(Track, ABC):
 
         if verbose:
             printable2 = os.linesep + os.linesep.join(
-                self.format_history_travel_testing_report(res, include_header=False)
+                self._format_history_travel_testing_report(res, include_header=False)
             )
             self.log.info(printable2)
 
@@ -873,26 +876,30 @@ class TrackTests(Track, ABC):
         graph-IDs with :py:meth:`idtrack.Track.convert`.
 
         Args:
-            convert_using_release: Whether to pin the *from_release* when
+            convert_using_release (bool): Whether to pin the *from_release* when
                 calling the converter.  Keeping this *True* usually speeds up
                 the search and mimics user-facing behaviour.
-            verbose: Print the current assembly/database/release being tested.
-            prioritize_to_one_filter: Todo.
-            ens_rel: Todo.
-            from_fraction: Todo.
-            database: Todo.
+            verbose (bool): Print the current assembly/database/release being tested.
+            prioritize_to_one_filter (bool): If ``True``, apply tie-breaking to
+                select a single best target when multiple candidates exist.
+            ens_rel (int | None): Specific Ensembl release to test. If ``None``,
+                a random release is chosen.
+            from_fraction (float): Fraction of identifiers to sample for testing
+                (0.0-1.0). Defaults to 1.0 (all identifiers).
+            database (str | None): Specific external database to test. If ``None``,
+                a random database is chosen.
 
         Returns:
             bool: *True* if every converted set equals the MySQL reference,
                 *False* upon the first deviation.
 
         Raises:
-            ValueError: Todo.
+            ValueError: Raised when test parameters are invalid or incompatible.
         """
         issues_t1 = []
         issues_t2 = []
         issues_t3 = []
-        assembly = DB.main_assembly
+        assembly = int(self.graph.graph["genome_assembly"])
 
         if database is None or ens_rel is None:
             self.log.info("Random database and Ensembl release.")
@@ -978,23 +985,27 @@ class TrackTests(Track, ABC):
         release constraint.
 
         Args:
-            assembly: NCBI assembly code (integer).
-            include_ensembl: Whether Ensembl backbone databases may be returned
+            assembly (int): Genome assembly code used in Ensembl core schema names
+                (e.g. ``38`` = human GRCh38, ``39`` = mouse GRCm39, ``111`` = pig Sscrofa11.1).
+            include_ensembl (bool): Whether Ensembl backbone databases may be returned
                 as *database*.
-            release_lower_limit: Smallest permissible Ensembl release number
+            release_lower_limit (int | None): Smallest permissible Ensembl release number
                 for the returned triple.  *None* disables the filter.
-            form: Restrict the draw to a particular connection *form*
+            form (str | None): Restrict the draw to a particular connection *form*
                 (protein/coding/gene).  *None* means no restriction.
-            only_backbone_tests: Todo.
-            include_external: Todo.
-            for_final_database: Todo.
+            only_backbone_tests (bool): If ``True``, restrict selection to backbone-only
+                databases (skip external databases entirely).
+            include_external (bool): Whether external (non-Ensembl) databases may be
+                included in the selection pool.
+            for_final_database (bool): If ``True``, exclude Ensembl assembly-specific
+                databases from selection (useful when selecting final conversion targets).
 
         Returns:
             tuple | None: ``(<database>, <assembly>, <release>)`` or *None* when
             no matching release exists.
 
         Raises:
-            ValueError: Todo.
+            ValueError: Raised when no valid database/release combination can be found.
         """
         if not only_backbone_tests:
             if include_external:
@@ -1023,13 +1034,13 @@ class TrackTests(Track, ABC):
         else:
             all_possible_sources = [DB.nts_ensembl[DB.backbone_form]]
 
-        selected_database = random.choice(all_possible_sources)
+        selected_database = random.choice(all_possible_sources)  # noqa: S311
         possible_releases = self.graph.available_releases_given_database_assembly[(selected_database, assembly)]
         if release_lower_limit is not None:
             possible_releases = {i for i in possible_releases if i >= release_lower_limit}
 
         if len(possible_releases) > 1:
-            selected_release = random.choice(list(possible_releases))
+            selected_release = random.choice(list(possible_releases))  # noqa: S311
             the_key = (selected_database, assembly, selected_release)
             return the_key
         else:
@@ -1069,14 +1080,15 @@ class TrackTests(Track, ABC):
 
         return True
 
-    def format_history_travel_testing_report_header(self, p: dict[str, Any]) -> list[str]:
-        """Todo.
+    def _format_history_travel_testing_report_header(self, p: dict[str, Any]) -> list[str]:
+        """Format the header section for a history travel testing report.
 
         Args:
-            p (dict[str, Any]): Todo.
+            p (dict[str, Any]): Parameters dictionary containing ``from_database``,
+                ``from_assembly``, ``from_release``, ``to_database``, and ``to_release``.
 
         Returns:
-            str: Todo.
+            list[str]: Lines of formatted text for the report header.
         """
         header = [
             "╔═ History-Travel-Testing Report ═╗",
@@ -1087,18 +1099,21 @@ class TrackTests(Track, ABC):
 
         return header
 
-    def format_history_travel_testing_report(
+    def _format_history_travel_testing_report(
         self, res: dict[str, Any], include_header=False, line_separation_at_end=True
     ) -> list[str]:
-        """Todo.
+        """Format a complete history travel testing report with metrics.
 
         Args:
-            res (dict[str, Any]): Todo.
-            include_header (bool): Todo. Defaults to False.
-            line_separation_at_end (bool): Todo.. Defaults to True.
+            res (dict[str, Any]): Results dictionary from history_travel_testing
+                containing conversion metrics and parameters.
+            include_header (bool): If ``True``, include the header section with
+                source/target information. Defaults to ``False``.
+            line_separation_at_end (bool): If ``True``, append a blank line
+                separator at the end of the report. Defaults to ``True``.
 
         Returns:
-            str: Todo.
+            list[str]: Lines of formatted text for the complete report.
         """
 
         def cnt(key: str) -> int:
@@ -1111,7 +1126,7 @@ class TrackTests(Track, ABC):
 
         if include_header:
             p = res.get("parameters", {})
-            header = self.format_history_travel_testing_report_header(p)
+            header = self._format_history_travel_testing_report_header(p)
             header_extension = [
                 f"External: {p.get('go_external')}   " f"1→1-pref.: {p.get('prioritize_to_one_filter')}",
                 f"Sample  : {p.get('from_fraction'):g} of source IDs",

@@ -1,4 +1,4 @@
-exclude: "^docs/_logo"
+exclude: "^docs/_notebooks/src"
 repos:
     - repo: https://github.com/asottile/seed-isort-config
       rev: v2.2.0
@@ -16,6 +16,7 @@ repos:
             name: isort (python)
             entry: isort
             language: system
+            types: [python]
           # - id: isort
           #   name: isort (cython)
           #   types: [cython]

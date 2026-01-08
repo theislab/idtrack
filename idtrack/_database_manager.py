@@ -55,6 +55,138 @@ class DatabaseManager:
     concise, human-readable dump of that state.
     """
 
+    _core_db_index_cache: dict[tuple[str, int], dict[str, Any]] = {}
+
+    @classmethod
+    def _get_core_db_index(cls, *, organism: str, genome_assembly: int) -> dict[str, Any]:
+        """Return cached core-DB availability for an (organism, assembly) pair across all configured ports.
+
+        The Ensembl public MySQL service can host the same assembly on multiple ports depending on release
+        (e.g. *sus_scrofa* assembly 102). To support full-history workflows we build a small in-memory index:
+
+        - `ports`: ports probed for this (organism, assembly) in preference order
+        - `releases_by_port`: releases available for this assembly on each reachable port
+        - `db_by_port_release`: schema name for each available release on each reachable port
+        - `releases`: sorted union of all releases across ports
+        - `port_for_release`: deterministic choice of port for each release (first configured port that has it)
+        - `db_for_release`: chosen schema name for each release (matching `port_for_release`, includes patch-letter suffixes)
+
+        Args:
+            organism: Canonical Ensembl organism name (e.g. ``"homo_sapiens"``).
+            genome_assembly: Genome assembly version (e.g. ``38`` for GRCh38).
+
+        Returns:
+            dict[str, Any]: Mapping describing reachable releases/ports for this organism/assembly.
+
+        Raises:
+            ValueError: If *organism* or *genome_assembly* is not configured.
+        """
+        key = (organism, int(genome_assembly))
+        cached = cls._core_db_index_cache.get(key)
+        if cached is not None:
+            return cached
+
+        if organism not in DB.assembly_mysqlport_priority:
+            raise ValueError(
+                f"Organism {organism!r} is not configured. Supported organisms: {sorted(DB.assembly_mysqlport_priority)}"
+            )
+        if int(genome_assembly) not in DB.assembly_mysqlport_priority[organism]:
+            raise ValueError(
+                f"Genome assembly {int(genome_assembly)} is not configured for organism {organism!r}. "
+                f"Supported assemblies: {sorted(DB.assembly_mysqlport_priority[organism])}"
+            )
+
+        ports = list(DB.assembly_mysqlport_priority[organism][int(genome_assembly)]["Ports"])
+        # Some Ensembl releases encode patch builds as a trailing letter, e.g. `homo_sapiens_core_56_37a`.
+        # Treat these as part of the same "base assembly" (37) for configuration and graph-level purposes.
+        pattern = re.compile(rf"^{re.escape(organism)}_core_([0-9]+)_{int(genome_assembly)}[a-z]*$")
+        # Use an information_schema filter to avoid `SHOW DATABASES` timeouts on busy ports.
+        escaped_organism = organism.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        like_pattern = f"{escaped_organism}\\_core\\_%\\_{int(genome_assembly)}%"
+
+        releases_by_port: dict[int, set[int]] = {}
+        db_by_port_release: dict[int, dict[int, str]] = {}
+        connection_errors: dict[int, Exception] = {}
+        for port in ports:
+            results_query = None
+            last_exc: Optional[Exception] = None
+            for attempt in range(2):
+                try:
+                    with pymysql.connect(
+                        host=DB.mysql_host,
+                        user=DB.myqsl_user,
+                        password=DB.mysql_togo,
+                        port=int(port),
+                        connect_timeout=max(DB.connection_timeout, 30),
+                        read_timeout=max(DB.reading_timeout, 60),
+                    ) as connection:
+                        with connection.cursor() as cur:
+                            cur.execute(
+                                "SELECT SCHEMA_NAME FROM information_schema.SCHEMATA "
+                                "WHERE SCHEMA_NAME LIKE %s ESCAPE '\\\\'",
+                                (like_pattern,),
+                            )
+                            results_query = cur.fetchall()
+                    break
+                except Exception as exc:
+                    last_exc = exc
+                    results_query = None
+                    if attempt == 0:
+                        continue
+            if results_query is None:
+                connection_errors[int(port)] = last_exc or RuntimeError("Unknown MySQL connection error")
+                continue
+
+            rels: set[int] = set()
+            db_for_release_on_port: dict[int, str] = {}
+            for (db_name,) in results_query:
+                if isinstance(db_name, bytes):
+                    db_name = db_name.decode("utf-8")
+                db_name = str(db_name)
+                m = pattern.match(db_name)
+                if m:
+                    rel = int(m.group(1))
+                    rels.add(rel)
+                    if rel not in db_for_release_on_port:
+                        db_for_release_on_port[rel] = db_name
+                    else:
+                        # Extremely rare: multiple schema suffixes for the same (release, base-assembly).
+                        # Prefer the shortest name (e.g. `_37` over `_37a`) for determinism.
+                        if len(db_name) < len(db_for_release_on_port[rel]):
+                            db_for_release_on_port[rel] = db_name
+
+            releases_by_port[int(port)] = rels
+            db_by_port_release[int(port)] = db_for_release_on_port
+
+        releases_union = sorted({r for rs in releases_by_port.values() for r in rs})
+        port_for_release: dict[int, int] = {}
+        db_for_release: dict[int, str] = {}
+        for rel in releases_union:
+            for port in ports:
+                if rel in releases_by_port.get(int(port), set()):
+                    port_for_release[int(rel)] = int(port)
+                    db_for_release[int(rel)] = db_by_port_release[int(port)][int(rel)]
+                    break
+
+        if not releases_union:
+            raise ValueError(
+                f"No Ensembl core databases found for {organism!r} on assembly {int(genome_assembly)} "
+                f"across ports {ports}. Connection errors: {connection_errors}"
+            )
+
+        index = {
+            "organism": organism,
+            "genome_assembly": int(genome_assembly),
+            "ports": tuple(int(p) for p in ports),
+            "releases_by_port": releases_by_port,
+            "db_by_port_release": db_by_port_release,
+            "releases": releases_union,
+            "port_for_release": port_for_release,
+            "db_for_release": db_for_release,
+        }
+        cls._core_db_index_cache[key] = index
+        return index
+
     def __init__(
         self,
         organism: str,
@@ -84,38 +216,151 @@ class DatabaseManager:
                 ``np.inf`` (the default) disables the upper bound and includes all newer releases.
             store_raw_always (bool): When ``True`` raw MySQL tables are *always* copied to
                 ``local_repository`` before conversion; when ``False`` they are kept only in memory.
-            genome_assembly (Optional[int]): NCBI assembly version (e.g. ``38`` for GRCh38). If
-                omitted, the assembly with the highest priority for *organism* is used.
+            genome_assembly (Optional[int]): Genome assembly code used in Ensembl core schema names
+                (``<organism>_core_<release>_<assembly>``). This selects the **primary** assembly used for data access
+                (e.g. ``38`` = human GRCh38, ``39`` = mouse GRCm39, ``111`` = pig Sscrofa11.1). If omitted, the
+                highest-priority assembly for *organism* is used. If *ensembl_release* is provided, the selection is
+                restricted to assemblies that actually contain that release.
 
         Raises:
             ValueError: If *form* is not in the supported list or *local_repository* fails basic
                 path/read/write checks.
+            RuntimeError: If internal port/release configuration is inconsistent.
             NotImplementedError: If *organism* is not yet supported by the package.
         """
-        if organism not in ["homo_sapiens", "mus_musculus"]:
+        if organism not in DB.supported_organisms:
             raise NotImplementedError(
-                "Organisms other than human and mouse is not implemented. In theory, it should work but "
-                "no tests have been conducted yet. In the next version of the package, other "
-                "organisms will be available. Please note that adding new organisms necessitates "
-                "to determine which external databases to include using ExternalDatabase class."
+                f"Organism {organism!r} is not configured. Supported organisms: {DB.supported_organisms}. "
+                "To add a new organism, extend `idtrack._db.DB.assembly_mysqlport_priority` and review external "
+                "database support via `idtrack._external_databases.ExternalDatabases`."
             )
 
-        if genome_assembly is None:  # Set default genome assembly when not specified specifically.
-            genome_assembly = sorted(
-                (DB.assembly_mysqlport_priority[i]["Priority"], i) for i in DB.assembly_mysqlport_priority
-            )[0][
-                1
-            ]  # Have the most important priority genome assembly as the default value.
+        if not os.path.isdir(local_repository):
+            raise ValueError(f"`local_repository` must be an existing directory: {local_repository!r}")
+        if not (os.access(local_repository, os.R_OK) and os.access(local_repository, os.W_OK)):
+            raise ValueError(f"`local_repository` must be readable and writable: {local_repository!r}")
+
+        if form not in DB.forms_in_order:
+            raise ValueError(f"Form {form!r} is not supported. Supported forms: {DB.forms_in_order}")
+
+        ignore_before_effective: Optional[int]
+        if ignore_before is None:
+            ignore_before_effective = None
+        else:
+            try:
+                ignore_before_float = float(ignore_before)
+                ignore_before_int = int(ignore_before_float)
+            except Exception as exc:  # pragma: no cover - defensive
+                raise ValueError("ignore_before must be an integer Ensembl release number.") from exc
+            if ignore_before_float != ignore_before_int:
+                raise ValueError("ignore_before must be an integer Ensembl release number.")
+            ignore_before_effective = ignore_before_int
+
+        if ignore_after is None:
+            ignore_after_effective: Union[int, float] = np.inf
+        else:
+            try:
+                ignore_after_float = float(ignore_after)
+            except Exception as exc:  # pragma: no cover - defensive
+                raise ValueError("ignore_after must be an integer Ensembl release number or np.inf.") from exc
+            if np.isinf(ignore_after_float):
+                ignore_after_effective = np.inf
+            else:
+                ignore_after_int = int(ignore_after_float)
+                if ignore_after_float != ignore_after_int:
+                    raise ValueError("ignore_after must be an integer Ensembl release number or np.inf.")
+                ignore_after_effective = ignore_after_int
+
+        if ignore_before_effective is not None and not np.isinf(ignore_after_effective):
+            if int(ignore_after_effective) < int(ignore_before_effective):
+                raise ValueError(
+                    f"ignore_after must be >= ignore_before (got ignore_before={ignore_before_effective}, "
+                    f"ignore_after={ignore_after_effective})."
+                )
+
+        configured_assemblies = DB.assembly_mysqlport_priority[organism]
+        if ensembl_release is not None and float(ensembl_release) != int(ensembl_release):
+            raise ValueError("Floating-point Ensembl releases (e.g. 18.2) are not supported; pass an integer release.")
+
+        if genome_assembly is None:
+            # Pick the highest-priority assembly that is *actually available* on the public MySQL service.
+            # If the user requested an explicit release, further restrict to assemblies that contain that release.
+            requested_release = int(ensembl_release) if ensembl_release is not None else None
+            assemblies_by_priority = sorted(
+                configured_assemblies.keys(), key=lambda a: int(configured_assemblies[int(a)]["Priority"])
+            )
+
+            candidate_indexes: dict[int, dict[str, Any]] = {}
+            last_exc: Optional[Exception] = None
+
+            for asm in assemblies_by_priority:
+                try:
+                    candidate_indexes[int(asm)] = self._get_core_db_index(organism=organism, genome_assembly=int(asm))
+                except Exception as exc:
+                    last_exc = exc
+                    continue
+
+                if requested_release is None or requested_release in candidate_indexes[int(asm)]["port_for_release"]:
+                    genome_assembly = int(asm)
+                    break
+
+            if genome_assembly is None:
+                available_summary = {
+                    asm: (
+                        min(idx["releases"]) if idx.get("releases") else None,
+                        max(idx["releases"]) if idx.get("releases") else None,
+                    )
+                    for asm, idx in candidate_indexes.items()
+                }
+                raise ValueError(
+                    f"Unable to infer a default genome assembly for {organism!r} "
+                    f"with requested release {requested_release!r}. "
+                    f"Available (min,max) release ranges by assembly: {available_summary}. "
+                    f"Last error while probing assemblies: {last_exc}"
+                )
+        else:
+            if int(genome_assembly) not in configured_assemblies:
+                raise ValueError(
+                    f"Genome assembly {int(genome_assembly)} is not configured for organism {organism!r}. "
+                    f"Supported assemblies: {sorted(configured_assemblies)}"
+                )
+            genome_assembly = int(genome_assembly)
 
         # MYSQL Settings
         self.genome_assembly = genome_assembly
-        self.mysql_settings = {
+        core_index = self._get_core_db_index(organism=organism, genome_assembly=self.genome_assembly)
+
+        if ensembl_release is None:
+            if not core_index["releases"]:
+                raise ValueError(
+                    f"No Ensembl core databases found for {organism!r} on assembly {self.genome_assembly} "
+                    f"(tried MySQL ports {core_index['ports']})."
+                )
+            if not np.isinf(ignore_after_effective):
+                eligible = [r for r in core_index["releases"] if r <= int(ignore_after_effective)]
+                if not eligible:
+                    raise ValueError(
+                        f"No Ensembl core database found for {organism!r} on assembly {self.genome_assembly} "
+                        f"at or before ignore_after={ignore_after_effective!r}. "
+                        f"Available releases: {core_index['releases']}"
+                    )
+                ensembl_release = eligible[-1]
+            else:
+                ensembl_release = core_index["releases"][-1]
+
+        ensembl_release = int(ensembl_release)
+        if ensembl_release not in core_index["port_for_release"]:
+            raise ValueError(
+                f"No Ensembl core database found for {organism!r} release {ensembl_release} on assembly {self.genome_assembly}. "
+                f"Tried MySQL ports {core_index['ports']}. Available releases: {core_index['releases']}"
+            )
+        selected_port = int(core_index["port_for_release"][ensembl_release])
+
+        self.mysql_settings: dict[str, Any] = {
             "host": DB.mysql_host,
             "user": DB.myqsl_user,
             "password": DB.mysql_togo,
-            # Port depends on which genome assembly is of interest. Refer to the following link.
-            # https://www.ensembl.org/info/data/mysql.html
-            "port": DB.assembly_mysqlport_priority[self.genome_assembly]["Port"],
+            "port": selected_port,
         }
 
         # The logger for informing the user about the progress.
@@ -126,11 +371,11 @@ class DatabaseManager:
         self.organism = organism
         self.form = form
         self.store_raw_always = store_raw_always
-        # If ignore_before is not specified clearly, than use the lowest possible priority defined by the MySQL server.
-        default_min_er = max(DB.assembly_mysqlport_priority[i]["MinRelease"] for i in DB.assembly_mysqlport_priority)
-        self.ignore_before: int = ignore_before if ignore_before is not None else default_min_er
-        # If ignore_after is not specified, than set it to infinite.
-        self.ignore_after: Union[int, float] = ignore_after if ignore_after is not None else np.inf
+        if ignore_before_effective is None:
+            ignore_before_effective = int(core_index["releases"][0])
+        self.ignore_before = int(ignore_before_effective)
+        # If ignore_after is not specified, then set it to infinite.
+        self.ignore_after: Union[int, float] = ignore_after_effective
 
         # Protected attributes
         self.available_form_of_interests = copy.deepcopy(DB.forms_in_order)  # Warning: the order is important.
@@ -138,29 +383,36 @@ class DatabaseManager:
         self._column_sep = "_COL_"
         self._identifiers = [f"{self.form}_stable_id", f"{self.form}_version"]
 
-        if ensembl_release is None:  # Set last possible Ensembl release for given genome assembly.
-            self.ensembl_release = 0  # placeholder value for for file naming method, it is not gonna be saved anyway.
-            ensembl_release = sorted(self.available_releases_no_save)[-1]
         self.ensembl_release = int(ensembl_release)
         # _ = self.external_inst.load_modified_yaml()
 
-        # Check if it seems ok.
-        checkers = (
-            # In very early releases, there are floating ensembl releases like "18.2". This package does not support.
-            float(ensembl_release) == int(ensembl_release),
-            self.ignore_after >= self.ensembl_release >= self.ignore_before,
-            self.ensembl_release in self.available_releases,
-            self.genome_assembly in DB.assembly_mysqlport_priority,
-            self.form in self.available_form_of_interests,
-            (
-                os.path.isdir(self.local_repository)
-                and os.access(self.local_repository, os.W_OK)
-                and os.access(self.local_repository, os.R_OK)
-            ),
-            not (self.ensembl_release < DB.assembly_mysqlport_priority[self.genome_assembly]["MinRelease"]),
-        )
-        if not all(checkers):
-            raise ValueError(f"'DatabaseManager' could not pass the 'checkers': {checkers}")
+        if not np.isinf(self.ignore_after) and self.ignore_after < self.ignore_before:
+            raise ValueError(
+                f"ignore_after must be >= ignore_before (got ignore_before={self.ignore_before}, ignore_after={self.ignore_after})."
+            )
+
+        releases_in_window = sorted(r for r in core_index["releases"] if self.ignore_after >= r >= self.ignore_before)
+        if not releases_in_window:
+            msg = (
+                "No Ensembl releases remain after applying "
+                f"ignore_before={self.ignore_before} and ignore_after={self.ignore_after} "
+                f"for {self.organism!r} assembly {int(self.genome_assembly)}. "
+                f"Available releases: {core_index['releases']}"
+            )
+            raise ValueError(msg)
+        if self.ensembl_release not in releases_in_window:
+            raise ValueError(
+                f"ensembl_release={self.ensembl_release} is outside the ignore window "
+                f"[{self.ignore_before}, {self.ignore_after}] for {self.organism!r} assembly {int(self.genome_assembly)}. "
+                f"Releases within window: {releases_in_window}"
+            )
+
+        min_port_release = DB.mysql_port_min_release.get(int(self.mysql_settings["port"]))
+        if min_port_release is not None and self.ensembl_release < int(min_port_release):
+            raise RuntimeError(
+                f"Internal configuration error: selected port {int(self.mysql_settings['port'])} has min release "
+                f"{int(min_port_release)} but release {int(self.ensembl_release)} was selected."
+            )
 
     def __str__(self) -> str:
         """Return a multi-line snapshot of the manager's current configuration.
@@ -236,94 +488,46 @@ class DatabaseManager:
     def available_releases_versions(self, **kwargs) -> list[int]:
         """Discover valid Ensembl releases for the configured organism and assembly.
 
-        A ``SHOW DATABASES`` query is issued against the configured MySQL mirror.  Results are matched
-        against the pattern ``^{organism}_core_<release>_.*$``; the captured ``<release>`` component is
-        converted to ``int`` (floating-point labels are rejected), range-checked against the manager's
-        ``ignore_before`` / ``ignore_after`` bounds, and finally sorted. Optional keyword arguments are
-        forwarded verbatim to :py:meth:`DatabaseManager.get_db`, allowing callers to tweak connection or
-        caching behaviour.
+        Availability is discovered via the cached, multi-port aware core index built by
+        :py:meth:`_get_core_db_index`. The resulting union of releases is filtered against the manager's
+        ``ignore_before`` / ``ignore_after`` bounds and returned in ascending order.
 
         Args:
-            kwargs: Arbitrary keyword arguments passed straight through to
-                :py:meth:`DatabaseManager.get_db` (e.g., ``mysql_conn``, ``force_refresh``).
+            kwargs: Kept for backward compatibility; currently unused.
 
         Returns:
             list[int]: Sorted list of release numbers that exist on the mirror and comply with the ignore window.
-
-        Raises:
-            ValueError: If a database name does not match the expected regex, if floating-point release
-                labels are encountered, or if other inconsistencies arise while parsing server results.
         """
-        # Get all possible ensembl releases for a given organism
-        dbs = self.get_db("availabledatabases", **kwargs)["available_databases"]  # Obtain the databases dataframe
-        pattern = re.compile(f"^{self.organism}_core_([0-9]+)_.+$")
-        # Search organism name in a specified format. Extract ensembl release number
-        releases = list()
-        for dbs_i in dbs:
-            if pattern.match(dbs_i):
-                dbs_ps = pattern.search(dbs_i)
-                if not dbs_ps:
-                    raise ValueError
-                releases.append(float(dbs_ps.groups()[0]))
-
-        # Get rid of floating ensembl releases if exists: In very early releases, there are floating releases
-        # like "18.2". This Python package does not support those.
-        floating_ensembl = list()
-        releases_final = list()
-        for r in releases:
-            if float(r) == int(r):
-                releases_final.append(int(r))
-            else:
-                floating_ensembl.append(r)
-
-        if len(floating_ensembl) > 0:
-            self.log.warning(
-                f"Some ensembl releases are included for {self.organism}. "
-                f"There are floating ensembl releases: {floating_ensembl}."
-            )
-
-        # Sort in ascending order and return the result.
-        releases_final = sorted(
-            i
-            for i in releases_final
-            if self.ignore_after >= i >= self.ignore_before  # Filter out the releases that are not of interest.
-        )
-
+        # Use the pre-built core-DB index (union across ports) so multi-port assemblies work correctly.
+        core_index = self._get_core_db_index(organism=self.organism, genome_assembly=self.genome_assembly)
+        releases_final = sorted(r for r in core_index["releases"] if self.ignore_after >= r >= self.ignore_before)
         return releases_final
 
     @cached_property
     def mysql_database(self) -> str:
         """Return the canonical Ensembl Core schema name for the current organism, release, and assembly.
 
-        The manager must resolve exactly one MySQL schema on the remote Ensembl server whose name encodes the
-        *organism* (e.g. ``homo_sapiens``), *release* (e.g. ``111``), and *genome assembly* (e.g. ``38``).  This
-        helper centralises that lookup, guaranteeing that downstream calls—such as :py:meth:`download_table`—always
-        talk to the correct database.  The search relies on :py:meth:`get_db` to fetch the server's catalogue and
-        then filters it by a strict regular expression; any ambiguity is treated as fatal because it would break
-        reproducibility.
+        The schema naming convention is deterministic:
+
+        ``{organism}_core_{ensembl_release}_{genome_assembly}[<patch>]``
+
+        For multi-port assemblies (e.g. *sus_scrofa* assembly ``102``), the *port* is selected in
+        :py:meth:`__init__` using :py:meth:`_get_core_db_index`.  Once the release is validated to exist on that
+        chosen port, the schema name itself does not require another server-side discovery query.
 
         Returns:
-            str: A single schema name like ``"homo_sapiens_core_111_38"`` that uniquely matches the manager's
-                configuration.
+            str: Schema name like ``"homo_sapiens_core_111_38"``.
 
         Raises:
-            ValueError: If zero **or** more than one schema satisfies the search criteria, signalling server
-                misconfiguration or an invalid combination of *organism* and *ensembl_release*.
+            ValueError: If the current release is not available for this (organism, assembly) pair.
         """
-        dbs = self.get_db("availabledatabases")["available_databases"]  # Obtain the databases dataframe
-
-        pattern = re.compile(f"^{self.organism}_core_{int(self.ensembl_release)}_.+$")
-        located = [i for i in dbs if pattern.match(i)]
-        # Search database in a specified format. Extract ensembl release number
-
-        if not len(located) == 1:
+        core_index = self._get_core_db_index(organism=self.organism, genome_assembly=self.genome_assembly)
+        if int(self.ensembl_release) not in core_index["port_for_release"]:
             raise ValueError(
-                "There are more than one 'MySQL database' in the server "
-                "satisfying given ensembl release and organism name."
+                f"No Ensembl core database found for {self.organism!r} release {int(self.ensembl_release)} "
+                f"on assembly {int(self.genome_assembly)}. Available releases: {core_index['releases']}"
             )
-        # Make sure there are only one database in the server satisfying given ensembl release and organism name.
-
-        return located[0]
+        return str(core_index["db_for_release"][int(self.ensembl_release)])
 
     def change_form(self, form: str) -> "DatabaseManager":
         """Clone the manager while switching the biological form of interest.
@@ -380,13 +584,14 @@ class DatabaseManager:
         """Clone the manager while targeting a new genome assembly (e.g. GRCh38 → GRCh37).
 
         Genome assemblies are encoded as integers in Ensembl's schema naming (``38`` for *GRCh38*,
-        ``37`` for *GRCh37*, ``102`` for *GRCm39*, …).  When *last_possible_ensembl_release* is ``True`` the
+        ``37`` for *GRCh37*, ``39`` for *GRCm39*, ``111`` for *Sscrofa11.1*, …).  When
+        *last_possible_ensembl_release* is ``True`` the
         method automatically picks the most recent Ensembl release that **still** provides MySQL dumps for the
         requested assembly, ensuring compatibility.  All other settings are copied verbatim.
 
         Args:
-            genome_assembly (int): Key from :py:data:`DB.assembly_mysqlport_priority` mapping—see Ensembl
-                documentation for valid values.
+            genome_assembly (int): Assembly code configured under
+                :py:attr:`DB.assembly_mysqlport_priority` for this manager's organism.
             last_possible_ensembl_release (bool): When ``True`` override *ensembl_release* with the
                 newest version available for *genome_assembly*.  Defaults to ``False``.
 
@@ -536,14 +741,26 @@ class DatabaseManager:
             ValueError: If any element of *usecols* is missing from *table_key*, or if the query returns
                 binary payloads that cannot be coerced into native Python types.
         """
+        if usecols == []:
+            usecols = None
+
+        def _quote_identifier(identifier: str) -> str:
+            if not isinstance(identifier, str):
+                raise ValueError(f"Unsafe SQL identifier type: {type(identifier)!r}")
+            if not re.fullmatch(r"[0-9A-Za-z_]+", identifier):
+                raise ValueError(f"Unsafe SQL identifier: {identifier!r}")
+            return f"`{identifier}`"
+
         # Base settings for MYSQL server.
         which_mysql_server = dict(**self.mysql_settings, **{"database": self.mysql_database})
 
         # Connect to the MYSQL server, close the connection after the code block
         with pymysql.connect(**which_mysql_server) as connection:
+            table_sql = _quote_identifier(table_key)
+
             # Create a cursor to be able to make some queries: First get the associated column names.
             with connection.cursor() as cur1:
-                cur1.execute(f"SHOW columns FROM {table_key}")
+                cur1.execute(f"SHOW columns FROM {table_sql}")  # noqa: S608
                 column_names = pd.DataFrame(cur1.fetchall())[0]
 
                 if pd.isna(column_names).any():
@@ -560,9 +777,16 @@ class DatabaseManager:
 
             # Create a cursor to be able to make some queries: Second get the associated table content.
             with connection.cursor() as cur2:
-                # Convert the list of column names into string to be used in MYSQL query
-                usecol_sql = ", ".join(usecols) if usecols else ""
-                cur2.execute(f"SELECT {'*' if usecols is None else usecol_sql} FROM {table_key}")
+                if usecols is None:
+                    select_sql = "*"
+                else:
+                    col_set = {str(c) for c in column_names.tolist()}
+                    missing = [c for c in usecols if not isinstance(c, str) or c not in col_set]
+                    if missing:
+                        raise ValueError(f"Missing columns in {table_key!r}: {missing}")
+                    select_sql = ", ".join(_quote_identifier(col) for col in usecols)
+
+                cur2.execute(f"SELECT {select_sql} FROM {table_sql}")  # noqa: S608
                 # Fetch all the content and save as a tuple file.
                 results_content = cur2.fetchall()
 
@@ -1177,8 +1401,8 @@ class DatabaseManager:
     def create_database_content(self, just_download: bool = False) -> pd.DataFrame:
         """Retrieve and optionally cache external-database metadata for every assembly, release, and form.
 
-        The helper iterates over *all* genome assemblies defined in
-        :py:data:`idtrack._db.DB.assembly_mysqlport_priority`, every available Ensembl release for each assembly,
+        The helper iterates over every genome assembly configured for the current organism in
+        :py:attr:`idtrack._db.DB.assembly_mysqlport_priority`, every available Ensembl release for each assembly,
         and every identifier *form* supported by the package, downloading the ``external_database`` table for
         each combination.  The resulting frames are concatenated, enriched with ``assembly``, ``release``,
         ``form``, and ``organism`` columns, and returned to the caller.  When ``just_download`` is ``True`` the
@@ -1195,8 +1419,11 @@ class DatabaseManager:
                 columns.  Empty when ``just_download`` is ``True``.
         """
         df = pd.DataFrame()
-        for k in DB.assembly_mysqlport_priority.keys():  # For all assemblies possible.
-            dm_assembly = self.change_assembly(k, last_possible_ensembl_release=True)
+        for k in DB.assembly_mysqlport_priority[self.organism].keys():
+            try:
+                dm_assembly = self.change_assembly(k, last_possible_ensembl_release=True)
+            except ValueError:
+                continue
             for j in dm_assembly.available_form_of_interests:  # For all assemblies possible.
                 for i in dm_assembly.available_releases:
                     self.log.info(
@@ -1259,7 +1486,7 @@ class DatabaseManager:
         Args:
             db_manager (DatabaseManager): Manager instance to probe.
             target_assembly (int): Genome-assembly code to test (a key of
-                :py:data:`idtrack._db.DB.assembly_mysqlport_priority`).
+                :py:attr:`idtrack._db.DB.assembly_mysqlport_priority` for the manager's organism).
 
         Returns:
             bool: ``True`` if the assembly switch succeeds without raising :py:class:`ValueError`; ``False`` otherwise.
@@ -1270,18 +1497,24 @@ class DatabaseManager:
         except ValueError:
             return False
 
-    def create_external_all(self, return_mode: str) -> Union[pd.DataFrame, pd.core.groupby.generic.DataFrameGroupBy]:
+    def create_external_all(
+        self, return_mode: str, narrow_external: bool = True
+    ) -> Union[pd.DataFrame, pd.core.groupby.generic.DataFrameGroupBy]:
         """Download and collate cross-reference mappings from every supported genome assembly.
 
         The manager cycles through every genome assembly recognised for the current organism (ordered by
-        :py:data:`idtrack._db.DB.assembly_mysqlport_priority`), fetches the *external_relevant* mapping table
-        for each via :py:meth:`~DatabaseManager.get_db`, labels every row with its source assembly, and finally
-        concatenates the tables.  Because this helper is intended for **ad-hoc inspection only**, it bypasses
-        the :py:meth:`~DatabaseManager.get_db` caching layer and therefore **never writes** the result to the
-        local repository.
+        :py:data:`idtrack._db.DB.assembly_mysqlport_priority`), fetches either the filtered
+        *external_relevant* mapping table (when ``narrow_external=True``) or the full *external* mapping table
+        (when ``narrow_external=False``) for each via :py:meth:`~DatabaseManager.get_db`, labels every row with
+        its source assembly, and finally concatenates the tables. Because this helper is intended for
+        **ad-hoc inspection only**, it bypasses the :py:meth:`~DatabaseManager.get_db` caching layer and
+        therefore **never writes** the result to the local repository.
 
         Args:
             return_mode (str): Strategy for handling rows that appear in more than one assembly.
+            narrow_external (bool): If ``True`` (default), restrict results to databases enabled in the external
+                YAML configuration (``external_relevant``). If ``False``, include all external databases provided by
+                the Ensembl MySQL server (``external``).
 
                 - ``"all"``
                     Keep one copy of every unique
@@ -1313,14 +1546,20 @@ class DatabaseManager:
         """
         ass = self.external_inst.give_list_for_case(give_type="assembly")
         df = pd.DataFrame()
-        assembly_priority = [DB.assembly_mysqlport_priority[i]["Priority"] for i in ass]
 
-        for i in [x for _, x in sorted(zip(assembly_priority, ass))]:  # sort according to priority
-            if self.check_if_change_assembly_works(db_manager=self, target_assembly=i):
+        df_indicator = "external_relevant" if narrow_external else "external"
+
+        cfg = DB.assembly_mysqlport_priority[self.organism]
+        ass_supported = [int(a) for a in ass if int(a) in cfg]
+        ass_sorted = sorted(ass_supported, key=lambda a: cfg[a]["Priority"])
+        for i in ass_sorted:  # sort according to per-organism priority (1 = newest)
+            try:
                 dm = self.change_assembly(i)
-                df_temp = dm.get_db("external_relevant")
-                df_temp["assembly"] = i
-                df = pd.concat([df, df_temp])
+            except ValueError:
+                continue
+            df_temp = dm.get_db(df_indicator)
+            df_temp["assembly"] = i
+            df = pd.concat([df, df_temp])
         df.reset_index(drop=True, inplace=True)
 
         compare_columns = [
@@ -1496,11 +1735,13 @@ class DatabaseManager:
         if len(split_ind) > 2:
             raise ValueError
 
-        # For 'availabledatabases' accept different files explained in the below functions.
+        # For 'availabledatabases', do *not* reuse another release's cached result.
+        #
+        # Multi-port assemblies can resolve to different ports depending on release. Since the server-side
+        # database catalogue is port-specific, reusing a "later" release's cached catalogue can silently
+        # drop earlier releases that only exist on a different port.
         if main_ind == "availabledatabases" and param1_ind is None:
-            xr1, xr1_a = check_exist_as_diff_release("common", df_indicator)
-            remove_redundant_exist("common", df_indicator, xr1, xr1_a)
-            hierarchy, file_path = self.file_name("common", df_indicator, ensembl_release=xr1)
+            hierarchy, file_path = self.file_name("common", df_indicator)
 
         elif main_ind == "versioninfo" and param1_ind is None:
             xr1, xr1_a = check_exist_as_diff_release("processed", df_indicator)

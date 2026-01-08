@@ -1,35 +1,79 @@
+# CI: Build distributions and sanity-check packaging metadata.
+#
+# Notes:
+# - Uses a matrix so each (os, python) pair is a separate job => parallelism.
+# - Uses `python -m build` (PEP 517) instead of installing Poetry in CI to reduce toolchain fragility.
+# - Installs the wheel with `--no-deps` to avoid downloading heavy scientific stacks on all platforms.
 name: Build idtrack Package
 
-on: [push, pull_request]
+on:
+    push:
+    pull_request:
+    workflow_dispatch:
+
+# Default permissions for the GITHUB_TOKEN (principle of least privilege).
+permissions:
+    contents: read
+
+# Cancel older runs for the same branch/PR to reduce CI queue time and avoid wasting minutes.
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
 
 jobs:
     build:
+        name: Build (${{ matrix.os }} / py${{ matrix.python-version }})
         runs-on: ${{ matrix.os }}
-        if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]')"
+        timeout-minutes: 30
+        # Support `[skip ci]`/`[ci skip]` in both commit messages (push) and PR titles (pull_request).
+        if: >-
+            !contains(github.event.head_commit.message || github.event.pull_request.title || '', '[skip ci]') &&
+            !contains(github.event.head_commit.message || github.event.pull_request.title || '', '[ci skip]')
         strategy:
+            # Do not cancel the whole matrix if a single entry fails.
+            fail-fast: false
             matrix:
-                os: [macos-latest, ubuntu-latest, windows-latest]
-                python: ["3.9", "3.10", "3.11", "3.12"]
+                # Pin runner images to reduce surprise breakage when `*-latest` moves.
+                os: [ubuntu-22.04, macos-14, windows-2022]
+                python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+
+        # Use bash everywhere so globs like dist/*.whl behave consistently across OSes.
+        defaults:
+            run:
+                shell: bash
 
         steps:
-            - uses: actions/checkout@v4
-              name: Check out source-code repository
+            - name: Check out source-code repository
+              uses: actions/checkout@v4
 
-            - name: Setup Python
-              uses: actions/setup-python@v3
+            # Install the Python interpreter for this matrix element.
+            - name: Set up Python ${{ matrix.python-version }}
+              uses: actions/setup-python@v5
               with:
-                  python-version: ${{ matrix.python }}
+                  python-version: ${{ matrix.python-version }}
+                  allow-prereleases: true
+                  cache: pip
+                  cache-dependency-path: |
+                      pyproject.toml
+                      poetry.lock
 
-            - name: Install Poetry
+            # Use PEP 517 builds via `build` (reads `pyproject.toml` build-system settings).
+            - name: Upgrade pip and install build tooling
               run: |
-                  pip install poetry poetry-plugin-export
-                  poetry --version
+                  python -m pip install --upgrade pip
+                  python -m pip install --upgrade build twine
 
-            - name: Build package
-              run: poetry build --ansi
+            # Build both sdist and wheel into dist/.
+            - name: Build package (sdist + wheel)
+              run: python -m build
 
-            - name: Install required twine packaging dependencies
-              run: pip install setuptools wheel twine
+            # Validate long_description rendering and core metadata.
+            - name: Check package metadata (twine)
+              run: python -m twine check --strict dist/*
 
-            - name: Check twine package
-              run: twine check dist/*
+            # Install the built wheel without dependencies to ensure the artifact is valid.
+            # We print the installed version via importlib.metadata to avoid importing runtime deps.
+            - name: Install wheel (no deps)
+              run: |
+                  python -m pip install --no-deps dist/*.whl
+                  python -c "import importlib.metadata as m; print(m.version('idtrack'))"

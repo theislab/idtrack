@@ -84,6 +84,46 @@ class Track:
         self.version_info = self.graph.graph["version_info"]
         self._external_entrance_placeholder = {False: -1, True: 10001}
         self._external_entrance_placeholders = sorted(self._external_entrance_placeholder.values())
+        self._ensure_assembly_priority_cache()
+
+    def _ensure_assembly_priority_cache(self) -> None:
+        """Ensure per-graph assembly-priority caches exist.
+
+        Some test fixtures construct `Track` via `Track.__new__()` (bypassing `__init__`). Keep
+        the conversion code robust by lazily initialising the per-graph assembly-priority mapping.
+        """
+        if hasattr(self, "_assembly_priority_by_assembly") and hasattr(self, "_assembly_priority"):
+            return
+
+        organism = self.graph.graph.get("organism")
+        assemblies = sorted(self.graph.available_genome_assemblies)
+
+        priority_by_assembly: dict[int, int] = {}
+        if isinstance(organism, str) and organism in DB.assembly_mysqlport_priority:
+            cfg = DB.assembly_mysqlport_priority[organism]
+            priority_by_assembly = {a: int(cfg[a]["Priority"]) for a in assemblies if a in cfg}
+
+            missing = [a for a in assemblies if a not in cfg]
+            if missing:
+                self.log.warning(
+                    "Graph contains genome assemblies not configured for organism %r: %s. "
+                    "Treating them as lowest priority; update DB.assembly_mysqlport_priority to set an explicit order.",
+                    organism,
+                    sorted(missing),
+                )
+                # Keep configured priorities for known assemblies; treat unknown assemblies as lowest priority
+                # (largest numeric value) so we do not silently "prefer" an unconfigured assembly.
+                start_rank = (max(priority_by_assembly.values()) if priority_by_assembly else 0) + 1
+                for offset, assembly in enumerate(sorted(missing), start=0):
+                    priority_by_assembly[int(assembly)] = start_rank + offset
+
+        if not priority_by_assembly:
+            # Fallback heuristic: higher numeric assembly code is treated as newer/preferred.
+            assemblies_desc = sorted(assemblies, reverse=True)
+            priority_by_assembly = {int(assembly): rank for rank, assembly in enumerate(assemblies_desc, start=1)}
+
+        self._assembly_priority_by_assembly = priority_by_assembly
+        self._assembly_priority = sorted(set(priority_by_assembly.values()), reverse=True)
 
     def _recursive_synonymous(
         self,
@@ -142,7 +182,9 @@ class Track:
                 nodes that are *active* in this Ensembl release.
             ensembl_backbone_shallow_search (bool): Activate the
                 shallow, mostly-reverse search mode described above.
-            account_for_hyperconnected_nodes: Todo.
+            account_for_hyperconnected_nodes (bool): If ``True``, skip nodes
+                that are marked as hyperconnective (very high connectivity) to
+                prevent search explosion and low-quality paths. Defaults to ``True``.
         """
 
         def decide_terminate_externals():
@@ -268,7 +310,9 @@ class Track:
             from_release (int | None): Constrain targets to those active in this Ensembl release.
             ensembl_backbone_shallow_search (bool): If *True*,
                 restricts the graph traversal as explained in :py:meth:`_recursive_synonymous`.
-            account_for_hyperconnected_nodes: Todo.
+            account_for_hyperconnected_nodes (bool): If ``True``, skip nodes
+                that are marked as hyperconnective (very high connectivity) to
+                prevent search explosion and low-quality paths. Defaults to ``True``.
 
         Returns:
             list[list[list[str]]]: A list whose elements are `[identifier_path, node_type_path]` pairs,
@@ -1253,6 +1297,7 @@ class Track:
             ValueError: If an unexpected edge encoding is encountered, if an edge
                 score is invalid/∞, or if `remove_na` is set to an unknown mode.
         """
+        self._ensure_assembly_priority_cache()
 
         def er_maker_for_initial_conversion(n1, n2, n3, n4):
             edge_key = self.edge_key_orientor(n1, n2, n3)
@@ -1298,11 +1343,11 @@ class Track:
                     raise ValueError(f"Unexpected edge score: {the_path, edge_scores}")
 
                 if remove_na == "omit":
-                    edge_scores_r = reduction([s for s in edge_scores if not pd.isna(0)])
+                    edge_scores_r = reduction([s for s in edge_scores if not pd.isna(s)])
                 elif remove_na == "to_1":
-                    edge_scores_r = reduction([s if not pd.isna(0) else 1 for s in edge_scores])
+                    edge_scores_r = reduction([s if not pd.isna(s) else 1 for s in edge_scores])
                 elif remove_na == "to_0":
-                    edge_scores_r = reduction([s if not pd.isna(0) else 0 for s in edge_scores])
+                    edge_scores_r = reduction([s if not pd.isna(s) else 0 for s in edge_scores])
                 else:
                     raise ValueError(f"Undefined parameter for 'remove_na': {remove_na}")
 
@@ -1313,7 +1358,8 @@ class Track:
             if len(the_path) == 1 and (the_path[0][0] is None or the_path[0][2] is None):
                 # Happens when the path is like following: ((None, 'ENSG00000170558.10', None),)
                 # Just check whether this Ensembl ID exist in both assemblies
-                assert the_path[0][1] is not None and the_path[0][0] is None and the_path[0][2] is None
+                if not (the_path[0][1] is not None and the_path[0][0] is None and the_path[0][2] is None):
+                    raise ValueError(f"Unexpected singleton path shape: {the_path!r}")
                 assemblies = list(
                     {
                         j
@@ -1321,7 +1367,7 @@ class Track:
                         for j in self.graph.combined_edges_genes[the_path[0][1]][i]
                     }
                 )
-                step_pri = sorted(DB.assembly_mysqlport_priority[i]["Priority"] for i in assemblies)
+                step_pri = sorted(self._assembly_priority_by_assembly[i] for i in assemblies)
                 assembly_jump, current_priority = 0, max(step_pri)
             else:
                 the_path = tuple(
@@ -1379,12 +1425,13 @@ class Track:
             edge_key = (n1, n2, n3)
         else:
             edge_key = (n2, n1, n3)
-            assert self.graph.has_edge(*edge_key), edge_key
+            if not self.graph.has_edge(*edge_key):
+                raise AssertionError(edge_key)
 
         return edge_key
 
     def path_step_possible_assembly_jumps(self, n1, n2, n3, n4=None):
-        """Return the genome assemblies that can legally be used for a single edge.
+        """Return the genome-assembly codes that can legally be used for a single edge.
 
         The helper inspects the edge that connects `n1` → `n2` and filters the
         assemblies recorded on that edge against the *release* constraint `n4`:
@@ -1402,7 +1449,7 @@ class Track:
             n4 (int | set[int] | None, optional): Release filter as described above.
 
         Returns:
-            list[str]: Sorted list of assembly names (e.g. `["GRCh37", "GRCh38"]`).
+            list[int]: Sorted list of assembly codes (species-specific integers; e.g. ``[37, 38]`` for human).
 
         Raises:
             ValueError: If `n4` is of an unsupported type.
@@ -1423,8 +1470,8 @@ class Track:
         """Compute the penalty incurred by assembly downgrades along a path.
 
         Each path step may be annotated with one or more candidate assemblies.
-        These are translated into priority values via
-        `DB.assembly_mysqlport_priority`.  The algorithm walks the path,
+        These are translated into priority values via the organism-scoped configuration
+        :py:attr:`DB.assembly_mysqlport_priority`.  The algorithm walks the path,
         tracking the current priority and counting how many times it must drop
         to a lower priority value—each drop constitutes an "assembly jump"
         penalty.
@@ -1443,21 +1490,27 @@ class Track:
                 - `step_pri` - priority list of the last processed edge.
                 - `current_priority` - priority value after the final edge.
         """
+        self._ensure_assembly_priority_cache()
         assemblies = [self.path_step_possible_assembly_jumps(*i) for i in the_path]
-        # should be sorted for bisect function to work properly in '_minimum_assembly_jumps_helper'
-        priorities = [[DB.assembly_mysqlport_priority[j]["Priority"] for j in i] for i in assemblies]
+        # Each per-step priority list must be sorted for bisecting to behave correctly.
+        priorities = [sorted(self._assembly_priority_by_assembly[j] for j in step) for step in assemblies]
 
         if step_pri is None:
             step_pri = priorities.pop(0)
+        else:
+            step_pri = sorted(step_pri)
         if current_priority is None:
             current_priority = max(step_pri)  # The logic is basically follow the lowest priority if possible.
 
         return Track._minimum_assembly_jumps_helper(
-            step_pri=step_pri, current_priority=current_priority, priorities=priorities
+            step_pri=step_pri,
+            current_priority=current_priority,
+            priorities=priorities,
+            assembly_priority=self._assembly_priority,
         )
 
     @staticmethod
-    def _minimum_assembly_jumps_helper(step_pri, current_priority, priorities):
+    def _minimum_assembly_jumps_helper(step_pri, current_priority, priorities, assembly_priority=None):
         """Internal worker for :py:meth:`minimum_assembly_jumps`.
 
         Given the priority sets for the remaining edges, iterate until all have
@@ -1470,19 +1523,24 @@ class Track:
             current_priority (int): Priority value inherited from previous steps.
             priorities (list[list[int]]): Priority lists for the *rest* of the path,
                 **already sorted** for correct bisecting.
+            assembly_priority (list[int] | None): Optional global priority lattice.
+                If ``None``, it is computed from ``step_pri``, ``current_priority``, and ``priorities``.
 
         Returns:
             tuple[int, list[int], int]: Same three-tuple as documented in
             :py:meth:`minimum_assembly_jumps`.
-
-        Raises:
-            ValueError: If the priority lattice enters an impossible state.
         """
+        if assembly_priority is None:
+            priority_values = set(step_pri)
+            priority_values.add(current_priority)
+            for pr in priorities:
+                priority_values.update(pr)
+            assembly_priority = sorted(priority_values, reverse=True)
 
         def next_priority(p):
-            p_ind = DB.assembly_priority.index(p)
+            p_ind = assembly_priority.index(p)
             # cannot return boundaries due to where the function is called.
-            return DB.assembly_priority[p_ind + 1]
+            return assembly_priority[p_ind + 1]
 
         def next_priority_2(p, p_list):
             p_ind = bisect.bisect(p_list, p) - 1
@@ -1490,20 +1548,24 @@ class Track:
             return p_list[p_ind]
 
         penalty = 0
-        while len(priorities) > 0:
-            if max(step_pri) < current_priority:
-                # Increase in priority if all assemblies of this step has higher priority than previous.
+
+        # Process the current step and every subsequent step, ensuring `current_priority` is always compatible with
+        # the step's available priorities. The original implementation advanced `step_pri` inside the loop which could
+        # leave the *final* step unprocessed when `priorities` became empty; this version explicitly processes all
+        # steps (including the last) to keep `(step_pri, current_priority)` consistent for downstream scoring.
+        all_steps = [sorted(step_pri)] + [sorted(p) for p in priorities]
+        for step_pri in all_steps:
+            while max(step_pri) < current_priority:
+                # Upgrade (move to a better/smaller priority value) until the current choice becomes feasible.
                 current_priority = next_priority(current_priority)
-            elif current_priority < min(step_pri):
+
+            if current_priority < min(step_pri):
+                # Downgrade (move to a worse/larger priority value) because this step cannot be satisfied otherwise.
                 current_priority = min(step_pri)
-                step_pri = priorities.pop(0)
-                penalty += 1  # lower to higher is fine, higher to lower is not.
-            elif min(step_pri) <= current_priority <= max(step_pri):
-                if current_priority not in step_pri:
-                    current_priority = next_priority_2(current_priority, step_pri)
-                step_pri = priorities.pop(0)
-            else:
-                raise ValueError("while len(priorities) > 0")
+                penalty += 1
+            elif current_priority not in step_pri:
+                # Snap to the best available priority that is still <= the current setting.
+                current_priority = next_priority_2(current_priority, step_pri)
 
         return penalty, step_pri, current_priority
 
@@ -1578,6 +1640,7 @@ class Track:
                 `final_elements[*]['filter_scores']` sub-dict that records the filters applied.
 
         Raises:
+            AssertionError: If node-score tie-breaking results in an empty candidate set.
             ValueError: If `dict_of_dict` is empty.
         """
         importance_order = (
@@ -1587,7 +1650,7 @@ class Track:
             "final_conv_asy_min_prior",  # return the one with latest assembly
             "assembly_jump",
             "external_jump",
-            # "external_step",  # TODO: calculcate "external_jump_depth" and put here.
+            # "external_step",  # TODO: calculate "external_jump_depth" and put here.
             "final_asy_min_prior",
             "final_asy_min_prior_count",
             "final_conv_asy_min_prior_count",
@@ -1637,7 +1700,8 @@ class Track:
             best_score_key_ns = min(minimum_scores_ns, key=the_min_key_ns)
             best_score_value_ns = minimum_scores_ns[best_score_key_ns]
             best_scoring_targets_ns = {i for i in minimum_scores_ns if best_score_value_ns == minimum_scores_ns[i]}
-            assert len(best_scoring_targets_ns) > 0
+            if not best_scoring_targets_ns:
+                raise AssertionError("Expected at least one best scoring target after node score filtering.")
             best_scoring_targets = [(i, j) for i, j in best_scoring_targets if i in best_scoring_targets_ns]
             node_score_switch = True
 
@@ -1729,6 +1793,14 @@ class Track:
         """
         if not callable(reduction):
             raise ValueError("not callable(reduction)")
+        self._ensure_assembly_priority_cache()
+
+        # Be defensive: allow callers to pass non-canonical identifiers directly to `Track.convert`.
+        if from_id not in self.graph.nodes:
+            resolved, _converted = self.graph.node_name_alternatives(from_id)
+            if resolved is None:
+                return None
+            from_id = resolved
         to_release = to_release if to_release is not None else self.graph.graph["ensembl_release"]
 
         if from_release is None:
@@ -1794,11 +1866,12 @@ class Track:
                 if len(new_converted) > 0:
                     converted = new_converted
 
-            allowed_ones = self.graph.available_external_databases_assembly[DB.main_assembly].union(
+            main_assembly = int(self.graph.graph["genome_assembly"])
+            allowed_ones = self.graph.available_external_databases_assembly[main_assembly].union(
                 {DB.nts_ensembl[DB.backbone_form], DB.nts_base_ensembl[DB.backbone_form]}
             )
             for cnvt in converted:
-                if final_database not in allowed_ones:
+                if final_database is not None and final_database not in allowed_ones:
                     raise ValueError(f"Final database (`final_database`) is not among allowed ones: {allowed_ones}")
                 elif final_database is None or final_database == DB.nts_ensembl[DB.backbone_form]:
                     prio_list = self._create_priority_list_ensembl(cnvt, to_release)
@@ -1848,12 +1921,13 @@ class Track:
         Returns:
             list[int]: Sorted list of priority values (ascending).
         """
+        self._ensure_assembly_priority_cache()
         ceg = self.graph.combined_edges_genes[from_id]
         ceg_assembly_list = sorted({j for i in ceg for j in ceg[i] if to_release in ceg[i][j]})
         if len(ceg_assembly_list) == 0:
             self.log.warning(f"A form of rare event found for {from_id!r}.")
             return [np.iinfo(np.int32).max]  # placeholder large integer
-        return [DB.assembly_mysqlport_priority[i]["Priority"] for i in ceg_assembly_list]
+        return [self._assembly_priority_by_assembly[i] for i in ceg_assembly_list]
 
     @staticmethod
     def _final_conversion_dict_prepare(
@@ -1960,15 +2034,19 @@ class Track:
                 synonym.
             return_ensembl_alternative (bool): When no synonym can be found,
                 add a fallback entry that keeps the Ensembl gene.
-            prevent_assembly_jumps: Todo.
-            account_for_hyperconnected_nodes: Todo.
+            prevent_assembly_jumps (bool): If ``True``, disallow conversion paths
+                that cross between different genome assemblies. Defaults to ``False``.
+            account_for_hyperconnected_nodes (bool): If ``True``, skip nodes
+                that are marked as hyperconnective (very high connectivity) to
+                prevent search explosion and low-quality paths. Defaults to ``True``.
 
         Returns:
             dict: The same `converted` dict, updated in place (and also
             returned for convenience).
 
         Raises:
-            EmptyConversionMetricsError: Todo.
+            EmptyConversionMetricsError: Raised when no valid conversion metrics
+                are available and no alternative conversion path can be found.
         """
 
         def _final_conversion_path(gene_id: str, target_db: str, from_release: int):
@@ -2057,7 +2135,7 @@ class Track:
                         for i in synonymous_nodes_output
                         if _contains_assembly(
                             lst=i[0],  # where node ids are stored.
-                            asyml=DB.main_assembly,
+                            asyml=int(self.graph.graph["genome_assembly"]),
                             er_for_jumps=er_for_jumps,
                             er_for_last_node=er_for_last_node,
                         )
@@ -2195,7 +2273,10 @@ class Track:
             elif mode == "assembly_ensembl_release":
                 possible_trios.extend({i[1:] for i in self.graph.node_trios[di]})
             else:
-                raise ValueError("no 1234")
+                raise ValueError(
+                    f"Unknown mode {mode!r}. Expected one of: 'complete', "
+                    "'ensembl_release', 'assembly', 'assembly_ensembl_release'."
+                )
 
         return list(Counter(possible_trios).most_common())
 
@@ -2206,7 +2287,14 @@ class Track:
         conversion target for each such that cross-sample clashes (e.g.
         duplicate loci) are minimised.
 
+        Note:
+            This method is a placeholder for future implementation. Use
+            :py:meth:`idtrack._api.API.convert_identifier_multiple` for batch
+            conversions until this optimised version is available.
+
         Raises:
             NotImplementedError: Always - the optimisation strategy is not yet implemented.
         """
-        raise NotImplementedError  # TODO
+        raise NotImplementedError(
+            "Batch-optimised converter is not yet implemented. Use API.convert_identifier_multiple instead."
+        )

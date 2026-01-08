@@ -12,7 +12,7 @@ set -e
 source "/Users/kemalinecik/Documents/Helmholtz/password.sh"
 
 # Define constants
-LOCAL_PATH="/Users/kemalinecik/git_nosync"
+LOCAL_PATH="/Users/kemalinecik/git_nosync/master_idtrack"
 SERVER_PATH="/home/icb/kemal.inecik/work/codes"
 PROJECT_NAME="idtrack"
 REMOTE_USER="kemal.inecik"

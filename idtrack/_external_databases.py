@@ -65,8 +65,9 @@ class ExternalDatabases:
                 value raises :py:class:`ValueError` in higher-level validation.
             local_repository (str): Writable directory where YAML files and downloads are cached.
                 The directory need not pre-exist; if missing, most public methods will attempt to create it.
-            genome_assembly (int): NCBI genome assembly version (e.g. ``38`` for GRCh38).  Used to
-                disambiguate multiple assemblies available for the same *organism*/*release* pair.
+            genome_assembly (int): Genome assembly code as used in Ensembl core schema naming
+                (e.g. ``38`` = human GRCh38, ``37`` = human GRCh37, ``39`` = mouse GRCm39, ``111`` = pig Sscrofa11.1).
+                Used to disambiguate multiple assemblies available for the same *organism*/*release* pair.
         """
         # The logger for informing the user about the progress.
         self.log = logging.getLogger("external_databases")
@@ -362,15 +363,12 @@ class ExternalDatabases:
                 res_ens = map(int, item["Ensembl release"].split(","))
 
                 if self.ensembl_release in res_ens and item["Include"]:
-                    if give_type == "db" and int(asm) == self.genome_assembly:
-                        result.add(db_name)
-
-                    elif give_type == "db":
-                        pass
-
+                    if give_type == "db":
+                        # Only add db_name if assembly matches
+                        if int(asm) == self.genome_assembly:
+                            result.add(db_name)
                     elif give_type == "assembly":
                         result.add(int(asm))
-
                     else:
                         raise ValueError
 

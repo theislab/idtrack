@@ -1,0 +1,802 @@
+#!/usr/bin/env python3
+"""
+run_cellranger_master.py
+
+Master function to run either `cellranger count` or `cellranger multi` for ONE dataset,
+using the Ensembl reference built earlier by `build_cellranger_mkref` and the FASTQ
+specification from `fastq_datasets.py` (and files downloaded via `download_fastq.py`).
+
+Key guarantees
+--------------
+- Chooses exactly one of `cellranger count` or `cellranger multi` based on the dataset's
+  `mode` field ("count" or "multi"). It will not run both.
+- Uses the reference folder created by `build_cellranger_mkref` for the specified Ensembl
+  release (defaults to assembly_label="GRCh38", path pattern:
+  ``<workdir>/references_gold_standard/<assembly_label>_<release>/reference_<assembly_label>_<release>``).
+  If a persisted job-status JSON exists (written by `build_cellranger_mkref`) it is consulted first.
+- Places outputs under: ``<results_dir>/<dataset_key>/<TAG>/`` where
+  ``TAG = <assembly_label>_<release>`` (e.g., ``GRCh38_110``) and runs Cell Ranger with
+  cwd set to that directory to keep everything contained there.
+- Ensures FASTQs are present; if requested, downloads them via `download_fastq.download_fastq(...)`,
+  then extracts .tar/.tar.gz archives. It locates one or more FASTQ directories automatically.
+- For `multi`, if a `multi_csv` aux file is present in the dataset spec, it is downloaded
+  (if needed) and patched so that:
+    * [gene expression] reference -> points to the mkref directory
+    * [libraries] fastqs -> point to the discovered FASTQ directories (semicolon-separated)
+    * [feature] feature_ref -> can be patched when provided in `aux` as "feature_ref"
+- For `count`, it auto-fills `--transcriptome`, `--fastqs`, and tries to infer `--sample`
+  (comma-separated) from FASTQ filenames if not provided through `params`.
+
+Inputs
+------
+- ONE dataset key (string) present in `fastq_datasets.fastq_datasets`
+- ONE Ensembl release number (int), e.g., 110
+- A working directory (Path-like) used by the prior scripts
+- A results directory (Path-like) where we create: results/<dataset_key>/<TAG>/
+
+Outputs
+-------
+A structured dictionary describing the run, including:
+  {
+    "dataset_key": ...,
+    "mode": "count" | "multi",
+    "cellranger": "/abs/path/to/cellranger",
+    "cellranger_version": "9.0.1",
+    "release": 110,
+    "assembly_label": "GRCh38",
+    "reference_dir": "/abs/path/to/reference_GRCh38_110",
+    "results_root": "/abs/path/to/<results>/<dataset>/<TAG>",
+    "run_id": "<derived id>",
+    "cmd": [...],
+    "returncode": 0/!=0,
+    "stdout_log": ".../cellranger_stdout.log",
+    "stderr_log": ".../cellranger_stderr.log",
+    "run_dir": ".../<TAG>/<run_id>",
+    "outs_dir": ".../<TAG>/<run_id>/outs" (if exists),
+  }
+
+Usage example
+-------------
+>>> from run_cellranger_master import run_cellranger_master
+>>> summary = run_cellranger_master(
+...     dataset_key="pbmc_1k_v3",
+...     release=110,
+...     workdir="/data/work",
+...     results_dir="/data/results",
+...     # Optional: if "cellranger" is not on PATH, point to it explicitly:
+...     # cellranger_bin="/opt/apps/cellranger-9.0.1/cellranger",
+... )
+
+Notes
+-----
+- This script does not attempt to *install* Cell Ranger. Use `install_cellranger.install_cellranger(...)`
+  beforehand and either put the launcher on PATH or pass its absolute path as `cellranger_bin`.
+- This script does not run `build_cellranger_mkref` itself. It *uses* its outputs by locating the
+  reference folder. If missing or incomplete, it raises a clear error.
+- This script *only* runs one of `count` or `multi` per call (never both).
+
+"""
+
+from __future__ import annotations
+
+import csv
+import json
+import os
+import re
+import shutil
+import subprocess
+import tarfile
+from collections.abc import Iterable, Mapping, MutableMapping
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Optional
+
+# Local modules created previously by you (imported but not executed here)
+try:
+    from src.download_fastq import download_fastq  # type: ignore
+    from src.fastq_datasets import DatasetSpec, fastq_datasets  # type: ignore
+except Exception:
+    from download_fastq import download_fastq  # type: ignore
+    from fastq_datasets import DatasetSpec, fastq_datasets  # type: ignore
+
+
+# --------------------------- Utilities ---------------------------
+
+
+def existing_outs_for_release(results_dir: Path, dataset_key: str, assembly_label: str, release: int) -> Path | None:
+    """
+    Return the finished Cell Ranger 'outs' directory for (dataset_key, assembly_label, release)
+    or None if not found.
+
+    Preferred (assembly-aware) layout (NEW):
+      <results_dir>/<dataset_key>/<assembly_label>_<release>/
+        <dataset_key>_{count|multi}_r<release>/outs/
+
+    Backward-compatible fallbacks (OLD):
+      <results_dir>/<dataset_key>/<assembly_label>_<release>/
+        GHRc<release>_<CR_MM>/<dataset_key>_{count|multi}_r<release>/outs/
+      <results_dir>/<dataset_key>/
+        GHRc<release>_<CR_MM>/<dataset_key>_{count|multi}_r<release>/outs/
+
+    A run is considered 'finished' if outs/ contains any of:
+      - metrics_summary.csv
+      - web_summary.html
+      - molecule_info.h5
+      - per_sample_outs/*/metrics_summary.csv  (common for `multi`)
+    """
+    results_dir = Path(results_dir)
+
+    # Prefer assembly-aware bases; last item is a fallback for legacy layout.
+    base_candidates = [
+        results_dir / dataset_key / f"{assembly_label}_{release}",  # NEW preferred base
+        results_dir / dataset_key / assembly_label,  # uncommon transitional layout
+        results_dir / dataset_key,  # legacy base
+    ]
+
+    def _outs_is_finished(outs: Path) -> tuple[bool, float]:
+        """Return (finished?, latest_mtime) using sentinel files."""
+        sentinels = [
+            outs / "metrics_summary.csv",
+            outs / "web_summary.html",
+            outs / "molecule_info.h5",
+        ]
+        pso = outs / "per_sample_outs"
+        if pso.is_dir():
+            sentinels.extend(pso.rglob("metrics_summary.csv"))
+
+        latest = -1.0
+        found = False
+        for s in sentinels:
+            try:
+                if s.exists() and s.stat().st_size > 0:
+                    found = True
+                    m = s.stat().st_mtime
+                    if m > latest:
+                        latest = m
+            except OSError:
+                pass
+
+        # Weak fallback: any content under outs/
+        if not found:
+            try:
+                any_content = next(outs.iterdir(), None) is not None
+            except Exception:
+                any_content = False
+            if any_content:
+                try:
+                    latest = max(latest, outs.stat().st_mtime)
+                    found = True
+                except OSError:
+                    pass
+
+        return found, latest
+
+    best_outs: Path | None = None
+    best_mtime: float = -1.0
+
+    for base in base_candidates:
+        if not base.is_dir():
+            continue
+
+        # ---------- NEW layout: run dirs live directly under the base ----------
+        for mode in ("count", "multi"):
+            run_dir = base / f"{dataset_key}_{mode}_r{release}"
+            outs = run_dir / "outs"
+            if outs.is_dir():
+                finished, mtime = _outs_is_finished(outs)
+                if finished and mtime > best_mtime:
+                    best_mtime = mtime
+                    best_outs = outs
+
+        # ---------- OLD layout: versioned GHRc* tag below base ----------
+        for tag_dir in sorted(base.glob(f"GHRc{release}_*")):
+            if not tag_dir.is_dir():
+                continue
+            for mode in ("count", "multi"):
+                run_dir = tag_dir / f"{dataset_key}_{mode}_r{release}"
+                outs = run_dir / "outs"
+                if outs.is_dir():
+                    finished, mtime = _outs_is_finished(outs)
+                    if finished and mtime > best_mtime:
+                        best_mtime = mtime
+                        best_outs = outs
+
+        # If we found a finished run under the preferred assembly-aware base, stop early
+        if best_outs and base.name.startswith(f"{assembly_label}_"):
+            break
+
+    return best_outs
+
+
+def _exists_nonempty(p: Path | None) -> bool:
+    try:
+        return bool(p) and Path(p).exists() and Path(p).stat().st_size > 0
+    except Exception:
+        return False
+
+
+def _resolve_cellranger(cellranger_bin: Path | str | None = None) -> Path:
+    """
+    Resolve path to the 'cellranger' launcher.
+
+    Resolution order:
+    1) Explicit `cellranger_bin` if provided (file or directory containing `cellranger`).
+    2) Environment variable CELLRANGER_BIN (file or directory).
+    3) Fallback to `cellranger` resolved from PATH.
+
+    Ensures the final path exists and is executable.
+    """
+    cand: Path | None = None
+
+    def normalize(x: str | Path) -> Path:
+        p = Path(x)
+        return (p / "cellranger") if p.is_dir() else p
+
+    if cellranger_bin:
+        cand = normalize(cellranger_bin)
+    elif os.environ.get("CELLRANGER_BIN"):
+        cand = normalize(os.environ["CELLRANGER_BIN"])
+    else:
+        which = shutil.which("cellranger")
+        if which:
+            cand = Path(which)
+
+    if not cand:
+        raise FileNotFoundError("Could not resolve 'cellranger'. Provide `cellranger_bin` or set CELLRANGER_BIN.")
+    if not cand.exists():
+        raise FileNotFoundError(f"cellranger not found at: {cand}")
+    if not os.access(str(cand), os.X_OK):
+        raise PermissionError(f"cellranger exists but is not executable: {cand}")
+    return cand.resolve()
+
+
+def _cellranger_version(cellranger: Path) -> str:
+    """Return '9.0.1' from 'cellranger-9.0.1' output. Returns 'unknown' on failure."""
+    try:
+        cp = subprocess.run([str(cellranger), "--version"], capture_output=True, text=True, check=False)
+        out = (cp.stdout or cp.stderr or "").strip()
+        # Expected like: 'cellranger-9.0.1'
+        m = re.search(r"(\d+)\.(\d+)(?:\.(\d+))?", out)
+        return m.group(0) if m else "unknown"
+    except Exception:
+        return "unknown"
+
+
+def _needs_create_bam_flag(ver: str) -> bool:
+    """
+    Return True if we should include the explicit create-bam control (Cell Ranger v8+).
+    If version cannot be parsed, default to True so we fail-safe for newer releases.
+    """
+    try:
+        major = int(re.match(r"(\\d+)", ver or "").group(1))
+        return major >= 8
+    except Exception:
+        return True
+
+
+def _reference_dir(workdir: Path, release: int, assembly_label: str = "GRCh38") -> Path:
+    """
+    Locate the mkref output folder produced by build_cellranger_mkref:
+      <workdir> / f"{assembly_label}_{release}" / f"reference_{assembly_label}_{release}"
+    If a persisted job JSON exists, trust its 'mkref_dir' when present.
+    """
+    rel_dir = workdir / f"{assembly_label}_{release}"
+    candidate = rel_dir / f"reference_{assembly_label}_{release}"
+    job_file = candidate / "job_exit_status_message"
+    if job_file.exists():
+        try:
+            payload = json.loads(job_file.read_text())
+            s = payload.get("mkref_dir")
+            if s:
+                p = Path(s)
+                if (p / "reference.json").exists():
+                    return p.resolve()
+        except Exception:
+            pass  # fall back to deterministic path
+
+    # Fallback: deterministic location
+    if (candidate / "reference.json").exists():
+        return candidate.resolve()
+
+    raise FileNotFoundError(
+        f"Could not find a complete Cell Ranger reference for release {release} at {candidate}."
+        " Make sure `build_cellranger_mkref(...)` finished successfully."
+    )
+
+
+def _extract_if_needed(archive: Path, dest_dir: Path) -> None:
+    """Extract .tar or .tar.gz archives into dest_dir (idempotent)."""
+    if not archive.exists():
+        raise FileNotFoundError(f"Archive not found: {archive}")
+    # If already extracted (we detect .fastq.gz present), skip
+    fastqs_found = list(dest_dir.rglob("*.fastq.gz"))
+    if fastqs_found:
+        return
+    suffixes = "".join(archive.suffixes)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    if suffixes in (".tar", ".tar.gz", ".tgz", ".tar.gzip"):
+        with tarfile.open(archive, "r:*") as tf:
+            tf.extractall(dest_dir)
+    else:
+        raise ValueError(f"Unsupported archive format for FASTQs: {archive.name} (suffixes={archive.suffixes})")
+
+
+def _discover_fastq_dirs(root: Path) -> list[Path]:
+    """Return unique parent directories that contain FASTQ files under root."""
+    parents: list[Path] = []
+    seen: set[Path] = set()
+    for fq in root.rglob("*.fastq.gz"):
+        p = fq.parent.resolve()
+        if p not in seen:
+            seen.add(p)
+            parents.append(p)
+    if not parents:
+        raise FileNotFoundError(f"No .fastq.gz files found under: {root}")
+    return parents
+
+
+def _guess_samples_from_fastqs(fastq_dirs: Iterable[Path], limit: int = 8) -> list[str]:
+    """
+    Infer sample prefixes from FASTQ filenames (10x style).
+    Returns up to `limit` unique prefixes. If none inferred, return [].
+
+    Examples matched (prefix extracted between start and first '_S' or '_L00'):
+      Sample123_S1_L001_R1_001.fastq.gz   -> Sample123
+      pbmc_1k_v3_S1_L002_R2_001.fastq.gz  -> pbmc_1k_v3
+    """
+    rx = re.compile(r"^(.+?)_(?:S\d+|L\d{3})_")
+    samples: list[str] = []
+    seen: set[str] = set()
+    for d in fastq_dirs:
+        for fq in d.glob("*.fastq.gz"):
+            m = rx.match(fq.name)
+            if m:
+                s = m.group(1)
+                if s not in seen:
+                    seen.add(s)
+                    samples.append(s)
+                    if len(samples) >= limit:
+                        return samples
+    return samples
+
+
+def _patch_multi_csv(
+    src_csv: Path,
+    dst_csv: Path,
+    *,
+    reference_dir: Path,
+    fastq_dirs: list[Path],
+    feature_ref: Path | None = None,
+    create_bam: bool | None = None,  # if not None, force create-bam in [gene-expression]
+) -> None:
+    """
+    Patch a 10x `cellranger multi` config CSV to inject reference and FASTQ locations.
+    - For the [gene expression] section, set 'reference' to `reference_dir`.
+    - If `create_bam` is not None, set 'create-bam' accordingly (insert if missing).
+    - For the [feature] section, if `feature_ref` is provided, set 'feature_ref'.
+    - For the [libraries] rows, update 'fastqs' to the semicolon-separated list of discovered fastq_dirs.
+
+    The format consists of bracketed sections and simple key,value lines, plus a [libraries] table.
+    Non-recognized lines are preserved verbatim.
+    """
+    lines = src_csv.read_text().splitlines()
+    out: list[str] = []
+    section: str | None = None
+    fq_str = ";".join(str(p) for p in fastq_dirs)
+
+    def norm_section(s: str | None) -> str:
+        # normalize: spaces/underscores -> hyphens; lowercase
+        return re.sub(r"[\\s_]+", "-", (s or "").strip().lower())
+
+    def norm_key(s: str) -> str:
+        return re.sub(r"[\\s_]+", "-", s.strip().lower())
+
+    in_ge = False
+    ge_create_bam_seen = False
+
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            out.append(raw)
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            # If we are leaving [gene-expression] and didn't see create-bam, inject before switching
+            if in_ge and create_bam is not None and not ge_create_bam_seen:
+                out.append(f"create-bam,{'true' if create_bam else 'false'}")
+            section = line[1:-1].strip()
+            in_ge = norm_section(section) == "gene-expression" or norm_section(section) == "geneexpression"
+            ge_create_bam_seen = False
+            out.append(raw)
+            continue
+
+        # Key,Value pairs
+        if "," in line:
+            key, val = (t.strip() for t in line.split(",", 1))
+            lk = norm_key(key)
+            # [gene-expression] keys
+            if in_ge:
+                if lk == "reference":
+                    out.append(f"reference,{reference_dir}")
+                    continue
+                if lk in {"feature-ref", "feature_ref"} and feature_ref is not None:
+                    out.append(f"feature_ref,{feature_ref}")
+                    continue
+                if lk == "create-bam" and create_bam is not None:
+                    ge_create_bam_seen = True
+                    out.append(f"create-bam,{'true' if create_bam else 'false'}")
+                    continue
+            # [feature] keys (legacy naming)
+            if norm_section(section) == "feature" and feature_ref is not None and lk in {"feature-ref", "feature_ref"}:
+                out.append(f"feature_ref,{feature_ref}")
+                continue
+            # default: keep as-is
+            out.append(raw)
+            continue
+
+        # [libraries] table: first line after header is the CSV header row
+        if norm_section(section) == "libraries":
+            # Replace the fastqs column in data rows (not the header)
+            # We detect header by presence of the literal "fastqs" token.
+            if "fastqs" in [t.strip().lower() for t in line.split(",")]:
+                out.append(raw)  # header
+            else:
+                # Format: fastq_id,fastqs,sample,library_type,...
+                parts = [t.strip() for t in line.split(",")]
+                if len(parts) >= 2:
+                    parts[1] = fq_str
+                    out.append(",".join(parts))
+                else:
+                    out.append(raw)
+            continue
+
+        # default passthrough
+        out.append(raw)
+
+    # EOF: if we ended inside [gene-expression] and still haven't written create-bam, append it
+    if in_ge and create_bam is not None and not ge_create_bam_seen:
+        out.append(f"create-bam,{'true' if create_bam else 'false'}")
+
+    dst_csv.write_text("\n".join(out))
+
+
+def _coerce_cli_params(params: Mapping[str, Any]) -> list[str]:
+    """
+    Convert a mapping of Cell Ranger CLI-like parameters into ['--key=value', ...].
+    Rules:
+      - keys should already be in kebab-case ('expect-cells', 'chemistry', etc.).
+      - bool True -> '--key' (flag), bool False -> omit
+      - EXCEPTION: for keys that require explicit boolean values (e.g., 'create-bam'),
+        bools are rendered as '--key=true|false'.
+      - everything else -> '--key=value'
+    """
+    cli: list[str] = []
+    explicit_bool_with_value = {"create-bam"}  # extend if needed
+    for k, v in params.items():
+        key = str(k).strip()
+        if not key:
+            continue
+        if isinstance(v, bool):
+            if key in explicit_bool_with_value:
+                cli.append(f"--{key}={'true' if v else 'false'}")
+            elif v:
+                cli.append(f"--{key}")
+        else:
+            cli.append(f"--{key}={v}")
+    return cli
+
+
+@dataclass
+class RunSummary:
+    dataset_key: str
+    mode: str
+    cellranger: Path
+    cellranger_version: str
+    release: int
+    assembly_label: str
+    reference_dir: Path
+    results_root: Path
+    run_id: str
+    cmd: list[str]
+    returncode: int
+    stdout_log: Path
+    stderr_log: Path
+    run_dir: Path | None = None
+    outs_dir: Path | None = None
+
+
+# --------------------------- Main orchestrator ---------------------------
+
+
+def run_cellranger_master(
+    *,
+    dataset_key: str,
+    release: int,
+    workdir: str | Path,
+    results_dir: str | Path,
+    cellranger_bin: str | Path | None = None,
+    assembly_label: str = "GRCh38",
+    download_if_missing: bool = False,
+    resume_downloads: bool = False,
+    use_threads: int | None = None,  # reserved for future (could set --localcores)
+    silent: bool = False,
+) -> dict[str, Any]:
+    """
+    Orchestrate a single Cell Ranger run for `dataset_key` with Ensembl `release`.
+
+    Parameters
+    ----------
+    dataset_key : str
+        Key in `fastq_datasets.fastq_datasets` identifying the dataset spec.
+    release : int
+        Ensembl release number (e.g., 110) corresponding to the reference built earlier.
+    workdir : Path-like
+        Working directory used by prior scripts (`download_references.py`, `build_cellranger_mkref.py`,
+        and `download_fastq.py`). FASTQs and refs are expected under here.
+    results_dir : Path-like
+        Where to create <results_dir>/<dataset_key>/<TAG>/ and place all outputs.
+    cellranger_bin : Optional[str|Path]
+        If omitted, we will try $CELLRANGER_BIN or look for 'cellranger' on PATH.
+    assembly_label : str
+        Assembly label used when building references (default "GRCh38").
+    download_if_missing : bool
+        If True, attempt to download FASTQs and aux files when missing using `download_fastq`.
+    resume_downloads : bool
+        If True, pass resume=True to the downloader.
+    use_threads : Optional[int]
+        Reserved for future expansions (e.g., --localcores); currently unused here.
+    silent : bool
+        Reduce console output if True.
+
+    Returns
+    -------
+    dict[str, Any]
+        JSON-serializable summary of the run; see `RunSummary` fields.
+    """
+    workdir = Path(workdir).expanduser().resolve()
+    results_dir = Path(results_dir).expanduser().resolve()
+
+    if dataset_key not in fastq_datasets:
+        raise KeyError(f"Dataset key not found in fastq_datasets: {dataset_key!r}")
+    ds_spec: Mapping[str, Any] = fastq_datasets[dataset_key]
+
+    # Resolve cellranger
+    cellranger = _resolve_cellranger(cellranger_bin)
+    cr_ver = _cellranger_version(cellranger)
+    needs_create_bam = _needs_create_bam_flag(cr_ver)
+
+    # Locate reference directory
+    workdir_references = workdir / "references_gold_standard"
+    ref_dir = _reference_dir(workdir_references, release, assembly_label=assembly_label)
+
+    # Ensure FASTQs present (download if requested)
+    ds_dir = workdir / "fastq_raw" / dataset_key
+    ds_dir.mkdir(parents=True, exist_ok=True)
+
+    fastq_archive: Path | None = None
+    multi_csv_path: Path | None = None
+    feature_ref_path: Path | None = None
+
+    # If requested, attempt to download; otherwise we rely on pre-existing files.
+    if download_if_missing:
+        try:
+            overall = download_fastq({dataset_key: ds_spec}, working_dir=workdir, resume=resume_downloads, silent=silent)  # type: ignore[arg-type]
+            if isinstance(overall, Mapping):
+                ds_res = overall.get(dataset_key, {})
+                if isinstance(ds_res, Mapping):
+                    files = ds_res.get("files", {})
+                    if isinstance(files, Mapping):
+                        fq_info = files.get("fastqs", {})
+                        if isinstance(fq_info, Mapping):
+                            cand = fq_info.get("file")
+                            if cand:
+                                fastq_archive = Path(str(cand))
+                        # Optional aux files
+                        mc = files.get("multi_csv", {})
+                        if isinstance(mc, Mapping):
+                            cand = mc.get("file")
+                            if cand:
+                                multi_csv_path = Path(str(cand))
+                        fr = files.get("feature_ref", {})
+                        if isinstance(fr, Mapping):
+                            cand = fr.get("file")
+                            if cand:
+                                feature_ref_path = Path(str(cand))
+        except Exception as e:
+            if not silent:
+                print(f"[warn] FASTQ download step raised: {e}. Continuing to look for local files.")
+
+    # Also honor aux paths from dataset spec if provided
+    aux = ds_spec.get("aux", {})
+    if isinstance(aux, Mapping):
+        mc = aux.get("multi_csv")
+        if isinstance(mc, str):
+            p = Path(mc)
+            multi_csv_path = p if p.is_absolute() else (ds_dir / p)
+        elif isinstance(mc, Mapping):
+            fname = mc.get("filename") or mc.get("file") or mc.get("path")
+            if fname:
+                p = Path(str(fname))
+                multi_csv_path = p if p.is_absolute() else (ds_dir / p)
+
+        fr = aux.get("feature_ref")
+        if isinstance(fr, str):
+            p = Path(fr)
+            feature_ref_path = p if p.is_absolute() else (ds_dir / p)
+        elif isinstance(fr, Mapping):
+            fname = fr.get("filename") or fr.get("file") or fr.get("path")
+            if fname:
+                p = Path(str(fname))
+                feature_ref_path = p if p.is_absolute() else (ds_dir / p)
+
+    # If archive was not discovered via downloader, try to find it directly
+    if fastq_archive is None:
+        candidates = list(ds_dir.glob("*.tar")) + list(ds_dir.glob("*.tar.gz")) + list(ds_dir.glob("*.tgz"))
+        fastq_archive = candidates[0] if candidates else None
+
+    # If an archive exists, extract (idempotent). If there are already FASTQs, this is fast.
+    if fastq_archive is not None and fastq_archive.exists():
+        _extract_if_needed(fastq_archive, ds_dir)
+
+    # Identify FASTQ directories (one or more)
+    fastq_dirs = _discover_fastq_dirs(ds_dir)
+
+    # Determine mode (count or multi)
+    mode = str(ds_spec.get("mode", "count")).strip().lower()
+    if mode not in {"count", "multi"}:
+        raise ValueError(f"Unsupported dataset 'mode': {mode!r}. Expected 'count' or 'multi'.")
+
+    # Build results root and run ID
+    tag = f"{assembly_label}_{release}"  # <-- NEW tag, matches reference folder style
+    results_root = (results_dir / dataset_key / tag).resolve()
+    results_root.mkdir(parents=True, exist_ok=True)
+
+    # Construct command
+    run_id = f"{dataset_key}_{mode}_r{release}"
+    params_map: Mapping[str, Any] = ds_spec.get("params", {}) if isinstance(ds_spec.get("params"), Mapping) else {}
+
+    stdout_log = results_root / "cellranger_stdout.log"
+    stderr_log = results_root / "cellranger_stderr.log"
+    cmd: list[str] = []
+
+    # Common helper: emit CLI params
+    extra_cli = _coerce_cli_params(params_map)
+
+    if mode == "count":
+        # Auto-fill transcriptome, fastqs, and (optionally) sample(s)
+        if not any(k == "transcriptome" or str(k).startswith("transcriptome") for k in params_map.keys()):
+            extra_cli = [f"--transcriptome={ref_dir}"] + extra_cli
+
+        # FASTQ directories (comma-separated)
+        fastq_arg = ",".join(str(p) for p in fastq_dirs)
+        extra_cli = [f"--fastqs={fastq_arg}"] + extra_cli
+
+        # If --sample not provided, infer from filenames
+        if not any(k == "sample" for k in params_map.keys()):
+            inferred = _guess_samples_from_fastqs(fastq_dirs)
+            if inferred:
+                extra_cli = [f"--sample={','.join(inferred)}"] + extra_cli
+
+        # If expect-cells not provided via params, use spec value (if any)
+        if "expect-cells" not in params_map and ds_spec.get("expected_cells"):
+            extra_cli = [f"--expect-cells={ds_spec['expected_cells']}"] + extra_cli
+
+        # Chemistry hint from spec if available (and not overridden)
+        if "chemistry" not in params_map and ds_spec.get("chemistry"):
+            extra_cli = [f"--chemistry={ds_spec['chemistry']}"] + extra_cli
+
+        # Cell Ranger v8+ requires explicit create-bam; default to false if user did not supply it.
+        if needs_create_bam and "create-bam" not in params_map:
+            extra_cli = [f"--create-bam=false"] + extra_cli
+
+        cmd = [str(cellranger), "count", f"--id={run_id}"] + extra_cli
+
+    else:  # mode == "multi"
+        # Need a multi CSV. Prefer a downloaded aux file, else find a CSV in ds_dir.
+        if multi_csv_path is None:
+            csv_candidates = [p for p in ds_dir.glob("*.csv")]
+            if not csv_candidates:
+                raise FileNotFoundError(
+                    "No multi CSV found. Provide it in the dataset 'aux' as 'multi_csv' or place a config.csv in the dataset folder."
+                )
+            multi_csv_path = csv_candidates[0]
+
+        # Patch CSV to point to our reference and fastqs
+        patched_csv = results_root / f"{Path(multi_csv_path).stem}.patched.csv"
+        _patch_multi_csv(
+            multi_csv_path,
+            patched_csv,
+            reference_dir=ref_dir,
+            fastq_dirs=fastq_dirs,
+            feature_ref=feature_ref_path,
+            # For Cell Ranger v8+, multi config must include create-bam; we set it false per request.
+            create_bam=(False if needs_create_bam else None),
+        )
+
+        cmd = [str(cellranger), "multi", f"--id={run_id}", f"--csv={patched_csv}"] + extra_cli
+
+    # Persist the assembled command for reproducibility
+    (results_root / "cellranger_cmd.txt").write_text(" ".join(cmd))
+
+    # Run cellranger (in results_root). This will create a subfolder named after --id there.
+    if not silent:
+        print(f"[info] Running: {' '.join(cmd)}")
+        print(f"[info]   cwd:   {results_root}")
+    proc = subprocess.run(cmd, cwd=str(results_root), text=True, capture_output=True)
+
+    stdout_log.write_text(proc.stdout or "")
+    stderr_log.write_text(proc.stderr or "")
+
+    # Derive run_dir and outs_dir
+    run_dir = results_root / run_id
+    outs_dir = run_dir / "outs"
+    summary = RunSummary(
+        dataset_key=dataset_key,
+        mode=mode,
+        cellranger=cellranger,
+        cellranger_version=cr_ver,
+        release=release,
+        assembly_label=assembly_label,
+        reference_dir=ref_dir,
+        results_root=results_root,
+        run_id=run_id,
+        cmd=cmd,
+        returncode=proc.returncode,
+        stdout_log=stdout_log,
+        stderr_log=stderr_log,
+        run_dir=run_dir if run_dir.exists() else None,
+        outs_dir=outs_dir if outs_dir.exists() else None,
+    )
+
+    # Return as plain dict (for JSON serialization)
+    out = {
+        "dataset_key": summary.dataset_key,
+        "mode": summary.mode,
+        "cellranger": str(summary.cellranger),
+        "cellranger_version": summary.cellranger_version,
+        "release": summary.release,
+        "assembly_label": summary.assembly_label,
+        "reference_dir": str(summary.reference_dir),
+        "results_root": str(summary.results_root),
+        "run_id": summary.run_id,
+        "cmd": summary.cmd,
+        "returncode": summary.returncode,
+        "stdout_log": str(summary.stdout_log),
+        "stderr_log": str(summary.stderr_log),
+        "run_dir": str(summary.run_dir) if summary.run_dir else None,
+        "outs_dir": str(summary.outs_dir) if summary.outs_dir else None,
+    }
+    return out
+
+
+# Optional CLI
+if __name__ == "__main__":
+    import argparse
+    import sys
+
+    ap = argparse.ArgumentParser(description="Run cellranger (count or multi) for one dataset.")
+    ap.add_argument("--dataset-key", required=True, help="Key in fastq_datasets.fastq_datasets")
+    ap.add_argument("--release", required=True, type=int, help="Ensembl release (e.g., 110)")
+    ap.add_argument("--workdir", required=True, help="Working directory used by prior scripts")
+    ap.add_argument("--results-dir", required=True, help="Directory to store outputs under <dataset>/<TAG>/")
+    ap.add_argument("--cellranger-bin", default=None, help="Path to cellranger launcher or folder (optional)")
+    ap.add_argument("--assembly-label", default="GRCh38", help="Assembly label used by mkref (default GRCh38)")
+    ap.add_argument("--no-download", action="store_true", help="Do not attempt downloads; require local files")
+    ap.add_argument("--quiet", action="store_true", help="Reduce console output")
+    args = ap.parse_args()
+
+    try:
+        summary = run_cellranger_master(
+            dataset_key=args.dataset_key,
+            release=args.release,
+            workdir=args.workdir,
+            results_dir=args.results_dir,
+            cellranger_bin=args.cellranger_bin,
+            assembly_label=args.assembly_label,
+            download_if_missing=not args.no_download,
+            silent=args.quiet,
+        )
+        print(json.dumps(summary, indent=2))
+        sys.exit(0 if summary.get("returncode", 1) == 0 else 1)
+    except Exception as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        sys.exit(2)

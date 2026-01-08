@@ -33,17 +33,16 @@ class DB:
         myqsl_user (str): Username for anonymous MySQL access.
         mysql_togo (str): Placeholder string kept for backward compatibility when assembling connection URLs.
 
-        assembly_mysqlport_priority (dict[int, dict[str, int]]): Mapping of genome assembly identifiers
-            (e.g. ``38`` or ``37``) to the port, priority rank (1 = highest), and minimum release available
-            on that port.
+        assembly_mysqlport_priority (dict[str, dict[int, dict[str, Any]]]): Organism-aware mapping
+            ``{organism -> {assembly -> {...}}}`` defining:
+            - `Ports`: ordered list of MySQL ports to try for that assembly
+            - `Priority`: assembly priority within the organism (1 = newest / preferred)
 
-        assembly_priority (list[int]): Sorted list of priority integers derived from
-            :py:data:`assembly_mysqlport_priority`, highest priority first.
+        mysql_port_min_release (dict[int, int]): Minimum Ensembl release supported by each public MySQL port.
 
-        sorted_assemblies (list[tuple[int, dict[str, int]]]): Equivalent information sorted by ascending
-            priority, making ``sorted_assemblies[0]`` the assembly with rank 1.
+        all_assemblies (set[int]): Union of every configured assembly code across supported organisms.
 
-        main_assembly (int): Assembly identifier chosen as the preferred default for queries.
+        main_assembly (int): Backward-compatibility default assembly (human GRCh38 = 38).
 
         synonym_id_nodes_prefix (str): Prefix inserted before node identifiers that represent synonym edges.
         no_old_node_id (str): Sentinel used when a historical ID is retired.
@@ -107,27 +106,61 @@ class DB:
     mysql_host = "ensembldb.ensembl.org"
     myqsl_user = "anonymous"
     mysql_togo = ""
-    assembly_mysqlport_priority: dict = {  # assembly -> [mysql_port, assembly priority]
-        # Port depends on which genome assembly is of interest. Refer to the following link.
+    mysql_port_min_release: dict[int, int] = {
         # https://www.ensembl.org/info/data/mysql.html
-        38: {
-            "Port": 3306,
-            "Priority": 1,  # Set as the highest priority assembly. The lower is better.
-            "MinRelease": 48,  # Specified in above link, the MySQL server does not let you download an deeper.
+        3306: 48,
+        5306: 48,  # mirror of 3306 for many datasets
+        3337: 79,
+    }
+
+    assembly_mysqlport_priority: dict[str, dict[int, dict[str, Any]]] = {
+        # Notes
+        # -----
+        # - The `<assembly>` suffix in `<organism>_core_<release>_<assembly>` is a numeric code (sometimes with a
+        #   trailing patch letter like `37a`) and therefore species-specific (e.g. `38` is GRCh38 for human but
+        #   GRCm38 for mouse).
+        # - Some (organism, assembly) pairs are hosted on multiple ports depending on release; we list ports in
+        #   preference order and let DatabaseManager pick the first port that contains the requested release.
+        "homo_sapiens": {
+            # GRCh38
+            38: {"Ports": [3306, 5306], "Priority": 1},
+            # GRCh37 exists on 3337 for later releases, and on 3306/5306 for older releases.
+            37: {"Ports": [3337, 3306, 5306], "Priority": 2},
+            # NCBI36 (very old human assembly; Ensembl releases 48–54)
+            36: {"Ports": [3306, 5306], "Priority": 3},
         },
-        37: {
-            "Port": 3337,
-            "Priority": 2,  # Second priority, as the assembl GRCh38 is generated after GRCh37.
-            "MinRelease": 79,  # Note: deeper versions is available via FTP server.
+        "mus_musculus": {
+            # GRCm39
+            39: {"Ports": [3306, 5306], "Priority": 1},
+            # GRCm38
+            38: {"Ports": [3306, 5306, 3337], "Priority": 2},
+            # GRCm37
+            37: {"Ports": [3306, 5306], "Priority": 3},
+        },
+        "sus_scrofa": {
+            # Sscrofa11.1
+            111: {"Ports": [3306, 5306], "Priority": 1},
+            # Sscrofa10.2 is hosted on both ports:
+            # - 3306/5306: releases 67–89
+            # - 3337:      releases 79–99
+            # Prefer the main port (3306/5306) when overlap exists, and fall back to 3337 for newer releases.
+            102: {"Ports": [3306, 5306, 3337], "Priority": 2},
+            # Sscrofa9.2
+            9: {"Ports": [3306, 5306], "Priority": 3},
         },
     }
-    # # Priority should follow 1, 2, 3
-    assembly_priority = list()
-    for ap1 in assembly_mysqlport_priority:
-        assembly_priority.append(assembly_mysqlport_priority[ap1]["Priority"])
-    assembly_priority = sorted(assembly_priority, reverse=True)
-    sorted_assemblies = sorted(assembly_mysqlport_priority.items(), key=lambda item: item[1]["Priority"])
-    main_assembly = sorted_assemblies[0][0]
+
+    supported_organisms = tuple(sorted(assembly_mysqlport_priority.keys()))
+
+    # NOTE: Do not use comprehensions that reference other class attributes inside the class body.
+    # In Python 3, comprehensions execute in their own scope and cannot "see" class-local names.
+    all_assemblies: set[int] = set()
+    for _org, _assemblies in assembly_mysqlport_priority.items():
+        for _asm in _assemblies:
+            all_assemblies.add(int(_asm))
+
+    # Backward-compatibility default for older code/tests.
+    main_assembly = 38
 
     # Protected Non-int Version Strings/Thresholds
     synonym_id_nodes_prefix = "synonym_id::"
@@ -142,21 +175,30 @@ class DB:
     forms_in_order = ["gene", "transcript", "translation"]  # Warning: the order is important here.
     backbone_form = "gene"  # No other choice possible.
 
-    nts_ensembl = {i: f"ensembl_{i}" for i in forms_in_order}  # ensembl_gene
-    nts_ensembl_reverse = {v: k for k, v in nts_ensembl.items()}
+    nts_ensembl: dict[str, str] = {}  # ensembl_gene
+    for _form in forms_in_order:
+        nts_ensembl[_form] = f"ensembl_{_form}"
+    nts_ensembl_reverse: dict[str, str] = {}
+    for _form, _nts in nts_ensembl.items():
+        nts_ensembl_reverse[_nts] = _form
 
-    nts_assembly = {
-        j: {i: f"assembly_{j}_ensembl_{i}" for i in ["gene", "transcript", "translation"]}
-        for j in assembly_mysqlport_priority
-    }  # assembly_37_ensembl_gene
+    nts_assembly: dict[int, dict[str, str]] = {}  # assembly_37_ensembl_gene
+    for _asm in all_assemblies:
+        nts_assembly[_asm] = {}
+        for _form in ["gene", "transcript", "translation"]:
+            nts_assembly[_asm][_form] = f"assembly_{_asm}_ensembl_{_form}"
 
     nts_assembly_reverse = dict()
     for i in nts_assembly:
         for j in nts_assembly[i]:
             nts_assembly_reverse[nts_assembly[i][j]] = nts_ensembl[j]
 
-    nts_base_ensembl = {i: f"base_ensembl_{i}" for i in forms_in_order}
-    nts_base_ensembl_reverse = {v: k for k, v in nts_base_ensembl.items()}
+    nts_base_ensembl: dict[str, str] = {}
+    for _form in forms_in_order:
+        nts_base_ensembl[_form] = f"base_ensembl_{_form}"
+    nts_base_ensembl_reverse: dict[str, str] = {}
+    for _form, _nts in nts_base_ensembl.items():
+        nts_base_ensembl_reverse[_nts] = _form
     nts_bidirectional_synonymous_search = {nts_external, nts_base_ensembl[backbone_form]}
 
     # Only gene assembly genes
@@ -177,7 +219,7 @@ class DB:
 
     # HDF5 Settings
     placeholder_na = "_PLACEHOLDER_NA_"
-    UTF8 = "utf-8"  # Define a UTF-8 string dtype for HDF5
+    UTF8 = "utf-8"
     UTF8_STR = h5py.string_dtype(encoding=UTF8)
 
 

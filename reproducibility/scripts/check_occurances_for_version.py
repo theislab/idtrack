@@ -36,9 +36,11 @@ def find_string_in_files(directory: str, search_string: str) -> tuple:
 
 def main():
     """Main."""
-    # Assuming this script is located at 'idtrack/reproducibility/version/check.py'
-    # script_directory = os.path.dirname(os.path.realpath(__file__))
-    idtrack_directory = "/Users/kemalinecik/git_nosync/idtrack"
+    # Determine the idtrack directory relative to this script's location
+    script_directory = os.path.dirname(os.path.realpath(__file__))
+    # This script is at: idtrack/reproducibility/scripts/check_occurances_for_version.py
+    # The idtrack package root is 2 levels up
+    idtrack_directory = os.path.abspath(os.path.join(script_directory, "..", ".."))
 
     search_string = input("Enter the search string: ")
 

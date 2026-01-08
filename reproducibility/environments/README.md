@@ -23,13 +23,15 @@ Before proceeding with the installation on macOS Silicon, you need to ensure tha
         brew install hdf5
         ```
     -   Install Pandoc for handling document conversions for docs built:
-        `bash brew install pandoc `
+        ```bash
+        brew install pandoc
+        ```
     -   Set environment variables to ensure these libraries are correctly recognized by your package manager:
         ```bash
         export BREW_PREFIX="$(brew --prefix)"
         export HDF5_DIR="${BREW_PREFIX}/opt/hdf5"
         export HDF5_INCLUDE="${HDF5_DIR}/include"
-        export HDF5_LIB="${HDFWIFT_DIR}/lib"
+        export HDF5_LIB="${HDF5_DIR}/lib"
         ```
 
 ### 3. Setting Up Conda Development Environments
@@ -93,7 +95,7 @@ Poetry is a tool for Python package management that simplifies declaring, managi
     When you modify your poetry configuration, it is essential to update the lock file to ensure all dependencies are compatible and then reinstall the environment. The command starts by activating the Conda environment specifically set for the poetry project. It then navigates to the project directory. The `poetry lock` command updates the lock file, which ensures all dependencies are recorded correctly. Following this, `poetry install` installs or updates the dependencies based on the new lock file. The environment is then deactivated with `conda deactivate`, and finally, the command returns to the home directory.
 
     ```bash
-    conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/idtrack; poetry lock; poetry install; conda deactivate; cd
+    conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/master_idtrack/idtrack; poetry lock; poetry install; conda deactivate; cd
     ```
 
 -   **Running Pre-commit Hooks:**
@@ -101,7 +103,7 @@ Poetry is a tool for Python package management that simplifies declaring, managi
     When running pre-commit hooks to check code quality and standards, the below command is used. It activates the Conda environment where the poetry project resides and navigates to the project directory. The `poetry run pre-commit run --all-files` command runs the pre-commit hooks against all files in the repository, which helps in identifying and fixing issues before they are committed to the version control system. After running the hooks, the Conda environment is deactivated, and the command exits to the home directory.
 
     ```bash
-    conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/idtrack; poetry run pre-commit run --all-files; conda deactivate; cd
+    conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/master_idtrack/idtrack; poetry run pre-commit run --all-files; conda deactivate; cd
     ```
 
 -   **Performing Static Type Checking with Mypy:**
@@ -109,7 +111,7 @@ Poetry is a tool for Python package management that simplifies declaring, managi
     To perform static type checking across the Python project, the command provided is tailored to ensure the source code complies with type annotations. Initially, it activates the Conda environment specifically configured for this project. The command then navigates to the project directory and employs poetry run mypy idtrack tests docs/conf.py to execute the mypy tool. mypy is a static type checker for Python, used to analyze the code in the specified directories—idtrack, tests, and the docs/conf.py configuration file. This helps detect type errors that can prevent runtime issues, ensuring the code adheres to declared types. After completing the type checking, the environment is deactivated, and the command returns to the home directory, maintaining a clean and organized workspace.
 
     ```bash
-    conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/idtrack; poetry run mypy idtrack tests docs/conf.py; conda deactivate; cd
+    conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/master_idtrack/idtrack; poetry run mypy idtrack tests docs/conf.py; conda deactivate; cd
     ```
 
 -   **Generating and Viewing HTML Documentation:**
@@ -117,7 +119,7 @@ Poetry is a tool for Python package management that simplifies declaring, managi
     For generating and viewing the HTML documentation of the project, the following command sequence is employed. It activates the appropriate Conda environment and changes to the documentation directory of the project. The `rm -rf _build` command removes the existing build directory to start fresh, preventing any stale files from being included. The `poetry run make html` command generates new HTML files for the documentation. The generated HTML files are then opened in the default web browser using `open _build/html/index.html`. Finally, the environment is deactivated, and the command navigates back to the home directory.
 
     ```bash
-    conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/idtrack/docs; rm -rf _build; poetry run make html; open _build/html/index.html; conda deactivate; cd
+    conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs; rm -rf _build; poetry run make html; open _build/html/index.html; conda deactivate; cd
     ```
 
 -   **Running Tests:**
@@ -125,13 +127,13 @@ Poetry is a tool for Python package management that simplifies declaring, managi
     To execute the project's test suite and verify that all components are functioning as expected, this command is utilized. After activating the Conda environment, it navigates to the project's main directory. The `poetry run pytest --typeguard-packages=idtrack` command runs the pytest framework with type checking on the specified packages, ensuring that type annotations are used correctly throughout the project. After the tests are complete, the environment is deactivated, and the command line returns to the home directory.
 
     ```bash
-    conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/idtrack; poetry run pytest --typeguard-packages=idtrack; conda deactivate; cd
+    conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/master_idtrack/idtrack; poetry run pytest --typeguard-packages=idtrack; conda deactivate; cd
     ```
 
     or better
 
     ```bash
-    conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/idtrack; poetry run coverage run --parallel -m pytest tests; coverage combine; coverage report; conda deactivate; cd
+    conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/master_idtrack/idtrack; poetry run coverage run --parallel -m pytest tests; coverage combine; coverage report; conda deactivate; cd
     ```
 
 -   **Conducting a Security Vulnerability Check:**
@@ -139,5 +141,5 @@ Poetry is a tool for Python package management that simplifies declaring, managi
     For ensuring the security of the project's dependencies, the following command is run. It starts by activating the Conda environment designated for the project and navigating to the project directory. The `safety check --full-report --file=requirements.txt` command performs a security vulnerability check against the dependencies listed in the specified requirements file, providing a full report of any issues found. Following the security check, the environment is deactivated, and the command exits to the home directory.
 
     ```bash
-    conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/idtrack; poetry export -f requirements.txt --output __requirements.txt; safety check --full-report --file=__requirements.txt; rm -rf __requirements.txt; conda deactivate; cd
+    conda activate idtrack_poetry_3_9_env; cd /Users/kemalinecik/git_nosync/master_idtrack/idtrack; poetry export -f requirements.txt --output __requirements.txt; safety check --full-report --file=__requirements.txt; rm -rf __requirements.txt; conda deactivate; cd
     ```

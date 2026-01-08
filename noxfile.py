@@ -3,6 +3,7 @@
 import os
 import shlex
 import shutil
+import subprocess  # noqa: S404
 import sys
 import tempfile
 from pathlib import Path
@@ -18,8 +19,57 @@ except ImportError:
     print("[bold blue]Try installing it using [bold green]pip install nox-poetry [bold blue]! ")
     sys.exit(1)
 
+
+def _ensure_poetry_export_available() -> None:
+    """Fail fast with a helpful message if `poetry export` is unavailable.
+
+    `nox-poetry` relies on `poetry export`, which is provided by the
+    `poetry-plugin-export` plugin for newer Poetry versions.
+
+    Raises:
+        SystemExit: If Poetry is missing or `poetry export` is unavailable.
+    """
+    poetry = shutil.which("poetry")
+    if poetry is None:
+        print(
+            "[bold red]Poetry was not found on PATH.[/bold red]\n"
+            "Install Poetry and the export plugin, e.g.\n"
+            "  - pip:   pip install poetry poetry-plugin-export\n"
+            "  - pipx:  pipx install poetry && pipx inject poetry poetry-plugin-export\n"
+            "  - conda: conda install -c conda-forge poetry poetry-plugin-export\n"
+        )
+        raise SystemExit(1)
+
+    proc = subprocess.run(  # noqa: S603
+        [poetry, "export", "--help"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    if proc.returncode == 0:
+        return
+
+    out = (proc.stdout or "").strip()
+    if "command export does not exist" in out.lower():
+        print(
+            "[bold red]Your Poetry installation does not provide `poetry export`.[/bold red]\n"
+            "Install the export plugin into the same Poetry environment:\n"
+            "  - pipx:  pipx inject poetry poetry-plugin-export\n"
+            "  - poetry: poetry self add poetry-plugin-export\n"
+            "  - pip/conda: ensure `poetry-plugin-export` is installed next to `poetry`\n"
+        )
+        raise SystemExit(1)
+
+    print("[bold red]Poetry failed to run `poetry export --help`.[/bold red]")
+    if out:
+        print(out)
+    raise SystemExit(1)
+
+
+_ensure_poetry_export_available()
+
 package = "idtrack"
-python_versions = ["3.9", "3.10", "3.11", "3.12"]
+python_versions = ["3.9", "3.10", "3.11", "3.12", "3.13"]
 nox.options.sessions = (
     "pre-commit",
     "safety",
@@ -136,8 +186,7 @@ def safety(session: Session) -> None:
         # Export the requirements from poetry
         session.run("poetry", "export", "--format=requirements.txt", "--without-hashes", "--output", str(reqs_path))
 
-        # Install safety 2.x
-        session.install("safety>=2,<3")
+        session.install("safety>=2,<4")
 
         # Run safety check
         session.run("safety", "check", "--full-report", f"--file={reqs_path}")
@@ -173,6 +222,29 @@ def tests(session: Session) -> None:
     session.install("coverage[toml]", "pytest", "pygments")
     try:
         session.run("coverage", "run", "--parallel", "-m", "pytest", *session.posargs)
+    finally:
+        if session.interactive:
+            session.notify("coverage")
+
+
+@session(name="tests-external-mappers", python=["3.11"])
+def tests_external_mappers(session: Session) -> None:
+    """Run tests with external mapper dependencies installed.
+
+    This session installs the optional external-mappers extras (gget, mygene,
+    pybiomart, gprofiler-official) and runs the external_mappers tests including
+    any tests marked as slow/integration that require these dependencies.
+
+    Args:
+        session: The nox session.
+    """
+    # Install package with external-mappers extras
+    session.install(".[external-mappers]")
+    session.install("coverage[toml]", "pytest", "pygments")
+
+    # Run external_mappers tests (includes slow-marked tests by default)
+    try:
+        session.run("coverage", "run", "--parallel", "-m", "pytest", "tests/test_external_mappers.py", *session.posargs)
     finally:
         if session.interactive:
             session.notify("coverage")
@@ -217,7 +289,13 @@ def docs_build(session: Session) -> None:
     args = session.posargs or ["docs", "docs/_build"]
     session.install(".")
     session.install(
-        "sphinx", "sphinx-click", "sphinx-rtd-theme", "sphinx-rtd-dark-mode", "nbsphinx", "pandoc", "IPython"
+        "sphinx",
+        "sphinx-design",
+        "sphinx-click",
+        "sphinx-rtd-theme",
+        "sphinx-rtd-dark-mode",
+        "nbsphinx",
+        "IPython",
     )
 
     build_dir = Path("docs", "_build")
@@ -235,11 +313,11 @@ def docs(session: Session) -> None:
     session.install(
         "sphinx",
         "sphinx-autobuild",
+        "sphinx-design",
         "sphinx-click",
         "sphinx-rtd-theme",
         "sphinx-rtd-dark-mode",
         "nbsphinx",
-        "pandoc",
         "IPython",
     )
 
