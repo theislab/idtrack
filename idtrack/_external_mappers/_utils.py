@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+"""
+Utility functions for the _external_mappers module.
+
+This module provides:
+- Database and species name canonicalization
+- ID version stripping for Ensembl and RefSeq identifiers
+- DataFrame utilities for standardizing output format
+- Helper functions for chunking, JSON serialization, etc.
+"""
 
 # Kemal Inecik
 # k.inecik@gmail.com
@@ -12,6 +21,7 @@ import json
 import logging
 import re
 import typing
+from typing import Any, Iterable
 
 import pandas as pd
 
@@ -32,17 +42,195 @@ __all__ = [
     "_ensure_all_inputs",
     "_suppress_stdout_stderr",
     "logger",
+    "check_optional_dependencies",
+    "raise_missing_dependency",
 ]
+
+
+# ----------------------------- Dependency Info ------------------------------ #
+
+# Registry of optional dependencies for this module
+OPTIONAL_DEPENDENCIES: dict[str, dict[str, Any]] = {
+    "gget": {
+        "import_name": "gget",
+        "pip_name": "gget",
+        "features": ["gget backend", "ortholog utilities"],
+        "description": "Query Ensembl REST API for gene information",
+    },
+    "mygene": {
+        "import_name": "mygene",
+        "pip_name": "mygene",
+        "features": ["mygene backend"],
+        "description": "Query MyGene.info API for ID mapping",
+    },
+    "pybiomart": {
+        "import_name": "pybiomart",
+        "pip_name": "pybiomart",
+        "features": ["pybiomart backend"],
+        "description": "Query Ensembl BioMart for ID mapping",
+    },
+    "gprofiler-official": {
+        "import_name": "gprofiler",
+        "pip_name": "gprofiler-official",
+        "features": ["gprofiler backend"],
+        "description": "Query g:Profiler API for ID mapping",
+    },
+    "biopython": {
+        "import_name": "Bio",
+        "pip_name": "biopython",
+        "features": ["ortholog utilities", "sequence alignment"],
+        "description": "Biological sequence analysis tools",
+    },
+}
+
+
+def _check_dependency(dep_key: str) -> bool:
+    """Check if a single dependency is available."""
+    if dep_key not in OPTIONAL_DEPENDENCIES:
+        return False
+    import_name = OPTIONAL_DEPENDENCIES[dep_key]["import_name"]
+    try:
+        __import__(import_name)
+        return True
+    except ImportError:
+        return False
+
+
+def check_optional_dependencies(warn: bool = True) -> dict[str, bool]:
+    """
+    Check which optional dependencies are installed.
+
+    Parameters
+    ----------
+    warn : bool, default True
+        If True, emit a warning for each missing dependency.
+
+    Returns
+    -------
+    dict[str, bool]
+        Dictionary mapping dependency names to availability status.
+    """
+    import warnings
+
+    status: dict[str, bool] = {}
+    missing: list[str] = []
+
+    for dep_key in OPTIONAL_DEPENDENCIES:
+        available = _check_dependency(dep_key)
+        status[dep_key] = available
+        if not available:
+            missing.append(dep_key)
+
+    if warn and missing:
+        pip_names = [OPTIONAL_DEPENDENCIES[d]["pip_name"] for d in missing]
+        warning_msg = (
+            f"\n"
+            f"{'=' * 70}\n"
+            f"idtrack._external_mappers: Missing optional dependencies\n"
+            f"{'=' * 70}\n"
+            f"\n"
+            f"The following optional packages are not installed:\n"
+        )
+        for dep_key in missing:
+            info = OPTIONAL_DEPENDENCIES[dep_key]
+            features = ", ".join(info["features"])
+            warning_msg += f"  - {info['pip_name']}: {info['description']} (used by: {features})\n"
+
+        warning_msg += (
+            f"\n"
+            f"To install all external mapper dependencies:\n"
+            f"  pip install {' '.join(pip_names)}\n"
+            f"\n"
+            f"Or install individually as needed.\n"
+            f"{'=' * 70}\n"
+        )
+        warnings.warn(warning_msg, UserWarning, stacklevel=2)
+
+    return status
+
+
+def raise_missing_dependency(
+    dep_key: str,
+    feature: str | None = None,
+    original_error: BaseException | None = None,
+) -> typing.NoReturn:
+    """
+    Raise a detailed error for a missing optional dependency.
+
+    Parameters
+    ----------
+    dep_key : str
+        Key in OPTIONAL_DEPENDENCIES (e.g., "gget", "mygene").
+    feature : str, optional
+        Description of the feature that requires this dependency.
+    original_error : BaseException, optional
+        The original ImportError to chain.
+
+    Raises
+    ------
+    RuntimeError
+        Always raises with detailed installation instructions.
+    """
+    if dep_key not in OPTIONAL_DEPENDENCIES:
+        # Fallback for unknown dependencies
+        msg = (
+            f"\n"
+            f"{'=' * 70}\n"
+            f"Missing dependency: {dep_key}\n"
+            f"{'=' * 70}\n"
+            f"\n"
+            f"Please install the required package:\n"
+            f"  pip install {dep_key}\n"
+            f"{'=' * 70}\n"
+        )
+        raise RuntimeError(msg) from original_error
+
+    info = OPTIONAL_DEPENDENCIES[dep_key]
+    pip_name = info["pip_name"]
+    description = info["description"]
+    features = ", ".join(info["features"])
+
+    if feature is None:
+        feature = features
+
+    msg = (
+        f"\n"
+        f"{'=' * 70}\n"
+        f"Missing optional dependency: {pip_name}\n"
+        f"{'=' * 70}\n"
+        f"\n"
+        f"The '{feature}' feature requires '{pip_name}'.\n"
+        f"\n"
+        f"Package info:\n"
+        f"  - Name: {pip_name}\n"
+        f"  - Description: {description}\n"
+        f"  - Used by: {features}\n"
+        f"\n"
+        f"To install this dependency:\n"
+        f"  pip install {pip_name}\n"
+        f"\n"
+        f"To install all external mapper dependencies:\n"
+        f"  pip install gget mygene pybiomart gprofiler-official biopython\n"
+        f"{'=' * 70}\n"
+    )
+    raise RuntimeError(msg) from original_error
 
 
 # ------------------------------- Logging ------------------------------------ #
 
-logger = logging.getLogger("id_mapper")
-if not logger.handlers:
-    _h = logging.StreamHandler()
-    _h.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
-    logger.addHandler(_h)
-logger.setLevel(logging.INFO)
+
+def _setup_logger() -> logging.Logger:
+    """Set up and return the module logger with proper configuration."""
+    log = logging.getLogger("idtrack.external_mappers")
+    if not log.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+        log.addHandler(handler)
+    log.setLevel(logging.INFO)
+    return log
+
+
+logger = _setup_logger()
 
 
 @contextlib.contextmanager
@@ -106,28 +294,56 @@ def _species_for_mygene(species: str | None) -> str:
 
 # ----------------------------- Helper utils -------------------------------- #
 
+# Regex patterns for ID version stripping
 _ENS_RE = re.compile(r"^(ENS[A-Z]*\d+)")
 _REFSEQ_VER_RE = re.compile(r"^([NX][MRP]_\d+)")
-_WS = re.compile(r"\s+")
 
 
 def strip_version(id_: str) -> str:
-    """Strip version suffixes for Ensembl/RefSeq when appropriate."""
+    """
+    Strip version suffixes from Ensembl and RefSeq identifiers.
+
+    Examples:
+        >>> strip_version("ENSG00000141510.15")
+        'ENSG00000141510'
+        >>> strip_version("NM_000546.6")
+        'NM_000546'
+        >>> strip_version("TP53")  # Non-versioned IDs pass through
+        'TP53'
+
+    Parameters
+    ----------
+    id_ : str
+        The identifier to strip version from.
+
+    Returns
+    -------
+    str
+        The identifier without version suffix.
+    """
     if not isinstance(id_, str):
-        return id_
+        return id_  # type: ignore[return-value]
     x = id_.strip()
-    
+
     m = _ENS_RE.match(x)
     if m:
         return m.group(1)
-    
+
     m = _REFSEQ_VER_RE.match(x)
     if m:
         return m.group(1)
-    
+
     return x
 
-def _as_list(v) -> list:
+
+def _as_list(v: Any) -> list[Any]:
+    """
+    Coerce a value to a list.
+
+    - None returns []
+    - list/tuple/set returns list(v)
+    - Scalar values return [v]
+    """
     if v is None:
         return []
     if isinstance(v, (list, tuple, set)):
@@ -135,8 +351,27 @@ def _as_list(v) -> list:
     return [v]
 
 
-def _unique_not_null(seq: typing.Iterable[typing.Any]) -> list[str]:
-    seen, out = set(), []
+def _unique_not_null(seq: Iterable[Any]) -> list[str]:
+    """
+    Return unique non-null string values from a sequence, preserving order.
+
+    Filters out:
+    - None values
+    - Empty strings or whitespace-only strings
+    - String representations of null values: 'nan', 'none', 'null' (case-insensitive)
+
+    Parameters
+    ----------
+    seq : Iterable[Any]
+        Input sequence of values.
+
+    Returns
+    -------
+    list[str]
+        List of unique non-null string values, preserving first occurrence order.
+    """
+    seen: set[str] = set()
+    out: list[str] = []
     for v in seq:
         if v is None:
             continue
@@ -149,16 +384,57 @@ def _unique_not_null(seq: typing.Iterable[typing.Any]) -> list[str]:
     return out
 
 
-def _chunker(items: list, size: int):
+def _chunker(items: list[Any], size: int) -> typing.Iterator[list[Any]]:
+    """
+    Yield successive chunks of a given size from a list.
+
+    Parameters
+    ----------
+    items : list
+        The list to chunk.
+    size : int
+        Maximum size of each chunk.
+
+    Yields
+    ------
+    list
+        Successive chunks of the input list.
+    """
     for i in range(0, len(items), size):
         yield items[i : i + size]
 
 
-def _json(obj) -> str:
+def _json(obj: Any) -> str:
+    """
+    Serialize object to compact JSON string with unicode preserved.
+
+    Parameters
+    ----------
+    obj : Any
+        Object to serialize.
+
+    Returns
+    -------
+    str
+        Compact JSON string representation.
+    """
     return json.dumps(obj, separators=(",", ":"), ensure_ascii=False)
 
 
 def _is_bare_numeric(s: str) -> bool:
+    """
+    Check if a string consists entirely of digits.
+
+    Parameters
+    ----------
+    s : str
+        String to check.
+
+    Returns
+    -------
+    bool
+        True if the string is a bare numeric (all digits), False otherwise.
+    """
     return bool(re.fullmatch(r"\d+", str(s).strip()))
 
 

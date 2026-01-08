@@ -3,7 +3,11 @@
 # Usage: ./idtrack_dev_menu.sh
 
 # --- constants ---------------------------------------------------------------
-PKG_DIR="/Users/kemalinecik/git_nosync/master_idtrack/idtrack"
+# Determine package directory relative to this script's location
+# This script is at: idtrack/reproducibility/scripts/idtrack_dev_menu.sh
+# The idtrack package root is 2 levels up
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PKG_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Colors (only for our own one-line echos; never color command output)
 if [[ -t 1 ]]; then
@@ -172,6 +176,22 @@ task_safety() {
     && rm -f __requirements.txt"
 }
 
+# --- local CI (mirrors GitHub Actions) --------------------------------------
+task_local_ci_build() {
+  echo "Running local CI: build_package.yml (build + metadata check + wheel install)..."
+  run_in_env "python reproducibility/scripts/local_ci.py build"
+}
+
+task_local_ci_compat() {
+  echo "Running local CI: dependency_compatibility.yml (constraints matrix)..."
+  run_in_env "python reproducibility/scripts/local_ci.py compat"
+}
+
+task_local_ci_clean() {
+  echo "Cleaning local CI workdir (.local-ci)..."
+  run_in_env "python reproducibility/scripts/local_ci.py clean"
+}
+
 # --- lint pipeline (quiet) ---------------------------------------------------
 task_lint() {
   echo "Running LINT pipeline (quiet): lock, install, pre-commit, mypy, docs build, pytest, coverage, safety"
@@ -229,7 +249,11 @@ Project dir: $PKG_DIR
   8) Run tests (pytest basic)
   9) Run tests with coverage
  10) Run safety vulnerability check
+ 11) Local CI: build_package workflow
+ 12) Local CI: dependency_compatibility workflow
+ 13) Local CI: clean .local-ci workdir
   l) Lint pipeline (quiet; skip flake & open docs)
+  e) Change conda environment
   q) Exit
 ================================================================
 
@@ -255,7 +279,11 @@ while true; do
     8)  task_pytest_basic ;;
     9)  task_tests_coverage ;;
     10) task_safety ;;
+    11) task_local_ci_build ;;
+    12) task_local_ci_compat ;;
+    13) task_local_ci_clean ;;
     l|L|lint) task_lint ;;
+    e|E) choose_env ;;
     q|Q) echo "Goodbye!"; exit 0 ;;
     *)  echo "Invalid choice: $choice" ;;
   esac

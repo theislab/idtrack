@@ -32,8 +32,8 @@ clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and 
 
 clean-build: ## remove build artifacts
 	if exist build rd /s /q build
-	if exist build rd /s /q dist
-	if exist build rd /s /q .eggs
+	if exist dist rd /s /q dist
+	if exist .eggs rd /s /q .eggs
 	for /d /r . %%d in (*.egg-info) do @if exist "%%d" echo "%%d" && rd /s/q "%%d"
 	del /q /s /f .\*.egg
 
@@ -46,7 +46,9 @@ clean-pyc: ## remove Python file artifacts
 
 clean-test: ## remove test and coverage artifacts
 	if exist .tox rd /s /q .tox
-	if exist .coverage rd /s /q .coverage
+	if exist .coverage del /f /q .coverage
+	if exist .coverage.* del /f /q .coverage.*
+	if exist coverage.xml del /f /q coverage.xml
 	if exist htmlcov rd /s /q htmlcov
 	if exist .pytest_cache rd /s /q .pytest_cache
 
@@ -56,8 +58,8 @@ lint: ## check style with flake8
 test: ## run tests quickly with the default Python
 	pytest
 
-test-all: ## run tests on every Python version with tox
-	tox
+test-all: ## run tests on every Python version with nox
+	nox
 
 coverage: ## check code coverage quickly with the default Python
 	coverage run --source idtrack -m pytest
@@ -77,7 +79,7 @@ servedocs: docs ## compile the docs watching for changes
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
 
 release: dist ## package and upload a release
-	poetry release
+	poetry publish --build
 
 dist: clean-build clean-pyc ## builds source and wheel package
 	poetry build

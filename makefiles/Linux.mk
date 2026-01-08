@@ -45,7 +45,7 @@ clean-pyc: ## remove Python file artifacts
 
 clean-test: ## remove test and coverage artifacts
 	rm -fr .tox/
-	rm -f .coverage
+	rm -f .coverage .coverage.* coverage.xml
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
@@ -55,7 +55,22 @@ lint: ## check style with flake8
 test: ## run tests quickly with the default Python
 	pytest
 
-test-all: ## run tests on every Python version with tox
+test-slow: ## run slow tests (network/integration tests)
+	pytest -m slow
+
+test-integration: ## run all integration tests
+	pytest -m integration
+
+test-all-with-slow: ## run all tests including slow tests
+	pytest --ignore-glob='**/test_external_mappers.py' -m '' tests/
+
+test-full: ## run complete test suite including slow and external-mappers
+	pytest -m ''
+
+test-coverage: ## run tests with coverage report
+	pytest --cov=idtrack --cov-report=term --cov-report=html
+
+test-all: ## run tests on every Python version with nox
 	nox
 
 coverage: ## check code coverage quickly with the default Python
@@ -76,7 +91,7 @@ servedocs: docs ## compile the docs watching for changes
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
 
 release: dist ## package and upload a release
-	poetry release
+	poetry publish --build
 
 dist: clean-build clean-pyc ## builds source and wheel package
 	poetry build

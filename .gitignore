@@ -142,6 +142,8 @@ dmypy.json
 *.orig
 
 # MacOS files
+.DS_Store
+**/.DS_Store
 *.DS_Store
 **.DS_Store
 docs/_notebooks/.pybiomart.sqlite
@@ -153,3 +155,5 @@ __temp__/
 *slurm_out*.log
 *slurm_job*.sh
 *slurm-*.out
+/things
+.pybiomart.sqlite

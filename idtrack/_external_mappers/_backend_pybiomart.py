@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+"""
+Ensembl BioMart backend for ID mapping.
+
+This module provides the map_with_pybiomart() function for querying
+Ensembl BioMart to convert biological identifiers. Supports historical
+Ensembl releases via archive hosts.
+"""
 
 # Kemal Inecik
 # k.inecik@gmail.com
@@ -7,6 +14,7 @@
 from __future__ import annotations
 
 import math
+import re
 import time
 import typing as _t
 from urllib.parse import urlparse
@@ -31,6 +39,7 @@ from idtrack._external_mappers._utils import (
     canonical_db,
     canonical_species,
     logger,
+    raise_missing_dependency,
     strip_version,
 )
 
@@ -57,9 +66,7 @@ def _ensembl_archive_host_for_release(
             return _ENSEMBL_SPECIAL_RELEASE_HOSTS[key]
 
         # Strip a leading "v" or "r" if present (e.g. "v104")
-        import re as _re
-
-        m = _re.match(r"^[vr]?(\d+)$", key)
+        m = re.match(r"^[vr]?(\d+)$", key)
         if not m:
             return None
         try:
@@ -107,7 +114,8 @@ def _bm_list_attribute_names(ds) -> list[str]:
     """Return a list of attribute names for a pybiomart Dataset."""
     try:
         attrs = ds.list_attributes()
-    except Exception:
+    except (AttributeError, TypeError, RuntimeError):
+        # Different pybiomart versions may not have list_attributes()
         attrs = getattr(ds, "attributes", None)
 
     if attrs is None:
@@ -124,10 +132,10 @@ def _bm_list_attribute_names(ds) -> list[str]:
         if isinstance(attrs, dict):
             return [str(k) for k in attrs.keys()]
         return [str(x) for x in list(attrs)]
-    except Exception:
+    except (KeyError, IndexError, TypeError, AttributeError):
         try:
             return list(attrs)
-        except Exception:
+        except (TypeError, ValueError):
             return []
 
 
@@ -135,7 +143,8 @@ def _bm_list_filter_names(ds) -> list[str]:
     """Return a list of filter names for a pybiomart Dataset."""
     try:
         filts = ds.list_filters()
-    except Exception:
+    except (AttributeError, TypeError, RuntimeError):
+        # Different pybiomart versions may not have list_filters()
         filts = getattr(ds, "filters", None)
 
     if filts is None:
@@ -150,10 +159,10 @@ def _bm_list_filter_names(ds) -> list[str]:
         if isinstance(filts, dict):
             return [str(k) for k in filts.keys()]
         return [str(x) for x in list(filts)]
-    except Exception:
+    except (KeyError, IndexError, TypeError, AttributeError):
         try:
             return list(filts)
-        except Exception:
+        except (TypeError, ValueError):
             return []
 
 
@@ -283,12 +292,53 @@ def map_with_pybiomart(
     suppress_method_verbosity: bool = True,
 ) -> pd.DataFrame:
     """
-    Map IDs via Ensembl BioMart (pybiomart).
+    Map identifiers using Ensembl BioMart via pybiomart.
+
+    Note: BioMart can only filter by Ensembl IDs (gene, transcript, protein).
+    Other ID types can be used as output_db but not input_db.
+
+    Parameters
+    ----------
+    ids : Iterable[str]
+        Input Ensembl identifiers to map.
+    input_db : str
+        Source database type. Must be an Ensembl type: 'ensembl_gene',
+        'ensembl_transcript', or 'ensembl_protein'.
+    output_db : str
+        Target database type (e.g., 'hgnc_symbol', 'uniprot', 'entrez_gene').
+    species : str, default 'hsapiens'
+        Species code (e.g., 'hsapiens', 'mmusculus', 'sscrofa').
+    chunk_size : int, default 1000
+        Number of IDs per BioMart query.
+    pause : float, default 0.2
+        Pause in seconds between queries.
+    strip_versions : bool, default True
+        Strip version suffixes from Ensembl/RefSeq IDs.
+    release : str | int | None, default None
+        Ensembl release number (e.g., 104) or special key (e.g., 'grch37').
+        If None, uses the current Ensembl release.
+    show_progress : bool, default True
+        Display progress bar.
+    suppress_method_verbosity : bool, default True
+        Suppress stdout/stderr from pybiomart.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns: input_id, input_db, mapping, output_id,
+        output_db, method, release_used, metadata_json.
+
+    Raises
+    ------
+    RuntimeError
+        If pybiomart is not installed or BioMart connection fails.
+    ValueError
+        If input_db is not an Ensembl type.
     """
     try:
         from pybiomart import Dataset  # type: ignore
-    except Exception as e:
-        raise RuntimeError("pybiomart is not installed. Try: pip install pybiomart") from e
+    except ImportError as e:
+        raise_missing_dependency("pybiomart", feature="pybiomart ID mapping backend", original_error=e)
 
     inp = canonical_db(input_db)
     outp = canonical_db(output_db)

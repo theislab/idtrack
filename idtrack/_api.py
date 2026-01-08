@@ -52,9 +52,16 @@ class API:
         self.log = logging.getLogger("api")
         self.logger_configured = False
         self.local_repository = local_repository
-        self.track: Union[Track, TrackTests]
+        self.track: Optional[Union[Track, TrackTests]] = None
 
-    def configure_logger(self, level=None):
+    def _require_track(self) -> Union[Track, TrackTests]:
+        """Return the active tracker or raise a clear error if the graph is not built yet."""
+        track = getattr(self, "track", None)
+        if track is None:
+            raise RuntimeError("No graph is attached to this API instance. Call `API.build_graph(...)` first.")
+        return track
+
+    def configure_logger(self, level=None) -> None:
         """Configure process-wide logging with a concise, time-stamped console format.
 
         This method is idempotent per :py:class:`idtrack.API` instance: the first call sets up a basic configuration
@@ -80,7 +87,7 @@ class API:
         else:
             self.log.info("The logger is already configured.")
 
-    def calculate_graph_caches(self, for_test: bool = False):
+    def calculate_graph_caches(self, for_test: bool = False) -> None:
         """Prime the working graph by eagerly computing all cached properties.
 
         This helper reduces first-call latency and makes test runs deterministic by batch-computing every
@@ -96,7 +103,7 @@ class API:
                 :py:attr:`idtrack._the_graph.TheGraph.available_releases_given_database_assembly`.
                 Defaults to ``False``.
         """
-        self.track.graph.calculate_caches(for_test=for_test)
+        self._require_track().graph.calculate_caches(for_test=for_test)
 
     def resolve_organism(self, tentative_organism_name: str) -> tuple[str, int]:
         """Normalize a tentative organism name and fetch the latest supported Ensembl release.
@@ -151,7 +158,7 @@ class API:
 
     def build_graph(
         self, organism_name: str, snapshot_release: int, return_test: bool = False, calculate_caches: bool = True
-    ):
+    ) -> None:
         """Build the bio-ID graph for an organism and prepare the path-finding engine.
 
         This method wires together the high-level components used throughout IDTrack. It first creates a
@@ -281,11 +288,12 @@ class API:
             raise ValueError("Invalid choice for `strategy`.")
 
         # Get the graph ID if possible.
-        new_ident, _ = self.track.graph.node_name_alternatives(identifier)
+        track = self._require_track()
+        new_ident, _ = track.graph.node_name_alternatives(identifier)
         no_corresponding, no_conversion = False, False
 
         if new_ident is not None:
-            cnt = self.track.convert(
+            cnt = track.convert(
                 from_id=new_ident,
                 from_release=from_release,
                 to_release=to_release,
@@ -310,16 +318,18 @@ class API:
             if not no_corresponding and not no_conversion
             else {None}
         )
-        assert len(final_database_conv_) == 1
-        final_database_conv = list(final_database_conv_)[0]
+        if len(final_database_conv_) != 1:
+            raise ValueError(f"Expected exactly one final database, got: {final_database_conv_}")
+        final_database_conv = next(iter(final_database_conv_))
 
         final_conf_: set[Optional[Union[int, float]]] = (
             {cnt[i]["final_conversion"]["final_conversion_confidence"] for i in cnt}
             if not no_corresponding and not no_conversion
             else {None}
         )
-        assert len(final_conf_) == 1
-        final_conf = list(final_conf_)[0]
+        if len(final_conf_) != 1:
+            raise ValueError(f"Expected exactly one final confidence, got: {final_conf_}")
+        final_conf = next(iter(final_conf_))
 
         result: dict[str, Any] = {
             "target_id": target_ids,
@@ -348,7 +358,7 @@ class API:
         return result
 
     def convert_identifier_multiple(
-        self, identifier_list, verbose: bool = True, pbar_prefix: str = "", **kwargs
+        self, identifier_list: list[str], verbose: bool = True, pbar_prefix: str = "", **kwargs
     ) -> list[dict]:
         """Convert a batch of identifiers and aggregate per-query conversion metadata.
 
@@ -542,7 +552,7 @@ class API:
 
     def infer_identifier_source(
         self, id_list: list[str], mode: str = "assembly_ensembl_release", report_only_winner: bool = True
-    ):
+    ) -> Union[tuple[str, int, int], tuple[int, int], int, list[tuple[Any, int]]]:
         """Infer the most likely source (database/assembly/release) for a heterogeneous identifier list.
 
         This helper estimates which origin best explains the given IDs so users can pick a sensible graph configuration
@@ -580,7 +590,7 @@ class API:
         none_id_list = list()
 
         for i in id_list:
-            found_id, _ = self.track.graph.node_name_alternatives(i)
+            found_id, _ = self._require_track().graph.node_name_alternatives(i)
             if found_id is None:
                 none_id_list.append(i)
             else:
@@ -589,7 +599,7 @@ class API:
         if len(none_id_list) > 0:
             self.log.warning(f"Number of unfound IDs: {len(none_id_list)}.")
 
-        identification = self.track.identify_source(found_id_list, mode=mode)
+        identification = self._require_track().identify_source(found_id_list, mode=mode)
         if not report_only_winner:
             return identification
         else:
@@ -602,7 +612,7 @@ class API:
             set[str]: Unique external database names discovered via
                 :py:meth:`idtrack._the_graph.TheGraph.available_external_databases`.
         """
-        return self.track.graph.available_external_databases
+        return self._require_track().graph.available_external_databases
 
     def list_genome_assemblies(self) -> set[int]:
         """List genome assemblies represented in the currently loaded graph.
@@ -614,7 +624,7 @@ class API:
         Returns:
             set[int]: Unique genome assembly identifiers present in the graph (e.g., ``38`` for GRCh38).
         """
-        return self.track.graph.available_genome_assemblies
+        return self._require_track().graph.available_genome_assemblies
 
     def list_external_databases_by_assembly(self) -> dict[int, set[str]]:
         """Map each genome assembly to the external databases present in that slice of the graph.
@@ -625,7 +635,7 @@ class API:
         Returns:
             dict[int, set[str]]: Mapping of assembly → set of external database names.
         """
-        return self.track.graph.available_external_databases_assembly
+        return self._require_track().graph.available_external_databases_assembly
 
     def external_database_forms(self) -> dict[str, str]:
         """Return the Ensembl form each external database connects through.
@@ -637,7 +647,7 @@ class API:
         Returns:
             dict[str, str]: Mapping of external database name → Ensembl form (e.g., ``"gene"``).
         """
-        return self.track.graph.external_database_connection_form
+        return self._require_track().graph.external_database_connection_form
 
     def list_ensembl_releases(self) -> list[int]:
         """List Ensembl releases reachable for the configured organism and assembly.
@@ -648,4 +658,4 @@ class API:
         Returns:
             list[int]: Sorted release numbers that can be queried and cached locally.
         """
-        return self.track.db_manager.available_releases
+        return self._require_track().db_manager.available_releases

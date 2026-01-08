@@ -1,36 +1,87 @@
-name: Publish sctram to PyPI
+# Release: Build and publish to PyPI when a GitHub Release is published.
+#
+# This workflow expects a `PYPI_TOKEN` secret (API token with upload permissions).
+# If you want to harden further, consider switching to PyPI "Trusted Publishing"
+# (OIDC) so no long-lived token is required.
+name: Publish idtrack to PyPI
 
 on:
     release:
         types: [published]
 
+# Default permissions for the GITHUB_TOKEN (principle of least privilege).
+permissions:
+    contents: read
+
 jobs:
     release:
-        name: Release
-        runs-on: ubuntu-latest
+        name: Build & publish
+        runs-on: ubuntu-22.04
+        timeout-minutes: 20
         steps:
             - name: Check out the repository
               uses: actions/checkout@v4
               with:
-                  fetch-depth: 2
+                  # Fetch tags/history so version checks can be done reliably.
+                  fetch-depth: 0
 
             - name: Set up Python
-              uses: actions/setup-python@v3
+              uses: actions/setup-python@v5
               with:
-                  python-version: "3.9"
+                  python-version: "3.11"
+                  cache: pip
+                  cache-dependency-path: |
+                      pyproject.toml
+                      poetry.lock
 
-            - name: Install Poetry
+            # Guardrail: ensure the GitHub Release tag matches pyproject.toml's version.
+            - name: Verify release tag matches package version
+              shell: python
+              env:
+                  RELEASE_TAG: ${{ github.event.release.tag_name }}
               run: |
-                  pip install poetry poetry-plugin-export
-                  poetry --version
+                  import os
+                  import re
+                  import sys
+                  from pathlib import Path
+                  import tomllib
 
+                  tag = os.environ["RELEASE_TAG"].strip()
+                  match = re.search(r"(\\d+\\.\\d+\\.\\d+(?:[a-zA-Z0-9\\.\\-]*)?)", tag)
+                  if not match:
+                      raise SystemExit(f"Could not parse a version from release tag: {tag!r}")
+
+                  tag_version = match.group(1)
+                  pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+                  project_version = pyproject["tool"]["poetry"]["version"]
+
+                  if project_version != tag_version:
+                      raise SystemExit(
+                          f"pyproject.toml version ({project_version}) does not match release tag ({tag}). "
+                          "Refuse to publish."
+                      )
+
+                  print(f"Publishing version {project_version} (tag {tag})")
+
+            - name: Upgrade pip and install build tooling
+              run: |
+                  python -m pip install --upgrade pip
+                  python -m pip install --upgrade build twine
+
+            # Build both sdist and wheel into dist/.
             - name: Build package
-              run: |
-                  poetry build --ansi
+              run: python -m build
 
+            # Validate long_description rendering and core metadata before publishing.
+            - name: Check package metadata (twine)
+              run: python -m twine check --strict dist/*
+
+            # Upload dist/* to PyPI.
             - name: Publish package on PyPI
-              uses: pypa/gh-action-pypi-publish@v1
+              uses: pypa/gh-action-pypi-publish@release/v1
               with:
                   user: __token__
                   password: ${{ secrets.PYPI_TOKEN }}
+                  packages-dir: dist
+                  skip-existing: true
                   verbose: true

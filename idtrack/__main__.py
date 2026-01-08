@@ -109,12 +109,14 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         int: An exit status suitable for :py:func:`sys.exit`. ``0`` indicates successful execution.
     """
-    parser = _build_parser()
-    args: Any = parser.parse_args(argv)  # noqa: F841  (kept for future use)
+    if argv is None:
+        argv = sys.argv[1:]
 
-    # No positional/sub-command yet → if nothing but the interpreter
-    # called us, show the banner.
-    if len(sys.argv) == 1:
+    parser = _build_parser()
+    _ = parser.parse_args(argv)
+
+    # No positional/sub-command yet → if no arguments were provided, show the banner.
+    if not argv:
         _print_banner()
 
     return 0

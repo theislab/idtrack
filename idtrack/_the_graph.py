@@ -683,8 +683,8 @@ class TheGraph(nx.MultiDiGraph):
             # Start from the lowest ensembl release and go up at each iteration.
             # Assume in the beginning, the ID is not active.
             for ind, (ens_rel, inout) in enumerate(inout_edges):
-                if ind == 0:
-                    assert inout, "The range building should start with in-edge."
+                if ind == 0 and not inout:
+                    raise ValueError("The range building should start with an in-edge.")
 
                 if not active_state:
                     # If ID is not active and there is in-node, there is a beginning of new active range.
@@ -699,12 +699,9 @@ class TheGraph(nx.MultiDiGraph):
                         active_state = False
 
                 else:
-                    # If ID is active and there is in-node, do nothing.
-                    if inout:
-                        pass
-
                     # If ID is active and there is out-node, end the range.
-                    else:
+                    # (If ID is active and there is in-node, do nothing - that case is skipped)
+                    if not inout:
                         narrowed.append(ens_rel)
                         active_state = False  # Set the ID not active.
 
@@ -1130,13 +1127,13 @@ class TheGraph(nx.MultiDiGraph):
                 linked to that assembly.
         """
         self.log.info(f"Cached properties being calculated: {'available_external_databases_assembly'}")
-        result: dict[int, set] = {i: set() for i in self.available_genome_assemblies}
-        for i in self.combined_edges:
-            d = self.combined_edges[i]
-            for i in d:
-                for j in d[i]:
-                    if i in self.available_external_databases:
-                        result[j].add(i)
+        result: dict[int, set] = {asm: set() for asm in self.available_genome_assemblies}
+        for node in self.combined_edges:
+            edges_dict = self.combined_edges[node]
+            for db_name in edges_dict:
+                for assembly in edges_dict[db_name]:
+                    if db_name in self.available_external_databases:
+                        result[assembly].add(db_name)
         return result
 
     @cached_property
@@ -1201,7 +1198,7 @@ class TheGraph(nx.MultiDiGraph):
         assembly component of each edge key.  It therefore answers the question *“Which genome builds
         does this graph actually know about?”*  Several public utilities depend on this information
         when validating user-supplied assembly arguments or iterating across assemblies in reproducible
-        order (see :py:attr:`DB.assembly_mysqlport_priority`).
+        order (see :py:attr:`DB.assembly_mysqlport_priority` for organism-scoped priorities).
 
         Returns:
             set[int]: Unique genome assembly identifiers (e.g. ``104``, ``108``) present anywhere in the graph.
@@ -1275,14 +1272,13 @@ class TheGraph(nx.MultiDiGraph):
                     assembly=assembly, database_name=database_name
                 )
 
+        main_assembly = int(self.graph["genome_assembly"])
         for database_name in DB.nts_base_ensembl.values():
-            r[(database_name, DB.main_assembly)] = _inline_available_releases(
-                assembly=DB.main_assembly, database_name=database_name
-            )
+            r[(database_name, main_assembly)] = _inline_available_releases(assembly=main_assembly, database_name=database_name)
 
         available_release = {j for i in r.values() for j in i}
         for database_name in DB.nts_ensembl.values():
-            r[(database_name, DB.main_assembly)] = available_release
+            r[(database_name, main_assembly)] = available_release
 
         return r
 

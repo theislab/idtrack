@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
+"""
+Constants and configuration for the _external_mappers module.
+
+This module provides:
+- Database alias mappings to canonical database names
+- Species aliases and mappings for various backends
+- Backend-specific configuration for MyGene, pybiomart, g:Profiler, and gget
+- Ensembl archive host mappings by release number
+"""
 
 # Kemal Inecik
 # k.inecik@gmail.com
 
 
 from __future__ import annotations
-from typing import Dict, Tuple
 
 # ----------------------------- Canonical DBs -------------------------------- #
 
@@ -91,11 +99,11 @@ _SPECIES_ALIASES = {
 }
 
 # Map canonical short codes -> how they appear in Bgee's 'genus' / 'species'
-_SPECIES_CANONICAL_TO_BGEENAMES: Dict[str, Tuple[str, str]] = {
+_SPECIES_CANONICAL_TO_BGEENAMES: dict[str, tuple[str, str]] = {
     "hsapiens": ("Homo", "sapiens"),
     "mmusculus": ("Mus", "musculus"),
     "sscrofa": ("Sus", "scrofa"),
-    # extend this as you add more species
+    # Extend this as you add more species
 }
 
 # --------------------------- Capability registry ---------------------------- #

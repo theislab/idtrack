@@ -289,9 +289,17 @@ def _save_index_data(grp: h5py.Group, df: pd.DataFrame, compression):
         grp.create_dataset("index_categories", data=cats, dtype=DB.UTF8_STR)
         grp.attrs["index_dtype"] = f"category|{df.index.ordered}"
     else:
-        # Regular index
-        grp.create_dataset("index_data", data=df.index.values, compression=compression)
-        grp.attrs["index_dtype"] = str(df.index.dtype)
+        # Regular index (including pandas' StringDtype, which exposes an object-typed `.values`).
+        index_dtype = str(df.index.dtype)
+        if pd.api.types.is_string_dtype(df.index) or index_dtype in {"object", "string"}:
+            values = df.index.to_numpy(dtype=object)
+            na_mask = pd.isna(values)
+            encoded = [DB.placeholder_na if is_na else str(v) for v, is_na in zip(values, na_mask)]
+            grp.create_dataset("index_data", data=np.array(encoded, dtype=DB.UTF8_STR), compression=compression)
+            grp.attrs["index_dtype"] = index_dtype
+        else:
+            grp.create_dataset("index_data", data=df.index.values, compression=compression)
+            grp.attrs["index_dtype"] = index_dtype
 
 
 def _save_column_data(grp: h5py.Group, df: pd.DataFrame, compression: Optional[Union[str, int]]):
@@ -331,6 +339,11 @@ def _save_column_data(grp: h5py.Group, df: pd.DataFrame, compression: Optional[U
             # Convert datetime to string for reliable storage
             dt_strings = col_data.astype(str).values
             data_grp.create_dataset(col_key, data=np.array(dt_strings, dtype=DB.UTF8_STR), compression=compression)
+
+        elif pd.api.types.is_timedelta64_dtype(col_data):
+            # Convert timedeltas to string for reliable storage (HDF5 has no native timedelta dtype)
+            td_strings = col_data.astype(str).values
+            data_grp.create_dataset(col_key, data=np.array(td_strings, dtype=DB.UTF8_STR), compression=compression)
 
         elif pd.api.types.is_string_dtype(col_data) or col_data.dtype == "object":
             # Handle string/object data, replacing NA with a placeholder
@@ -422,9 +435,12 @@ def _load_index_data(grp: h5py.Group) -> tuple[pd.Index, list[Optional[str]]]:
         index = pd.CategoricalIndex.from_codes(index_data, categories=categories, ordered=ordered)
     else:
         # Regular index
-        if isinstance(index_data[0], bytes):
-            index_data = [x.decode(DB.UTF8) for x in index_data]
-        index = pd.Index(index_data, dtype=index_dtype)
+        values = index_data.tolist() if hasattr(index_data, "tolist") else list(index_data)
+        if values and isinstance(values[0], bytes):
+            values = [x.decode(DB.UTF8) for x in values]
+        if index_dtype in {"object", "string"}:
+            values = [pd.NA if x == DB.placeholder_na else x for x in values]
+        index = pd.Index(values, dtype=index_dtype)
 
     return index, index_names
 
@@ -467,6 +483,11 @@ def _load_column_data(
             # Convert string back to datetime
             dt_strs = [x.decode(DB.UTF8) if isinstance(x, bytes) else str(x) for x in data_grp[col_key][()]]
             data_dict[col] = pd.to_datetime(dt_strs)
+
+        elif str(dtype).startswith("timedelta64"):
+            # Convert string back to timedelta
+            td_strs = [x.decode(DB.UTF8) if isinstance(x, bytes) else str(x) for x in data_grp[col_key][()]]
+            data_dict[col] = pd.to_timedelta(td_strs)
 
         elif str(dtype) in ["object", "string"]:
             # Handle string/object data, restoring placeholder back to NA

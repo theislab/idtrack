@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, asdict
-from typing import Dict, List, Optional, Sequence, Tuple, Any
+from typing import Dict, List, Optional, Sequence, Tuple, Any, TYPE_CHECKING
 
 import tempfile
 import os
@@ -9,26 +9,49 @@ import os
 import numpy as np
 import pandas as pd
 
-import gget  # pip install gget
-# pip install biopython
-from Bio.Align import substitution_matrices
-from Bio import SeqIO
+from idtrack._external_mappers._constants import _SPECIES_ALIASES, _SPECIES_CANONICAL_TO_BGEENAMES
+from idtrack._external_mappers._utils import raise_missing_dependency
 
-from ._constants import _SPECIES_ALIASES, _SPECIES_CANONICAL_TO_BGEENAMES
+# Lazy-loaded optional dependencies (gget, biopython)
+_gget = None
+_substitution_matrices = None
+_SeqIO = None
+_BLOSUM62 = None
 
-# Optional: only needed if you want embeddings
-try:
-    import torch
-    from transformers import AutoTokenizer, AutoModel
-    _HAS_TRANSFORMERS = True
-except ImportError:
-    _HAS_TRANSFORMERS = False
+
+def _require_ortholog_deps():
+    """Lazily import gget and biopython; raise helpful error if missing."""
+    global _gget, _substitution_matrices, _SeqIO
+    if _gget is None:
+        # Check gget first
+        try:
+            import gget as _gget_mod
+        except ImportError as e:
+            raise_missing_dependency("gget", feature="ortholog utilities", original_error=e)
+
+        # Check biopython
+        try:
+            from Bio.Align import substitution_matrices as _sm
+            from Bio import SeqIO as _seqio
+        except ImportError as e:
+            raise_missing_dependency("biopython", feature="ortholog utilities", original_error=e)
+
+        _gget = _gget_mod
+        _substitution_matrices = _sm
+        _SeqIO = _seqio
+    return _gget, _substitution_matrices, _SeqIO
+
+
+def _get_blosum62():
+    """Lazily load BLOSUM62 matrix."""
+    global _BLOSUM62
+    if _BLOSUM62 is None:
+        _, substitution_matrices, _ = _require_ortholog_deps()
+        _BLOSUM62 = substitution_matrices.load('BLOSUM62')
+    return _BLOSUM62
 
 
 AA_ALPHABET = "ACDEFGHIKLMNPQRSTVWY"
-# BLOSUM62 designed for aligning proteins that are more distantly related compared to matrices like BLOSUM80,
-# which is better for closely related sequences.
-BLOSUM62 = substitution_matrices.load('BLOSUM62')  # use matrix names to load
 
 
 # ------------------------ species helpers ------------------------ #
@@ -171,6 +194,7 @@ def get_ortholog_table(
     Returns a DataFrame with columns like:
       gene_id, gene_name, species_id, genus, species
     """
+    gget, _, _ = _require_ortholog_deps()
     df = gget.bgee(
         query_ensembl_id,
         type="orthologs",
@@ -189,39 +213,13 @@ def get_ortholog_table(
     return df
 
 
-
-def pick_ortholog_for_species(
-    ortholog_df: pd.DataFrame,
-    target_species: str,
-) -> Optional[str]:
-    """
-    From Bgee ortholog dataframe pick one ortholog gene_id for the
-    requested target species.
-
-    `target_species` is a string:
-       'human', 'Homo sapiens', 'hsapiens', 'bos taurus', etc.
-    """
-    _, genus, species = _species_to_genus_species(target_species)
-
-    mask = (
-        ortholog_df["genus"].str.lower().eq(genus.lower())
-        & ortholog_df["species"].str.lower().eq(species.lower())
-    )
-
-    subset = ortholog_df[mask]
-    if subset.empty:
-        return None
-
-    # If multiple rows exist, just take the first.
-    return str(subset["gene_id"].iloc[0])
-
-
 # ------------------------ sequences & MUSCLE ------------------------ #
 
 def fetch_aa_sequence(ensembl_id: str) -> str:
     """
     Fetch amino-acid sequence for a gene using gget.seq(translate=True).
     """
+    gget, _, _ = _require_ortholog_deps()
     header, seq = gget.seq(ensembl_id, translate=True)
     seq = str(seq)
     if not seq:
@@ -243,15 +241,13 @@ def run_muscle_pairwise(
     Implementation: build a temporary FASTA with explicit headers,
     run gget.muscle on the file path, parse the ClustalW output.
     """
-    import tempfile
-    import os
-
     fasta_text = f">{name1}\n{seq1}\n>{name2}\n{seq2}\n"
 
     with tempfile.NamedTemporaryFile("w", suffix=".fa", delete=False) as fh:
         path = fh.name
         fh.write(fasta_text)
 
+    gget, _, _ = _require_ortholog_deps()
     try:
         clustal = gget.muscle(path, super5=super5)
     finally:
@@ -318,6 +314,8 @@ def compute_alignment_scores(
     if L == 0:
         raise ValueError("Empty alignment.")
 
+    blosum62 = _get_blosum62()
+
     matches = positives = very_negative = 0
     gaps_q = gaps_t = 0
     gap_open_q = gap_open_t = 0
@@ -347,9 +345,9 @@ def compute_alignment_scores(
             matches += 1
 
         pair = (a, b)
-        if pair not in BLOSUM62:
+        if pair not in blosum62:
             pair = (b, a)
-        score = BLOSUM62.get(pair, 0)
+        score = blosum62.get(pair, 0)
         blosum_sum += score
 
         if score > 0:

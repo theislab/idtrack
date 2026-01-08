@@ -168,7 +168,10 @@ class VerifyOrganism:
 
             # In very early releases, there are floating releases like "18.2". This package does not support those.
             if not float(organism["release"]) == int(organism["release"]):
-                raise ValueError("Ensembl release is not in integer format. {}")
+                raise ValueError(
+                    f"Ensembl release is not in integer format: {organism['release']!r} "
+                    f"(organism: {organism['name']!r})"
+                )
 
             # Save the associated the latest release
             latest_ensembl_releases[organism["name"].lower()] = int(organism["release"])

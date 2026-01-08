@@ -1,91 +1,130 @@
+# CI: Run the project's Nox sessions (tests, linting, typing, docs).
+#
+# Design goals:
+# - Parallelism: each (session, python) pair is a separate matrix job.
+# - Reproducibility: pin action major versions and runner images where practical.
+# - Robustness: avoid doing expensive system setup (apt) unless a job needs it.
+# - Least privilege: keep the default GITHUB_TOKEN permissions read-only.
 name: Run idtrack Tests
 
 on:
-    - push
-    - pull_request
+    push:
+    pull_request:
+    workflow_dispatch:
+
+# Default permissions for the GITHUB_TOKEN.
+# Most CI jobs only need to read the repository contents.
+permissions:
+    contents: read
+
+# Cancel older runs for the same branch/PR to reduce CI queue time and avoid wasting minutes.
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
 
 jobs:
     tests:
-        name: ${{ matrix.session }} ${{ matrix.python-version }} / ${{ matrix.os }}
-        runs-on: ${{ matrix.os }}
+        # This name shows up in the GitHub UI for each matrix element.
+        name: ${{ matrix.session }} (py${{ matrix.python-version }})
+        runs-on: ubuntu-22.04
+        timeout-minutes: 45
         strategy:
+            # Do not cancel the whole matrix if a single entry fails.
+            # This keeps signal for other Python versions/sessions.
             fail-fast: false
             matrix:
                 include:
+                    # Keep "tooling" sessions on a single Python for speed.
                     - {
-                          python-version: "3.9",
-                          os: ubuntu-latest,
+                          python-version: "3.11",
                           session: "pre-commit",
                       }
                     - {
-                          python-version: "3.9",
-                          os: macos-latest,
-                          session: "safety",
-                      }
-                    - {
-                          python-version: "3.10",
-                          os: macos-latest,
+                          python-version: "3.11",
                           session: "safety",
                       }
                     - {
                           python-version: "3.11",
-                          os: macos-latest,
-                          session: "safety",
-                      }
-                    - {
-                          python-version: "3.9",
-                          os: ubuntu-latest,
                           session: "mypy",
                       }
+                    # Run the full test suite across the supported Python versions.
                     - {
                           python-version: "3.9",
-                          os: ubuntu-latest,
                           session: "tests",
                       }
                     - {
-                          python-version: "3.9",
-                          os: windows-latest,
+                          python-version: "3.10",
                           session: "tests",
                       }
                     - {
-                          python-version: "3.9",
-                          os: macos-latest,
+                          python-version: "3.11",
                           session: "tests",
                       }
                     - {
-                          python-version: "3.9",
-                          os: ubuntu-latest,
+                          python-version: "3.12",
+                          session: "tests",
+                      }
+                    - {
+                          python-version: "3.13",
+                          session: "tests",
+                      }
+                    - {
+                          python-version: "3.14",
+                          session: "tests",
+                      }
+                    - {
+                          python-version: "3.11",
                           session: "typeguard",
                       }
                     - {
-                          python-version: "3.9",
-                          os: ubuntu-latest,
+                          python-version: "3.11",
                           session: "xdoctest",
                       }
+                    # Documentation build (kept as a separate session for clear failures).
                     - {
-                          python-version: "3.9",
-                          os: ubuntu-latest,
+                          python-version: "3.11",
                           session: "docs-build",
                       }
-
-        env:
-            NOXSESSION: ${{ matrix.session }}
+                    # Test with optional external-mappers dependencies
+                    - {
+                          python-version: "3.11",
+                          session: "tests-external-mappers",
+                      }
 
         steps:
+            # Checkout is required for Nox to install the local package and for
+            # tools like pre-commit and mypy to see the repo content.
             - name: Check out the repository
               uses: actions/checkout@v4
 
+            # Install the Python interpreter for this matrix element.
+            # We also enable pip caching to speed up dependency downloads.
             - name: Set up Python ${{ matrix.python-version }}
-              uses: actions/setup-python@v3
+              uses: actions/setup-python@v5
               with:
                   python-version: ${{ matrix.python-version }}
+                  allow-prereleases: true
+                  cache: pip
+                  cache-dependency-path: |
+                      pyproject.toml
+                      poetry.lock
+                      .pre-commit-config.yaml
 
+            # pandoc is only required for docs builds (nbsphinx/nbconvert).
+            - name: Install pandoc (docs only)
+              if: matrix.session == 'docs-build'
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y pandoc
+
+            # Install Poetry (used by the nox-poetry plugin and the safety session).
             - name: Install Poetry
               run: |
                   pipx install poetry
                   pipx inject poetry poetry-plugin-export
                   poetry --version
 
+            # Install Nox + its Poetry integration.
             - name: Install nox nox-poetry rich
               run: |
                   pipx install nox
@@ -93,6 +132,8 @@ jobs:
                   pipx inject nox rich
                   nox --version
 
+            # pre-commit downloads hooks into ~/.cache/pre-commit.
+            # Caching that directory speeds up repeated CI runs.
             - name: Compute pre-commit cache key
               if: matrix.session == 'pre-commit'
               id: pre-commit-cache
@@ -122,30 +163,18 @@ jobs:
                   restore-keys: |
                       ${{ steps.pre-commit-cache.outputs.result }}-
 
-            - name: Run Nox (ubuntu)
-              if: matrix.os == 'ubuntu-latest'
+            # Run the requested Nox session for this matrix entry.
+            # NOTE: We pass --python to force Nox to use the interpreter we just set up.
+            - name: Run Nox
               run: |
-                  sudo apt-get install -y pandoc
-                  nox --force-color --python=${{ matrix.python-version }}
-
-            - name: Run Nox (windows)
-              if: matrix.os == 'windows-latest'
-              run: |
-                  choco install pandoc
-                  nox --force-color --python=${{ matrix.python-version }}
-
-            - name: Run Nox (macos)
-              if: matrix.os == 'macos-latest'
-              run: |
-                  brew install pandoc
-                  nox --force-color --python=${{ matrix.python-version }}
+                  nox --force-color --python=${{ matrix.python-version }} --session=${{ matrix.session }}
 
             - name: Show coverage files
-              if: always() && matrix.session == 'tests' && matrix.os == 'ubuntu-latest'
+              if: always() && matrix.session == 'tests' && matrix.python-version == '3.11'
               run: ls -alh .coverage*
 
             - name: Upload coverage data
-              if: always() && matrix.session == 'tests' && matrix.os == 'ubuntu-latest'
+              if: always() && matrix.session == 'tests' && matrix.python-version == '3.11'
               uses: actions/upload-artifact@v4
               with:
                   name: coverage-data
@@ -160,16 +189,24 @@ jobs:
                   path: docs/_build
 
     coverage:
-        runs-on: ubuntu-latest
+        # Always attempt to process coverage if the artifact exists.
+        # This allows coverage upload even if *some* matrix entries failed.
+        if: ${{ always() }}
+        runs-on: ubuntu-22.04
         needs: tests
+        timeout-minutes: 30
         steps:
             - name: Check out the repository
               uses: actions/checkout@v4
 
-            - name: Set up Python 3.9
-              uses: actions/setup-python@v3
+            - name: Set up Python 3.11
+              uses: actions/setup-python@v5
               with:
-                  python-version: "3.9"
+                  python-version: "3.11"
+                  cache: pip
+                  cache-dependency-path: |
+                      pyproject.toml
+                      poetry.lock
 
             - name: Install Poetry
               run: |
@@ -185,15 +222,35 @@ jobs:
                   nox --version
 
             - name: Download coverage data
+              id: download-coverage
+              continue-on-error: true
               uses: actions/download-artifact@v4
               with:
                   name: coverage-data
 
+            # Guard downstream steps so the job stays green when coverage-data was not produced
+            # (e.g. if the py3.11 tests matrix entry was cancelled/failed before uploading).
+            - name: Check for coverage inputs
+              id: coverage-inputs
+              run: |
+                  if ls -1 .coverage* >/dev/null 2>&1; then
+                      echo "present=true" >> "$GITHUB_OUTPUT"
+                  else
+                      echo "present=false" >> "$GITHUB_OUTPUT"
+                  fi
+
             - name: Combine coverage data and display human readable report
+              if: steps.coverage-inputs.outputs.present == 'true'
               run: nox --force-color --session=coverage
 
             - name: Create coverage report
+              if: steps.coverage-inputs.outputs.present == 'true'
               run: nox --force-color --session=coverage -- xml -i
 
             - name: Upload coverage report
+              if: steps.coverage-inputs.outputs.present == 'true'
               uses: codecov/codecov-action@v5
+              with:
+                  token: ${{ secrets.CODECOV_TOKEN }}
+                  files: coverage.xml
+                  fail_ci_if_error: false

@@ -23,13 +23,15 @@ Before proceeding with the installation on macOS Silicon, you need to ensure tha
         brew install hdf5
         ```
     -   Install Pandoc for handling document conversions for docs built:
-        `bash brew install pandoc `
+        ```bash
+        brew install pandoc
+        ```
     -   Set environment variables to ensure these libraries are correctly recognized by your package manager:
         ```bash
         export BREW_PREFIX="$(brew --prefix)"
         export HDF5_DIR="${BREW_PREFIX}/opt/hdf5"
         export HDF5_INCLUDE="${HDF5_DIR}/include"
-        export HDF5_LIB="${HDFWIFT_DIR}/lib"
+        export HDF5_LIB="${HDF5_DIR}/lib"
         ```
 
 ### 3. Setting Up Conda Development Environments

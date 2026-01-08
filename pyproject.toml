@@ -12,7 +12,7 @@ packages = [
     { include = "idtrack" },
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Natural Language :: English",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Intended Audience :: Science/Research",
@@ -26,6 +26,8 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 
 
@@ -45,12 +47,35 @@ anndata = ">=0.7"
 scipy = ">=1.5.3"  # sparse
 sparse = ">0.11.2"
 
+# Optional dependencies for _external_mappers package
+gget = {version = ">=0.28", optional = true}
+pybiomart = {version = ">=0.2", optional = true}
+gprofiler-official = {version = ">=1.0", optional = true}
+mygene = {version = ">=3.2", optional = true}
+biopython = {version = ">=1.79", optional = true}
+torch = {version = ">=1.9", optional = true}
+transformers = {version = ">=4.20", optional = true}
+
+[tool.poetry.extras]
+# External ID mapping backends (gget, pybiomart, gprofiler, mygene)
+external-mappers = ["gget", "pybiomart", "gprofiler-official", "mygene"]
+# Ortholog utilities (requires gget and biopython)
+ortholog = ["gget", "biopython"]
+# Protein embeddings for ortholog features (requires torch and transformers)
+embeddings = ["torch", "transformers"]
+# All external mapper features
+all-external = ["gget", "pybiomart", "gprofiler-official", "mygene", "biopython", "torch", "transformers"]
+
 [tool.poetry.group.dev.dependencies]
 click = ">=8.0.0"
 rich = ">=10.3.0"
 pytest = ">=6.2.3"
+pytest-xdist = ">=2.5.0"  # Parallel test execution
+pytest-mock = ">=3.6.0"  # Better mocking utilities
+pytest-cov = ">=3.0.0"  # Coverage integration with pytest
+pytest-timeout = ">=2.1.0"  # Test timeouts
 coverage = {extras = ["toml"], version = ">=5.3"}
-safety = ">=2,<3"
+safety = ">=2,<4"
 typeguard = ">=2.12.0"
 xdoctest = {extras = ["colors"], version = ">=0.15.0"}
 sphinx = ">=4.0.2"
@@ -58,7 +83,7 @@ sphinx-autobuild = ">=2021.3.14"
 pre-commit = ">=2.11.1"
 flake8 = ">=3.8.4"
 black = ">=20.8b1"
-flake8-bandit = "2.0.0"
+flake8-bandit = ">=2.0.0"
 flake8-bugbear = ">=21.4.3"
 flake8-docstrings = ">=1.5.0"
 flake8-rst-docstrings = ">=0.2.3"
@@ -75,15 +100,17 @@ types-attrs = ">=19.1.0"
 sphinx-rtd-dark-mode = ">=1.2.3"
 Jinja2 = ">=3.0.1"
 mypy = ">=0.910"
+nox = ">=2022.1.0"
+nox-poetry = ">=1.0.0"
 pyupgrade = ">=2.31.0"
-bandit = "^1.7.4"
-flake8-builtins = "^1.5.3"
-flake8-colors = "^0.1.9"
-nbsphinx = "^0.8.9"
-types-PyMySQL = "^1.0.19"
-types-PyYAML = "^6.0.11"
-ipython = "^8.4.0"
-isort = "^5.12.0"
+bandit = ">=1.7.4"
+flake8-builtins = ">=1.5.3"
+flake8-colors = ">=0.1.9"
+nbsphinx = ">=0.8.9"
+types-PyMySQL = ">=1.0.19"
+types-PyYAML = ">=6.0.11"
+ipython = ">=8.4.0"
+isort = ">=5.12.0"
 poetry-plugin-export = ">=1.8"
 
 [tool.poetry.scripts]
@@ -109,6 +136,43 @@ source = ["idtrack"]
 
 [tool.coverage.report]
 show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+fail_under = 60  # Minimum coverage threshold
+skip_covered = false
+skip_empty = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests requiring external resources",
+    "network: marks tests requiring network access",
+    "database: marks tests requiring database connection",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

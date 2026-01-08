@@ -176,30 +176,41 @@ class GraphMaker:
         # To make the form_list cached in the object.
         g._attach_included_forms(form_list)
 
-        # Establish connection between different forms
-        self.log.info("Establishing connection between different forms.")
-        for ensembl_release in self.db_manager.available_releases:
-            db_manager = dbman_s["transcript"].change_release(ensembl_release)  # Does not matter which form.
-            rc = db_manager.get_db("relationcurrent", save_after_calculation=db_manager.store_raw_always)
+        # Establish connection between different forms (only for included forms).
+        relation_pairs: list[tuple[str, str]] = []
+        if "transcript" in form_list and "gene" in form_list:
+            relation_pairs.append(("transcript", "gene"))
+        if "translation" in form_list and "transcript" in form_list:
+            relation_pairs.append(("translation", "transcript"))
 
-            for _ind, entry in rc.iterrows():
-                # To make the edge direction from transcript to gene, translation to transcript
-                for e1_str, e2_str in (("transcript", "gene"), ("translation", "transcript")):
-                    e1 = entry[e1_str]
-                    e2 = entry[e2_str]
+        if relation_pairs:
+            self.log.info("Establishing connection between different forms.")
+            # `relationcurrent` is not form-specific; pick any configured manager.
+            dm_rel_base = next(iter(dbman_s.values()))
+            for ensembl_release in self.db_manager.available_releases:
+                dm_rel = dm_rel_base.change_release(ensembl_release)
+                rc = dm_rel.get_db("relationcurrent", save_after_calculation=dm_rel.store_raw_always)
 
-                    if e1 and e2:
-                        if e1 not in g.nodes or e2 not in g.nodes:
-                            raise ValueError
+                for _ind, entry in rc.iterrows():
+                    # To make the edge direction from transcript to gene, translation to transcript
+                    for e1_str, e2_str in relation_pairs:
+                        e1 = entry.get(e1_str)
+                        e2 = entry.get(e2_str)
 
-                        # Edges are from transcript to gene, from translation to transcript
-                        sly = self.db_manager.genome_assembly
-                        add_edge(e1, e2, DB.nts_ensembl[e1_str], sly, ensembl_release)
+                        if e1 and e2:
+                            if e1 not in g.nodes or e2 not in g.nodes:
+                                raise ValueError(
+                                    f"Missing graph node(s) while adding edge: "
+                                    f"{e1_str}={e1!r} → {e2_str}={e2!r}"
+                                )
+
+                            sly = self.db_manager.genome_assembly
+                            add_edge(e1, e2, DB.nts_ensembl[e1_str], sly, ensembl_release)
 
         # Establish connection between different databases
         graph_nodes_before_external = set(g.nodes)
         graph_nodes_added_assembly: dict = {
-            i: set() for i in DB.assembly_mysqlport_priority.keys() if i != self.db_manager.genome_assembly
+            i: set() for i in DB.all_assemblies if i != self.db_manager.genome_assembly
         }
         misplaced_external_entry = list()
         establish_form_connection = list()
@@ -213,7 +224,7 @@ class GraphMaker:
                 # it is important to capture correct ens_release in min_ens_release dictionary
 
                 db_manager = dbman_s[f].change_release(ens_rel)
-                rc = db_manager.create_external_all(return_mode="all")
+                rc = db_manager.create_external_all(return_mode="all", narrow_external=narrow_external)
 
                 for _ind, entry in rc.iterrows():
                     # Note that the `rc` dataframe have higher priority assembly entries at the top.
@@ -222,7 +233,7 @@ class GraphMaker:
                     er, edb = entry["release"], entry["name_db"]
                     sly = int(entry["assembly"])
 
-                    if sly not in DB.assembly_mysqlport_priority:
+                    if sly not in DB.all_assemblies:
                         raise ValueError
 
                     if e1 and e2 and er and edb and sly:
@@ -332,8 +343,9 @@ class GraphMaker:
                                 }
                                 g.add_node(anid, **node_attributes_4)
 
-                        for e1_str, e2_str in (("transcript", "gene"), ("translation", "transcript")):
-                            new1, new2 = item[e1_str], item[e2_str]
+                        for e1_str, e2_str in relation_pairs:
+                            new1 = item.get(e1_str)
+                            new2 = item.get(e2_str)
                             if new1 and new2:
                                 if not g.has_edge(new1, new2):
                                     added_edge += 1
@@ -366,18 +378,19 @@ class GraphMaker:
                         ids = db_manager.id_ver_from_df(ids_db)
 
                         for n in ids:
-                            if n not in g.nodes and aa == self.db_manager.genome_assembly:
-                                raise ValueError(aa, er, n)
-                            elif n not in g.nodes:
-                                pass
-                            else:
-                                m = g.nodes[n]["ID"]
-                                if m not in g.nodes:
-                                    node_attributes = {DB.node_type_str: DB.nts_base_ensembl[f]}
-                                    g.add_node(m, **node_attributes)
+                            if n not in g.nodes:
+                                if aa == self.db_manager.genome_assembly:
+                                    raise ValueError(aa, er, n)
+                                # Skip nodes not in graph for non-primary assemblies
+                                continue
 
-                                # Edges are from versionless base ID to ID (with version).
-                                add_edge(m, n, DB.nts_base_ensembl[f], aa, er)
+                            m = g.nodes[n]["ID"]
+                            if m not in g.nodes:
+                                node_attributes = {DB.node_type_str: DB.nts_base_ensembl[f]}
+                                g.add_node(m, **node_attributes)
+
+                            # Edges are from versionless base ID to ID (with version).
+                            add_edge(m, n, DB.nts_base_ensembl[f], aa, er)
 
                 self.log.info(f"Edges between versionless ID to version ID has been added for '{f}', assembly {aa}.")
         else:
@@ -487,9 +500,8 @@ class GraphMaker:
                 for na in node_att:
                     if na not in merged_node_attributes:
                         raise ValueError
-                    elif na == DB.node_type_str and merged_node_attributes[na] == node_att[na]:
-                        pass
-                    else:
+                    # Only node_type_str is allowed, and it must match across merged nodes
+                    if na != DB.node_type_str or merged_node_attributes[na] != node_att[na]:
                         raise NotImplementedError
 
             # Find new correct name, the one with most edges or most upper case elements is winner,
@@ -622,7 +634,7 @@ class GraphMaker:
         self.log.info(f"Graph is being created: {db_manager.form}")
 
         # Initialize important variables
-        ms = ms_creator()
+        ms = ms_creator() if not narrow else None
         version_info = db_manager.check_version_info()
         _available_set = set(db_manager.available_releases)
         # Create the ID history information from ensembl sources
@@ -1041,6 +1053,9 @@ class GraphMaker:
         create_even_if_exist: bool = False,
         save_after_calculation: bool = True,
         overwrite_even_if_exist: bool = False,
+        *,
+        form_list: Optional[list[str]] = None,
+        narrow_external: bool = True,
     ) -> TheGraph:
         """Simplifies the graph construction process.
 
@@ -1056,12 +1071,12 @@ class GraphMaker:
             Resultant multi edge directed graph, which can be used in all future calculations.
         """
         # Get the file name and narrow parameter.
-        file_path = self.create_file_name(narrow)
+        file_path = self.create_file_name(narrow, form_list=form_list, narrow_external=narrow_external)
 
         # If the file name is not accessible for reading, or explicitly prompt to do so, then create the graph.
         if not os.access(file_path, os.R_OK) or create_even_if_exist:
             self.log.info(f"The graph is being constructed: {file_path}")
-            g = self.construct_graph(narrow)
+            g = self.construct_graph(narrow=narrow, form_list=form_list, narrow_external=narrow_external)
         else:  # Otherwise, just read the file that is already in the directory.
             self.log.info(f"The graph is being read: {file_path}")
             g = GraphMaker.read_exported(file_path)
@@ -1091,7 +1106,9 @@ class GraphMaker:
         with open(file_path, "rb") as handle:
             return pickle.load(handle)
 
-    def create_file_name(self, narrow: bool) -> str:
+    def create_file_name(
+        self, narrow: bool, form_list: Optional[list[str]] = None, narrow_external: bool = True
+    ) -> str:
         """File name creator which includes some information regarding the construction process.
 
         Facilitates to recognize the graph based on file name.
@@ -1105,7 +1122,11 @@ class GraphMaker:
         narrow_ext = "_narrow" if narrow else ""
         min_ext = f"_min{self.db_manager.ignore_before}" if not np.isinf(self.db_manager.ignore_before) else ""
         max_ext = f"_max{self.db_manager.ignore_after}" if not np.isinf(self.db_manager.ignore_after) else ""
-        ext = f"{min_ext}{max_ext}{narrow_ext}"
+        default_forms = self.db_manager.available_form_of_interests
+        effective_forms = default_forms if form_list is None else form_list
+        forms_ext = f"_forms{'-'.join(effective_forms)}" if effective_forms != default_forms else ""
+        external_ext = "" if narrow_external else "_extall"
+        ext = f"{min_ext}{max_ext}{narrow_ext}{forms_ext}{external_ext}"
         return os.path.join(self.db_manager.local_repository, f"graph_{self.db_manager.organism}{ext}.pickle")
 
     def export_disk(self, g: TheGraph, file_path: str, overwrite: bool):

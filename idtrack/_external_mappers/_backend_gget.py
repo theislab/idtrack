@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""
+gget backend for ID mapping.
+
+This module provides the map_with_gget() function for querying
+the gget.info API (Ensembl REST-backed) to convert biological identifiers.
+"""
 
 # Kemal Inecik
 # k.inecik@gmail.com
@@ -24,14 +30,26 @@ from idtrack._external_mappers._utils import (
     canonical_db,
     canonical_species,
     logger,
+    raise_missing_dependency,
     strip_version,
 )
 
 
 def _gget_extract(df: pd.DataFrame, outp: str) -> pd.DataFrame:
     """
-    Normalize the output from gget.info() into a simple (input_id, output_id)
-    DataFrame for a requested target DB.
+    Normalize gget.info() output into standardized (input_id, output_id) format.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Raw DataFrame from gget.info().
+    outp : str
+        Target database type.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with 'input_id' and 'output_id' columns.
     """
     rename = {
         "id": "gene_id",
@@ -105,12 +123,52 @@ def map_with_gget(
     suppress_method_verbosity: bool = True,
 ) -> pd.DataFrame:
     """
-    Map IDs using gget.info (Ensembl REST-backed).
+    Map identifiers using gget.info (Ensembl REST API-backed).
+
+    Note: gget is Ensembl-centric, so input_db must be an Ensembl ID type.
+    For non-Ensembl inputs, use 'mygene' or 'gprofiler' methods.
+
+    Parameters
+    ----------
+    ids : Iterable[str]
+        Input Ensembl identifiers to map.
+    input_db : str
+        Source database type. Must be an Ensembl type: 'ensembl_gene',
+        'ensembl_transcript', or 'ensembl_protein'.
+    output_db : str
+        Target database type (e.g., 'hgnc_symbol', 'uniprot', 'entrez_gene').
+    species : str, default 'hsapiens'
+        Species code (e.g., 'hsapiens', 'mmusculus', 'sscrofa').
+    chunk_size : int, default 1000
+        Number of IDs per API request.
+    pause : float, default 0.2
+        Pause in seconds between requests.
+    max_retries : int, default 3
+        Maximum retry attempts per chunk on failure.
+    strip_versions : bool, default True
+        Strip version suffixes from Ensembl/RefSeq IDs.
+    show_progress : bool, default True
+        Display progress bar.
+    suppress_method_verbosity : bool, default True
+        Suppress stdout/stderr from gget.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns: input_id, input_db, mapping, output_id,
+        output_db, method, release_used, metadata_json.
+
+    Raises
+    ------
+    RuntimeError
+        If gget is not installed.
+    ValueError
+        If input_db is not an Ensembl type.
     """
     try:
         from gget import info as gget_info  # type: ignore
-    except Exception as e:
-        raise RuntimeError("gget is not installed. Try: pip install gget") from e
+    except ImportError as e:
+        raise_missing_dependency("gget", feature="gget ID mapping backend", original_error=e)
 
     inp = canonical_db(input_db)
     outp = canonical_db(output_db)
@@ -133,7 +191,8 @@ def map_with_gget(
         from inspect import signature
 
         sig_params = set(signature(gget_info).parameters)
-    except Exception:
+    except (ValueError, TypeError):
+        # signature() can fail on built-in functions or unusual callables
         sig_params = set()
 
     kwargs: dict[str, _t.Any] = {}

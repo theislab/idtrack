@@ -362,15 +362,12 @@ class ExternalDatabases:
                 res_ens = map(int, item["Ensembl release"].split(","))
 
                 if self.ensembl_release in res_ens and item["Include"]:
-                    if give_type == "db" and int(asm) == self.genome_assembly:
-                        result.add(db_name)
-
-                    elif give_type == "db":
-                        pass
-
+                    if give_type == "db":
+                        # Only add db_name if assembly matches
+                        if int(asm) == self.genome_assembly:
+                            result.add(db_name)
                     elif give_type == "assembly":
                         result.add(int(asm))
-
                     else:
                         raise ValueError
 

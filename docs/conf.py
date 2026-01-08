@@ -25,12 +25,22 @@ sys.path.insert(0, os.path.abspath(".."))
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.viewcode",
-    "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
-    "sphinx_click",
     # "sphinx_rtd_dark_mode",
     "nbsphinx",
 ]
+
+# Optional: sphinx-click is only needed if we render CLI docs via the `.. click::` directive.
+try:  # pragma: no cover
+    import sphinx_click  # noqa: F401
+except ModuleNotFoundError:
+    pass
+else:
+    extensions.append("sphinx_click")
+
+# Notebooks are written as tutorials (mostly narrative) and are not meant to be executed during docs builds.
+# Users can still run them locally in Jupyter.
+nbsphinx_execute = "never"
 
 # If this option is true (the default option), users will start in dark mode when first visiting the site.
 # If this option is false, users will start in light mode when they first visit the site.
@@ -69,7 +79,20 @@ language = "en"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "**.ipynb_checkpoints",
+    # Legacy/dev notebooks and helper assets not meant for the user-facing tutorial flow.
+    "_notebooks/comparison.ipynb",
+    "_notebooks/example_manual_running.ipynb",
+    "_notebooks/random_data.ipynb",
+    "_notebooks/prepare_new_external_yaml-2.ipynb",
+    "_notebooks/experiment_cellranger_idtrack/**",
+    "_notebooks/figure_rcparams/**",
+    "_notebooks/src/**",
+]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "sphinx"

@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 
-import sys
 import os
-import anndata as ad
 import pickle
 import argparse
 import copy
 
-# Make sure the idtrack package can be found
-sys.path.append("/home/icb/kemal.inecik/work/codes/idtrack")
-import idtrack  # noqa: E402
+import anndata as ad
+
+# Rely on properly installed package (no sys.path hacks)
+import idtrack
 
 
-IDTRACK_LOCAL_REPO = "/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp"
+# Configure cache path via environment variable or use a sensible default
+IDTRACK_LOCAL_REPO = os.environ.get("IDTRACK_LOCAL_REPO", "./idtrack_cache")
 
 
 def log(message: str) -> None:

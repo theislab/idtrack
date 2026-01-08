@@ -42,6 +42,7 @@ dependencies:
     - flake8-colors
     - bandit
     - mypy
+    - pytest-cov
 
     # 3) DATA MANIPULATION & NUMERICAL COMPUTING
     - pandas>=0.25.3
@@ -134,12 +135,16 @@ dependencies:
 
     # 9) DEVELOPMENT & TESTING TOOLS
     - poetry
+    - poetry-plugin-export
     - pre_commit
     - click
     - rich
     - pytest
+    - pytest-mock
+    - pytest-timeout
+    - pytest-xdist
     - coverage
-    - safety>=2,<3
+    - safety>=2,<4
     - nox
     - nox-poetry
     - typeguard
@@ -149,6 +154,7 @@ dependencies:
     - sphinx-autobuild
     - sphinx-rtd-theme
     - sphinx-click
+    - nbsphinx
     - jinja2
     - cryptography
 
@@ -157,6 +163,10 @@ dependencies:
           - flake8-bandit
           - sphinx-rtd-dark-mode
           - types-attrs
+          - types-PyMySQL
+          - types-PyYAML
+          - types-requests
+          - types-setuptools
           - scib-metrics==0.5.1
           - scib==1.1.5
           - louvain==0.8.2

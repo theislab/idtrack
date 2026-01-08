@@ -51,6 +51,9 @@ You can install them with:
 .. code:: console
 
     $ pip install poetry poetry-plugin-export nox nox-poetry
+    # If you installed Poetry via pipx instead:
+    $ pipx install poetry
+    $ pipx inject poetry poetry-plugin-export
 
 Install the package with development requirements:
 
@@ -132,7 +135,7 @@ Open a `pull request`_ to submit changes to this project against the ``developme
 Your pull request needs to meet the following guidelines for acceptance:
 
 - The Nox test suite must pass without errors and warnings.
-- Include unit tests. This project maintains a high code coverage.
+- Include unit tests when possible.
 - If your changes add functionality, update the documentation accordingly.
 
 To run linting and code formatting checks before committing your change, you can install pre-commit as a Git hook by running the following command:

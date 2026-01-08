@@ -516,7 +516,9 @@ class HarmonizeFeatures:
         diagnostic structure.
 
         Returns:
-            set[str]: Todo.
+            set[str]: Identifiers that failed conversion in at least one dataset
+                or have inconsistent mappings (1-to-0, 1-to-n, or n-to-1 where not
+                all datasets share the same mapping).
         """
         result = set()
 
