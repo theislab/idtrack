@@ -5,6 +5,7 @@
    :caption: Contents:
    :hidden:
 
+   tutorials
    installation
    usage
    reference

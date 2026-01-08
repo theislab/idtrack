@@ -1,0 +1,824 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack._external_mappers._ortholog &mdash; idtrack 0.0.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/tutorials.css?v=f6ff1e94" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack._external_mappers._ortholog</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack._external_mappers._ortholog</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">asdict</span><span class="p">,</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers._constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">_SPECIES_ALIASES</span><span class="p">,</span> <span class="n">_SPECIES_CANONICAL_TO_BGEENAMES</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers._utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">raise_missing_dependency</span>
+
+<span class="c1"># Lazy-loaded optional dependencies (gget, biopython)</span>
+<span class="n">_gget</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">_substitution_matrices</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">_SeqIO</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">_BLOSUM62</span> <span class="o">=</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="_require_ortholog_deps">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog._require_ortholog_deps">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_require_ortholog_deps</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Lazily import gget and biopython; raise helpful error if missing.&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">_gget</span><span class="p">,</span> <span class="n">_substitution_matrices</span><span class="p">,</span> <span class="n">_SeqIO</span>
+    <span class="k">if</span> <span class="n">_gget</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Check gget first</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">gget</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">_gget_mod</span>
+        <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">raise_missing_dependency</span><span class="p">(</span><span class="s2">&quot;gget&quot;</span><span class="p">,</span> <span class="n">feature</span><span class="o">=</span><span class="s2">&quot;ortholog utilities&quot;</span><span class="p">,</span> <span class="n">original_error</span><span class="o">=</span><span class="n">e</span><span class="p">)</span>
+
+        <span class="c1"># Check biopython</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">Bio</span><span class="w"> </span><span class="kn">import</span> <span class="n">SeqIO</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">Bio.Align</span><span class="w"> </span><span class="kn">import</span> <span class="n">substitution_matrices</span> <span class="k">as</span> <span class="n">_sm</span>
+        <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">raise_missing_dependency</span><span class="p">(</span><span class="s2">&quot;biopython&quot;</span><span class="p">,</span> <span class="n">feature</span><span class="o">=</span><span class="s2">&quot;ortholog utilities&quot;</span><span class="p">,</span> <span class="n">original_error</span><span class="o">=</span><span class="n">e</span><span class="p">)</span>
+
+        <span class="n">_gget</span> <span class="o">=</span> <span class="n">_gget_mod</span>
+        <span class="n">_substitution_matrices</span> <span class="o">=</span> <span class="n">_sm</span>
+        <span class="n">_SeqIO</span> <span class="o">=</span> <span class="n">SeqIO</span>
+    <span class="k">return</span> <span class="n">_gget</span><span class="p">,</span> <span class="n">_substitution_matrices</span><span class="p">,</span> <span class="n">_SeqIO</span></div>
+
+
+
+<div class="viewcode-block" id="_get_blosum62">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog._get_blosum62">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_blosum62</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Lazily load BLOSUM62 matrix.&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">_BLOSUM62</span>
+    <span class="k">if</span> <span class="n">_BLOSUM62</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">substitution_matrices</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_require_ortholog_deps</span><span class="p">()</span>
+        <span class="n">_BLOSUM62</span> <span class="o">=</span> <span class="n">substitution_matrices</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;BLOSUM62&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_BLOSUM62</span></div>
+
+
+
+<span class="n">AA_ALPHABET</span> <span class="o">=</span> <span class="s2">&quot;ACDEFGHIKLMNPQRSTVWY&quot;</span>
+
+
+<span class="c1"># ------------------------ species helpers ------------------------ #</span>
+
+
+<div class="viewcode-block" id="_canonical_from_alias">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog._canonical_from_alias">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_canonical_from_alias</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return canonical short-code for a species alias.</span>
+
+<span class="sd">    Maps strings like ``&quot;human&quot;``, ``&quot;Homo sapiens&quot;``, ``&quot;sus_scrofa&quot;`` to canonical</span>
+<span class="sd">    short codes (``hsapiens``, ``mmusculus``, ``sscrofa``). Unknown inputs are</span>
+<span class="sd">    returned unchanged (lowercased/stripped).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name: Species name or alias.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: Canonical short code (or a normalized fallback if unknown).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">raw</span> <span class="ow">in</span> <span class="n">_SPECIES_ALIASES</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_SPECIES_ALIASES</span><span class="p">[</span><span class="n">raw</span><span class="p">]</span>
+
+    <span class="n">raw_us</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">raw_us</span> <span class="ow">in</span> <span class="n">_SPECIES_ALIASES</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_SPECIES_ALIASES</span><span class="p">[</span><span class="n">raw_us</span><span class="p">]</span>
+
+    <span class="c1"># maybe already &#39;hsapiens&#39;, or something like &#39;bos taurus&#39;</span>
+    <span class="k">return</span> <span class="n">raw</span></div>
+
+
+
+<div class="viewcode-block" id="_species_to_genus_species">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog._species_to_genus_species">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_species_to_genus_species</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert a species string to ``(canonical_code, genus, species)`` for Bgee.</span>
+
+<span class="sd">    Inputs may be any key in :py:data:`_SPECIES_ALIASES` or any canonical key in</span>
+<span class="sd">    :py:data:`_SPECIES_CANONICAL_TO_BGEENAMES`. Unknown canonical codes raise a</span>
+<span class="sd">    helpful error.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name: Species name or alias.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple[str, str, str]: ``(canonical_code, genus, species)`` for Bgee.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If the species cannot be resolved to a supported canonical code.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">canonical</span> <span class="o">=</span> <span class="n">_canonical_from_alias</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">canonical</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_SPECIES_CANONICAL_TO_BGEENAMES</span><span class="p">:</span>
+        <span class="n">known_canonical</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">_SPECIES_CANONICAL_TO_BGEENAMES</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+        <span class="n">known_aliases</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">_SPECIES_ALIASES</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Species </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> could not be resolved to a canonical code in &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;_SPECIES_CANONICAL_TO_BGEENAMES.</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Known canonical codes: </span><span class="si">{</span><span class="n">known_canonical</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Known aliases: </span><span class="si">{</span><span class="n">known_aliases</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;If you need another organism, add it to &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;_SPECIES_CANONICAL_TO_BGEENAMES (and optionally _SPECIES_ALIASES).&quot;</span>
+        <span class="p">)</span>
+
+    <span class="n">genus</span><span class="p">,</span> <span class="n">species</span> <span class="o">=</span> <span class="n">_SPECIES_CANONICAL_TO_BGEENAMES</span><span class="p">[</span><span class="n">canonical</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">canonical</span><span class="p">,</span> <span class="n">genus</span><span class="p">,</span> <span class="n">species</span></div>
+
+
+
+<span class="c1"># ------------------------ dataclasses ------------------------ #</span>
+
+
+<div class="viewcode-block" id="AlignmentScores">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog.AlignmentScores">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">AlignmentScores</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Alignment-derived scalar metrics for a pairwise protein alignment.&quot;&quot;&quot;</span>
+
+    <span class="n">alignment_length</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">identity_fraction</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">positive_fraction</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">very_negative_fraction</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">gap_fraction_query</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">gap_fraction_target</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">gap_openings_query</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">gap_openings_target</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">seq1_coverage</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">seq2_coverage</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">blosum62_sum</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">blosum62_mean</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">composition_l2_distance</span><span class="p">:</span> <span class="nb">float</span></div>
+
+
+
+<div class="viewcode-block" id="EmbeddingFeatures">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog.EmbeddingFeatures">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">EmbeddingFeatures</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Embedding-derived similarity features for two protein sequences.&quot;&quot;&quot;</span>
+
+    <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">dim</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">cosine_similarity</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">euclidean_distance</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">diff_embedding</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span></div>
+
+
+
+<span class="c1"># ------------------------ Bgee / IDs ------------------------ #</span>
+
+
+<div class="viewcode-block" id="get_ortholog_ids_for_species">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog.get_ortholog_ids_for_species">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_ortholog_ids_for_species</span><span class="p">(</span>
+    <span class="n">ortholog_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">target_species</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return all ortholog Ensembl IDs in ``ortholog_df`` for a target species.&quot;&quot;&quot;</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">genus</span><span class="p">,</span> <span class="n">species</span> <span class="o">=</span> <span class="n">_species_to_genus_species</span><span class="p">(</span><span class="n">target_species</span><span class="p">)</span>
+
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">ortholog_df</span><span class="p">[</span><span class="s2">&quot;genus&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">eq</span><span class="p">(</span><span class="n">genus</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span> <span class="o">&amp;</span> <span class="n">ortholog_df</span><span class="p">[</span><span class="s2">&quot;species&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">eq</span><span class="p">(</span><span class="n">species</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+    <span class="n">subset</span> <span class="o">=</span> <span class="n">ortholog_df</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">subset</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="c1"># unique gene_ids, converted to str just in case</span>
+    <span class="n">gene_ids</span> <span class="o">=</span> <span class="n">subset</span><span class="p">[</span><span class="s2">&quot;gene_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">gene_ids</span></div>
+
+
+
+<div class="viewcode-block" id="pick_ortholog_for_species">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog.pick_ortholog_for_species">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">pick_ortholog_for_species</span><span class="p">(</span>
+    <span class="n">ortholog_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">target_species</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Backward-compatible helper that returns only the first ortholog ID.&quot;&quot;&quot;</span>
+    <span class="n">gene_ids</span> <span class="o">=</span> <span class="n">get_ortholog_ids_for_species</span><span class="p">(</span><span class="n">ortholog_df</span><span class="p">,</span> <span class="n">target_species</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">gene_ids</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">gene_ids</span> <span class="k">else</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="get_ortholog_table">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog.get_ortholog_table">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_ortholog_table</span><span class="p">(</span>
+    <span class="n">query_ensembl_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return Bgee ortholog table for a query Ensembl gene ID via gget.bgee.&quot;&quot;&quot;</span>
+    <span class="n">gget</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_require_ortholog_deps</span><span class="p">()</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">gget</span><span class="o">.</span><span class="n">bgee</span><span class="p">(</span>
+        <span class="n">query_ensembl_id</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;orthologs&quot;</span><span class="p">,</span>
+        <span class="n">json</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;gget.bgee did not return a pandas DataFrame.&quot;</span><span class="p">)</span>
+
+    <span class="n">expected</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;gene_id&quot;</span><span class="p">,</span> <span class="s2">&quot;genus&quot;</span><span class="p">,</span> <span class="s2">&quot;species&quot;</span><span class="p">}</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">expected</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected Bgee columns </span><span class="si">{</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="si">}</span><span class="s2">. &quot;</span> <span class="sa">f</span><span class="s2">&quot;Expected at least </span><span class="si">{</span><span class="n">expected</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">df</span></div>
+
+
+
+<span class="c1"># ------------------------ sequences &amp; MUSCLE ------------------------ #</span>
+
+
+<div class="viewcode-block" id="fetch_aa_sequence">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog.fetch_aa_sequence">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_aa_sequence</span><span class="p">(</span><span class="n">ensembl_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fetch amino-acid sequence for a gene using gget.seq(translate=True).&quot;&quot;&quot;</span>
+    <span class="n">gget</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_require_ortholog_deps</span><span class="p">()</span>
+    <span class="n">header</span><span class="p">,</span> <span class="n">seq</span> <span class="o">=</span> <span class="n">gget</span><span class="o">.</span><span class="n">seq</span><span class="p">(</span><span class="n">ensembl_id</span><span class="p">,</span> <span class="n">translate</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">seq</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Empty sequence returned for </span><span class="si">{</span><span class="n">ensembl_id</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">seq</span></div>
+
+
+
+<div class="viewcode-block" id="run_muscle_pairwise">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog.run_muscle_pairwise">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_muscle_pairwise</span><span class="p">(</span>
+    <span class="n">seq1</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">seq2</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">name1</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">name2</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">super5</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Align two AA sequences via gget.muscle.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        seq1: Amino-acid sequence for the first protein.</span>
+<span class="sd">        seq2: Amino-acid sequence for the second protein.</span>
+<span class="sd">        name1: Sequence name for the first protein (used in FASTA headers).</span>
+<span class="sd">        name2: Sequence name for the second protein (used in FASTA headers).</span>
+<span class="sd">        super5: Whether to enable MUSCLE super5 mode.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple[str, str, str]: ``(aligned_seq1, aligned_seq2, raw_clustal_text)``.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        RuntimeError: If MUSCLE output cannot be parsed or does not contain the expected sequence names.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">fasta_text</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&gt;</span><span class="si">{</span><span class="n">name1</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">seq1</span><span class="si">}</span><span class="se">\n</span><span class="s2">&gt;</span><span class="si">{</span><span class="n">name2</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">seq2</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+
+    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s2">&quot;.fa&quot;</span><span class="p">,</span> <span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">fh</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">fasta_text</span><span class="p">)</span>
+
+    <span class="n">gget</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_require_ortholog_deps</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">clustal</span> <span class="o">=</span> <span class="n">gget</span><span class="o">.</span><span class="n">muscle</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">super5</span><span class="o">=</span><span class="n">super5</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+    <span class="n">aligned</span> <span class="o">=</span> <span class="n">parse_clustal_alignment</span><span class="p">(</span><span class="n">clustal</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">name1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">aligned</span> <span class="ow">or</span> <span class="n">name2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">aligned</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not find </span><span class="si">{</span><span class="n">name1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name2</span><span class="si">}</span><span class="s2"> sequences in MUSCLE output.&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">aligned</span><span class="p">[</span><span class="n">name1</span><span class="p">],</span> <span class="n">aligned</span><span class="p">[</span><span class="n">name2</span><span class="p">],</span> <span class="n">clustal</span></div>
+
+
+
+<div class="viewcode-block" id="parse_clustal_alignment">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog.parse_clustal_alignment">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_clustal_alignment</span><span class="p">(</span><span class="n">clustal_text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse a minimal ClustalW/MUSCLE text alignment.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        clustal_text: Raw ClustalW/MUSCLE text output.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Mapping of ``{sequence_name: aligned_sequence}``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">seqs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">clustal_text</span><span class="o">.</span><span class="n">splitlines</span><span class="p">():</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;CLUSTAL&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;MUSCLE&quot;</span><span class="p">):</span>
+            <span class="k">continue</span>
+
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">frag</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># Skip consensus lines of just *:. etc.</span>
+        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">c</span> <span class="ow">in</span> <span class="s2">&quot;*:.&quot;</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">name</span><span class="p">):</span>
+            <span class="k">continue</span>
+
+        <span class="n">seqs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">frag</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">frags</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">frags</span> <span class="ow">in</span> <span class="n">seqs</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span></div>
+
+
+
+<span class="c1"># ------------------------ scoring ------------------------ #</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_aa_composition_vector</span><span class="p">(</span><span class="n">seq</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">seq</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">/</span> <span class="n">length</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">AA_ALPHABET</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="compute_alignment_scores">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog.compute_alignment_scores">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_alignment_scores</span><span class="p">(</span>
+    <span class="n">seq1</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">seq2</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">aligned1</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">aligned2</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">AlignmentScores</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute alignment-derived scores and the AA composition-difference vector.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">aligned1</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">aligned2</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Aligned sequences must have the same length.&quot;</span><span class="p">)</span>
+
+    <span class="n">alignment_length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">aligned1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">alignment_length</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Empty alignment.&quot;</span><span class="p">)</span>
+
+    <span class="n">blosum62</span> <span class="o">=</span> <span class="n">_get_blosum62</span><span class="p">()</span>
+
+    <span class="n">matches</span> <span class="o">=</span> <span class="n">positives</span> <span class="o">=</span> <span class="n">very_negative</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">gaps_q</span> <span class="o">=</span> <span class="n">gaps_t</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">gap_open_q</span> <span class="o">=</span> <span class="n">gap_open_t</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">prev_gap_q</span> <span class="o">=</span> <span class="n">prev_gap_t</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">blosum_sum</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">aligned1</span><span class="p">,</span> <span class="n">aligned2</span><span class="p">):</span>
+        <span class="n">gap_q</span> <span class="o">=</span> <span class="n">a</span> <span class="o">==</span> <span class="s2">&quot;-&quot;</span>
+        <span class="n">gap_t</span> <span class="o">=</span> <span class="n">b</span> <span class="o">==</span> <span class="s2">&quot;-&quot;</span>
+
+        <span class="k">if</span> <span class="n">gap_q</span><span class="p">:</span>
+            <span class="n">gaps_q</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">prev_gap_q</span><span class="p">:</span>
+                <span class="n">gap_open_q</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">gap_t</span><span class="p">:</span>
+            <span class="n">gaps_t</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">prev_gap_t</span><span class="p">:</span>
+                <span class="n">gap_open_t</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">prev_gap_q</span> <span class="o">=</span> <span class="n">gap_q</span>
+        <span class="n">prev_gap_t</span> <span class="o">=</span> <span class="n">gap_t</span>
+
+        <span class="k">if</span> <span class="n">gap_q</span> <span class="ow">or</span> <span class="n">gap_t</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="k">if</span> <span class="n">a</span> <span class="o">==</span> <span class="n">b</span><span class="p">:</span>
+            <span class="n">matches</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">pair</span> <span class="o">=</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">pair</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">blosum62</span><span class="p">:</span>
+            <span class="n">pair</span> <span class="o">=</span> <span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="n">blosum62</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pair</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">blosum_sum</span> <span class="o">+=</span> <span class="n">score</span>
+
+        <span class="k">if</span> <span class="n">score</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">positives</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">score</span> <span class="o">&lt;=</span> <span class="o">-</span><span class="mi">3</span><span class="p">:</span>
+            <span class="n">very_negative</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="n">identity_fraction</span> <span class="o">=</span> <span class="n">matches</span> <span class="o">/</span> <span class="n">alignment_length</span>
+    <span class="n">positive_fraction</span> <span class="o">=</span> <span class="n">positives</span> <span class="o">/</span> <span class="n">alignment_length</span>
+    <span class="n">very_negative_fraction</span> <span class="o">=</span> <span class="n">very_negative</span> <span class="o">/</span> <span class="n">alignment_length</span>
+    <span class="n">blosum_mean</span> <span class="o">=</span> <span class="n">blosum_sum</span> <span class="o">/</span> <span class="n">alignment_length</span>
+    <span class="n">gap_fraction_query</span> <span class="o">=</span> <span class="n">gaps_q</span> <span class="o">/</span> <span class="n">alignment_length</span>
+    <span class="n">gap_fraction_target</span> <span class="o">=</span> <span class="n">gaps_t</span> <span class="o">/</span> <span class="n">alignment_length</span>
+
+    <span class="n">cov1</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">aligned1</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">seq1</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">cov2</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">aligned2</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">seq2</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">comp1</span> <span class="o">=</span> <span class="n">_aa_composition_vector</span><span class="p">(</span><span class="n">seq1</span><span class="p">)</span>
+    <span class="n">comp2</span> <span class="o">=</span> <span class="n">_aa_composition_vector</span><span class="p">(</span><span class="n">seq2</span><span class="p">)</span>
+    <span class="n">comp_diff</span> <span class="o">=</span> <span class="n">comp1</span> <span class="o">-</span> <span class="n">comp2</span>
+    <span class="n">comp_l2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">comp_diff</span><span class="p">))</span>
+
+    <span class="n">scores</span> <span class="o">=</span> <span class="n">AlignmentScores</span><span class="p">(</span>
+        <span class="n">alignment_length</span><span class="o">=</span><span class="n">alignment_length</span><span class="p">,</span>
+        <span class="n">identity_fraction</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">identity_fraction</span><span class="p">),</span>
+        <span class="n">positive_fraction</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">positive_fraction</span><span class="p">),</span>
+        <span class="n">very_negative_fraction</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">very_negative_fraction</span><span class="p">),</span>
+        <span class="n">gap_fraction_query</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">gap_fraction_query</span><span class="p">),</span>
+        <span class="n">gap_fraction_target</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">gap_fraction_target</span><span class="p">),</span>
+        <span class="n">gap_openings_query</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">gap_open_q</span><span class="p">),</span>
+        <span class="n">gap_openings_target</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">gap_open_t</span><span class="p">),</span>
+        <span class="n">seq1_coverage</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">cov1</span><span class="p">),</span>
+        <span class="n">seq2_coverage</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">cov2</span><span class="p">),</span>
+        <span class="n">blosum62_sum</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">blosum_sum</span><span class="p">),</span>
+        <span class="n">blosum62_mean</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">blosum_mean</span><span class="p">),</span>
+        <span class="n">composition_l2_distance</span><span class="o">=</span><span class="n">comp_l2</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">scores</span><span class="p">,</span> <span class="n">comp_diff</span></div>
+
+
+
+<span class="c1"># ------------------------ embeddings (optional) ------------------------ #</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoModel</span><span class="p">,</span> <span class="n">AutoTokenizer</span>
+
+    <span class="n">_HAS_TRANSFORMERS</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+    <span class="n">_HAS_TRANSFORMERS</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="n">_MODEL_CACHE</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_load_protein_model</span><span class="p">(</span><span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">revision</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;main&quot;</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">_HAS_TRANSFORMERS</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
+            <span class="s2">&quot;transformers / torch not installed. &quot;</span>
+            <span class="s2">&quot;Install them or call align_ortholog_pair_with_features(..., &quot;</span>
+            <span class="s2">&quot;embedding_model_name=None).&quot;</span>
+        <span class="p">)</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">model_name</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">revision</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_MODEL_CACHE</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_MODEL_CACHE</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+    <span class="n">tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">model_name</span><span class="p">,</span> <span class="n">do_lower_case</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="n">revision</span><span class="p">)</span>  <span class="c1"># noqa: S615</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">AutoModel</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">model_name</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="n">revision</span><span class="p">)</span>  <span class="c1"># noqa: S615</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+    <span class="n">_MODEL_CACHE</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">tokenizer</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tokenizer</span><span class="p">,</span> <span class="n">model</span>
+
+
+<div class="viewcode-block" id="get_protein_embedding">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog.get_protein_embedding">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_protein_embedding</span><span class="p">(</span>
+    <span class="n">sequence</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+    <span class="n">revision</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;main&quot;</span><span class="p">,</span>
+    <span class="n">max_len</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1022</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a pooled protein embedding for a sequence via a transformer model.</span>
+
+<span class="sd">    The embedding is obtained by mean pooling the per-residue representations.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        sequence: Protein sequence (amino-acid string).</span>
+<span class="sd">        model_name: Hugging Face model name for the embedding model.</span>
+<span class="sd">        device: Device for the transformer model (e.g. ``&quot;cpu&quot;``, ``&quot;cuda&quot;``).</span>
+<span class="sd">        revision: Model revision for ``from_pretrained``.</span>
+<span class="sd">        max_len: Maximum tokenized sequence length (including special tokens).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        np.ndarray: 1D embedding vector.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">tokenizer</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">_load_protein_model</span><span class="p">(</span><span class="n">model_name</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="n">revision</span><span class="p">)</span>
+
+    <span class="n">tokens</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span>
+        <span class="n">sequence</span><span class="p">,</span>
+        <span class="n">return_tensors</span><span class="o">=</span><span class="s2">&quot;pt&quot;</span><span class="p">,</span>
+        <span class="n">add_special_tokens</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">truncation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">max_length</span><span class="o">=</span><span class="n">max_len</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">tokens</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">tokens</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="o">**</span><span class="n">tokens</span><span class="p">)</span>
+
+    <span class="n">hidden</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">last_hidden_state</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># [L, D]</span>
+    <span class="k">if</span> <span class="n">hidden</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">residue_embs</span> <span class="o">=</span> <span class="n">hidden</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">residue_embs</span> <span class="o">=</span> <span class="n">hidden</span>
+
+    <span class="n">emb</span> <span class="o">=</span> <span class="n">residue_embs</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">emb</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="compute_embedding_features">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog.compute_embedding_features">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_embedding_features</span><span class="p">(</span>
+    <span class="n">seq1</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">seq2</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+    <span class="n">revision</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;main&quot;</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EmbeddingFeatures</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute embedding-based similarity features for two sequences.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        seq1: First protein sequence.</span>
+<span class="sd">        seq2: Second protein sequence.</span>
+<span class="sd">        model_name: Hugging Face model name for embeddings.</span>
+<span class="sd">        device: Device for the transformer model (e.g. ``&quot;cpu&quot;``, ``&quot;cuda&quot;``).</span>
+<span class="sd">        revision: Model revision for ``from_pretrained``.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        EmbeddingFeatures: Scalar similarities plus the difference vector.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">emb1</span> <span class="o">=</span> <span class="n">get_protein_embedding</span><span class="p">(</span><span class="n">seq1</span><span class="p">,</span> <span class="n">model_name</span><span class="o">=</span><span class="n">model_name</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="n">revision</span><span class="p">)</span>
+    <span class="n">emb2</span> <span class="o">=</span> <span class="n">get_protein_embedding</span><span class="p">(</span><span class="n">seq2</span><span class="p">,</span> <span class="n">model_name</span><span class="o">=</span><span class="n">model_name</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span> <span class="n">revision</span><span class="o">=</span><span class="n">revision</span><span class="p">)</span>
+
+    <span class="n">diff</span> <span class="o">=</span> <span class="n">emb1</span> <span class="o">-</span> <span class="n">emb2</span>
+    <span class="n">dot</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">emb1</span><span class="p">,</span> <span class="n">emb2</span><span class="p">))</span>
+    <span class="n">n1</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">emb1</span><span class="p">)</span> <span class="ow">or</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">n2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">emb2</span><span class="p">)</span> <span class="ow">or</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">cosine</span> <span class="o">=</span> <span class="n">dot</span> <span class="o">/</span> <span class="p">(</span><span class="n">n1</span> <span class="o">*</span> <span class="n">n2</span><span class="p">)</span>
+    <span class="n">euclid</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">diff</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">EmbeddingFeatures</span><span class="p">(</span>
+        <span class="n">model_name</span><span class="o">=</span><span class="n">model_name</span><span class="p">,</span>
+        <span class="n">dim</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">diff</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+        <span class="n">cosine_similarity</span><span class="o">=</span><span class="n">cosine</span><span class="p">,</span>
+        <span class="n">euclidean_distance</span><span class="o">=</span><span class="n">euclid</span><span class="p">,</span>
+        <span class="n">diff_embedding</span><span class="o">=</span><span class="n">diff</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="c1"># ------------------------ main entrypoint (string species only) ------------------------ #</span>
+
+
+<div class="viewcode-block" id="align_ortholog_pair_with_features">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog.align_ortholog_pair_with_features">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">align_ortholog_pair_with_features</span><span class="p">(</span>
+    <span class="n">query_ensembl_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">target_species</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">use_super5</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">embedding_model_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">&quot;facebook/esm2_t12_35M_UR50D&quot;</span><span class="p">,</span>
+    <span class="n">embedding_device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+    <span class="n">embedding_revision</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;main&quot;</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute ortholog alignment features for a query gene and target species.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        query_ensembl_id: Ensembl gene ID in the query organism.</span>
+<span class="sd">        target_species: Target species alias, interpreted via :py:data:`_SPECIES_ALIASES`.</span>
+<span class="sd">        use_super5: Passed through to ``gget.muscle(super5=...)``.</span>
+<span class="sd">        embedding_model_name: Hugging Face model name for embeddings. Set to ``None`` to disable embeddings.</span>
+<span class="sd">        embedding_device: Device for the transformer model (e.g. ``&quot;cpu&quot;``, ``&quot;cuda&quot;``).</span>
+<span class="sd">        embedding_revision: Model revision for ``from_pretrained`` (pin to a commit hash for reproducibility).</span>
+<span class="sd">        verbose: Print progress/warnings.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Mapping from target ortholog Ensembl IDs to feature dictionaries.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If no orthologs are available for the query/target species pair.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># 1) Get the ortholog table from Bgee</span>
+    <span class="n">ortho_df</span> <span class="o">=</span> <span class="n">get_ortholog_table</span><span class="p">(</span><span class="n">query_ensembl_id</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+
+    <span class="c1"># 2) Resolve target species and get all its ortholog IDs</span>
+    <span class="c1">#    This will raise a clear error if the species is unknown.</span>
+    <span class="n">canonical_target</span><span class="p">,</span> <span class="n">genus</span><span class="p">,</span> <span class="n">species</span> <span class="o">=</span> <span class="n">_species_to_genus_species</span><span class="p">(</span><span class="n">target_species</span><span class="p">)</span>
+    <span class="n">target_gene_ids</span> <span class="o">=</span> <span class="n">get_ortholog_ids_for_species</span><span class="p">(</span><span class="n">ortho_df</span><span class="p">,</span> <span class="n">target_species</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">target_gene_ids</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;No orthologs found in Bgee for query gene </span><span class="si">{</span><span class="n">query_ensembl_id</span><span class="si">!r}</span><span class="s2"> and target species </span><span class="si">{</span><span class="n">target_species</span><span class="si">!r}</span><span class="s2"> &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;(canonical: </span><span class="si">{</span><span class="n">canonical_target</span><span class="si">!r}</span><span class="s2">, genus: </span><span class="si">{</span><span class="n">genus</span><span class="si">!r}</span><span class="s2">, species: </span><span class="si">{</span><span class="n">species</span><span class="si">!r}</span><span class="s2">).&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;[INFO] Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">target_gene_ids</span><span class="p">)</span><span class="si">}</span><span class="s2"> ortholog(s) for &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">query_ensembl_id</span><span class="si">!r}</span><span class="s2"> in target species </span><span class="si">{</span><span class="n">target_species</span><span class="si">!r}</span><span class="s2"> &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;(canonical=</span><span class="si">{</span><span class="n">canonical_target</span><span class="si">!r}</span><span class="s2">, genus=</span><span class="si">{</span><span class="n">genus</span><span class="si">!r}</span><span class="s2">, species=</span><span class="si">{</span><span class="n">species</span><span class="si">!r}</span><span class="s2">).&quot;</span>
+        <span class="p">)</span>
+
+    <span class="c1"># 3) Fetch query AA sequence once</span>
+    <span class="n">query_seq_aa</span> <span class="o">=</span> <span class="n">fetch_aa_sequence</span><span class="p">(</span><span class="n">query_ensembl_id</span><span class="p">)</span>
+
+    <span class="c1"># 4) For each ortholog gene_id in the target species, compute features</span>
+    <span class="n">results</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">target_gene_id</span> <span class="ow">in</span> <span class="n">target_gene_ids</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Aligning </span><span class="si">{</span><span class="n">query_ensembl_id</span><span class="si">!r}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">target_gene_id</span><span class="si">!r}</span><span class="s2"> (</span><span class="si">{</span><span class="n">target_species</span><span class="si">!r}</span><span class="s2">)&quot;</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">target_seq_aa</span> <span class="o">=</span> <span class="n">fetch_aa_sequence</span><span class="p">(</span><span class="n">target_gene_id</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] Could not fetch sequence for </span><span class="si">{</span><span class="n">target_gene_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">continue</span>
+
+        <span class="c1"># MUSCLE alignment</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">aligned_q</span><span class="p">,</span> <span class="n">aligned_t</span><span class="p">,</span> <span class="n">clustal</span> <span class="o">=</span> <span class="n">run_muscle_pairwise</span><span class="p">(</span>
+                <span class="n">query_seq_aa</span><span class="p">,</span>
+                <span class="n">target_seq_aa</span><span class="p">,</span>
+                <span class="n">name1</span><span class="o">=</span><span class="n">query_ensembl_id</span><span class="p">,</span>
+                <span class="n">name2</span><span class="o">=</span><span class="n">target_gene_id</span><span class="p">,</span>
+                <span class="n">super5</span><span class="o">=</span><span class="n">use_super5</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] MUSCLE failed for </span><span class="si">{</span><span class="n">target_gene_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">continue</span>
+
+        <span class="c1"># Alignment-based scores</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">scores</span><span class="p">,</span> <span class="n">comp_diff</span> <span class="o">=</span> <span class="n">compute_alignment_scores</span><span class="p">(</span>
+                <span class="n">query_seq_aa</span><span class="p">,</span>
+                <span class="n">target_seq_aa</span><span class="p">,</span>
+                <span class="n">aligned_q</span><span class="p">,</span>
+                <span class="n">aligned_t</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] Failed to compute alignment scores for </span><span class="si">{</span><span class="n">target_gene_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">continue</span>
+
+        <span class="c1"># Embedding-based features (optional)</span>
+        <span class="k">if</span> <span class="n">embedding_model_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">emb_feats</span> <span class="o">=</span> <span class="n">compute_embedding_features</span><span class="p">(</span>
+                    <span class="n">query_seq_aa</span><span class="p">,</span>
+                    <span class="n">target_seq_aa</span><span class="p">,</span>
+                    <span class="n">model_name</span><span class="o">=</span><span class="n">embedding_model_name</span><span class="p">,</span>
+                    <span class="n">device</span><span class="o">=</span><span class="n">embedding_device</span><span class="p">,</span>
+                    <span class="n">revision</span><span class="o">=</span><span class="n">embedding_revision</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">diff_vec</span> <span class="o">=</span> <span class="n">emb_feats</span><span class="o">.</span><span class="n">diff_embedding</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] Failed to compute embeddings for </span><span class="si">{</span><span class="n">target_gene_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">emb_feats</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">diff_vec</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">emb_feats</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">diff_vec</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Build feature dict for this ortholog</span>
+        <span class="n">feat</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;query_id&quot;</span><span class="p">:</span> <span class="n">query_ensembl_id</span><span class="p">,</span>
+            <span class="s2">&quot;target_id&quot;</span><span class="p">:</span> <span class="n">target_gene_id</span><span class="p">,</span>
+            <span class="s2">&quot;target_species&quot;</span><span class="p">:</span> <span class="n">target_species</span><span class="p">,</span>
+            <span class="s2">&quot;target_species_canonical&quot;</span><span class="p">:</span> <span class="n">canonical_target</span><span class="p">,</span>
+            <span class="s2">&quot;target_species_genus&quot;</span><span class="p">:</span> <span class="n">genus</span><span class="p">,</span>
+            <span class="s2">&quot;target_species_species&quot;</span><span class="p">:</span> <span class="n">species</span><span class="p">,</span>
+            <span class="s2">&quot;alignment_aligned_query&quot;</span><span class="p">:</span> <span class="n">aligned_q</span><span class="p">,</span>
+            <span class="s2">&quot;alignment_aligned_target&quot;</span><span class="p">:</span> <span class="n">aligned_t</span><span class="p">,</span>
+            <span class="s2">&quot;alignment_raw_clustal&quot;</span><span class="p">:</span> <span class="n">clustal</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="c1"># Scalar alignment scores</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">asdict</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">feat</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;score_</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+
+        <span class="c1"># 20-D AA composition difference (fixed size)</span>
+        <span class="n">comp_diff</span> <span class="o">=</span> <span class="n">comp_diff</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">feat</span><span class="p">[</span><span class="s2">&quot;composition_diff_vector&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">comp_diff</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">aa</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">AA_ALPHABET</span><span class="p">):</span>
+            <span class="n">feat</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;compdiff_</span><span class="si">{</span><span class="n">aa</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">comp_diff</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+        <span class="c1"># Embedding features (fixed embedding dim for a given model)</span>
+        <span class="k">if</span> <span class="n">emb_feats</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">diff_vec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">feat</span><span class="p">[</span><span class="s2">&quot;emb_model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">emb_feats</span><span class="o">.</span><span class="n">model_name</span>
+            <span class="n">feat</span><span class="p">[</span><span class="s2">&quot;emb_dim&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">emb_feats</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
+            <span class="n">feat</span><span class="p">[</span><span class="s2">&quot;emb_cosine&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">emb_feats</span><span class="o">.</span><span class="n">cosine_similarity</span><span class="p">)</span>
+            <span class="n">feat</span><span class="p">[</span><span class="s2">&quot;emb_euclid&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">emb_feats</span><span class="o">.</span><span class="n">euclidean_distance</span><span class="p">)</span>
+            <span class="n">feat</span><span class="p">[</span><span class="s2">&quot;emb_diff&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">diff_vec</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">feat</span><span class="p">[</span><span class="s2">&quot;emb_model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">feat</span><span class="p">[</span><span class="s2">&quot;emb_dim&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">feat</span><span class="p">[</span><span class="s2">&quot;emb_cosine&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">feat</span><span class="p">[</span><span class="s2">&quot;emb_euclid&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">feat</span><span class="p">[</span><span class="s2">&quot;emb_diff&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Use the ortholog Ensembl ID as the key in the outer dict</span>
+        <span class="n">results</span><span class="p">[</span><span class="n">target_gene_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">feat</span>
+
+    <span class="k">return</span> <span class="n">results</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

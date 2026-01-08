@@ -1,0 +1,1341 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>External Mappers &mdash; idtrack 0.0.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=f6ff1e94" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Contributor Guide" href="../contributing.html" />
+    <link rel="prev" title="Reference" href="../reference.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            idtrack
+              <img src="../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Quickstart</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../reference.html">Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._api.API"><code class="docutils literal notranslate"><span class="pre">API</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._harmonize_features.HarmonizeFeatures"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._database_manager.DatabaseManager"><code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._external_databases.ExternalDatabases"><code class="docutils literal notranslate"><span class="pre">ExternalDatabases</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._the_graph.TheGraph"><code class="docutils literal notranslate"><span class="pre">TheGraph</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._graph_maker.GraphMaker"><code class="docutils literal notranslate"><span class="pre">GraphMaker</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._verify_organism.VerifyOrganism"><code class="docutils literal notranslate"><span class="pre">VerifyOrganism</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._track.Track"><code class="docutils literal notranslate"><span class="pre">Track</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._track_tests.TrackTests"><code class="docutils literal notranslate"><span class="pre">TrackTests</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._db.DB"><code class="docutils literal notranslate"><span class="pre">DB</span></code></a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">External Mappers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#module-idtrack._external_mappers">Package API</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers.check_optional_dependencies"><code class="docutils literal notranslate"><span class="pre">check_optional_dependencies()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers.convert_ids"><code class="docutils literal notranslate"><span class="pre">convert_ids()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-idtrack._external_mappers._convert">Conversion helpers</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._convert.convert_ids"><code class="docutils literal notranslate"><span class="pre">convert_ids()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-idtrack._external_mappers._ortholog">Orthology helpers</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._ortholog.AlignmentScores"><code class="docutils literal notranslate"><span class="pre">AlignmentScores</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._ortholog.EmbeddingFeatures"><code class="docutils literal notranslate"><span class="pre">EmbeddingFeatures</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._ortholog._canonical_from_alias"><code class="docutils literal notranslate"><span class="pre">_canonical_from_alias()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._ortholog._get_blosum62"><code class="docutils literal notranslate"><span class="pre">_get_blosum62()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._ortholog._require_ortholog_deps"><code class="docutils literal notranslate"><span class="pre">_require_ortholog_deps()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._ortholog._species_to_genus_species"><code class="docutils literal notranslate"><span class="pre">_species_to_genus_species()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._ortholog.align_ortholog_pair_with_features"><code class="docutils literal notranslate"><span class="pre">align_ortholog_pair_with_features()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._ortholog.compute_alignment_scores"><code class="docutils literal notranslate"><span class="pre">compute_alignment_scores()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._ortholog.compute_embedding_features"><code class="docutils literal notranslate"><span class="pre">compute_embedding_features()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._ortholog.fetch_aa_sequence"><code class="docutils literal notranslate"><span class="pre">fetch_aa_sequence()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._ortholog.get_ortholog_ids_for_species"><code class="docutils literal notranslate"><span class="pre">get_ortholog_ids_for_species()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._ortholog.get_ortholog_table"><code class="docutils literal notranslate"><span class="pre">get_ortholog_table()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._ortholog.get_protein_embedding"><code class="docutils literal notranslate"><span class="pre">get_protein_embedding()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._ortholog.parse_clustal_alignment"><code class="docutils literal notranslate"><span class="pre">parse_clustal_alignment()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._ortholog.pick_ortholog_for_species"><code class="docutils literal notranslate"><span class="pre">pick_ortholog_for_species()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._ortholog.run_muscle_pairwise"><code class="docutils literal notranslate"><span class="pre">run_muscle_pairwise()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-idtrack._external_mappers._backend_pybiomart">Backend implementations</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._backend_pybiomart._biomart_dataset_for_species"><code class="docutils literal notranslate"><span class="pre">_biomart_dataset_for_species()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._backend_pybiomart._bm_list_attribute_names"><code class="docutils literal notranslate"><span class="pre">_bm_list_attribute_names()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._backend_pybiomart._bm_list_filter_names"><code class="docutils literal notranslate"><span class="pre">_bm_list_filter_names()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._backend_pybiomart._bm_pick_attribute"><code class="docutils literal notranslate"><span class="pre">_bm_pick_attribute()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._backend_pybiomart._bm_pick_filter"><code class="docutils literal notranslate"><span class="pre">_bm_pick_filter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._backend_pybiomart._ensembl_archive_host_for_release"><code class="docutils literal notranslate"><span class="pre">_ensembl_archive_host_for_release()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._backend_pybiomart._normalize_biomart_host"><code class="docutils literal notranslate"><span class="pre">_normalize_biomart_host()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._backend_pybiomart.map_with_pybiomart"><code class="docutils literal notranslate"><span class="pre">map_with_pybiomart()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._backend_mygene._mg_extract"><code class="docutils literal notranslate"><span class="pre">_mg_extract()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._backend_mygene.map_with_mygene"><code class="docutils literal notranslate"><span class="pre">map_with_mygene()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._backend_gprofiler._build_metadata_column"><code class="docutils literal notranslate"><span class="pre">_build_metadata_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._backend_gprofiler._extract_namespace_tokens"><code class="docutils literal notranslate"><span class="pre">_extract_namespace_tokens()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._backend_gprofiler._gp_target_candidates"><code class="docutils literal notranslate"><span class="pre">_gp_target_candidates()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._backend_gprofiler._process_gprofiler_response"><code class="docutils literal notranslate"><span class="pre">_process_gprofiler_response()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._backend_gprofiler.map_with_gprofiler"><code class="docutils literal notranslate"><span class="pre">map_with_gprofiler()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._backend_gget._gget_extract"><code class="docutils literal notranslate"><span class="pre">_gget_extract()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._backend_gget.map_with_gget"><code class="docutils literal notranslate"><span class="pre">map_with_gget()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-idtrack._external_mappers._utils">Shared utilities and constants</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._utils._add_mapping_column"><code class="docutils literal notranslate"><span class="pre">_add_mapping_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._utils._as_list"><code class="docutils literal notranslate"><span class="pre">_as_list()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._utils._chunker"><code class="docutils literal notranslate"><span class="pre">_chunker()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._utils._empty_result"><code class="docutils literal notranslate"><span class="pre">_empty_result()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._utils._ensure_all_inputs"><code class="docutils literal notranslate"><span class="pre">_ensure_all_inputs()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._utils._is_bare_numeric"><code class="docutils literal notranslate"><span class="pre">_is_bare_numeric()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._utils._json"><code class="docutils literal notranslate"><span class="pre">_json()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._utils._species_for_mygene"><code class="docutils literal notranslate"><span class="pre">_species_for_mygene()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._utils._suppress_stdout_stderr"><code class="docutils literal notranslate"><span class="pre">_suppress_stdout_stderr()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._utils._unique_not_null"><code class="docutils literal notranslate"><span class="pre">_unique_not_null()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._utils.canonical_db"><code class="docutils literal notranslate"><span class="pre">canonical_db()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._utils.canonical_species"><code class="docutils literal notranslate"><span class="pre">canonical_species()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._utils.check_optional_dependencies"><code class="docutils literal notranslate"><span class="pre">check_optional_dependencies()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._utils.raise_missing_dependency"><code class="docutils literal notranslate"><span class="pre">raise_missing_dependency()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers._utils.strip_version"><code class="docutils literal notranslate"><span class="pre">strip_version()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#ontology">Ontology</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../reference.html">Reference</a></li>
+      <li class="breadcrumb-item active">External Mappers</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/reference/external_mappers.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="external-mappers">
+<h1>External Mappers<a class="headerlink" href="#external-mappers" title="Link to this heading"></a></h1>
+<p>External mappers are <strong>optional helpers</strong> for cross-database mapping and orthology-related utilities.
+They are <em>not</em> the core “time-aware graph snapshot” engine (that lives in the backbone graph), but they can be useful for:</p>
+<ul class="simple">
+<li><p>fetching or aligning ortholog tables for cross-species workflows</p></li>
+<li><p>using external services to map between common identifier types when you need a convenience layer</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Some external mapper backends require optional dependencies (or network access).
+The Part 6 tutorial shows how to check availability before you rely on them.</p>
+</div>
+<nav class="contents local" id="contents">
+<ul class="simple">
+<li><p><a class="reference internal" href="#module-idtrack._external_mappers" id="id1">Package API</a></p></li>
+<li><p><a class="reference internal" href="#module-idtrack._external_mappers._convert" id="id2">Conversion helpers</a></p></li>
+<li><p><a class="reference internal" href="#module-idtrack._external_mappers._ortholog" id="id3">Orthology helpers</a></p></li>
+<li><p><a class="reference internal" href="#module-idtrack._external_mappers._backend_pybiomart" id="id4">Backend implementations</a></p></li>
+<li><p><a class="reference internal" href="#module-idtrack._external_mappers._utils" id="id5">Shared utilities and constants</a></p></li>
+<li><p><a class="reference internal" href="#ontology" id="id6">Ontology</a></p></li>
+</ul>
+</nav>
+<section id="module-idtrack._external_mappers">
+<span id="package-api"></span><h2>Package API<a class="headerlink" href="#module-idtrack._external_mappers" title="Link to this heading"></a></h2>
+<p>External ID mapping backends for idtrack.</p>
+<p>This module provides interfaces to external ID mapping services:
+- g:Profiler (gprofiler-official)
+- MyGene.info (mygene)
+- Ensembl BioMart (pybiomart)
+- gget (Ensembl REST API)</p>
+<p>Additionally, ortholog utilities are available (require gget + biopython).</p>
+<p><strong>Note:</strong> This module requires optional dependencies that are not installed
+with the core idtrack package. Install them with:</p>
+<blockquote>
+<div><p>pip install gget mygene pybiomart gprofiler-official biopython</p>
+</div></blockquote>
+<p>Or install only the backends you need.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers.check_optional_dependencies">
+<span class="sig-name descname"><span class="pre">check_optional_dependencies</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">warn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#check_optional_dependencies"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers.check_optional_dependencies" title="Link to this definition"></a></dt>
+<dd><p>Check which optional dependencies are installed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>warn</strong> (<em>bool</em>) – When <code class="docutils literal notranslate"><span class="pre">True</span></code>, emit a warning summarizing missing packages.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mapping from dependency key to availability.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict[str, bool]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers.convert_ids">
+<span class="sig-name descname"><span class="pre">convert_ids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_db</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_db</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">species</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_metadata_json_column</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pause</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_retries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_versions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">release_for_pybiomart</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strict_input_db_gprofiler</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suppress_method_verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_convert.html#convert_ids"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers.convert_ids" title="Link to this definition"></a></dt>
+<dd><p>Convert identifiers using an external mapper backend.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ids</strong> (<em>Iterable</em><em>[</em><em>str</em><em>]</em>) – Input identifiers to map.</p></li>
+<li><p><strong>input_db</strong> (<em>str</em>) – Source database type.</p></li>
+<li><p><strong>output_db</strong> (<em>str</em>) – Target database type.</p></li>
+<li><p><strong>method</strong> (<em>str</em>) – Backend method name (one of <code class="xref py py-data docutils literal notranslate"><span class="pre">SUPPORTED_METHODS</span></code>).</p></li>
+<li><p><strong>species</strong> (<em>str</em>) – Species code (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hsapiens&quot;</span></code>).</p></li>
+<li><p><strong>drop_metadata_json_column</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, drop the <code class="docutils literal notranslate"><span class="pre">metadata_json</span></code> column from the returned DataFrame.</p></li>
+<li><p><strong>chunk_size</strong> (<em>int</em>) – Number of IDs per API request.</p></li>
+<li><p><strong>pause</strong> (<em>float</em>) – Pause in seconds between requests.</p></li>
+<li><p><strong>max_retries</strong> (<em>int</em>) – Maximum retry attempts per chunk on failure (for backends that support it).</p></li>
+<li><p><strong>strip_versions</strong> (<em>bool</em>) – Strip version suffixes from Ensembl/RefSeq IDs.</p></li>
+<li><p><strong>release_for_pybiomart</strong> (<em>str</em><em> | </em><em>int</em><em> | </em><em>None</em>) – Ensembl release/key for the pybiomart backend. Must be <code class="docutils literal notranslate"><span class="pre">None</span></code> unless
+<code class="docutils literal notranslate"><span class="pre">method=&quot;pybiomart&quot;</span></code>.</p></li>
+<li><p><strong>strict_input_db_gprofiler</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, enforce strict input-db filtering in the gprofiler backend.</p></li>
+<li><p><strong>suppress_method_verbosity</strong> (<em>bool</em>) – Suppress stdout/stderr from the underlying backend library.</p></li>
+<li><p><strong>verbose</strong> (<em>int</em><em> | </em><em>str</em><em> | </em><em>bool</em>) – Verbosity level (<code class="docutils literal notranslate"><span class="pre">1</span></code>/<code class="docutils literal notranslate"><span class="pre">2</span></code>/<code class="docutils literal notranslate"><span class="pre">3</span></code>) or string alias (<code class="docutils literal notranslate"><span class="pre">&quot;error&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;warning&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;info&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;debug&quot;</span></code>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Standardized mapping DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">method</span></code>/<code class="docutils literal notranslate"><span class="pre">verbose</span></code> is invalid, or if <code class="docutils literal notranslate"><span class="pre">release_for_pybiomart</span></code> is used with a
+    non-pybiomart backend.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-idtrack._external_mappers._convert">
+<span id="conversion-helpers"></span><h2>Conversion helpers<a class="headerlink" href="#module-idtrack._external_mappers._convert" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._convert.convert_ids">
+<span class="sig-name descname"><span class="pre">convert_ids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_db</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_db</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">species</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_metadata_json_column</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pause</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_retries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_versions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">release_for_pybiomart</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strict_input_db_gprofiler</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suppress_method_verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_convert.html#convert_ids"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._convert.convert_ids" title="Link to this definition"></a></dt>
+<dd><p>Convert identifiers using an external mapper backend.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ids</strong> (<em>Iterable</em><em>[</em><em>str</em><em>]</em>) – Input identifiers to map.</p></li>
+<li><p><strong>input_db</strong> (<em>str</em>) – Source database type.</p></li>
+<li><p><strong>output_db</strong> (<em>str</em>) – Target database type.</p></li>
+<li><p><strong>method</strong> (<em>str</em>) – Backend method name (one of <code class="xref py py-data docutils literal notranslate"><span class="pre">SUPPORTED_METHODS</span></code>).</p></li>
+<li><p><strong>species</strong> (<em>str</em>) – Species code (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hsapiens&quot;</span></code>).</p></li>
+<li><p><strong>drop_metadata_json_column</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, drop the <code class="docutils literal notranslate"><span class="pre">metadata_json</span></code> column from the returned DataFrame.</p></li>
+<li><p><strong>chunk_size</strong> (<em>int</em>) – Number of IDs per API request.</p></li>
+<li><p><strong>pause</strong> (<em>float</em>) – Pause in seconds between requests.</p></li>
+<li><p><strong>max_retries</strong> (<em>int</em>) – Maximum retry attempts per chunk on failure (for backends that support it).</p></li>
+<li><p><strong>strip_versions</strong> (<em>bool</em>) – Strip version suffixes from Ensembl/RefSeq IDs.</p></li>
+<li><p><strong>release_for_pybiomart</strong> (<em>str</em><em> | </em><em>int</em><em> | </em><em>None</em>) – Ensembl release/key for the pybiomart backend. Must be <code class="docutils literal notranslate"><span class="pre">None</span></code> unless
+<code class="docutils literal notranslate"><span class="pre">method=&quot;pybiomart&quot;</span></code>.</p></li>
+<li><p><strong>strict_input_db_gprofiler</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, enforce strict input-db filtering in the gprofiler backend.</p></li>
+<li><p><strong>suppress_method_verbosity</strong> (<em>bool</em>) – Suppress stdout/stderr from the underlying backend library.</p></li>
+<li><p><strong>verbose</strong> (<em>int</em><em> | </em><em>str</em><em> | </em><em>bool</em>) – Verbosity level (<code class="docutils literal notranslate"><span class="pre">1</span></code>/<code class="docutils literal notranslate"><span class="pre">2</span></code>/<code class="docutils literal notranslate"><span class="pre">3</span></code>) or string alias (<code class="docutils literal notranslate"><span class="pre">&quot;error&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;warning&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;info&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;debug&quot;</span></code>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Standardized mapping DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">method</span></code>/<code class="docutils literal notranslate"><span class="pre">verbose</span></code> is invalid, or if <code class="docutils literal notranslate"><span class="pre">release_for_pybiomart</span></code> is used with a
+    non-pybiomart backend.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-idtrack._external_mappers._ortholog">
+<span id="orthology-helpers"></span><h2>Orthology helpers<a class="headerlink" href="#module-idtrack._external_mappers._ortholog" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="idtrack._external_mappers._ortholog.AlignmentScores">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">AlignmentScores</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alignment_length</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">identity_fraction</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">positive_fraction</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">very_negative_fraction</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gap_fraction_query</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gap_fraction_target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gap_openings_query</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gap_openings_target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seq1_coverage</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seq2_coverage</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">blosum62_sum</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">blosum62_mean</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">composition_l2_distance</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_ortholog.html#AlignmentScores"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._ortholog.AlignmentScores" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Alignment-derived scalar metrics for a pairwise protein alignment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>alignment_length</strong> (<em>int</em>)</p></li>
+<li><p><strong>identity_fraction</strong> (<em>float</em>)</p></li>
+<li><p><strong>positive_fraction</strong> (<em>float</em>)</p></li>
+<li><p><strong>very_negative_fraction</strong> (<em>float</em>)</p></li>
+<li><p><strong>gap_fraction_query</strong> (<em>float</em>)</p></li>
+<li><p><strong>gap_fraction_target</strong> (<em>float</em>)</p></li>
+<li><p><strong>gap_openings_query</strong> (<em>int</em>)</p></li>
+<li><p><strong>gap_openings_target</strong> (<em>int</em>)</p></li>
+<li><p><strong>seq1_coverage</strong> (<em>float</em>)</p></li>
+<li><p><strong>seq2_coverage</strong> (<em>float</em>)</p></li>
+<li><p><strong>blosum62_sum</strong> (<em>float</em>)</p></li>
+<li><p><strong>blosum62_mean</strong> (<em>float</em>)</p></li>
+<li><p><strong>composition_l2_distance</strong> (<em>float</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="idtrack._external_mappers._ortholog.EmbeddingFeatures">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">EmbeddingFeatures</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cosine_similarity</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">euclidean_distance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diff_embedding</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_ortholog.html#EmbeddingFeatures"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._ortholog.EmbeddingFeatures" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Embedding-derived similarity features for two protein sequences.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_name</strong> (<em>str</em>)</p></li>
+<li><p><strong>dim</strong> (<em>int</em>)</p></li>
+<li><p><strong>cosine_similarity</strong> (<em>float</em>)</p></li>
+<li><p><strong>euclidean_distance</strong> (<em>float</em>)</p></li>
+<li><p><strong>diff_embedding</strong> (<em>ndarray</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._ortholog._canonical_from_alias">
+<span class="sig-name descname"><span class="pre">_canonical_from_alias</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_ortholog.html#_canonical_from_alias"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._ortholog._canonical_from_alias" title="Link to this definition"></a></dt>
+<dd><p>Return canonical short-code for a species alias.</p>
+<p>Maps strings like <code class="docutils literal notranslate"><span class="pre">&quot;human&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Homo</span> <span class="pre">sapiens&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;sus_scrofa&quot;</span></code> to canonical
+short codes (<code class="docutils literal notranslate"><span class="pre">hsapiens</span></code>, <code class="docutils literal notranslate"><span class="pre">mmusculus</span></code>, <code class="docutils literal notranslate"><span class="pre">sscrofa</span></code>). Unknown inputs are
+returned unchanged (lowercased/stripped).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>name</strong> (<em>str</em>) – Species name or alias.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Canonical short code (or a normalized fallback if unknown).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._ortholog._get_blosum62">
+<span class="sig-name descname"><span class="pre">_get_blosum62</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_ortholog.html#_get_blosum62"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._ortholog._get_blosum62" title="Link to this definition"></a></dt>
+<dd><p>Lazily load BLOSUM62 matrix.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._ortholog._require_ortholog_deps">
+<span class="sig-name descname"><span class="pre">_require_ortholog_deps</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_ortholog.html#_require_ortholog_deps"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._ortholog._require_ortholog_deps" title="Link to this definition"></a></dt>
+<dd><p>Lazily import gget and biopython; raise helpful error if missing.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._ortholog._species_to_genus_species">
+<span class="sig-name descname"><span class="pre">_species_to_genus_species</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_ortholog.html#_species_to_genus_species"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._ortholog._species_to_genus_species" title="Link to this definition"></a></dt>
+<dd><p>Convert a species string to <code class="docutils literal notranslate"><span class="pre">(canonical_code,</span> <span class="pre">genus,</span> <span class="pre">species)</span></code> for Bgee.</p>
+<p>Inputs may be any key in <code class="xref py py-data docutils literal notranslate"><span class="pre">_SPECIES_ALIASES</span></code> or any canonical key in
+<code class="xref py py-data docutils literal notranslate"><span class="pre">_SPECIES_CANONICAL_TO_BGEENAMES</span></code>. Unknown canonical codes raise a
+helpful error.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>name</strong> (<em>str</em>) – Species name or alias.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">(canonical_code,</span> <span class="pre">genus,</span> <span class="pre">species)</span></code> for Bgee.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[str, str, str]</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If the species cannot be resolved to a supported canonical code.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._ortholog.align_ortholog_pair_with_features">
+<span class="sig-name descname"><span class="pre">align_ortholog_pair_with_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query_ensembl_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_species</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_super5</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">embedding_model_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'facebook/esm2_t12_35M_UR50D'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">embedding_device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cpu'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">embedding_revision</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'main'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_ortholog.html#align_ortholog_pair_with_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._ortholog.align_ortholog_pair_with_features" title="Link to this definition"></a></dt>
+<dd><p>Compute ortholog alignment features for a query gene and target species.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>query_ensembl_id</strong> (<em>str</em>) – Ensembl gene ID in the query organism.</p></li>
+<li><p><strong>target_species</strong> (<em>str</em>) – Target species alias, interpreted via <code class="xref py py-data docutils literal notranslate"><span class="pre">_SPECIES_ALIASES</span></code>.</p></li>
+<li><p><strong>use_super5</strong> (<em>bool</em>) – Passed through to <code class="docutils literal notranslate"><span class="pre">gget.muscle(super5=...)</span></code>.</p></li>
+<li><p><strong>embedding_model_name</strong> (<em>str</em><em> | </em><em>None</em>) – Hugging Face model name for embeddings. Set to <code class="docutils literal notranslate"><span class="pre">None</span></code> to disable embeddings.</p></li>
+<li><p><strong>embedding_device</strong> (<em>str</em>) – Device for the transformer model (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;cpu&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;cuda&quot;</span></code>).</p></li>
+<li><p><strong>embedding_revision</strong> (<em>str</em>) – Model revision for <code class="docutils literal notranslate"><span class="pre">from_pretrained</span></code> (pin to a commit hash for reproducibility).</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – Print progress/warnings.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mapping from target ortholog Ensembl IDs to feature dictionaries.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If no orthologs are available for the query/target species pair.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict[str, dict[str, <em>Any</em>]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._ortholog.compute_alignment_scores">
+<span class="sig-name descname"><span class="pre">compute_alignment_scores</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seq1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seq2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aligned1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aligned2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_ortholog.html#compute_alignment_scores"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._ortholog.compute_alignment_scores" title="Link to this definition"></a></dt>
+<dd><p>Compute alignment-derived scores and the AA composition-difference vector.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seq1</strong> (<em>str</em>)</p></li>
+<li><p><strong>seq2</strong> (<em>str</em>)</p></li>
+<li><p><strong>aligned1</strong> (<em>str</em>)</p></li>
+<li><p><strong>aligned2</strong> (<em>str</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple[<a class="reference internal" href="#idtrack._external_mappers._ortholog.AlignmentScores" title="idtrack._external_mappers._ortholog.AlignmentScores"><em>AlignmentScores</em></a>, <em>ndarray</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._ortholog.compute_embedding_features">
+<span class="sig-name descname"><span class="pre">compute_embedding_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seq1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seq2</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cpu'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">revision</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'main'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_ortholog.html#compute_embedding_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._ortholog.compute_embedding_features" title="Link to this definition"></a></dt>
+<dd><p>Compute embedding-based similarity features for two sequences.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seq1</strong> (<em>str</em>) – First protein sequence.</p></li>
+<li><p><strong>seq2</strong> (<em>str</em>) – Second protein sequence.</p></li>
+<li><p><strong>model_name</strong> (<em>str</em>) – Hugging Face model name for embeddings.</p></li>
+<li><p><strong>device</strong> (<em>str</em>) – Device for the transformer model (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;cpu&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;cuda&quot;</span></code>).</p></li>
+<li><p><strong>revision</strong> (<em>str</em>) – Model revision for <code class="docutils literal notranslate"><span class="pre">from_pretrained</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Scalar similarities plus the difference vector.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#idtrack._external_mappers._ortholog.EmbeddingFeatures" title="idtrack._external_mappers._ortholog.EmbeddingFeatures">EmbeddingFeatures</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._ortholog.fetch_aa_sequence">
+<span class="sig-name descname"><span class="pre">fetch_aa_sequence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ensembl_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_ortholog.html#fetch_aa_sequence"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._ortholog.fetch_aa_sequence" title="Link to this definition"></a></dt>
+<dd><p>Fetch amino-acid sequence for a gene using gget.seq(translate=True).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ensembl_id</strong> (<em>str</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._ortholog.get_ortholog_ids_for_species">
+<span class="sig-name descname"><span class="pre">get_ortholog_ids_for_species</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ortholog_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_species</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_ortholog.html#get_ortholog_ids_for_species"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._ortholog.get_ortholog_ids_for_species" title="Link to this definition"></a></dt>
+<dd><p>Return all ortholog Ensembl IDs in <code class="docutils literal notranslate"><span class="pre">ortholog_df</span></code> for a target species.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ortholog_df</strong> (<em>DataFrame</em>)</p></li>
+<li><p><strong>target_species</strong> (<em>str</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._ortholog.get_ortholog_table">
+<span class="sig-name descname"><span class="pre">get_ortholog_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query_ensembl_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_ortholog.html#get_ortholog_table"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._ortholog.get_ortholog_table" title="Link to this definition"></a></dt>
+<dd><p>Return Bgee ortholog table for a query Ensembl gene ID via gget.bgee.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>query_ensembl_id</strong> (<em>str</em>)</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>DataFrame</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._ortholog.get_protein_embedding">
+<span class="sig-name descname"><span class="pre">get_protein_embedding</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sequence</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cpu'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">revision</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'main'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_len</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1022</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_ortholog.html#get_protein_embedding"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._ortholog.get_protein_embedding" title="Link to this definition"></a></dt>
+<dd><p>Return a pooled protein embedding for a sequence via a transformer model.</p>
+<p>The embedding is obtained by mean pooling the per-residue representations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sequence</strong> (<em>str</em>) – Protein sequence (amino-acid string).</p></li>
+<li><p><strong>model_name</strong> (<em>str</em>) – Hugging Face model name for the embedding model.</p></li>
+<li><p><strong>device</strong> (<em>str</em>) – Device for the transformer model (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;cpu&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;cuda&quot;</span></code>).</p></li>
+<li><p><strong>revision</strong> (<em>str</em>) – Model revision for <code class="docutils literal notranslate"><span class="pre">from_pretrained</span></code>.</p></li>
+<li><p><strong>max_len</strong> (<em>int</em>) – Maximum tokenized sequence length (including special tokens).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>1D embedding vector.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._ortholog.parse_clustal_alignment">
+<span class="sig-name descname"><span class="pre">parse_clustal_alignment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">clustal_text</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_ortholog.html#parse_clustal_alignment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._ortholog.parse_clustal_alignment" title="Link to this definition"></a></dt>
+<dd><p>Parse a minimal ClustalW/MUSCLE text alignment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>clustal_text</strong> (<em>str</em>) – Raw ClustalW/MUSCLE text output.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mapping of <code class="docutils literal notranslate"><span class="pre">{sequence_name:</span> <span class="pre">aligned_sequence}</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict[str, str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._ortholog.pick_ortholog_for_species">
+<span class="sig-name descname"><span class="pre">pick_ortholog_for_species</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ortholog_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_species</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_ortholog.html#pick_ortholog_for_species"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._ortholog.pick_ortholog_for_species" title="Link to this definition"></a></dt>
+<dd><p>Backward-compatible helper that returns only the first ortholog ID.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ortholog_df</strong> (<em>DataFrame</em>)</p></li>
+<li><p><strong>target_species</strong> (<em>str</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._ortholog.run_muscle_pairwise">
+<span class="sig-name descname"><span class="pre">run_muscle_pairwise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seq1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seq2</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">name1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">super5</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_ortholog.html#run_muscle_pairwise"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._ortholog.run_muscle_pairwise" title="Link to this definition"></a></dt>
+<dd><p>Align two AA sequences via gget.muscle.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seq1</strong> (<em>str</em>) – Amino-acid sequence for the first protein.</p></li>
+<li><p><strong>seq2</strong> (<em>str</em>) – Amino-acid sequence for the second protein.</p></li>
+<li><p><strong>name1</strong> (<em>str</em>) – Sequence name for the first protein (used in FASTA headers).</p></li>
+<li><p><strong>name2</strong> (<em>str</em>) – Sequence name for the second protein (used in FASTA headers).</p></li>
+<li><p><strong>super5</strong> (<em>bool</em>) – Whether to enable MUSCLE super5 mode.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">(aligned_seq1,</span> <span class="pre">aligned_seq2,</span> <span class="pre">raw_clustal_text)</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[str, str, str]</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>RuntimeError</strong> – If MUSCLE output cannot be parsed or does not contain the expected sequence names.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-idtrack._external_mappers._backend_pybiomart">
+<span id="backend-implementations"></span><h2>Backend implementations<a class="headerlink" href="#module-idtrack._external_mappers._backend_pybiomart" title="Link to this heading"></a></h2>
+<p>Ensembl BioMart backend for ID mapping.</p>
+<p>This module provides the map_with_pybiomart() function for querying
+Ensembl BioMart to convert biological identifiers. Supports historical
+Ensembl releases via archive hosts.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._backend_pybiomart._biomart_dataset_for_species">
+<span class="sig-name descname"><span class="pre">_biomart_dataset_for_species</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">species</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">explicit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_backend_pybiomart.html#_biomart_dataset_for_species"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._backend_pybiomart._biomart_dataset_for_species" title="Link to this definition"></a></dt>
+<dd><p>Return the Ensembl BioMart dataset name for the given species.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>species</strong> (<em>str</em>)</p></li>
+<li><p><strong>explicit</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._backend_pybiomart._bm_list_attribute_names">
+<span class="sig-name descname"><span class="pre">_bm_list_attribute_names</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ds</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_backend_pybiomart.html#_bm_list_attribute_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._backend_pybiomart._bm_list_attribute_names" title="Link to this definition"></a></dt>
+<dd><p>Return a list of attribute names for a pybiomart Dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._backend_pybiomart._bm_list_filter_names">
+<span class="sig-name descname"><span class="pre">_bm_list_filter_names</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ds</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_backend_pybiomart.html#_bm_list_filter_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._backend_pybiomart._bm_list_filter_names" title="Link to this definition"></a></dt>
+<dd><p>Return a list of filter names for a pybiomart Dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._backend_pybiomart._bm_pick_attribute">
+<span class="sig-name descname"><span class="pre">_bm_pick_attribute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">canonical_db_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">available_attrs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_backend_pybiomart.html#_bm_pick_attribute"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._backend_pybiomart._bm_pick_attribute" title="Link to this definition"></a></dt>
+<dd><p>Choose a BioMart attribute name for a canonical DB.</p>
+<p>The helper first tries explicit candidates from <code class="xref py py-data docutils literal notranslate"><span class="pre">_BM_ATTR_CANDIDATES</span></code> and
+falls back to fuzzy matching on common substrings.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>canonical_db_name</strong> (<em>str</em>) – Canonical database key (see <a class="reference internal" href="#idtrack._external_mappers._utils.canonical_db" title="idtrack._external_mappers._utils.canonical_db"><code class="xref py py-func docutils literal notranslate"><span class="pre">canonical_db()</span></code></a>).</p></li>
+<li><p><strong>available_attrs</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – Attribute names provided by the BioMart dataset.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Selected attribute name.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>RuntimeError</strong> – If no compatible attribute is available on the dataset.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._backend_pybiomart._bm_pick_filter">
+<span class="sig-name descname"><span class="pre">_bm_pick_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">canonical_db_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attr_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">available_filters</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_backend_pybiomart.html#_bm_pick_filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._backend_pybiomart._bm_pick_filter" title="Link to this definition"></a></dt>
+<dd><p>Choose a BioMart filter name.</p>
+<p>The selection depends on the canonical database and chosen attribute.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>canonical_db_name</strong> (<em>str</em>) – Canonical database key for the input IDs.</p></li>
+<li><p><strong>attr_name</strong> (<em>str</em>) – Attribute name chosen for the input IDs.</p></li>
+<li><p><strong>available_filters</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – Filter names provided by the BioMart dataset.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Selected filter name.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>RuntimeError</strong> – If no compatible filter is available on the dataset.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._backend_pybiomart._ensembl_archive_host_for_release">
+<span class="sig-name descname"><span class="pre">_ensembl_archive_host_for_release</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">release</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_backend_pybiomart.html#_ensembl_archive_host_for_release"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._backend_pybiomart._ensembl_archive_host_for_release" title="Link to this definition"></a></dt>
+<dd><p>Resolve an Ensembl release or key to an archive host.</p>
+<p>Examples include an integer release (e.g. <code class="docutils literal notranslate"><span class="pre">104</span></code>) or a special string key
+(e.g. <code class="docutils literal notranslate"><span class="pre">&quot;GRCh37&quot;</span></code>) mapping to hosts like <code class="docutils literal notranslate"><span class="pre">&quot;may2021.archive.ensembl.org&quot;</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>release</strong> (<em>int</em><em> | </em><em>str</em><em> | </em><em>None</em>) – Ensembl release number or key (e.g. <code class="docutils literal notranslate"><span class="pre">104</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;v104&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;GRCh37&quot;</span></code>), or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Archive host for the requested release, or <code class="docutils literal notranslate"><span class="pre">None</span></code> if unknown.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._backend_pybiomart._normalize_biomart_host">
+<span class="sig-name descname"><span class="pre">_normalize_biomart_host</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_backend_pybiomart.html#_normalize_biomart_host"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._backend_pybiomart._normalize_biomart_host" title="Link to this definition"></a></dt>
+<dd><p>Normalize an Ensembl BioMart host for pybiomart.</p>
+<dl class="simple">
+<dt>Examples of valid outputs:</dt><dd><p>“<a class="reference external" href="http://www.ensembl.org">http://www.ensembl.org</a>”
+“<a class="reference external" href="http://nov2020.archive.ensembl.org">http://nov2020.archive.ensembl.org</a>”
+“<a class="reference external" href="http://grch37.ensembl.org">http://grch37.ensembl.org</a>”</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>host</strong> (<em>str</em><em> | </em><em>None</em>) – Hostname or URL (scheme optional). If <code class="docutils literal notranslate"><span class="pre">None</span></code>, defaults to <code class="docutils literal notranslate"><span class="pre">&quot;http://www.ensembl.org&quot;</span></code>.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Normalized base URL suitable for pybiomart.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._backend_pybiomart.map_with_pybiomart">
+<span class="sig-name descname"><span class="pre">map_with_pybiomart</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_db</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_db</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">species</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'hsapiens'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pause</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_versions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">release</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suppress_method_verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_backend_pybiomart.html#map_with_pybiomart"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._backend_pybiomart.map_with_pybiomart" title="Link to this definition"></a></dt>
+<dd><p>Map identifiers using Ensembl BioMart via pybiomart.</p>
+<p>Note: BioMart can only filter by Ensembl IDs (gene, transcript, protein).
+Other ID types can be used as output_db but not input_db.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ids</strong> (<em>Iterable</em><em>[</em><em>str</em><em>]</em>) – Input Ensembl identifiers to map.</p></li>
+<li><p><strong>input_db</strong> (<em>str</em>) – Source database type. Must be one of <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_gene&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_transcript&quot;</span></code>,
+or <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_protein&quot;</span></code>.</p></li>
+<li><p><strong>output_db</strong> (<em>str</em>) – Target database type (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hgnc_symbol&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;uniprot&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;entrez_gene&quot;</span></code>).</p></li>
+<li><p><strong>species</strong> (<em>str</em>) – Species code (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hsapiens&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mmusculus&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;sscrofa&quot;</span></code>).</p></li>
+<li><p><strong>chunk_size</strong> (<em>int</em>) – Number of IDs per BioMart query.</p></li>
+<li><p><strong>pause</strong> (<em>float</em>) – Pause in seconds between queries.</p></li>
+<li><p><strong>strip_versions</strong> (<em>bool</em>) – Strip version suffixes from Ensembl/RefSeq IDs.</p></li>
+<li><p><strong>release</strong> (<em>str</em><em> | </em><em>int</em><em> | </em><em>None</em>) – Ensembl release number (e.g. <code class="docutils literal notranslate"><span class="pre">104</span></code>) or special key (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;grch37&quot;</span></code>). If <code class="docutils literal notranslate"><span class="pre">None</span></code>, uses
+the current Ensembl release.</p></li>
+<li><p><strong>show_progress</strong> (<em>bool</em>) – Display progress bar.</p></li>
+<li><p><strong>suppress_method_verbosity</strong> (<em>bool</em>) – Suppress stdout/stderr from pybiomart.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Standardized mapping DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>RuntimeError</strong> – If the BioMart connection fails or required dataset metadata cannot be retrieved.</p></li>
+<li><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">input_db</span></code> is not an Ensembl type.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<p id="module-idtrack._external_mappers._backend_mygene">MyGene.info backend for ID mapping.</p>
+<p>This module provides the map_with_mygene() function for querying
+the MyGene.info API to convert biological identifiers.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._backend_mygene._mg_extract">
+<span class="sig-name descname"><span class="pre">_mg_extract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_backend_mygene.html#_mg_extract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._backend_mygene._mg_extract" title="Link to this definition"></a></dt>
+<dd><p>Extract target identifiers from a MyGene.info record.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rec</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – One record from the MyGene.info <code class="docutils literal notranslate"><span class="pre">querymany</span></code> response.</p></li>
+<li><p><strong>target</strong> (<em>str</em>) – Canonical target database name (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hgnc_symbol&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;uniprot&quot;</span></code>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Extracted target identifiers (may be empty).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._backend_mygene.map_with_mygene">
+<span class="sig-name descname"><span class="pre">map_with_mygene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_db</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_db</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">species</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'hsapiens'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pause</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_retries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_versions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suppress_method_verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_backend_mygene.html#map_with_mygene"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._backend_mygene.map_with_mygene" title="Link to this definition"></a></dt>
+<dd><p>Map identifiers using the MyGene.info API.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ids</strong> (<em>Iterable</em><em>[</em><em>str</em><em>]</em>) – Input identifiers to map.</p></li>
+<li><p><strong>input_db</strong> (<em>str</em>) – Source database type (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_gene&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;hgnc_symbol&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;entrez_gene&quot;</span></code>).</p></li>
+<li><p><strong>output_db</strong> (<em>str</em>) – Target database type (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;uniprot&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;hgnc_symbol&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;entrez_gene&quot;</span></code>).</p></li>
+<li><p><strong>species</strong> (<em>str</em>) – Species code (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hsapiens&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mmusculus&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;sscrofa&quot;</span></code>).</p></li>
+<li><p><strong>chunk_size</strong> (<em>int</em>) – Number of IDs per API request.</p></li>
+<li><p><strong>pause</strong> (<em>float</em>) – Pause in seconds between API requests.</p></li>
+<li><p><strong>max_retries</strong> (<em>int</em>) – Maximum retry attempts per chunk on failure.</p></li>
+<li><p><strong>strip_versions</strong> (<em>bool</em>) – Strip version suffixes from Ensembl/RefSeq IDs.</p></li>
+<li><p><strong>show_progress</strong> (<em>bool</em>) – Display progress bar.</p></li>
+<li><p><strong>suppress_method_verbosity</strong> (<em>bool</em>) – Suppress stdout/stderr from the mygene library.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Standardized mapping DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">input_db</span></code> is not supported by MyGene.info.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function" id="module-idtrack._external_mappers._backend_gprofiler">
+<dt class="sig sig-object py" id="idtrack._external_mappers._backend_gprofiler._build_metadata_column">
+<span class="sig-name descname"><span class="pre">_build_metadata_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_cols</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_backend_gprofiler.html#_build_metadata_column"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._backend_gprofiler._build_metadata_column" title="Link to this definition"></a></dt>
+<dd><p>Build a metadata_json column from extra columns.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>DataFrame</em>) – Input DataFrame containing columns referenced by <code class="docutils literal notranslate"><span class="pre">extra_cols</span></code>.</p></li>
+<li><p><strong>extra_cols</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – Column names to include in the JSON metadata per row.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>JSON-encoded metadata aligned with <code class="docutils literal notranslate"><span class="pre">df.index</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._backend_gprofiler._extract_namespace_tokens">
+<span class="sig-name descname"><span class="pre">_extract_namespace_tokens</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_backend_gprofiler.html#_extract_namespace_tokens"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._backend_gprofiler._extract_namespace_tokens" title="Link to this definition"></a></dt>
+<dd><p>Normalize the g:Profiler <cite>namespaces</cite> field into uppercase tokens.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>raw</strong> (<em>Any</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>set[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._backend_gprofiler._gp_target_candidates">
+<span class="sig-name descname"><span class="pre">_gp_target_candidates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">outp</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_backend_gprofiler.html#_gp_target_candidates"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._backend_gprofiler._gp_target_candidates" title="Link to this definition"></a></dt>
+<dd><p>Return g:Profiler target_namespace candidates for a canonical output database.</p>
+<p>The returned list is ordered by preference (first hit wins).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>outp</strong> (<em>str</em>) – Canonical output database name.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Target namespace candidates in preference order.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._backend_gprofiler._process_gprofiler_response">
+<span class="sig-name descname"><span class="pre">_process_gprofiler_response</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">namespace_filter</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_backend_gprofiler.html#_process_gprofiler_response"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._backend_gprofiler._process_gprofiler_response" title="Link to this definition"></a></dt>
+<dd><p>Process a g:Profiler convert() response into standardized format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>DataFrame</em><em> | </em><em>None</em>) – Raw g:Profiler response DataFrame (or <code class="docutils literal notranslate"><span class="pre">None</span></code>).</p></li>
+<li><p><strong>namespace_filter</strong> (<em>Callable</em><em>[</em><em>[</em><em>Any</em><em>]</em><em>, </em><em>bool</em><em>] </em><em>| </em><em>None</em>) – Optional predicate to filter the <code class="docutils literal notranslate"><span class="pre">namespaces</span></code> column when enforcing
+strict input-db behavior.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">(processed_df,</span> <span class="pre">has_non_null_outputs)</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[pd.DataFrame, bool]</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>RuntimeError</strong> – If <code class="docutils literal notranslate"><span class="pre">namespace_filter</span></code> is provided but the response lacks a <code class="docutils literal notranslate"><span class="pre">namespaces</span></code> column.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._backend_gprofiler.map_with_gprofiler">
+<span class="sig-name descname"><span class="pre">map_with_gprofiler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_db</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_db</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">species</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'hsapiens'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pause</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_retries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_versions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suppress_method_verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strict_input_db</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_backend_gprofiler.html#map_with_gprofiler"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._backend_gprofiler.map_with_gprofiler" title="Link to this definition"></a></dt>
+<dd><p>Map IDs via g:Profiler (gprofiler-official).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ids</strong> (<em>Iterable</em><em>[</em><em>str</em><em>]</em>) – Input identifiers to map.</p></li>
+<li><p><strong>input_db</strong> (<em>str</em>) – Database/namespace of input IDs (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_gene&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;hgnc_symbol&quot;</span></code>).</p></li>
+<li><p><strong>output_db</strong> (<em>str</em>) – Target database/namespace (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;uniprot&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;entrez_gene&quot;</span></code>).</p></li>
+<li><p><strong>species</strong> (<em>str</em>) – Species code (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hsapiens&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mmusculus&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;sscrofa&quot;</span></code>).</p></li>
+<li><p><strong>chunk_size</strong> (<em>int</em>) – Number of IDs per API request.</p></li>
+<li><p><strong>pause</strong> (<em>float</em>) – Seconds to pause between requests.</p></li>
+<li><p><strong>max_retries</strong> (<em>int</em>) – Maximum retry attempts per chunk on failure.</p></li>
+<li><p><strong>strip_versions</strong> (<em>bool</em>) – Strip version suffixes from Ensembl/RefSeq IDs.</p></li>
+<li><p><strong>show_progress</strong> (<em>bool</em>) – Display progress bar.</p></li>
+<li><p><strong>suppress_method_verbosity</strong> (<em>bool</em>) – Suppress stdout/stderr from the gprofiler library.</p></li>
+<li><p><strong>strict_input_db</strong> (<em>bool</em>) – If True, filter results to only include mappings where the input namespace matches
+the expected <code class="docutils literal notranslate"><span class="pre">input_db</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Standardized mapping DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">strict_input_db</span></code> is enabled for an unsupported input database.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<p id="module-idtrack._external_mappers._backend_gget">gget backend for ID mapping.</p>
+<p>This module provides the map_with_gget() function for querying
+the gget.info API (Ensembl REST-backed) to convert biological identifiers.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._backend_gget._gget_extract">
+<span class="sig-name descname"><span class="pre">_gget_extract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outp</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_backend_gget.html#_gget_extract"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._backend_gget._gget_extract" title="Link to this definition"></a></dt>
+<dd><p>Normalize gget.info() output into standardized (input_id, output_id) format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>DataFrame</em>) – Raw DataFrame from gget.info().</p></li>
+<li><p><strong>outp</strong> (<em>str</em>) – Target database type.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>DataFrame with <code class="docutils literal notranslate"><span class="pre">input_id</span></code> and <code class="docutils literal notranslate"><span class="pre">output_id</span></code> columns.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>DataFrame</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._backend_gget.map_with_gget">
+<span class="sig-name descname"><span class="pre">map_with_gget</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_db</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_db</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">species</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'hsapiens'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pause</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_retries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_versions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suppress_method_verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_backend_gget.html#map_with_gget"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._backend_gget.map_with_gget" title="Link to this definition"></a></dt>
+<dd><p>Map identifiers using gget.info (Ensembl REST API-backed).</p>
+<p>Note: gget is Ensembl-centric, so input_db must be an Ensembl ID type.
+For non-Ensembl inputs, use ‘mygene’ or ‘gprofiler’ methods.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ids</strong> (<em>Iterable</em><em>[</em><em>str</em><em>]</em>) – Input Ensembl identifiers to map.</p></li>
+<li><p><strong>input_db</strong> (<em>str</em>) – Source database type. Must be one of <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_gene&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_transcript&quot;</span></code>,
+or <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_protein&quot;</span></code>.</p></li>
+<li><p><strong>output_db</strong> (<em>str</em>) – Target database type (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hgnc_symbol&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;uniprot&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;entrez_gene&quot;</span></code>).</p></li>
+<li><p><strong>species</strong> (<em>str</em>) – Species code (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hsapiens&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mmusculus&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;sscrofa&quot;</span></code>).</p></li>
+<li><p><strong>chunk_size</strong> (<em>int</em>) – Number of IDs per API request.</p></li>
+<li><p><strong>pause</strong> (<em>float</em>) – Pause in seconds between requests.</p></li>
+<li><p><strong>max_retries</strong> (<em>int</em>) – Maximum retry attempts per chunk on failure.</p></li>
+<li><p><strong>strip_versions</strong> (<em>bool</em>) – Strip version suffixes from Ensembl/RefSeq IDs.</p></li>
+<li><p><strong>show_progress</strong> (<em>bool</em>) – Display progress bar.</p></li>
+<li><p><strong>suppress_method_verbosity</strong> (<em>bool</em>) – Suppress stdout/stderr from gget.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Standardized mapping DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">input_db</span></code> is not an Ensembl type.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-idtrack._external_mappers._utils">
+<span id="shared-utilities-and-constants"></span><h2>Shared utilities and constants<a class="headerlink" href="#module-idtrack._external_mappers._utils" title="Link to this heading"></a></h2>
+<p>Utility functions for the _external_mappers module.</p>
+<p>This module provides:
+- Database and species name canonicalization
+- ID version stripping for Ensembl and RefSeq identifiers
+- DataFrame utilities for standardizing output format
+- Helper functions for chunking, JSON serialization, etc.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._utils._add_mapping_column">
+<span class="sig-name descname"><span class="pre">_add_mapping_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#_add_mapping_column"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._utils._add_mapping_column" title="Link to this definition"></a></dt>
+<dd><p>Add or recompute the <code class="docutils literal notranslate"><span class="pre">mapping</span></code> column on a standardized mapping DataFrame.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">mapping</span></code> value is the per-input cardinality:
+<code class="docutils literal notranslate"><span class="pre">1:0</span></code> (no outputs), <code class="docutils literal notranslate"><span class="pre">1:1</span></code> (one unique output), <code class="docutils literal notranslate"><span class="pre">1:n</span></code> (multiple outputs).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>df</strong> (<em>DataFrame</em>) – Standardized mapping DataFrame.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>DataFrame with a (re)computed <code class="docutils literal notranslate"><span class="pre">mapping</span></code> column.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._utils._as_list">
+<span class="sig-name descname"><span class="pre">_as_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#_as_list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._utils._as_list" title="Link to this definition"></a></dt>
+<dd><p>Coerce a value to a list.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">None</span></code> returns <code class="docutils literal notranslate"><span class="pre">[]</span></code></p></li>
+<li><p>list/tuple/set returns <code class="docutils literal notranslate"><span class="pre">list(v)</span></code></p></li>
+<li><p>scalar values return <code class="docutils literal notranslate"><span class="pre">[v]</span></code></p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>v</strong> (<em>Any</em>) – Value to coerce.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">v</span></code> represented as a list.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[Any]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._utils._chunker">
+<span class="sig-name descname"><span class="pre">_chunker</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">items</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#_chunker"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._utils._chunker" title="Link to this definition"></a></dt>
+<dd><p>Yield successive chunks of a list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>items</strong> (<em>list</em><em>[</em><em>Any</em><em>]</em>)</p></li>
+<li><p><strong>size</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Iterator</em>[list[<em>Any</em>]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._utils._empty_result">
+<span class="sig-name descname"><span class="pre">_empty_result</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#_empty_result"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._utils._empty_result" title="Link to this definition"></a></dt>
+<dd><p>Return an empty standardized mapping result DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>DataFrame</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._utils._ensure_all_inputs">
+<span class="sig-name descname"><span class="pre">_ensure_all_inputs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">original_inputs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">release_used</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#_ensure_all_inputs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._utils._ensure_all_inputs" title="Link to this definition"></a></dt>
+<dd><p>Ensure each input appears at least once in the output.</p>
+<p>Missing inputs are appended with <code class="docutils literal notranslate"><span class="pre">output_id=None</span></code>. Input order is preserved and the
+<code class="docutils literal notranslate"><span class="pre">mapping</span></code> column is (re)computed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>DataFrame</em>) – Partially populated standardized mapping DataFrame.</p></li>
+<li><p><strong>original_inputs</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – Original input identifiers (order is preserved).</p></li>
+<li><p><strong>inp</strong> (<em>str</em>) – Canonical input database key.</p></li>
+<li><p><strong>outp</strong> (<em>str</em>) – Canonical output database key.</p></li>
+<li><p><strong>method</strong> (<em>str</em>) – Backend method name.</p></li>
+<li><p><strong>release_used</strong> (<em>str</em><em> | </em><em>None</em>) – Backend-provided release/host label (if any).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Standardized mapping DataFrame containing at least one row per input.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._utils._is_bare_numeric">
+<span class="sig-name descname"><span class="pre">_is_bare_numeric</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#_is_bare_numeric"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._utils._is_bare_numeric" title="Link to this definition"></a></dt>
+<dd><p>Return <code class="docutils literal notranslate"><span class="pre">True</span></code> if a string consists entirely of digits.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>str</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._utils._json">
+<span class="sig-name descname"><span class="pre">_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._utils._json" title="Link to this definition"></a></dt>
+<dd><p>Serialize an object to a compact JSON string (unicode preserved).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>obj</strong> (<em>Any</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._utils._species_for_mygene">
+<span class="sig-name descname"><span class="pre">_species_for_mygene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">species</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#_species_for_mygene"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._utils._species_for_mygene" title="Link to this definition"></a></dt>
+<dd><p>Return the MyGene-compatible common name for a canonical species code.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>species</strong> (<em>str</em><em> | </em><em>None</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._utils._suppress_stdout_stderr">
+<span class="sig-name descname"><span class="pre">_suppress_stdout_stderr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">enabled</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#_suppress_stdout_stderr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._utils._suppress_stdout_stderr" title="Link to this definition"></a></dt>
+<dd><p>Context manager to squelch noisy stdout/stderr emissions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>enabled</strong> (<em>bool</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._utils._unique_not_null">
+<span class="sig-name descname"><span class="pre">_unique_not_null</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seq</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#_unique_not_null"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._utils._unique_not_null" title="Link to this definition"></a></dt>
+<dd><p>Return unique non-null string values from a sequence, preserving order.</p>
+<p>Filters out:
+- <code class="docutils literal notranslate"><span class="pre">None</span></code> values
+- empty / whitespace-only strings
+- stringified null values (<code class="docutils literal notranslate"><span class="pre">&quot;nan&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;none&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;null&quot;</span></code>; case-insensitive)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>seq</strong> (<em>Iterable</em><em>[</em><em>Any</em><em>]</em>) – Sequence of values to normalize and filter.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Unique non-null string values in first-seen order.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._utils.canonical_db">
+<span class="sig-name descname"><span class="pre">canonical_db</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">db</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#canonical_db"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._utils.canonical_db" title="Link to this definition"></a></dt>
+<dd><p>Return canonical DB key given a user-friendly/alias string.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>db</strong> (<em>str</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._utils.canonical_species">
+<span class="sig-name descname"><span class="pre">canonical_species</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">species</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#canonical_species"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._utils.canonical_species" title="Link to this definition"></a></dt>
+<dd><p>Return canonical organism code (g:Profiler / Ensembl style).</p>
+<p>Supported out-of-the-box: human → <code class="docutils literal notranslate"><span class="pre">hsapiens</span></code>, mouse → <code class="docutils literal notranslate"><span class="pre">mmusculus</span></code>, pig → <code class="docutils literal notranslate"><span class="pre">sscrofa</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>species</strong> (<em>str</em><em> | </em><em>None</em>) – Species code/alias. If <code class="docutils literal notranslate"><span class="pre">None</span></code> or empty, defaults to <code class="docutils literal notranslate"><span class="pre">&quot;hsapiens&quot;</span></code>.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Canonical organism code.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._utils.check_optional_dependencies">
+<span class="sig-name descname"><span class="pre">check_optional_dependencies</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">warn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#check_optional_dependencies"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._utils.check_optional_dependencies" title="Link to this definition"></a></dt>
+<dd><p>Check which optional dependencies are installed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>warn</strong> (<em>bool</em>) – When <code class="docutils literal notranslate"><span class="pre">True</span></code>, emit a warning summarizing missing packages.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mapping from dependency key to availability.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict[str, bool]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._utils.raise_missing_dependency">
+<span class="sig-name descname"><span class="pre">raise_missing_dependency</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dep_key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">original_error</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#raise_missing_dependency"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._utils.raise_missing_dependency" title="Link to this definition"></a></dt>
+<dd><p>Raise a detailed error for a missing optional dependency.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dep_key</strong> (<em>str</em>) – Key in <code class="xref py py-data docutils literal notranslate"><span class="pre">OPTIONAL_DEPENDENCIES</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;gget&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mygene&quot;</span></code>).</p></li>
+<li><p><strong>feature</strong> (<em>str</em><em> | </em><em>None</em>) – Description of the feature that requires the dependency.</p></li>
+<li><p><strong>original_error</strong> (<em>BaseException</em><em> | </em><em>None</em>) – Optional original ImportError to chain.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>RuntimeError</strong> – Always, with detailed installation instructions.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>NoReturn</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._external_mappers._utils.strip_version">
+<span class="sig-name descname"><span class="pre">strip_version</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ididid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#strip_version"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._utils.strip_version" title="Link to this definition"></a></dt>
+<dd><p>Strip version suffixes from Ensembl and RefSeq identifiers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ididid</strong> (<em>str</em>) – Identifier to strip.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Identifier without a version suffix (or unchanged if none is present).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<p id="module-idtrack._external_mappers._constants">Constants and configuration for the _external_mappers module.</p>
+<p>This module provides:
+- Database alias mappings to canonical database names
+- Species aliases and mappings for various backends
+- Backend-specific configuration for MyGene, pybiomart, g:Profiler, and gget
+- Ensembl archive host mappings by release number</p>
+</section>
+<section id="ontology">
+<h2>Ontology<a class="headerlink" href="#ontology" title="Link to this heading"></a></h2>
+<p>This section defines the vocabulary used throughout IDTrack’s tutorials and API reference.
+The goal is to make results <em>interpretable</em> without requiring graph theory or database background.</p>
+<dl class="simple glossary">
+<dt id="term-Ensembl-release">Ensembl release<a class="headerlink" href="#term-Ensembl-release" title="Link to this term"></a></dt><dd><p>A numbered snapshot of Ensembl reference data (e.g., release 114). In IDTrack, releases define the <strong>time axis</strong>.</p>
+</dd>
+<dt id="term-Snapshot-release-snapshot-boundary">Snapshot release (snapshot boundary)<a class="headerlink" href="#term-Snapshot-release-snapshot-boundary" title="Link to this term"></a></dt><dd><p>The release you choose as the <strong>upper time boundary</strong> for a graph snapshot. It makes conversions reproducible: the same inputs and the same snapshot boundary should yield the same outputs.</p>
+</dd>
+<dt id="term-Backbone-namespace">Backbone namespace<a class="headerlink" href="#term-Backbone-namespace" title="Link to this term"></a></dt><dd><p>The Ensembl “core” identifier spaces that carry historical relationships across releases (e.g., Ensembl gene IDs). Backbone edges enable time-travel mapping across releases.</p>
+</dd>
+<dt id="term-External-namespace">External namespace<a class="headerlink" href="#term-External-namespace" title="Link to this term"></a></dt><dd><p>A non-Ensembl identifier system (HGNC, EntrezGene, UniProtKB, RefSeq, MGI, …). External edges connect backbone nodes to external identifiers when enabled by configuration.</p>
+</dd>
+<dt id="term-External-YAML">External YAML<a class="headerlink" href="#term-External-YAML" title="Link to this term"></a></dt><dd><p>A user-editable configuration file that declares which external namespaces are allowed to participate in mapping for a given organism/snapshot. It is an explicit contract that improves reproducibility and reduces accidental ambiguity.</p>
+</dd>
+<dt id="term-Assembly">Assembly<a class="headerlink" href="#term-Assembly" title="Link to this term"></a></dt><dd><p>The genome build context for an organism (e.g., human GRCh38 vs GRCh37). Assemblies can affect which releases are reachable and which identifiers are valid.</p>
+</dd>
+<dt id="term-Graph-snapshot">Graph snapshot<a class="headerlink" href="#term-Graph-snapshot" title="Link to this term"></a></dt><dd><p>A precomputed mapping graph built for a specific organism and snapshot release (and often multiple assemblies). It is stored on disk under your local repository so it can be reused across sessions.</p>
+</dd>
+<dt id="term-Identifier-drift">Identifier drift<a class="headerlink" href="#term-Identifier-drift" title="Link to this term"></a></dt><dd><p>The fact that identifiers change across releases (retirements, merges, splits, version changes) and differ across databases. Drift is the core reason conversions must be time-aware.</p>
+</dd>
+<dt id="term-10-11-1n-outcomes">1→0 / 1→1 / 1→n outcomes<a class="headerlink" href="#term-10-11-1n-outcomes" title="Link to this term"></a></dt><dd><p>The three conversion outcome families: no mapping, unique mapping, or ambiguous mapping with multiple valid targets. IDTrack reports these explicitly rather than silently forcing a single answer.</p>
+</dd>
+<dt id="term-Strategy-best-vs-all">Strategy (best vs all)<a class="headerlink" href="#term-Strategy-best-vs-all" title="Link to this term"></a></dt><dd><p>A conversion policy. <code class="docutils literal notranslate"><span class="pre">strategy='best'</span></code> returns a single preferred target; <code class="docutils literal notranslate"><span class="pre">strategy='all'</span></code> returns all plausible targets so you can handle ambiguity explicitly.</p>
+</dd>
+<dt id="term-Explainability-payload">Explainability payload<a class="headerlink" href="#term-Explainability-payload" title="Link to this term"></a></dt><dd><p>Optional structured information returned alongside a conversion result that helps you audit <em>why</em> a mapping happened (paths, intermediate nodes, decisions).</p>
+</dd>
+<dt id="term-Hyperconnected-node">Hyperconnected node<a class="headerlink" href="#term-Hyperconnected-node" title="Link to this term"></a></dt><dd><p>An identifier that connects to many other identifiers (common in some external namespaces). These can explode the search space; IDTrack uses safeguards so “promiscuous” nodes do not dominate results.</p>
+</dd>
+<dt id="term-Local-repository-cache-directory">Local repository (cache directory)<a class="headerlink" href="#term-Local-repository-cache-directory" title="Link to this term"></a></dt><dd><p>A writable directory where IDTrack stores downloads, derived tables, and graph snapshots. You can set it via the <code class="docutils literal notranslate"><span class="pre">IDTRACK_LOCAL_REPO</span></code> environment variable.</p>
+</dd>
+</dl>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../reference.html" class="btn btn-neutral float-left" title="Reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../contributing.html" class="btn btn-neutral float-right" title="Contributor Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

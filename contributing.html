@@ -9,20 +9,23 @@
   <title>Contributor Guide &mdash; idtrack 0.0.4 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="_static/custom_settings.css?v=15bcc2cf" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="_static/tutorials.css?v=f6ff1e94" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=8c5712d9"></script>
-      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/design-tabs.js?v=f930bc37"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Credits" href="authors.html" />
-    <link rel="prev" title="Reference" href="reference.html" /> 
+    <link rel="prev" title="External Mappers" href="reference/external_mappers.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -47,16 +50,51 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference.html">Reference</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Contributor Guide</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#how-to-report-a-bug">How to report a bug</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#how-to-request-a-feature">How to request a feature</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#how-to-set-up-your-development-environment">How to set up your development environment</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#how-to-test-the-project">How to test the project</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#how-to-build-and-view-the-documentation">How to build and view the documentation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#how-to-submit-changes">How to submit changes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ways-to-contribute">Ways to Contribute</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#quick-links">Quick Links</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#reporting-bugs">Reporting Bugs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#bug-report-template">Bug Report Template</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#requesting-features">Requesting Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#development-setup">Development Setup</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#development-tools">Development Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#setting-up-the-project">Setting Up the Project</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#running-tests">Running Tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#run-the-full-test-suite">Run the Full Test Suite</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#run-specific-test-sessions">Run Specific Test Sessions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#run-tests-directly-with-pytest">Run Tests Directly with pytest</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-organization">Test Organization</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#building-documentation">Building Documentation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#install-documentation-dependencies">Install Documentation Dependencies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#build-the-documentation">Build the Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#live-preview-during-editing">Live Preview During Editing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#documentation-guidelines">Documentation Guidelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#submitting-changes">Submitting Changes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#workflow-overview">Workflow Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-by-step-guide">Step-by-Step Guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pull-request-guidelines">Pull Request Guidelines</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pull-request-template">Pull Request Template</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#code-style">Code Style</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#example-function">Example Function</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#adding-organism-support">Adding Organism Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#getting-help">Getting Help</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="authors.html">Credits</a></li>
@@ -89,102 +127,596 @@
              
   <section id="contributor-guide">
 <h1>Contributor Guide<a class="headerlink" href="#contributor-guide" title="Link to this heading"></a></h1>
-<p>Thank you for your interest in improving this project.
-This project is open-source under the <a class="reference external" href="https://opensource.org/licenses/BSD-3-Clause">BSD license</a> and
-highly welcomes contributions in the form of bug reports, feature requests, and pull requests.</p>
-<p>Here is a list of important resources for contributors:</p>
+<p>Thank you for your interest in contributing to IDTrack! This project is open-source
+under the <a class="reference external" href="https://opensource.org/licenses/BSD-3-Clause">BSD 3-Clause License</a> and welcomes contributions from the community.</p>
+<nav class="contents local" id="contents">
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/theislab/idtrack">Source Code</a></p></li>
-<li><p><a class="reference external" href="https://idtrack.readthedocs.io/">Documentation</a></p></li>
-<li><p><a class="reference external" href="https://github.com/theislab/idtrack/issues">Issue Tracker</a></p></li>
-<li><p><a class="reference external" href="CODE_OF_CONDUCT.rst">Code of Conduct</a></p></li>
+<li><p><a class="reference internal" href="#ways-to-contribute" id="id1">Ways to Contribute</a></p></li>
+<li><p><a class="reference internal" href="#quick-links" id="id2">Quick Links</a></p></li>
+<li><p><a class="reference internal" href="#reporting-bugs" id="id3">Reporting Bugs</a></p>
+<ul>
+<li><p><a class="reference internal" href="#bug-report-template" id="id4">Bug Report Template</a></p></li>
 </ul>
-<section id="how-to-report-a-bug">
-<h2>How to report a bug<a class="headerlink" href="#how-to-report-a-bug" title="Link to this heading"></a></h2>
-<p>Report bugs on the <a class="reference external" href="https://github.com/theislab/idtrack/issues">Issue Tracker</a>.</p>
+</li>
+<li><p><a class="reference internal" href="#requesting-features" id="id5">Requesting Features</a></p></li>
+<li><p><a class="reference internal" href="#development-setup" id="id6">Development Setup</a></p>
+<ul>
+<li><p><a class="reference internal" href="#prerequisites" id="id7">Prerequisites</a></p></li>
+<li><p><a class="reference internal" href="#development-tools" id="id8">Development Tools</a></p></li>
+<li><p><a class="reference internal" href="#setting-up-the-project" id="id9">Setting Up the Project</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#running-tests" id="id10">Running Tests</a></p>
+<ul>
+<li><p><a class="reference internal" href="#run-the-full-test-suite" id="id11">Run the Full Test Suite</a></p></li>
+<li><p><a class="reference internal" href="#run-specific-test-sessions" id="id12">Run Specific Test Sessions</a></p></li>
+<li><p><a class="reference internal" href="#run-tests-directly-with-pytest" id="id13">Run Tests Directly with pytest</a></p></li>
+<li><p><a class="reference internal" href="#test-organization" id="id14">Test Organization</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#building-documentation" id="id15">Building Documentation</a></p>
+<ul>
+<li><p><a class="reference internal" href="#install-documentation-dependencies" id="id16">Install Documentation Dependencies</a></p></li>
+<li><p><a class="reference internal" href="#build-the-documentation" id="id17">Build the Documentation</a></p></li>
+<li><p><a class="reference internal" href="#live-preview-during-editing" id="id18">Live Preview During Editing</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#documentation-guidelines" id="id19">Documentation Guidelines</a></p></li>
+<li><p><a class="reference internal" href="#submitting-changes" id="id20">Submitting Changes</a></p>
+<ul>
+<li><p><a class="reference internal" href="#workflow-overview" id="id21">Workflow Overview</a></p></li>
+<li><p><a class="reference internal" href="#step-by-step-guide" id="id22">Step-by-Step Guide</a></p></li>
+<li><p><a class="reference internal" href="#pull-request-guidelines" id="id23">Pull Request Guidelines</a></p></li>
+<li><p><a class="reference internal" href="#pull-request-template" id="id24">Pull Request Template</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#code-style" id="id25">Code Style</a></p>
+<ul>
+<li><p><a class="reference internal" href="#example-function" id="id26">Example Function</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#adding-organism-support" id="id27">Adding Organism Support</a></p></li>
+<li><p><a class="reference internal" href="#getting-help" id="id28">Getting Help</a></p></li>
+</ul>
+</nav>
+<section id="ways-to-contribute">
+<h2>Ways to Contribute<a class="headerlink" href="#ways-to-contribute" title="Link to this heading"></a></h2>
+<p>There are many ways to contribute to IDTrack, regardless of your experience level:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Contribution Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Report Bugs</strong></p></td>
+<td><p>Help us identify issues and improve reliability</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Request Features</strong></p></td>
+<td><p>Suggest new functionality or enhancements</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Improve Documentation</strong></p></td>
+<td><p>Fix typos, clarify explanations, add examples</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Submit Code</strong></p></td>
+<td><p>Fix bugs or implement new features</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Add Organism Support</strong></p></td>
+<td><p>Configure external databases for new species</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Answer Questions</strong></p></td>
+<td><p>Help other users in discussions and issues</p></td>
+</tr>
+</tbody>
+</table>
 </section>
-<section id="how-to-request-a-feature">
-<h2>How to request a feature<a class="headerlink" href="#how-to-request-a-feature" title="Link to this heading"></a></h2>
-<p>Request features on the <a class="reference external" href="https://github.com/theislab/idtrack/issues">Issue Tracker</a>.</p>
+<section id="quick-links">
+<h2>Quick Links<a class="headerlink" href="#quick-links" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 30.0%" />
+<col style="width: 70.0%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>Source Code</p></td>
+<td><p><a class="reference external" href="https://github.com/theislab/idtrack">github.com/theislab/idtrack</a></p></td>
+</tr>
+<tr class="row-even"><td><p>Documentation</p></td>
+<td><p><a class="reference external" href="https://idtrack.readthedocs.io/">idtrack.readthedocs.io</a></p></td>
+</tr>
+<tr class="row-odd"><td><p>Issue Tracker</p></td>
+<td><p><a class="reference external" href="https://github.com/theislab/idtrack/issues">GitHub Issues</a></p></td>
+</tr>
+<tr class="row-even"><td><p>Pull Requests</p></td>
+<td><p><a class="reference external" href="https://github.com/theislab/idtrack/pulls">GitHub Pull Requests</a></p></td>
+</tr>
+<tr class="row-odd"><td><p>Discussions</p></td>
+<td><p><a class="reference external" href="https://github.com/theislab/idtrack/discussions">GitHub Discussions</a></p></td>
+</tr>
+<tr class="row-even"><td><p>Code of Conduct</p></td>
+<td><p><a class="reference internal" href="code_of_conduct.html"><span class="doc">Contributor Covenant Code of Conduct</span></a></p></td>
+</tr>
+</tbody>
+</table>
 </section>
-<section id="how-to-set-up-your-development-environment">
-<h2>How to set up your development environment<a class="headerlink" href="#how-to-set-up-your-development-environment" title="Link to this heading"></a></h2>
-<p>You should the <code class="docutils literal notranslate"><span class="pre">Pandoc</span></code> installation already to include tutorial Jupter notebooks into the documentation:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>brew<span class="w"> </span>install<span class="w"> </span>pandoc<span class="w">  </span><span class="c1"># MacOS</span>
-<span class="gp">$ </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>pandoc<span class="w">  </span><span class="c1"># Ubuntu</span>
-<span class="gp">$ </span>choco<span class="w"> </span>install<span class="w"> </span>pandoc<span class="w">  </span><span class="c1"># Windows</span>
+<section id="reporting-bugs">
+<h2>Reporting Bugs<a class="headerlink" href="#reporting-bugs" title="Link to this heading"></a></h2>
+<p>Found a bug? Please report it on the <a class="reference external" href="https://github.com/theislab/idtrack/issues">Issue Tracker</a>.</p>
+<p>A good bug report includes:</p>
+<ol class="arabic simple">
+<li><p><strong>Summary</strong> - A clear, concise description of the problem</p></li>
+<li><p><strong>Environment</strong> - Python version, IDTrack version, operating system</p></li>
+<li><p><strong>Steps to reproduce</strong> - Minimal code example that triggers the bug</p></li>
+<li><p><strong>Expected behavior</strong> - What you expected to happen</p></li>
+<li><p><strong>Actual behavior</strong> - What actually happened (include error messages)</p></li>
+</ol>
+<section id="bug-report-template">
+<h3>Bug Report Template<a class="headerlink" href="#bug-report-template" title="Link to this heading"></a></h3>
+<div class="highlight-markdown notranslate"><div class="highlight"><pre><span></span><span class="gu">## Environment</span>
+<span class="k">-</span><span class="w"> </span>IDTrack version: 0.0.x (run <span class="sb">`python -c &quot;import idtrack; print(idtrack.__version__)&quot;`</span>)
+<span class="k">-</span><span class="w"> </span>Python version: 3.11.x (run <span class="sb">`python --version`</span>)
+<span class="k">-</span><span class="w"> </span>OS: Ubuntu 22.04 / macOS 14.x / Windows 11
+
+<span class="gu">## Description</span>
+A clear, concise description of what the bug is.
+
+<span class="gu">## Steps to Reproduce</span>
+<span class="sb">```python</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+
+<span class="c1"># Minimal code that triggers the bug</span>
+<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="s2">&quot;./cache&quot;</span><span class="p">)</span>
+<span class="c1"># ...</span>
+<span class="sb">```</span>
+
+<span class="gu">## Expected Behavior</span>
+What you expected to happen.
+
+<span class="gu">## Actual Behavior</span>
+What actually happened. Include the complete error traceback if applicable.
+
+<span class="gu">## Additional Context</span>
+Any other context about the problem (screenshots, related issues, etc.).
 </pre></div>
 </div>
-<p>You need Python 3.9+ and the following tools:</p>
-<ul class="simple">
-<li><p><a class="reference external" href="https://python-poetry.org/">Poetry</a></p></li>
-<li><p><a class="reference external" href="https://nox.thea.codes/">Nox</a></p></li>
-<li><p><a class="reference external" href="https://nox-poetry.readthedocs.io/">nox-poetry</a></p></li>
-</ul>
-<p>You can install them with:</p>
+</section>
+</section>
+<section id="requesting-features">
+<h2>Requesting Features<a class="headerlink" href="#requesting-features" title="Link to this heading"></a></h2>
+<p>Have an idea for a new feature? Open an issue on the <a class="reference external" href="https://github.com/theislab/idtrack/issues">Issue Tracker</a> with:</p>
+<ol class="arabic simple">
+<li><p><strong>Use case</strong> - Describe the problem you’re trying to solve</p></li>
+<li><p><strong>Proposed solution</strong> - Your suggested approach</p></li>
+<li><p><strong>Alternatives considered</strong> - Other approaches you’ve thought about</p></li>
+<li><p><strong>Impact</strong> - Who would benefit from this feature</p></li>
+</ol>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>It’s a good idea to open an issue before starting work on a feature.
+This allows maintainers to discuss the approach and avoid duplicate effort.</p>
+</div>
+</section>
+<section id="development-setup">
+<h2>Development Setup<a class="headerlink" href="#development-setup" title="Link to this heading"></a></h2>
+<section id="prerequisites">
+<h3>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h3>
+<p>Before setting up your development environment, ensure you have:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Requirement</p></th>
+<th class="head"><p>Details</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Python</strong></p></td>
+<td><p>3.9 or later (3.11 recommended)</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Git</strong></p></td>
+<td><p>For version control</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Pandoc</strong></p></td>
+<td><p>Required for building documentation with Jupyter notebooks</p></td>
+</tr>
+</tbody>
+</table>
+<p>Install Pandoc:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>macOS
+<span class="gp">$ </span>brew<span class="w"> </span>install<span class="w"> </span>pandoc
+
+<span class="gp"># </span>Ubuntu/Debian
+<span class="gp">$ </span>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>pandoc
+
+<span class="gp"># </span>Windows<span class="w"> </span><span class="o">(</span>using<span class="w"> </span>Chocolatey<span class="o">)</span>
+<span class="gp">$ </span>choco<span class="w"> </span>install<span class="w"> </span>pandoc
+
+<span class="gp"># </span>Or<span class="w"> </span>download<span class="w"> </span>from<span class="w"> </span>https://pandoc.org/installing.html
+</pre></div>
+</div>
+</section>
+<section id="development-tools">
+<h3>Development Tools<a class="headerlink" href="#development-tools" title="Link to this heading"></a></h3>
+<p>IDTrack uses the following tools for development:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 40.0%" />
+<col style="width: 40.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Tool</p></th>
+<th class="head"><p>Purpose</p></th>
+<th class="head"><p>Installation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference external" href="https://python-poetry.org/">Poetry</a></p></td>
+<td><p>Dependency management</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">poetry</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference external" href="https://nox.thea.codes/">Nox</a></p></td>
+<td><p>Test automation</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">nox</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference external" href="https://nox-poetry.readthedocs.io/">nox-poetry</a></p></td>
+<td><p>Nox + Poetry integration</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">nox-poetry</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p>Install all development tools:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>poetry<span class="w"> </span>poetry-plugin-export<span class="w"> </span>nox<span class="w"> </span>nox-poetry
+
+<span class="gp"># </span>Alternative:<span class="w"> </span>If<span class="w"> </span>you<span class="w"> </span>installed<span class="w"> </span>Poetry<span class="w"> </span>via<span class="w"> </span>pipx
+<span class="gp">$ </span>pipx<span class="w"> </span>install<span class="w"> </span>poetry
+<span class="gp">$ </span>pipx<span class="w"> </span>inject<span class="w"> </span>poetry<span class="w"> </span>poetry-plugin-export
 </pre></div>
 </div>
-<p>Install the package with development requirements:</p>
+</section>
+<section id="setting-up-the-project">
+<h3>Setting Up the Project<a class="headerlink" href="#setting-up-the-project" title="Link to this heading"></a></h3>
+<p><strong>Step 1: Fork and clone</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Fork<span class="w"> </span>on<span class="w"> </span>GitHub,<span class="w"> </span><span class="k">then</span><span class="w"> </span>clone<span class="w"> </span>your<span class="w"> </span>fork
+<span class="gp">$ </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/YOUR_USERNAME/idtrack.git
+<span class="gp">$ </span><span class="nb">cd</span><span class="w"> </span>idtrack
+<span class="gp">$ </span>git<span class="w"> </span>remote<span class="w"> </span>add<span class="w"> </span>upstream<span class="w"> </span>https://github.com/theislab/idtrack.git
+</pre></div>
+</div>
+<p><strong>Step 2: Install dependencies with Poetry</strong></p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>make<span class="w"> </span>install
 </pre></div>
 </div>
-<p>You can now run an interactive Python session,
-or the command-line interface:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>poetry<span class="w"> </span>run<span class="w"> </span>python
-<span class="gp">$ </span>poetry<span class="w"> </span>run<span class="w"> </span>idtrack
+<p>This installs IDTrack in development mode with all dependencies.</p>
+<p><strong>Step 3: Verify your setup</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Start<span class="w"> </span>an<span class="w"> </span>interactive<span class="w"> </span>Python<span class="w"> </span>session
+<span class="gp">$ </span>poetry<span class="w"> </span>run<span class="w"> </span>python
+
+<span class="gp"># </span>Or<span class="w"> </span>run<span class="w"> </span>the<span class="w"> </span>CLI
+<span class="gp">$ </span>poetry<span class="w"> </span>run<span class="w"> </span>idtrack<span class="w"> </span>--help
 </pre></div>
 </div>
-<p>Please, also have a look at <a class="reference internal" href="installation.html"><span class="doc">Installation</span></a> to learn any other required packages needed such as <code class="docutils literal notranslate"><span class="pre">HDF5</span></code>.</p>
-</section>
-<section id="how-to-test-the-project">
-<h2>How to test the project<a class="headerlink" href="#how-to-test-the-project" title="Link to this heading"></a></h2>
-<p>Run the full test suite:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox
-</pre></div>
-</div>
-<p>List the available Nox sessions:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox<span class="w"> </span>--list-sessions
-</pre></div>
-</div>
-<p>You can also run a specific Nox session.
-For example, invoke the unit test suite like this:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox<span class="w"> </span>--session<span class="o">=</span>tests
-</pre></div>
-</div>
-<p>Unit tests are located in the <code class="docutils literal notranslate"><span class="pre">tests</span></code> directory,
-and are written using the <a class="reference external" href="https://pytest.readthedocs.io/">pytest</a> testing framework.</p>
-</section>
-<section id="how-to-build-and-view-the-documentation">
-<h2>How to build and view the documentation<a class="headerlink" href="#how-to-build-and-view-the-documentation" title="Link to this heading"></a></h2>
-<p>This project uses <a class="reference external" href="https://www.sphinx-doc.org/en/master/">Sphinx</a> together with several extensions to build the documentation.
-It further requires <a class="reference external" href="https://pandoc.org/">Pandoc</a> to translate various formats.</p>
-<p>To install all required dependencies for the documentation run:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>docs/requirements.txt
-</pre></div>
-</div>
-<p>Please note that idtrack itself must also be installed. To build the documentation run:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>make<span class="w"> </span>html
-</pre></div>
-</div>
-<p>from inside the docs folder. The generated static HTML files can be found in the <cite>_build/html</cite> folder.
-Simply open them with your favorite browser.</p>
-</section>
-<section id="how-to-submit-changes">
-<h2>How to submit changes<a class="headerlink" href="#how-to-submit-changes" title="Link to this heading"></a></h2>
-<p>Open a <a class="reference external" href="https://github.com/theislab/idtrack/pulls">pull request</a> to submit changes to this project against the <code class="docutils literal notranslate"><span class="pre">development</span></code> branch.</p>
-<p>Your pull request needs to meet the following guidelines for acceptance:</p>
-<ul class="simple">
-<li><p>The Nox test suite must pass without errors and warnings.</p></li>
-<li><p>Include unit tests. This project maintains a high code coverage.</p></li>
-<li><p>If your changes add functionality, update the documentation accordingly.</p></li>
-</ul>
-<p>To run linting and code formatting checks before committing your change, you can install pre-commit as a Git hook by running the following command:</p>
+<p><strong>Step 4: Install pre-commit hooks (recommended)</strong></p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox<span class="w"> </span>--session<span class="o">=</span>pre-commit<span class="w"> </span>--<span class="w"> </span>install
 </pre></div>
 </div>
-<p>It is recommended to open an issue before starting work on anything.
-This will allow a chance to talk it over with the owners and validate your approach.</p>
+<p>This automatically runs code formatting and linting checks before each commit.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>See <a class="reference internal" href="installation.html"><span class="doc">Installation</span></a> for additional requirements like HDF5 on Apple Silicon.</p>
+</div>
+</section>
+</section>
+<section id="running-tests">
+<h2>Running Tests<a class="headerlink" href="#running-tests" title="Link to this heading"></a></h2>
+<p>IDTrack uses <a class="reference external" href="https://pytest.readthedocs.io/">pytest</a> for testing and <a class="reference external" href="https://nox.thea.codes/">Nox</a> for test automation.</p>
+<section id="run-the-full-test-suite">
+<h3>Run the Full Test Suite<a class="headerlink" href="#run-the-full-test-suite" title="Link to this heading"></a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox
+</pre></div>
+</div>
+<p>This runs all tests, linting, and type checking.</p>
+</section>
+<section id="run-specific-test-sessions">
+<h3>Run Specific Test Sessions<a class="headerlink" href="#run-specific-test-sessions" title="Link to this heading"></a></h3>
+<p>List available sessions:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox<span class="w"> </span>--list-sessions
+</pre></div>
+</div>
+<p>Run only unit tests:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox<span class="w"> </span>--session<span class="o">=</span>tests
+</pre></div>
+</div>
+<p>Run tests with a specific Python version:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox<span class="w"> </span>--session<span class="o">=</span>tests<span class="w"> </span>--python<span class="o">=</span><span class="m">3</span>.11
+</pre></div>
+</div>
+</section>
+<section id="run-tests-directly-with-pytest">
+<h3>Run Tests Directly with pytest<a class="headerlink" href="#run-tests-directly-with-pytest" title="Link to this heading"></a></h3>
+<p>For faster iteration during development:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Run<span class="w"> </span>all<span class="w"> </span>tests
+<span class="gp">$ </span>poetry<span class="w"> </span>run<span class="w"> </span>pytest
+
+<span class="gp"># </span>Run<span class="w"> </span>a<span class="w"> </span>specific<span class="w"> </span><span class="nb">test</span><span class="w"> </span>file
+<span class="gp">$ </span>poetry<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_api.py
+
+<span class="gp"># </span>Run<span class="w"> </span>tests<span class="w"> </span>matching<span class="w"> </span>a<span class="w"> </span>pattern
+<span class="gp">$ </span>poetry<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-k<span class="w"> </span><span class="s2">&quot;test_convert&quot;</span>
+
+<span class="gp"># </span>Run<span class="w"> </span>with<span class="w"> </span>verbose<span class="w"> </span>output
+<span class="gp">$ </span>poetry<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-v
+
+<span class="gp"># </span>Run<span class="w"> </span>with<span class="w"> </span>coverage<span class="w"> </span>report
+<span class="gp">$ </span>poetry<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>--cov<span class="o">=</span>idtrack<span class="w"> </span>--cov-report<span class="o">=</span>html
+</pre></div>
+</div>
+</section>
+<section id="test-organization">
+<h3>Test Organization<a class="headerlink" href="#test-organization" title="Link to this heading"></a></h3>
+<p>Tests are located in the <code class="docutils literal notranslate"><span class="pre">tests/</span></code> directory:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>tests/
+├── test_api.py           # Public API tests
+├── test_graph.py         # Graph engine tests
+├── test_harmonize.py     # Harmonization tests
+├── conftest.py           # Shared fixtures
+└── ...
+</pre></div>
+</div>
+</section>
+</section>
+<section id="building-documentation">
+<h2>Building Documentation<a class="headerlink" href="#building-documentation" title="Link to this heading"></a></h2>
+<p>IDTrack uses <a class="reference external" href="https://www.sphinx-doc.org/">Sphinx</a> with <a class="reference external" href="https://nbsphinx.readthedocs.io/">nbsphinx</a> to build documentation from reStructuredText
+files and Jupyter notebooks.</p>
+<section id="install-documentation-dependencies">
+<h3>Install Documentation Dependencies<a class="headerlink" href="#install-documentation-dependencies" title="Link to this heading"></a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>docs/requirements.txt
+</pre></div>
+</div>
+</section>
+<section id="build-the-documentation">
+<h3>Build the Documentation<a class="headerlink" href="#build-the-documentation" title="Link to this heading"></a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span><span class="nb">cd</span><span class="w"> </span>docs
+<span class="gp">$ </span>make<span class="w"> </span>html
+</pre></div>
+</div>
+<p>The generated HTML files are in <code class="docutils literal notranslate"><span class="pre">docs/_build/html/</span></code>. Open <code class="docutils literal notranslate"><span class="pre">index.html</span></code> in your browser.</p>
+</section>
+<section id="live-preview-during-editing">
+<h3>Live Preview During Editing<a class="headerlink" href="#live-preview-during-editing" title="Link to this heading"></a></h3>
+<p>For automatic rebuilds while editing:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>sphinx-autobuild
+<span class="gp">$ </span><span class="nb">cd</span><span class="w"> </span>docs
+<span class="gp">$ </span>sphinx-autobuild<span class="w"> </span>.<span class="w"> </span>_build/html
+</pre></div>
+</div>
+<p>Then open <a class="reference external" href="http://localhost:8000">http://localhost:8000</a> in your browser.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>IDTrack itself must be installed for the API documentation to build correctly.
+Notebooks are not executed during builds (<code class="docutils literal notranslate"><span class="pre">nbsphinx_execute</span> <span class="pre">=</span> <span class="pre">&quot;never&quot;</span></code>);
+they are rendered with pre-existing outputs.</p>
+</div>
+</section>
+</section>
+<section id="documentation-guidelines">
+<h2>Documentation Guidelines<a class="headerlink" href="#documentation-guidelines" title="Link to this heading"></a></h2>
+<p>When contributing to the documentation website:</p>
+<ul class="simple">
+<li><p><strong>Keep pages scannable</strong>: start with a short summary, then use <code class="docutils literal notranslate"><span class="pre">..</span> <span class="pre">contents::</span></code> and tables for structured material.</p></li>
+<li><p><strong>Prefer cross-links over duplication</strong>: use <code class="docutils literal notranslate"><span class="pre">:doc:`...`</span></code> for pages and <code class="docutils literal notranslate"><span class="pre">:meth:`...`</span></code> / <code class="docutils literal notranslate"><span class="pre">:class:`...`</span></code> for API items.</p></li>
+<li><p><strong>Tutorial notebooks are source of truth for narrative workflows</strong>: notebooks live in <code class="docutils literal notranslate"><span class="pre">docs/_notebooks</span></code> and are
+rendered by <em>nbsphinx</em> without execution during builds.</p></li>
+<li><p><strong>Avoid huge notebook outputs</strong>: keep outputs concise and deterministic so the rendered docs remain readable.</p></li>
+</ul>
+</section>
+<section id="submitting-changes">
+<h2>Submitting Changes<a class="headerlink" href="#submitting-changes" title="Link to this heading"></a></h2>
+<section id="workflow-overview">
+<h3>Workflow Overview<a class="headerlink" href="#workflow-overview" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 10.0%" />
+<col style="width: 30.0%" />
+<col style="width: 60.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Step</p></th>
+<th class="head"><p>Action</p></th>
+<th class="head"><p>Details</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1</p></td>
+<td><p>Fork &amp; Clone</p></td>
+<td><p>Create your own copy of the repository</p></td>
+</tr>
+<tr class="row-odd"><td><p>2</p></td>
+<td><p>Branch</p></td>
+<td><p>Create a feature branch from <code class="docutils literal notranslate"><span class="pre">development</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>3</p></td>
+<td><p>Develop</p></td>
+<td><p>Make your changes with tests</p></td>
+</tr>
+<tr class="row-odd"><td><p>4</p></td>
+<td><p>Test</p></td>
+<td><p>Run tests and linting locally</p></td>
+</tr>
+<tr class="row-even"><td><p>5</p></td>
+<td><p>Submit</p></td>
+<td><p>Create a pull request</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="step-by-step-guide">
+<h3>Step-by-Step Guide<a class="headerlink" href="#step-by-step-guide" title="Link to this heading"></a></h3>
+<p><strong>Step 1: Fork and clone</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Fork<span class="w"> </span>on<span class="w"> </span>GitHub,<span class="w"> </span><span class="k">then</span><span class="w"> </span>clone<span class="w"> </span>your<span class="w"> </span>fork
+<span class="gp">$ </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/YOUR_USERNAME/idtrack.git
+<span class="gp">$ </span><span class="nb">cd</span><span class="w"> </span>idtrack
+<span class="gp">$ </span>git<span class="w"> </span>remote<span class="w"> </span>add<span class="w"> </span>upstream<span class="w"> </span>https://github.com/theislab/idtrack.git
+</pre></div>
+</div>
+<p><strong>Step 2: Create a feature branch</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>git<span class="w"> </span>checkout<span class="w"> </span>development
+<span class="gp">$ </span>git<span class="w"> </span>pull<span class="w"> </span>upstream<span class="w"> </span>development
+<span class="gp">$ </span>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feature/your-feature-name
+</pre></div>
+</div>
+<p>Use descriptive branch names:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">feature/add-zebrafish-support</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fix/hgnc-download-timeout</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">docs/improve-quickstart</span></code></p></li>
+</ul>
+<p><strong>Step 3: Make your changes</strong></p>
+<ul class="simple">
+<li><p>Write clear, focused commits</p></li>
+<li><p>Follow the existing code style</p></li>
+<li><p>Add tests for new functionality</p></li>
+<li><p>Update documentation if needed</p></li>
+</ul>
+<p><strong>Step 4: Run tests and linting</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox
+</pre></div>
+</div>
+<p>All tests and checks must pass before submitting.</p>
+<p><strong>Step 5: Push and create a pull request</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>feature/your-feature-name
+</pre></div>
+</div>
+<p>Then open a pull request on GitHub against the <code class="docutils literal notranslate"><span class="pre">development</span></code> branch.</p>
+</section>
+<section id="pull-request-guidelines">
+<h3>Pull Request Guidelines<a class="headerlink" href="#pull-request-guidelines" title="Link to this heading"></a></h3>
+<p>Your pull request should:</p>
+<ul class="simple">
+<li><p><strong>Pass all tests</strong> - The Nox test suite must pass without errors</p></li>
+<li><p><strong>Include tests</strong> - Add tests for bug fixes and new features</p></li>
+<li><p><strong>Update documentation</strong> - If your changes affect user-facing behavior</p></li>
+<li><p><strong>Have a clear description</strong> - Explain what the PR does and why</p></li>
+<li><p><strong>Reference issues</strong> - Link to related issues (e.g., “Fixes #123”)</p></li>
+</ul>
+</section>
+<section id="pull-request-template">
+<h3>Pull Request Template<a class="headerlink" href="#pull-request-template" title="Link to this heading"></a></h3>
+<div class="highlight-markdown notranslate"><div class="highlight"><pre><span></span><span class="gu">## Summary</span>
+Brief description of what this PR does.
+
+<span class="gu">## Changes</span>
+<span class="k">-</span><span class="w"> </span>Added support for X
+<span class="k">-</span><span class="w"> </span>Fixed bug in Y
+<span class="k">-</span><span class="w"> </span>Updated documentation for Z
+
+<span class="gu">## Testing</span>
+<span class="k">- [ ]</span> Unit tests added/updated
+<span class="k">- [ ]</span> All tests pass locally (<span class="sb">`nox`</span>)
+<span class="k">- [ ]</span> Documentation builds without errors
+
+<span class="gu">## Related Issues</span>
+Fixes <span class="ni">#123</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="code-style">
+<h2>Code Style<a class="headerlink" href="#code-style" title="Link to this heading"></a></h2>
+<p>IDTrack follows these conventions:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Aspect</p></th>
+<th class="head"><p>Convention</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Formatting</strong></p></td>
+<td><p>Black (automatically applied by pre-commit)</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Linting</strong></p></td>
+<td><p>Ruff</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Type hints</strong></p></td>
+<td><p>Use type annotations for public APIs</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Docstrings</strong></p></td>
+<td><p>NumPy style</p></td>
+</tr>
+</tbody>
+</table>
+<section id="example-function">
+<h3>Example Function<a class="headerlink" href="#example-function" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">convert_identifier</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">to_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">explain</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ConversionResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert a biological identifier to a target release.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    identifier</span>
+<span class="sd">        The identifier to convert (e.g., gene symbol, Ensembl ID).</span>
+<span class="sd">    to_release</span>
+<span class="sd">        Target Ensembl release number.</span>
+<span class="sd">    explain</span>
+<span class="sd">        If True, include detailed mapping information.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ConversionResult</span>
+<span class="sd">        The conversion result with mapped identifiers.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the identifier format is not recognized.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; api.convert_identifier(&quot;TP53&quot;, to_release=112)</span>
+<span class="sd">    ConversionResult(...)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="adding-organism-support">
+<h2>Adding Organism Support<a class="headerlink" href="#adding-organism-support" title="Link to this heading"></a></h2>
+<p>Want to add support for a new organism? This involves configuring external databases
+for the species.</p>
+<p>See the detailed tutorial: <a class="reference internal" href="_notebooks/prepare_new_external_yaml.html"><span class="doc">Part 2 — External Database Configuration</span></a></p>
+<p>The general process is:</p>
+<ol class="arabic simple">
+<li><p><strong>Create a YAML configuration</strong> for external databases</p></li>
+<li><p><strong>Test the configuration</strong> with graph builds</p></li>
+<li><p><strong>Validate conversion accuracy</strong> against known mappings</p></li>
+<li><p><strong>Submit a pull request</strong> with the new configuration</p></li>
+</ol>
+</section>
+<section id="getting-help">
+<h2>Getting Help<a class="headerlink" href="#getting-help" title="Link to this heading"></a></h2>
+<p>If you have questions or need help:</p>
+<ul class="simple">
+<li><p><strong>General questions</strong>: Open a <a class="reference external" href="https://github.com/theislab/idtrack/discussions">GitHub Discussion</a></p></li>
+<li><p><strong>Bug reports and features</strong>: Use the <a class="reference external" href="https://github.com/theislab/idtrack/issues">Issue Tracker</a></p></li>
+<li><p><strong>Direct contact</strong>: See <a class="reference internal" href="authors.html"><span class="doc">Credits</span></a></p></li>
+</ul>
+<p>We appreciate all contributions, no matter how small. Thank you for helping make IDTrack better!</p>
 </section>
 </section>
 
@@ -192,7 +724,7 @@ This will allow a chance to talk it over with the owners and validate your appro
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="reference.html" class="btn btn-neutral float-left" title="Reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="reference/external_mappers.html" class="btn btn-neutral float-left" title="External Mappers" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="authors.html" class="btn btn-neutral float-right" title="Credits" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

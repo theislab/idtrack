@@ -1,0 +1,482 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "23c813fb",
+   "metadata": {},
+   "source": [
+    "# Part 4 — Core API Deep-Dive (Human Example)\n",
+    "\n",
+    "*Last updated:* 2026-01-08\n",
+    "\n",
+    "This notebook is a **hands-on tutorial** of the public IDTrack API using **human**.\n",
+    "\n",
+    "**Learning objectives**\n",
+    "- Create the `idtrack.API` façade and understand what it wraps.\n",
+    "- Convert single identifiers (time travel + optional external outputs).\n",
+    "- Convert batches and summarize outcomes (1→0 / 1→1 / 1→n).\n",
+    "- Request explanation payloads for audit trails.\n",
+    "- Learn advanced knobs (external bridging, ambiguity strategy, assembly awareness).\n",
+    "- Learn introspection helpers (available databases, assemblies, releases, active ranges).\n",
+    "\n",
+    "> **Prerequisite:** `initialization_graph.ipynb` (Part 3) is recommended so the graph loads from cache.\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "aa04831d",
+   "metadata": {},
+   "source": [
+    "## 4.1 — The API Facade\n",
+    "\n",
+    "`idtrack.API` is the user-facing entry point. It handles:\n",
+    "- organism resolution (human/mouse/pig names and synonyms)\n",
+    "- building or loading a graph snapshot (the reproducible snapshot boundary)\n",
+    "- conversion helpers like `convert_identifier(...)` and `convert_identifier_multiple(...)`\n",
+    "\n",
+    "In this notebook we build (or load) the **human** snapshot, then use it for the rest of the examples.\n",
+    "\n",
+    "> **Expected result:** after the setup cell runs, `api.track` exists and conversions become available.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "7e64623d",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from __future__ import annotations\n",
+    "\n",
+    "import os\n",
+    "from pathlib import Path\n",
+    "\n",
+    "import idtrack\n",
+    "\n",
+    "LOCAL_REPOSITORY = Path(os.environ.get('IDTRACK_LOCAL_REPO', './idtrack_cache')).resolve()\n",
+    "LOCAL_REPOSITORY.mkdir(parents=True, exist_ok=True)\n",
+    "\n",
+    "api = idtrack.API(local_repository=str(LOCAL_REPOSITORY))\n",
+    "api.configure_logger()\n",
+    "\n",
+    "organism, latest_release = api.resolve_organism('human')\n",
+    "SNAPSHOT_RELEASE = latest_release\n",
+    "\n",
+    "api.build_graph(organism_name=organism, snapshot_release=SNAPSHOT_RELEASE, calculate_caches=True)\n",
+    "print('Ready:', organism, 'snapshot', SNAPSHOT_RELEASE)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "adc0ede4",
+   "metadata": {},
+   "source": [
+    "## 4.2 — Single Identifier Conversion\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "dbedd707",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "api.convert_identifier('TP53', to_release=SNAPSHOT_RELEASE)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "567b689b",
+   "metadata": {},
+   "source": [
+    "If you see `no_corresponding=True`, it means the input could not be matched.\n",
+    "Try a different spelling/casing, or use an Ensembl ID directly.\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d832c626",
+   "metadata": {},
+   "source": [
+    "### 4.2.1 Example: time travel (convert to an older release)\n",
+    "\n",
+    "Why this matters: published datasets often use older releases.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "f251b006",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Choose an older release to demonstrate time travel\n",
+    "older_release = SNAPSHOT_RELEASE - 10\n",
+    "api.convert_identifier('TP53', to_release=older_release)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1f4beed4",
+   "metadata": {},
+   "source": [
+    "### 4.2.2 Convert into an external database (HGNC)\n",
+    "\n",
+    "To convert into a specific external database, pass `final_database=...`.\n",
+    "Database names are the same names you see in your external YAML.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "c9c3dd54",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "api.convert_identifier('ENSG00000141510', to_release=SNAPSHOT_RELEASE, final_database='HGNC Symbol')\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b50aa467",
+   "metadata": {},
+   "source": [
+    "### 4.2.3 How do I know which external databases are available?\n",
+    "\n",
+    "Use the graph itself to list databases currently represented.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "67598312",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "g = api.track.graph\n",
+    "sorted(g.available_external_databases)[:50]\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "10f77c9b",
+   "metadata": {},
+   "source": [
+    "### 4.2.4 Understanding the result dictionary\n",
+    "\n",
+    "Key fields:\n",
+    "- `query_id`: exactly what you typed\n",
+    "- `graph_id`: what IDTrack matched internally (normalization step)\n",
+    "- `target_id`: list of outputs (can be 0, 1, or many)\n",
+    "- `no_corresponding`: input didn’t match any node\n",
+    "- `no_conversion`: input matched, but no path to target release / database\n",
+    "- `no_target`: reached an Ensembl target, but requested external DB had no synonym\n",
+    "\n",
+    "Important: `target_id` is a list because ambiguity is real and common.\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ac47627b",
+   "metadata": {},
+   "source": [
+    "### 4.2.5 Ambiguity control: strategy='best' vs strategy='all'\n",
+    "\n",
+    "- `strategy='best'` (default): returns a single best target when possible\n",
+    "- `strategy='all'`: returns *all* candidates IDTrack found\n",
+    "\n",
+    "Use `'all'` when you are doing QC or want to inspect ambiguous mappings.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "d0a3f563",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "api.convert_identifier('TP53', to_release=SNAPSHOT_RELEASE, strategy='all')\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8ab242d3",
+   "metadata": {},
+   "source": [
+    "## 4.3 — Batch Conversion\n",
+    "\n",
+    "Most workflows start from a list of identifiers (genes in a count matrix, markers, hits, etc.).\n",
+    "IDTrack provides two helpers:\n",
+    "- `convert_identifier_multiple(...)`\n",
+    "- `classify_multiple_conversion(...)` to summarize outcomes\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "ca00f64f",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "genes = ['TP53', 'BRCA1', 'BRCA2', 'BRAF', 'KRAS', 'NOT_A_REAL_GENE']\n",
+    "results = api.convert_identifier_multiple(genes, to_release=SNAPSHOT_RELEASE, final_database='HGNC Symbol')\n",
+    "results[:2]  # show first two\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "49300b27",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "summary = api.classify_multiple_conversion(results)\n",
+    "# Each bin is a list of per-gene dictionaries\n",
+    "{k: len(v) for k, v in summary.items()}\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "24116800",
+   "metadata": {},
+   "source": [
+    "If you want a human-readable report, you can print the summary bins:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "b9931ed6",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "api.print_binned_conversion(summary)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "739b6db6",
+   "metadata": {},
+   "source": [
+    "## 4.4 — Explainability & Auditability\n",
+    "\n",
+    "When you set `explain=True`, the result includes a `the_path` field describing the graph edges followed.\n",
+    "This is very useful for advanced QC and debugging.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "4a51a1c4",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "explained = api.convert_identifier('TP53', to_release=SNAPSHOT_RELEASE, final_database='HGNC Symbol', explain=True)\n",
+    "list(explained.keys())\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "102844e8",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# The path dictionary keys are (target_id, ensembl_gene_id) pairs\n",
+    "list(explained['the_path'].keys())[:3]\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "aa85d082",
+   "metadata": {},
+   "source": [
+    "`the_path` is intentionally detailed. For most users, the summary flags and `target_id` are enough.\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "af01ac49",
+   "metadata": {},
+   "source": [
+    "## 4.5 — Advanced Conversion Options\n",
+    "\n",
+    "`api.convert_identifier(...)` is a convenience wrapper around `api.track.convert(...)`.\n",
+    "\n",
+    "Use the high-level API most of the time.\n",
+    "But if you need full control (search settings, whether external bridging is allowed, deeper path diagnostics), you can call `Track.convert` directly.\n",
+    "\n",
+    "### 4.5.1 Best vs all (selection strategy)\n",
+    "\n",
+    "- `strategy='best'` returns a single globally best target.\n",
+    "- `strategy='all'` returns all scored targets (useful for ambiguity-aware pipelines).\n",
+    "\n",
+    "### 4.5.2 Controlling external bridging\n",
+    "\n",
+    "External bridging helps reconnect broken Ensembl histories using external IDs, but it can also increase search space.\n",
+    "Power users can toggle it via `go_external` on `Track.convert`.\n",
+    "\n",
+    "### 4.5.3 Hyperconnected nodes\n",
+    "\n",
+    "Some external identifiers connect to *many* entities (e.g. generic accessions). IDTrack detects these and limits their use to keep searches fast.\n",
+    "\n",
+    "### 4.5.4 Assembly-aware conversions\n",
+    "\n",
+    "In IDTrack, genome assemblies are part of the graph. This is crucial when you integrate datasets that were annotated with different references\n",
+    "(for example, a GRCh37-based GTF and a GRCh38-based GTF).\n",
+    "\n",
+    "When you build a snapshot you choose a **primary assembly** (default: the newest/highest-priority assembly for that organism).\n",
+    "The snapshot can still include other assemblies that Ensembl exposes within the snapshot window, and the path-finder can traverse between\n",
+    "assemblies when it improves connectivity.\n",
+    "\n",
+    "Practical consequences:\n",
+    "- You can feed identifiers originating from older builds and still harmonize them into one target space (your snapshot release + primary assembly).\n",
+    "- External databases can be assembly-scoped; keeping assembly blocks enabled in your external YAML increases the set of bridges available for mapping.\n",
+    "\n",
+    "If you truly need outputs anchored to a different primary assembly (for example, a GRCh37-only downstream reference), rebuild with\n",
+    "`genome_assembly=37`. Note that the cached graph filename does not include the assembly; use a separate local repository if you want to keep\n",
+    "multiple primary-assembly snapshots side-by-side.\n",
+    "\n",
+    "Example (advanced):\n",
+    "```python\n",
+    "api.track.convert(\n",
+    "    from_id='TP53',\n",
+    "    from_release=None,\n",
+    "    to_release=SNAPSHOT_RELEASE,\n",
+    "    final_database='HGNC Symbol',\n",
+    "    go_external=True,\n",
+    "    return_path=True,\n",
+    ")\n",
+    "```\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "53eeb29f",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Advanced demo: inspect hyperconnected nodes and compare `go_external` behavior.\n",
+    "# Safe: does not modify your cache; it only runs conversions.\n",
+    "\n",
+    "# 1) Hyperconnected nodes (performance/ambiguity concept)\n",
+    "g = api.track.graph\n",
+    "hc = getattr(g, 'hyperconnective_nodes', {})\n",
+    "print('Hyperconnected external nodes:', len(hc))\n",
+    "if hc:\n",
+    "    top = sorted(hc.items(), key=lambda kv: kv[1], reverse=True)[:10]\n",
+    "    print('Top 10 by out-degree:')\n",
+    "    for node, deg in top:\n",
+    "        print(' ', deg, '-', node)\n",
+    "\n",
+    "# 2) External bridging toggle (often matters when backbone history is disconnected)\n",
+    "# For many well-behaved genes, both calls will succeed; the point is the *option* exists.\n",
+    "res_no_external = api.track.convert(\n",
+    "    from_id='TP53',\n",
+    "    from_release=None,\n",
+    "    to_release=SNAPSHOT_RELEASE,\n",
+    "    final_database=None,\n",
+    "    go_external=False,\n",
+    "    prioritize_to_one_filter=True,\n",
+    "    return_path=False,\n",
+    ")\n",
+    "res_with_external = api.track.convert(\n",
+    "    from_id='TP53',\n",
+    "    from_release=None,\n",
+    "    to_release=SNAPSHOT_RELEASE,\n",
+    "    final_database=None,\n",
+    "    go_external=True,\n",
+    "    prioritize_to_one_filter=True,\n",
+    "    return_path=False,\n",
+    ")\n",
+    "\n",
+    "print('go_external=False ->', 'OK' if res_no_external else None)\n",
+    "print('go_external=True  ->', 'OK' if res_with_external else None)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "e7b55b58",
+   "metadata": {},
+   "source": [
+    "## 4.6 — Introspection & Discovery\n",
+    "\n",
+    "These helpers answer practical questions like:\n",
+    "- *Which external databases are available in my current graph?*\n",
+    "- *Which genome assemblies are represented?*\n",
+    "- *What Ensembl release range does my snapshot cover?*\n",
+    "- *When was a given identifier active across releases?*\n",
+    "\n",
+    "The next cell demonstrates the most useful introspection calls.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "ed563412",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Introspection demo\n",
+    "\n",
+    "print('Assemblies in this graph:', sorted(api.list_genome_assemblies()))\n",
+    "\n",
+    "ext_dbs = sorted(api.list_external_databases())\n",
+    "print('External DBs enabled (count):', len(ext_dbs))\n",
+    "print('External DBs (first 25):', ext_dbs[:25])\n",
+    "\n",
+    "forms = api.external_database_forms()\n",
+    "print()\n",
+    "print('External DB connection forms (sample):')\n",
+    "for name in ext_dbs[:10]:\n",
+    "    print(' ', name, '→', forms.get(name))\n",
+    "\n",
+    "rels = api.list_ensembl_releases()\n",
+    "print()\n",
+    "print('Ensembl releases in snapshot window:', (min(rels), max(rels)) if rels else None)\n",
+    "\n",
+    "# Active ranges: when was an ID \"alive\" across releases?\n",
+    "# (Useful for provenance documentation.)\n",
+    "g = api.track.graph\n",
+    "example_gene = 'ENSG00000141510'  # TP53\n",
+    "if example_gene in g.nodes:\n",
+    "    print()\n",
+    "    print('Active ranges (main assembly) for', example_gene, ':', g.get_active_ranges_of_id.get(example_gene))\n",
+    "    try:\n",
+    "        print('Active ranges (all assemblies) for', example_gene, ':', g.get_active_ranges_of_id_ensembl_all_inclusive(example_gene))\n",
+    "    except Exception as e:\n",
+    "        print('All-assemblies active range failed ->', repr(e))\n",
+    "else:\n",
+    "    print('Example gene not found in graph (unexpected).')\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "4e306c2e",
+   "metadata": {},
+   "source": [
+    "## 4.7 — Practical advice (the kind that saves you a week)\n",
+    "\n",
+    "1. Always record your **snapshot boundary** (release) in your analysis notes.\n",
+    "2. If you share results, share the **external YAML** too.\n",
+    "3. When mapping is ambiguous, do not hide it — decide how your pipeline should handle 1→n mappings.\n",
+    "4. For scRNA-seq harmonization, prefer stable namespaces (Ensembl IDs) before switching to symbols.\n",
+    "\n",
+    "> **Tip:** If you need troubleshooting checklists and diagnostics helpers, see `08_advanced_topics.ipynb` (Part 7.3).\n"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

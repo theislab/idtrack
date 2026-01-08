@@ -1,0 +1,498 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Part 4 — Core API Deep-Dive (Human Example) &mdash; idtrack 0.0.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=f6ff1e94" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Part 5 — Real-World Experiments: Harmonization" href="tutorial_harmonization.html" />
+    <link rel="prev" title="Part 3 — Graph Initialization &amp; Management" href="initialization_graph.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            idtrack
+              <img src="../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../tutorials.html">Tutorials</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="00_idtrack_overview.html">Part 0 — Conceptual Foundation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="01_installation_guide.html">Part 1 — Environment Setup &amp; Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prepare_new_external_yaml.html">Part 2 — External Database Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialization_graph.html">Part 3 — Graph Initialization &amp; Management</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Part 4 — Core API Deep-Dive (Human Example)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#4.1-—-The-API-Facade">4.1 — The API Facade</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#4.2-—-Single-Identifier-Conversion">4.2 — Single Identifier Conversion</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#4.2.1-Example:-time-travel-(convert-to-an-older-release)">4.2.1 Example: time travel (convert to an older release)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#4.2.2-Convert-into-an-external-database-(HGNC)">4.2.2 Convert into an external database (HGNC)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#4.2.3-How-do-I-know-which-external-databases-are-available?">4.2.3 How do I know which external databases are available?</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#4.2.4-Understanding-the-result-dictionary">4.2.4 Understanding the result dictionary</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#4.2.5-Ambiguity-control:-strategy='best'-vs-strategy='all'">4.2.5 Ambiguity control: strategy=’best’ vs strategy=’all’</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#4.3-—-Batch-Conversion">4.3 — Batch Conversion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#4.4-—-Explainability-&amp;-Auditability">4.4 — Explainability &amp; Auditability</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#4.5-—-Advanced-Conversion-Options">4.5 — Advanced Conversion Options</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#4.5.1-Best-vs-all-(selection-strategy)">4.5.1 Best vs all (selection strategy)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#4.5.2-Controlling-external-bridging">4.5.2 Controlling external bridging</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#4.5.3-Hyperconnected-nodes">4.5.3 Hyperconnected nodes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#4.5.4-Assembly-aware-conversions">4.5.4 Assembly-aware conversions</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#4.6-—-Introspection-&amp;-Discovery">4.6 — Introspection &amp; Discovery</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#4.7-—-Practical-advice-(the-kind-that-saves-you-a-week)">4.7 — Practical advice (the kind that saves you a week)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial_harmonization.html">Part 5 — Real-World Experiments: Harmonization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial_humanization_mouse_pig_to_human.html">Part 6 — Cross-Species Workflows: Humanization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="08_advanced_topics.html">Part 7 — Advanced Topics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialization_test.html">Appendix</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../tutorials.html">Tutorials</a></li>
+      <li class="breadcrumb-item active">Part 4 — Core API Deep-Dive (Human Example)</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_notebooks/api_deep_dive_human.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="idtrack-notebook-meta">
+  <a class="idtrack-notebook-download" href="../_sources/_notebooks/api_deep_dive_human.ipynb">Download notebook</a>
+</div><section id="Part-4-—-Core-API-Deep-Dive-(Human-Example)">
+<h1>Part 4 — Core API Deep-Dive (Human Example)<a class="headerlink" href="#Part-4-—-Core-API-Deep-Dive-(Human-Example)" title="Link to this heading"></a></h1>
+<p><em>Last updated:</em> 2026-01-08</p>
+<p>This notebook is a <strong>hands-on tutorial</strong> of the public IDTrack API using <strong>human</strong>.</p>
+<p><strong>Learning objectives</strong></p>
+<ul class="simple">
+<li><p>Create the <code class="docutils literal notranslate"><span class="pre">idtrack.API</span></code> façade and understand what it wraps.</p></li>
+<li><p>Convert single identifiers (time travel + optional external outputs).</p></li>
+<li><p>Convert batches and summarize outcomes (1→0 / 1→1 / 1→n).</p></li>
+<li><p>Request explanation payloads for audit trails.</p></li>
+<li><p>Learn advanced knobs (external bridging, ambiguity strategy, assembly awareness).</p></li>
+<li><p>Learn introspection helpers (available databases, assemblies, releases, active ranges).</p></li>
+</ul>
+<blockquote>
+<div><p><strong>Prerequisite:</strong> <code class="docutils literal notranslate"><span class="pre">initialization_graph.ipynb</span></code> (Part 3) is recommended so the graph loads from cache.</p>
+</div></blockquote>
+<section id="4.1-—-The-API-Facade">
+<h2>4.1 — The API Facade<a class="headerlink" href="#4.1-—-The-API-Facade" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">idtrack.API</span></code> is the user-facing entry point. It handles:</p>
+<ul class="simple">
+<li><p>organism resolution (human/mouse/pig names and synonyms)</p></li>
+<li><p>building or loading a graph snapshot (the reproducible snapshot boundary)</p></li>
+<li><p>conversion helpers like <code class="docutils literal notranslate"><span class="pre">convert_identifier(...)</span></code> and <code class="docutils literal notranslate"><span class="pre">convert_identifier_multiple(...)</span></code></p></li>
+</ul>
+<p>In this notebook we build (or load) the <strong>human</strong> snapshot, then use it for the rest of the examples.</p>
+<blockquote>
+<div><p><strong>Expected result:</strong> after the setup cell runs, <code class="docutils literal notranslate"><span class="pre">api.track</span></code> exists and conversions become available.</p>
+</div></blockquote>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+
+<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;IDTRACK_LOCAL_REPO&#39;</span><span class="p">,</span> <span class="s1">&#39;./idtrack_cache&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
+<span class="n">api</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
+
+<span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;human&#39;</span><span class="p">)</span>
+<span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="n">latest_release</span>
+
+<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Ready:&#39;</span><span class="p">,</span> <span class="n">organism</span><span class="p">,</span> <span class="s1">&#39;snapshot&#39;</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="4.2-—-Single-Identifier-Conversion">
+<h2>4.2 — Single Identifier Conversion<a class="headerlink" href="#4.2-—-Single-Identifier-Conversion" title="Link to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">&#39;TP53&#39;</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<p>If you see <code class="docutils literal notranslate"><span class="pre">no_corresponding=True</span></code>, it means the input could not be matched. Try a different spelling/casing, or use an Ensembl ID directly.</p>
+<section id="4.2.1-Example:-time-travel-(convert-to-an-older-release)">
+<h3>4.2.1 Example: time travel (convert to an older release)<a class="headerlink" href="#4.2.1-Example:-time-travel-(convert-to-an-older-release)" title="Link to this heading"></a></h3>
+<p>Why this matters: published datasets often use older releases.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Choose an older release to demonstrate time travel</span>
+<span class="n">older_release</span> <span class="o">=</span> <span class="n">SNAPSHOT_RELEASE</span> <span class="o">-</span> <span class="mi">10</span>
+<span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">&#39;TP53&#39;</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">older_release</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="4.2.2-Convert-into-an-external-database-(HGNC)">
+<h3>4.2.2 Convert into an external database (HGNC)<a class="headerlink" href="#4.2.2-Convert-into-an-external-database-(HGNC)" title="Link to this heading"></a></h3>
+<p>To convert into a specific external database, pass <code class="docutils literal notranslate"><span class="pre">final_database=...</span></code>. Database names are the same names you see in your external YAML.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">&#39;ENSG00000141510&#39;</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="4.2.3-How-do-I-know-which-external-databases-are-available?">
+<h3>4.2.3 How do I know which external databases are available?<a class="headerlink" href="#4.2.3-How-do-I-know-which-external-databases-are-available?" title="Link to this heading"></a></h3>
+<p>Use the graph itself to list databases currently represented.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
+<span class="nb">sorted</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">available_external_databases</span><span class="p">)[:</span><span class="mi">50</span><span class="p">]</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="4.2.4-Understanding-the-result-dictionary">
+<h3>4.2.4 Understanding the result dictionary<a class="headerlink" href="#4.2.4-Understanding-the-result-dictionary" title="Link to this heading"></a></h3>
+<p>Key fields:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">query_id</span></code>: exactly what you typed</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">graph_id</span></code>: what IDTrack matched internally (normalization step)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">target_id</span></code>: list of outputs (can be 0, 1, or many)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">no_corresponding</span></code>: input didn’t match any node</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">no_conversion</span></code>: input matched, but no path to target release / database</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">no_target</span></code>: reached an Ensembl target, but requested external DB had no synonym</p></li>
+</ul>
+<p>Important: <code class="docutils literal notranslate"><span class="pre">target_id</span></code> is a list because ambiguity is real and common.</p>
+</section>
+<section id="4.2.5-Ambiguity-control:-strategy='best'-vs-strategy='all'">
+<h3>4.2.5 Ambiguity control: strategy=’best’ vs strategy=’all’<a class="headerlink" href="#4.2.5-Ambiguity-control:-strategy='best'-vs-strategy='all'" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">strategy='best'</span></code> (default): returns a single best target when possible</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">strategy='all'</span></code>: returns <em>all</em> candidates IDTrack found</p></li>
+</ul>
+<p>Use <code class="docutils literal notranslate"><span class="pre">'all'</span></code> when you are doing QC or want to inspect ambiguous mappings.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">&#39;TP53&#39;</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">strategy</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="4.3-—-Batch-Conversion">
+<h2>4.3 — Batch Conversion<a class="headerlink" href="#4.3-—-Batch-Conversion" title="Link to this heading"></a></h2>
+<p>Most workflows start from a list of identifiers (genes in a count matrix, markers, hits, etc.). IDTrack provides two helpers:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">convert_identifier_multiple(...)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">classify_multiple_conversion(...)</span></code> to summarize outcomes</p></li>
+</ul>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">genes</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;TP53&#39;</span><span class="p">,</span> <span class="s1">&#39;BRCA1&#39;</span><span class="p">,</span> <span class="s1">&#39;BRCA2&#39;</span><span class="p">,</span> <span class="s1">&#39;BRAF&#39;</span><span class="p">,</span> <span class="s1">&#39;KRAS&#39;</span><span class="p">,</span> <span class="s1">&#39;NOT_A_REAL_GENE&#39;</span><span class="p">]</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier_multiple</span><span class="p">(</span><span class="n">genes</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">)</span>
+<span class="n">results</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>  <span class="c1"># show first two</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">summary</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">classify_multiple_conversion</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+<span class="c1"># Each bin is a list of per-gene dictionaries</span>
+<span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">summary</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+<br/></pre></div>
+</div>
+</div>
+<p>If you want a human-readable report, you can print the summary bins:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">print_binned_conversion</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="4.4-—-Explainability-&amp;-Auditability">
+<h2>4.4 — Explainability &amp; Auditability<a class="headerlink" href="#4.4-—-Explainability-&-Auditability" title="Link to this heading"></a></h2>
+<p>When you set <code class="docutils literal notranslate"><span class="pre">explain=True</span></code>, the result includes a <code class="docutils literal notranslate"><span class="pre">the_path</span></code> field describing the graph edges followed. This is very useful for advanced QC and debugging.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">explained</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">&#39;TP53&#39;</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">,</span> <span class="n">explain</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nb">list</span><span class="p">(</span><span class="n">explained</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># The path dictionary keys are (target_id, ensembl_gene_id) pairs</span>
+<span class="nb">list</span><span class="p">(</span><span class="n">explained</span><span class="p">[</span><span class="s1">&#39;the_path&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())[:</span><span class="mi">3</span><span class="p">]</span>
+<br/></pre></div>
+</div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">the_path</span></code> is intentionally detailed. For most users, the summary flags and <code class="docutils literal notranslate"><span class="pre">target_id</span></code> are enough.</p>
+</section>
+<section id="4.5-—-Advanced-Conversion-Options">
+<h2>4.5 — Advanced Conversion Options<a class="headerlink" href="#4.5-—-Advanced-Conversion-Options" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">api.convert_identifier(...)</span></code> is a convenience wrapper around <code class="docutils literal notranslate"><span class="pre">api.track.convert(...)</span></code>.</p>
+<p>Use the high-level API most of the time. But if you need full control (search settings, whether external bridging is allowed, deeper path diagnostics), you can call <code class="docutils literal notranslate"><span class="pre">Track.convert</span></code> directly.</p>
+<section id="4.5.1-Best-vs-all-(selection-strategy)">
+<h3>4.5.1 Best vs all (selection strategy)<a class="headerlink" href="#4.5.1-Best-vs-all-(selection-strategy)" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">strategy='best'</span></code> returns a single globally best target.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">strategy='all'</span></code> returns all scored targets (useful for ambiguity-aware pipelines).</p></li>
+</ul>
+</section>
+<section id="4.5.2-Controlling-external-bridging">
+<h3>4.5.2 Controlling external bridging<a class="headerlink" href="#4.5.2-Controlling-external-bridging" title="Link to this heading"></a></h3>
+<p>External bridging helps reconnect broken Ensembl histories using external IDs, but it can also increase search space. Power users can toggle it via <code class="docutils literal notranslate"><span class="pre">go_external</span></code> on <code class="docutils literal notranslate"><span class="pre">Track.convert</span></code>.</p>
+</section>
+<section id="4.5.3-Hyperconnected-nodes">
+<h3>4.5.3 Hyperconnected nodes<a class="headerlink" href="#4.5.3-Hyperconnected-nodes" title="Link to this heading"></a></h3>
+<p>Some external identifiers connect to <em>many</em> entities (e.g. generic accessions). IDTrack detects these and limits their use to keep searches fast.</p>
+</section>
+<section id="4.5.4-Assembly-aware-conversions">
+<h3>4.5.4 Assembly-aware conversions<a class="headerlink" href="#4.5.4-Assembly-aware-conversions" title="Link to this heading"></a></h3>
+<p>In IDTrack, genome assemblies are part of the graph. This is crucial when you integrate datasets that were annotated with different references (for example, a GRCh37-based GTF and a GRCh38-based GTF).</p>
+<p>When you build a snapshot you choose a <strong>primary assembly</strong> (default: the newest/highest-priority assembly for that organism). The snapshot can still include other assemblies that Ensembl exposes within the snapshot window, and the path-finder can traverse between assemblies when it improves connectivity.</p>
+<p>Practical consequences:</p>
+<ul class="simple">
+<li><p>You can feed identifiers originating from older builds and still harmonize them into one target space (your snapshot release + primary assembly).</p></li>
+<li><p>External databases can be assembly-scoped; keeping assembly blocks enabled in your external YAML increases the set of bridges available for mapping.</p></li>
+</ul>
+<p>If you truly need outputs anchored to a different primary assembly (for example, a GRCh37-only downstream reference), rebuild with <code class="docutils literal notranslate"><span class="pre">genome_assembly=37</span></code>. Note that the cached graph filename does not include the assembly; use a separate local repository if you want to keep multiple primary-assembly snapshots side-by-side.</p>
+<p>Example (advanced):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
+    <span class="n">from_id</span><span class="o">=</span><span class="s1">&#39;TP53&#39;</span><span class="p">,</span>
+    <span class="n">from_release</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span>
+    <span class="n">final_database</span><span class="o">=</span><span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">,</span>
+    <span class="n">go_external</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">return_path</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Advanced demo: inspect hyperconnected nodes and compare `go_external` behavior.</span>
+<span class="c1"># Safe: does not modify your cache; it only runs conversions.</span>
+
+<span class="c1"># 1) Hyperconnected nodes (performance/ambiguity concept)</span>
+<span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
+<span class="n">hc</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="s1">&#39;hyperconnective_nodes&#39;</span><span class="p">,</span> <span class="p">{})</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Hyperconnected external nodes:&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">hc</span><span class="p">))</span>
+<span class="k">if</span> <span class="n">hc</span><span class="p">:</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">hc</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">kv</span><span class="p">:</span> <span class="n">kv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)[:</span><span class="mi">10</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Top 10 by out-degree:&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">deg</span> <span class="ow">in</span> <span class="n">top</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="n">deg</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+
+<span class="c1"># 2) External bridging toggle (often matters when backbone history is disconnected)</span>
+<span class="c1"># For many well-behaved genes, both calls will succeed; the point is the *option* exists.</span>
+<span class="n">res_no_external</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
+    <span class="n">from_id</span><span class="o">=</span><span class="s1">&#39;TP53&#39;</span><span class="p">,</span>
+    <span class="n">from_release</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span>
+    <span class="n">final_database</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">go_external</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">res_with_external</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
+    <span class="n">from_id</span><span class="o">=</span><span class="s1">&#39;TP53&#39;</span><span class="p">,</span>
+    <span class="n">from_release</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span>
+    <span class="n">final_database</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">go_external</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">return_path</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;go_external=False -&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;OK&#39;</span> <span class="k">if</span> <span class="n">res_no_external</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;go_external=True  -&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;OK&#39;</span> <span class="k">if</span> <span class="n">res_with_external</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="4.6-—-Introspection-&amp;-Discovery">
+<h2>4.6 — Introspection &amp; Discovery<a class="headerlink" href="#4.6-—-Introspection-&-Discovery" title="Link to this heading"></a></h2>
+<p>These helpers answer practical questions like:</p>
+<ul class="simple">
+<li><p><em>Which external databases are available in my current graph?</em></p></li>
+<li><p><em>Which genome assemblies are represented?</em></p></li>
+<li><p><em>What Ensembl release range does my snapshot cover?</em></p></li>
+<li><p><em>When was a given identifier active across releases?</em></p></li>
+</ul>
+<p>The next cell demonstrates the most useful introspection calls.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Introspection demo</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assemblies in this graph:&#39;</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_genome_assemblies</span><span class="p">()))</span>
+
+<span class="n">ext_dbs</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_external_databases</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;External DBs enabled (count):&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ext_dbs</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;External DBs (first 25):&#39;</span><span class="p">,</span> <span class="n">ext_dbs</span><span class="p">[:</span><span class="mi">25</span><span class="p">])</span>
+
+<span class="n">forms</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">external_database_forms</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;External DB connection forms (sample):&#39;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">ext_dbs</span><span class="p">[:</span><span class="mi">10</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s1">&#39;→&#39;</span><span class="p">,</span> <span class="n">forms</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+
+<span class="n">rels</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">list_ensembl_releases</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Ensembl releases in snapshot window:&#39;</span><span class="p">,</span> <span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">rels</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">rels</span><span class="p">))</span> <span class="k">if</span> <span class="n">rels</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+
+<span class="c1"># Active ranges: when was an ID &quot;alive&quot; across releases?</span>
+<span class="c1"># (Useful for provenance documentation.)</span>
+<span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
+<span class="n">example_gene</span> <span class="o">=</span> <span class="s1">&#39;ENSG00000141510&#39;</span>  <span class="c1"># TP53</span>
+<span class="k">if</span> <span class="n">example_gene</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Active ranges (main assembly) for&#39;</span><span class="p">,</span> <span class="n">example_gene</span><span class="p">,</span> <span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">get_active_ranges_of_id</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">example_gene</span><span class="p">))</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Active ranges (all assemblies) for&#39;</span><span class="p">,</span> <span class="n">example_gene</span><span class="p">,</span> <span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">get_active_ranges_of_id_ensembl_all_inclusive</span><span class="p">(</span><span class="n">example_gene</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;All-assemblies active range failed -&gt;&#39;</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Example gene not found in graph (unexpected).&#39;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="4.7-—-Practical-advice-(the-kind-that-saves-you-a-week)">
+<h2>4.7 — Practical advice (the kind that saves you a week)<a class="headerlink" href="#4.7-—-Practical-advice-(the-kind-that-saves-you-a-week)" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>Always record your <strong>snapshot boundary</strong> (release) in your analysis notes.</p></li>
+<li><p>If you share results, share the <strong>external YAML</strong> too.</p></li>
+<li><p>When mapping is ambiguous, do not hide it — decide how your pipeline should handle 1→n mappings.</p></li>
+<li><p>For scRNA-seq harmonization, prefer stable namespaces (Ensembl IDs) before switching to symbols.</p></li>
+</ol>
+<blockquote>
+<div><p><strong>Tip:</strong> If you need troubleshooting checklists and diagnostics helpers, see <code class="docutils literal notranslate"><span class="pre">08_advanced_topics.ipynb</span></code> (Part 7.3).</p>
+</div></blockquote>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="initialization_graph.html" class="btn btn-neutral float-left" title="Part 3 — Graph Initialization &amp; Management" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="tutorial_harmonization.html" class="btn btn-neutral float-right" title="Part 5 — Real-World Experiments: Harmonization" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

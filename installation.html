@@ -9,20 +9,23 @@
   <title>Installation &mdash; idtrack 0.0.4 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="_static/custom_settings.css?v=15bcc2cf" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="_static/tutorials.css?v=f6ff1e94" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=8c5712d9"></script>
-      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/design-tabs.js?v=f930bc37"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Usage" href="usage.html" />
-    <link rel="prev" title="idtrack" href="index.html" /> 
+    <link rel="next" title="Quickstart" href="usage.html" />
+    <link rel="prev" title="Appendix — Self-tests &amp; Sanity Checks (Human, Mouse, Pig)" href="_notebooks/initialization_test.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -47,12 +50,40 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Tutorials</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#stable-release">Stable release</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#from-sources">From sources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#system-requirements">System Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#quick-install-with-mamba-recommended">Quick Install with Mamba (Recommended)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#alternative-installation-methods">Alternative Installation Methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#apple-silicon-m1-m2-m3-m4-setup">Apple Silicon (M1/M2/M3/M4) Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#creating-a-dedicated-environment-recommended">Creating a Dedicated Environment (Recommended)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#using-mamba-fastest">Using Mamba (fastest)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#using-conda">Using conda</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#using-venv-pip">Using venv + pip</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#development-installation">Development Installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#clone-and-install">Clone and Install</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#alternative-install-from-tarball">Alternative: Install from Tarball</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#verifying-your-installation">Verifying Your Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#optional-dependencies">Optional Dependencies</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#external-mapping-backends">External Mapping Backends</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ortholog-analysis">Ortholog Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#all-optional-dependencies">All Optional Dependencies</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#common-installation-issues">Common Installation Issues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#getting-help">Getting Help</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#what-s-next">What’s Next?</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="authors.html">Credits</a></li>
@@ -85,36 +116,418 @@
              
   <section id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h1>
-<section id="stable-release">
-<h2>Stable release<a class="headerlink" href="#stable-release" title="Link to this heading"></a></h2>
-<p>To install idtrack, run this command in your terminal:</p>
+<p>This guide covers all installation methods for IDTrack. Choose the approach that best fits
+your workflow.</p>
+<nav class="contents local" id="contents">
+<ul class="simple">
+<li><p><a class="reference internal" href="#system-requirements" id="id2">System Requirements</a></p></li>
+<li><p><a class="reference internal" href="#quick-install-with-mamba-recommended" id="id3">Quick Install with Mamba (Recommended)</a></p></li>
+<li><p><a class="reference internal" href="#alternative-installation-methods" id="id4">Alternative Installation Methods</a></p></li>
+<li><p><a class="reference internal" href="#apple-silicon-m1-m2-m3-m4-setup" id="id5">Apple Silicon (M1/M2/M3/M4) Setup</a></p></li>
+<li><p><a class="reference internal" href="#creating-a-dedicated-environment-recommended" id="id6">Creating a Dedicated Environment (Recommended)</a></p>
+<ul>
+<li><p><a class="reference internal" href="#using-mamba-fastest" id="id7">Using Mamba (fastest)</a></p></li>
+<li><p><a class="reference internal" href="#using-conda" id="id8">Using conda</a></p></li>
+<li><p><a class="reference internal" href="#using-venv-pip" id="id9">Using venv + pip</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#development-installation" id="id10">Development Installation</a></p>
+<ul>
+<li><p><a class="reference internal" href="#prerequisites" id="id11">Prerequisites</a></p></li>
+<li><p><a class="reference internal" href="#clone-and-install" id="id12">Clone and Install</a></p></li>
+<li><p><a class="reference internal" href="#alternative-install-from-tarball" id="id13">Alternative: Install from Tarball</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#verifying-your-installation" id="id14">Verifying Your Installation</a></p></li>
+<li><p><a class="reference internal" href="#optional-dependencies" id="id15">Optional Dependencies</a></p>
+<ul>
+<li><p><a class="reference internal" href="#external-mapping-backends" id="id16">External Mapping Backends</a></p></li>
+<li><p><a class="reference internal" href="#ortholog-analysis" id="id17">Ortholog Analysis</a></p></li>
+<li><p><a class="reference internal" href="#all-optional-dependencies" id="id18">All Optional Dependencies</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#troubleshooting" id="id19">Troubleshooting</a></p>
+<ul>
+<li><p><a class="reference internal" href="#common-installation-issues" id="id20">Common Installation Issues</a></p></li>
+<li><p><a class="reference internal" href="#getting-help" id="id21">Getting Help</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#what-s-next" id="id22">What’s Next?</a></p></li>
+</ul>
+</nav>
+<section id="system-requirements">
+<h2>System Requirements<a class="headerlink" href="#system-requirements" title="Link to this heading"></a></h2>
+<p>Before installing IDTrack, ensure your system meets these requirements:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Requirement</p></th>
+<th class="head"><p>Details</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Python</strong></p></td>
+<td><p>3.9 or later (3.11 recommended)</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Operating Systems</strong></p></td>
+<td><p>Linux, macOS (Intel and Apple Silicon), Windows</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Memory</strong></p></td>
+<td><p>Minimum 4 GB RAM (8 GB recommended for large graphs)</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Disk Space</strong></p></td>
+<td><p>2-5 GB for cached databases (varies by organism)</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Network</strong></p></td>
+<td><p>Internet connection required for initial database downloads</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><strong>Apple Silicon users (M1/M2/M3/M4):</strong> If you install via pip/venv, install HDF5 first (or use conda-forge).
+See the <a class="reference internal" href="#apple-silicon"><span class="std std-ref">Apple Silicon (M1/M2/M3/M4) Setup</span></a> section below.</p>
+</div>
+</section>
+<section id="quick-install-with-mamba-recommended">
+<h2>Quick Install with Mamba (Recommended)<a class="headerlink" href="#quick-install-with-mamba-recommended" title="Link to this heading"></a></h2>
+<p>We recommend <a class="reference external" href="https://mamba.readthedocs.io/">Mamba</a> for the fastest and most reliable
+installation experience. Mamba is a drop-in replacement for conda with significantly
+faster dependency resolution.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Environment activation is handled by conda’s shell integration, even if you use
+Mamba for installs. Use <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">&lt;env&gt;</span></code> after creating an environment.</p>
+</div>
+<p><strong>Install Mamba</strong> (if you don’t have it):</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Option<span class="w"> </span><span class="m">1</span>:<span class="w"> </span>Install<span class="w"> </span>Miniforge<span class="w"> </span><span class="o">(</span>includes<span class="w"> </span>Mamba<span class="o">)</span><span class="w"> </span>-<span class="w"> </span>recommended
+<span class="gp"># </span>Download<span class="w"> </span>from<span class="w"> </span>https://github.com/conda-forge/miniforge
+
+<span class="gp"># </span>Option<span class="w"> </span><span class="m">2</span>:<span class="w"> </span>Install<span class="w"> </span>Mamba<span class="w"> </span>into<span class="w"> </span>existing<span class="w"> </span>conda
+<span class="gp">$ </span>conda<span class="w"> </span>install<span class="w"> </span>-n<span class="w"> </span>base<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>mamba
+</pre></div>
+</div>
+<p><strong>Install IDTrack with Mamba</strong>:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Option<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">(</span>recommended<span class="o">)</span>:<span class="w"> </span>create<span class="w"> </span>an<span class="w"> </span>isolated<span class="w"> </span>environment<span class="w"> </span><span class="k">in</span><span class="w"> </span>one<span class="w"> </span><span class="nb">command</span>
+<span class="gp">$ </span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.11<span class="w"> </span>idtrack
+<span class="gp">$ </span>conda<span class="w"> </span>activate<span class="w"> </span>idtrack-env
+
+<span class="gp"># </span>Option<span class="w"> </span><span class="m">2</span>:<span class="w"> </span>install<span class="w"> </span>into<span class="w"> </span>your<span class="w"> </span>currently<span class="w"> </span>active<span class="w"> </span>conda<span class="w"> </span>environment
+<span class="gp">$ </span>mamba<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>idtrack
+</pre></div>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p><strong>Why Mamba?</strong> Mamba resolves dependencies 10-100x faster than conda and handles
+complex scientific packages (HDF5, NumPy, SciPy) more reliably. If you encounter
+issues with other installation methods, try Mamba first.</p>
+</div>
+</section>
+<section id="alternative-installation-methods">
+<h2>Alternative Installation Methods<a class="headerlink" href="#alternative-installation-methods" title="Link to this heading"></a></h2>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-0">
+Using conda</label><div class="sd-tab-content docutils">
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>idtrack
+</pre></div>
+</div>
+</div>
+<input id="sd-tab-item-1" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-1">
+Using pip</label><div class="sd-tab-content docutils">
+<p>If you prefer pip or are working in a virtual environment:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
 </pre></div>
 </div>
-<p>This is the preferred method to install idtrack, as it will always install the most recent stable release.</p>
-<p>If you don’t have <a class="reference external" href="https://pip.pypa.io">pip</a> installed, this <a class="reference external" href="http://docs.python-guide.org/en/latest/starting/installation/">Python installation guide</a> can guide
-you through the process.</p>
-<p>If you use an Apple Silicon processor, you have to be sure that you have the <code class="docutils literal notranslate"><span class="pre">HDF5</span></code> installation already:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>conda<span class="w"> </span>install<span class="w"> </span>hdf5
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Pip installation may fail on some systems due to HDF5 compilation requirements.
+If you encounter errors, use Mamba/conda instead or install HDF5 first.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="apple-silicon-m1-m2-m3-m4-setup">
+<span id="apple-silicon"></span><h2>Apple Silicon (M1/M2/M3/M4) Setup<a class="headerlink" href="#apple-silicon-m1-m2-m3-m4-setup" title="Link to this heading"></a></h2>
+<p>Apple Silicon Macs require HDF5 to be installed before IDTrack. This is because the
+<code class="docutils literal notranslate"><span class="pre">h5py</span></code> and <code class="docutils literal notranslate"><span class="pre">pytables</span></code> packages (used for efficient data caching) need pre-compiled
+HDF5 binaries that match the ARM64 architecture. When installing via pip, these binaries
+may not be available or may fail to compile. Installing HDF5 through Mamba/conda ensures
+compatible ARM64 binaries are used. This is a one-time setup.</p>
+<p><strong>Step 1: Install HDF5</strong></p>
+<p>Choose one of these methods:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Method<span class="w"> </span><span class="m">1</span>:<span class="w"> </span>Using<span class="w"> </span>Mamba<span class="w"> </span><span class="o">(</span>recommended<span class="o">)</span>
+<span class="gp">$ </span>mamba<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>hdf5
+
+<span class="gp"># </span>Method<span class="w"> </span><span class="m">2</span>:<span class="w"> </span>Using<span class="w"> </span>conda
+<span class="gp">$ </span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>hdf5
+
+<span class="gp"># </span>Method<span class="w"> </span><span class="m">3</span>:<span class="w"> </span>Using<span class="w"> </span>Homebrew
+<span class="gp">$ </span>brew<span class="w"> </span>install<span class="w"> </span>hdf5
+</pre></div>
+</div>
+<p><strong>Step 2: Install IDTrack</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>mamba<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>idtrack
+</pre></div>
+</div>
+<p><strong>Verification:</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import h5py; print(&#39;HDF5 version:&#39;, h5py.version.hdf5_version)&quot;</span>
+</pre></div>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>If you still encounter HDF5 errors after installation, ensure your Python environment
+was created <em>after</em> installing HDF5. Creating a fresh environment often resolves issues.</p>
+</div>
+</section>
+<section id="creating-a-dedicated-environment-recommended">
+<h2>Creating a Dedicated Environment (Recommended)<a class="headerlink" href="#creating-a-dedicated-environment-recommended" title="Link to this heading"></a></h2>
+<p>Using a dedicated environment is a good practice for any Python project and makes it
+easier to manage your installation.</p>
+<section id="using-mamba-fastest">
+<h3>Using Mamba (fastest)<a class="headerlink" href="#using-mamba-fastest" title="Link to this heading"></a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Create<span class="w"> </span>a<span class="w"> </span>new<span class="w"> </span>environment<span class="w"> </span>with<span class="w"> </span>Python<span class="w"> </span><span class="m">3</span>.11
+<span class="gp">$ </span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.11
+
+<span class="gp"># </span>Activate<span class="w"> </span>the<span class="w"> </span>environment
+<span class="gp">$ </span>conda<span class="w"> </span>activate<span class="w"> </span>idtrack-env
+
+<span class="gp"># </span>Install<span class="w"> </span>IDTrack
+<span class="gp">$ </span>mamba<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>idtrack
 </pre></div>
 </div>
 </section>
-<section id="from-sources">
-<h2>From sources<a class="headerlink" href="#from-sources" title="Link to this heading"></a></h2>
-<p>The sources for idtrack can be downloaded from the <a class="reference external" href="https://github.com/theislab/idtrack">Github repo</a>.
-Please note that you require <a class="reference external" href="https://python-poetry.org/">poetry</a> to be installed.</p>
-<p>You can either clone the public repository:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>git<span class="w"> </span>clone<span class="w"> </span>git://github.com/theislab/idtrack
+<section id="using-conda">
+<h3>Using conda<a class="headerlink" href="#using-conda" title="Link to this heading"></a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Create<span class="w"> </span>a<span class="w"> </span>new<span class="w"> </span>environment<span class="w"> </span>with<span class="w"> </span>Python<span class="w"> </span><span class="m">3</span>.11
+<span class="gp">$ </span>conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.11
+
+<span class="gp"># </span>Activate<span class="w"> </span>the<span class="w"> </span>environment
+<span class="gp">$ </span>conda<span class="w"> </span>activate<span class="w"> </span>idtrack-env
+
+<span class="gp"># </span>Install<span class="w"> </span>IDTrack
+<span class="gp">$ </span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>idtrack
 </pre></div>
 </div>
-<p>Or download the <a class="reference external" href="https://github.com/theislab/idtrack/tarball/master">tarball</a>:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>curl<span class="w"> </span>-OJL<span class="w"> </span>https://github.com/theislab/idtrack/tarball/master
+</section>
+<section id="using-venv-pip">
+<h3>Using venv + pip<a class="headerlink" href="#using-venv-pip" title="Link to this heading"></a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Create<span class="w"> </span>a<span class="w"> </span>new<span class="w"> </span>virtual<span class="w"> </span>environment
+<span class="gp">$ </span>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>idtrack-env
+
+<span class="gp"># </span>Activate<span class="w"> </span>the<span class="w"> </span>environment
+<span class="gp"># </span>On<span class="w"> </span>Linux/macOS:
+<span class="gp">$ </span><span class="nb">source</span><span class="w"> </span>idtrack-env/bin/activate
+<span class="gp"># </span>On<span class="w"> </span>Windows:
+<span class="gp">$ </span>idtrack-env<span class="se">\S</span>cripts<span class="se">\a</span>ctivate
+
+<span class="gp"># </span>Install<span class="w"> </span>IDTrack
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
 </pre></div>
 </div>
-<p>Once you have a copy of the source, you can install it with:</p>
+</section>
+</section>
+<section id="development-installation">
+<h2>Development Installation<a class="headerlink" href="#development-installation" title="Link to this heading"></a></h2>
+<p>For contributors or users who want the latest development features.</p>
+<section id="prerequisites">
+<h3>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h3>
+<p>Ensure you have these tools installed:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://git-scm.com/">Git</a> for version control</p></li>
+<li><p><a class="reference external" href="https://python-poetry.org/">Poetry</a> for dependency management</p></li>
+</ul>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>poetry<span class="w"> </span>poetry-plugin-export
+</pre></div>
+</div>
+</section>
+<section id="clone-and-install">
+<h3>Clone and Install<a class="headerlink" href="#clone-and-install" title="Link to this heading"></a></h3>
+<p><strong>Step 1: Clone the repository</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/theislab/idtrack.git
+<span class="gp">$ </span><span class="nb">cd</span><span class="w"> </span>idtrack
+</pre></div>
+</div>
+<p><strong>Step 2: Install with Poetry</strong></p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>make<span class="w"> </span>install
 </pre></div>
 </div>
+<p>This installs IDTrack in development mode with all dependencies, including development
+and testing tools.</p>
+<p><strong>Step 3: Verify installation</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>poetry<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import idtrack; print(f&#39;IDTrack {idtrack.__version__}&#39;)&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="alternative-install-from-tarball">
+<h3>Alternative: Install from Tarball<a class="headerlink" href="#alternative-install-from-tarball" title="Link to this heading"></a></h3>
+<p>For users who want a specific release without cloning the repository:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>curl<span class="w"> </span>-OJL<span class="w"> </span>https://github.com/theislab/idtrack/tarball/main
+<span class="gp">$ </span>tar<span class="w"> </span>-xzf<span class="w"> </span>theislab-idtrack-*.tar.gz
+<span class="gp">$ </span><span class="nb">cd</span><span class="w"> </span>theislab-idtrack-*
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>.
+</pre></div>
+</div>
+</section>
+</section>
+<section id="verifying-your-installation">
+<h2>Verifying Your Installation<a class="headerlink" href="#verifying-your-installation" title="Link to this heading"></a></h2>
+<p>After installation, verify that IDTrack is working correctly by running this verification
+script:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+
+<span class="c1"># Pick a stable, writable cache directory (reused across runs)</span>
+<span class="n">local_repo</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./idtrack_cache&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">local_repo</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Print version information</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;IDTrack version: </span><span class="si">{</span><span class="n">idtrack</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># Test API initialization</span>
+<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">local_repo</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;API initialized successfully&quot;</span><span class="p">)</span>
+
+<span class="c1"># Test organism resolution</span>
+<span class="n">organism</span><span class="p">,</span> <span class="n">release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s2">&quot;human&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Resolved organism: </span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Latest Ensembl release: </span><span class="si">{</span><span class="n">release</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Installation verified successfully!&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Expected output:</strong></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>IDTrack version: 0.0.x
+API initialized successfully
+Resolved organism: homo_sapiens
+Latest Ensembl release: 114
+
+Installation verified successfully!
+</pre></div>
+</div>
+<p>If you see output similar to this, your installation is complete and working.</p>
+</section>
+<section id="optional-dependencies">
+<h2>Optional Dependencies<a class="headerlink" href="#optional-dependencies" title="Link to this heading"></a></h2>
+<p>IDTrack has optional dependencies for advanced features:</p>
+<section id="external-mapping-backends">
+<h3>External Mapping Backends<a class="headerlink" href="#external-mapping-backends" title="Link to this heading"></a></h3>
+<p>For cross-database identifier mapping using external services:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Install<span class="w"> </span>the<span class="w"> </span>optional<span class="w"> </span>backends<span class="w"> </span>via<span class="w"> </span>Python<span class="w"> </span>extras<span class="w"> </span><span class="o">(</span>recommended<span class="o">)</span>
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;idtrack[external-mappers]&quot;</span>
+
+<span class="gp"># </span>Or<span class="w"> </span>install<span class="w"> </span>only<span class="w"> </span>the<span class="w"> </span>libraries<span class="w"> </span>you<span class="w"> </span>need
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>gget<span class="w"> </span>mygene<span class="w"> </span>pybiomart<span class="w"> </span>gprofiler-official
+</pre></div>
+</div>
+</section>
+<section id="ortholog-analysis">
+<h3>Ortholog Analysis<a class="headerlink" href="#ortholog-analysis" title="Link to this heading"></a></h3>
+<p>For cross-species ortholog analysis with sequence alignment:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;idtrack[ortholog]&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="all-optional-dependencies">
+<h3>All Optional Dependencies<a class="headerlink" href="#all-optional-dependencies" title="Link to this heading"></a></h3>
+<p>Install all optional dependencies at once:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;idtrack[all-external]&quot;</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<section id="common-installation-issues">
+<h3>Common Installation Issues<a class="headerlink" href="#common-installation-issues" title="Link to this heading"></a></h3>
+<p><strong>HDF5 / h5py import errors</strong></p>
+<p>This usually indicates an HDF5 binary compatibility issue. The most reliable fix is to
+use conda-forge (Mamba or conda):</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Create<span class="w"> </span>a<span class="w"> </span>fresh<span class="w"> </span>environment<span class="w"> </span>with<span class="w"> </span>Mamba
+<span class="gp">$ </span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.11<span class="w"> </span>idtrack<span class="w"> </span>-c<span class="w"> </span>conda-forge
+<span class="gp">$ </span>conda<span class="w"> </span>activate<span class="w"> </span>idtrack-env
+</pre></div>
+</div>
+<p>If you must use pip, install HDF5 dependencies first:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>mamba<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>hdf5
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
+</pre></div>
+</div>
+<p><strong>SSL Certificate errors during download</strong></p>
+<p>If IDTrack encounters SSL errors when downloading external databases:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Update<span class="w"> </span>certificates
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>certifi
+
+<span class="gp"># </span>On<span class="w"> </span>macOS,<span class="w"> </span>you<span class="w"> </span>may<span class="w"> </span>also<span class="w"> </span>need:
+<span class="gp">$ </span>/Applications/Python<span class="se">\ </span><span class="m">3</span>.x/Install<span class="se">\ </span>Certificates.command
+</pre></div>
+</div>
+<p><strong>Permission errors during installation</strong></p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Option<span class="w"> </span><span class="m">1</span>:<span class="w"> </span>Use<span class="w"> </span>--user<span class="w"> </span>flag<span class="w"> </span>with<span class="w"> </span>pip
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>--user<span class="w"> </span>idtrack
+
+<span class="gp"># </span>Option<span class="w"> </span><span class="m">2</span>:<span class="w"> </span>Use<span class="w"> </span>a<span class="w"> </span>virtual<span class="w"> </span>environment<span class="w"> </span><span class="o">(</span>recommended<span class="o">)</span>
+<span class="gp">$ </span>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>idtrack-env
+<span class="gp">$ </span><span class="nb">source</span><span class="w"> </span>idtrack-env/bin/activate
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
+</pre></div>
+</div>
+<p><strong>Slow dependency resolution with conda</strong></p>
+<p>Switch to Mamba for significantly faster installation:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>conda<span class="w"> </span>install<span class="w"> </span>-n<span class="w"> </span>base<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>mamba
+<span class="gp">$ </span>mamba<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>idtrack
+</pre></div>
+</div>
+</section>
+<section id="getting-help">
+<h3>Getting Help<a class="headerlink" href="#getting-help" title="Link to this heading"></a></h3>
+<p>If you encounter issues not covered here:</p>
+<ol class="arabic simple">
+<li><p>Check the <a class="reference external" href="https://github.com/theislab/idtrack/issues">GitHub Issues</a> for known problems and solutions</p></li>
+<li><p>Search <a class="reference external" href="https://github.com/theislab/idtrack/discussions">existing discussions</a> for similar questions</p></li>
+<li><p>Open a new issue with:</p>
+<ul class="simple">
+<li><p>Your operating system and Python version</p></li>
+<li><p>The complete error message</p></li>
+<li><p>Steps to reproduce the issue</p></li>
+</ul>
+</li>
+<li><p>See the <a class="reference internal" href="_notebooks/01_installation_guide.html"><span class="doc">Part 1 — Environment Setup &amp; Installation</span></a> tutorial for detailed environment setup</p></li>
+</ol>
+</section>
+</section>
+<section id="what-s-next">
+<h2>What’s Next?<a class="headerlink" href="#what-s-next" title="Link to this heading"></a></h2>
+<p>After successful installation, continue with these resources:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 30.0%" />
+<col style="width: 70.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Resource</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="usage.html"><span class="doc">Quickstart</span></a></p></td>
+<td><p>Minimal quickstart code (5-minute introduction)</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="_notebooks/01_installation_guide.html"><span class="doc">Part 1 — Environment Setup &amp; Installation</span></a></p></td>
+<td><p>Detailed environment configuration tutorial</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="_notebooks/00_idtrack_overview.html"><span class="doc">Part 0 — Conceptual Foundation</span></a></p></td>
+<td><p>Understand the mental model behind IDTrack</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="tutorials.html"><span class="doc">Tutorials</span></a></p></td>
+<td><p>Complete learning path (Parts 0-7)</p></td>
+</tr>
+</tbody>
+</table>
 </section>
 </section>
 
@@ -122,8 +535,8 @@ Please note that you require <a class="reference external" href="https://python-
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="index.html" class="btn btn-neutral float-left" title="idtrack" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="usage.html" class="btn btn-neutral float-right" title="Usage" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="_notebooks/initialization_test.html" class="btn btn-neutral float-left" title="Appendix — Self-tests &amp; Sanity Checks (Human, Mouse, Pig)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="usage.html" class="btn btn-neutral float-right" title="Quickstart" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

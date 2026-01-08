@@ -1,0 +1,339 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Part 1 — Environment Setup &amp; Installation &mdash; idtrack 0.0.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=f6ff1e94" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Part 2 — External Database Configuration" href="prepare_new_external_yaml.html" />
+    <link rel="prev" title="Part 0 — Conceptual Foundation" href="00_idtrack_overview.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            idtrack
+              <img src="../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../tutorials.html">Tutorials</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="00_idtrack_overview.html">Part 0 — Conceptual Foundation</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Part 1 — Environment Setup &amp; Installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#1.1-—-Installation-Guide">1.1 — Installation Guide</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Step-1-—-Create-an-isolated-environment">Step 1 — Create an isolated environment</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Step-2-—-Install-IDTrack">Step 2 — Install IDTrack</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Step-3-—-Quick-environment-report-(safe-to-run)">Step 3 — Quick environment report (safe to run)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Step-4-—-Choose-your-local-repository-directory-(IDTRACK_LOCAL_REPO)">Step 4 — Choose your local repository directory (<code class="docutils literal notranslate"><span class="pre">IDTRACK_LOCAL_REPO</span></code>)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Step-5-—-Verify-local-repository-read/write-(safe-to-run)">Step 5 — Verify local repository read/write (safe to run)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Step-6-—-Network-sanity-checks-(optional,-but-recommended)">Step 6 — Network sanity checks (optional, but recommended)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#What’s-next?">What’s next?</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Troubleshooting-(common-issues)">Troubleshooting (common issues)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="prepare_new_external_yaml.html">Part 2 — External Database Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialization_graph.html">Part 3 — Graph Initialization &amp; Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_deep_dive_human.html">Part 4 — Core API Deep-Dive (Human Example)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial_harmonization.html">Part 5 — Real-World Experiments: Harmonization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial_humanization_mouse_pig_to_human.html">Part 6 — Cross-Species Workflows: Humanization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="08_advanced_topics.html">Part 7 — Advanced Topics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialization_test.html">Appendix</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../tutorials.html">Tutorials</a></li>
+      <li class="breadcrumb-item active">Part 1 — Environment Setup &amp; Installation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_notebooks/01_installation_guide.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="idtrack-notebook-meta">
+  <a class="idtrack-notebook-download" href="../_sources/_notebooks/01_installation_guide.ipynb">Download notebook</a>
+</div><section id="Part-1-—-Environment-Setup-&amp;-Installation">
+<h1>Part 1 — Environment Setup &amp; Installation<a class="headerlink" href="#Part-1-—-Environment-Setup-&-Installation" title="Link to this heading"></a></h1>
+<p><em>Last updated:</em> 2026-01-08</p>
+<p>This tutorial gets you from <strong>“I have Python”</strong> to <strong>“IDTrack imports and has a working local cache directory”</strong>.</p>
+<p><strong>Learning objectives</strong></p>
+<ul class="simple">
+<li><p>Install IDTrack in an isolated environment (conda or pip).</p></li>
+<li><p>Verify your installation with a short, copy/pasteable checklist.</p></li>
+<li><p>Understand and set <code class="docutils literal notranslate"><span class="pre">IDTRACK_LOCAL_REPO</span></code> (your on-disk cache + configuration folder).</p></li>
+<li><p>Know what “success” looks like before you start building graphs.</p></li>
+</ul>
+<blockquote>
+<div><p><strong>Warning:</strong> The first real graph build (Part 3) can take time and disk space. This notebook only verifies that your environment is ready.</p>
+</div></blockquote>
+<section id="1.1-—-Installation-Guide">
+<h2>1.1 — Installation Guide<a class="headerlink" href="#1.1-—-Installation-Guide" title="Link to this heading"></a></h2>
+<p>IDTrack is a Python package. The easiest way to avoid dependency conflicts is to use a <strong>fresh environment</strong>.</p>
+<p>You have two common workflows:</p>
+<ol class="arabic simple">
+<li><p><strong>Conda/Mamba environment (recommended if you already use conda)</strong></p></li>
+<li><p><strong>pip + venv (recommended if you prefer plain Python tooling)</strong></p></li>
+</ol>
+<p>Either option is fine. Pick the one that matches how your lab usually manages Python.</p>
+<section id="Step-1-—-Create-an-isolated-environment">
+<h3>Step 1 — Create an isolated environment<a class="headerlink" href="#Step-1-—-Create-an-isolated-environment" title="Link to this heading"></a></h3>
+<p><strong>Option A: conda/mamba</strong></p>
+<p>Create and activate a clean environment (example uses Python 3.11):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.11<span class="w"> </span>-y
+mamba<span class="w"> </span>activate<span class="w"> </span>idtrack
+</pre></div>
+</div>
+<blockquote>
+<div><p><strong>Tip:</strong> If you are on Apple Silicon and see HDF5/h5py issues later, installing <code class="docutils literal notranslate"><span class="pre">hdf5</span></code> via conda often fixes it:</p>
+<p><code class="docutils literal notranslate"><span class="pre">mamba</span> <span class="pre">install</span> <span class="pre">-n</span> <span class="pre">idtrack</span> <span class="pre">hdf5</span> <span class="pre">-y</span></code></p>
+</div></blockquote>
+<p><strong>Option B: venv</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
+<span class="nb">source</span><span class="w"> </span>.venv/bin/activate
+python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>pip
+</pre></div>
+</div>
+</section>
+<section id="Step-2-—-Install-IDTrack">
+<h3>Step 2 — Install IDTrack<a class="headerlink" href="#Step-2-—-Install-IDTrack" title="Link to this heading"></a></h3>
+<p>If you are installing from PyPI:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
+</pre></div>
+</div>
+<p>If you are working from a cloned repository (developer install):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</pre></div>
+</div>
+<blockquote>
+<div><p><strong>Expected result:</strong> <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">idtrack</span></code> works in Python, and <code class="docutils literal notranslate"><span class="pre">idtrack.__version__</span></code> prints a version string.</p>
+</div></blockquote>
+</section>
+<section id="Step-3-—-Quick-environment-report-(safe-to-run)">
+<h3>Step 3 — Quick environment report (safe to run)<a class="headerlink" href="#Step-3-—-Quick-environment-report-(safe-to-run)" title="Link to this heading"></a></h3>
+<p>This cell prints your Python version and tries to import IDTrack.</p>
+<blockquote>
+<div><p><strong>Expected result:</strong> If installation succeeded, you will see an IDTrack version. If it failed, you will see a helpful error message (and the notebook continues).</p>
+</div></blockquote>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">platform</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Python:&#39;</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">version</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Executable:&#39;</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Platform:&#39;</span><span class="p">,</span> <span class="n">platform</span><span class="o">.</span><span class="n">platform</span><span class="p">())</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;idtrack version:&#39;</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">idtrack</span><span class="p">,</span> <span class="s1">&#39;__version__&#39;</span><span class="p">,</span> <span class="s1">&#39;unknown&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;idtrack package path:&#39;</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">idtrack</span><span class="o">.</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+    <span class="n">IDTRACK_OK</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;idtrack import failed -&gt;&#39;</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Fix: confirm you activated the intended environment, then re-run: pip install idtrack&#39;</span><span class="p">)</span>
+    <span class="n">IDTRACK_OK</span> <span class="o">=</span> <span class="kc">False</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="Step-4-—-Choose-your-local-repository-directory-(IDTRACK_LOCAL_REPO)">
+<h3>Step 4 — Choose your local repository directory (<code class="docutils literal notranslate"><span class="pre">IDTRACK_LOCAL_REPO</span></code>)<a class="headerlink" href="#Step-4-—-Choose-your-local-repository-directory-(IDTRACK_LOCAL_REPO)" title="Link to this heading"></a></h3>
+<p>IDTrack stores <strong>cached downloads</strong>, <strong>graph snapshots</strong>, and your <strong>external YAML</strong> files in one place: your <strong>local repository</strong> directory.</p>
+<p>You can set it in your shell:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">IDTRACK_LOCAL_REPO</span><span class="o">=</span>/path/to/idtrack_cache
+</pre></div>
+</div>
+<p>In notebooks, many tutorials fall back to <code class="docutils literal notranslate"><span class="pre">./idtrack_cache</span></code> if <code class="docutils literal notranslate"><span class="pre">IDTRACK_LOCAL_REPO</span></code> is not set.</p>
+<blockquote>
+<div><p><strong>Tip:</strong> In a real project, put this folder somewhere stable (not a temporary directory) so you reuse caches across sessions.</p>
+</div></blockquote>
+</section>
+<section id="Step-5-—-Verify-local-repository-read/write-(safe-to-run)">
+<h3>Step 5 — Verify local repository read/write (safe to run)<a class="headerlink" href="#Step-5-—-Verify-local-repository-read/write-(safe-to-run)" title="Link to this heading"></a></h3>
+<p>This cell creates the directory (if needed) and writes a tiny test file.</p>
+<blockquote>
+<div><p><strong>Expected result:</strong> You should see <code class="docutils literal notranslate"><span class="pre">OK</span></code> and the resolved path.</p>
+</div></blockquote>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="n">local_repo</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;IDTRACK_LOCAL_REPO&#39;</span><span class="p">,</span> <span class="s1">&#39;./idtrack_cache&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">local_repo</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">test_file</span> <span class="o">=</span> <span class="n">local_repo</span> <span class="o">/</span> <span class="s1">&#39;_idtrack_write_test.txt&#39;</span>
+<span class="n">test_file</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s1">&#39;ok&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Local repository:&#39;</span><span class="p">,</span> <span class="n">local_repo</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Write test:&#39;</span><span class="p">,</span> <span class="s1">&#39;OK&#39;</span> <span class="k">if</span> <span class="n">test_file</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;FAILED&#39;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="Step-6-—-Network-sanity-checks-(optional,-but-recommended)">
+<h3>Step 6 — Network sanity checks (optional, but recommended)<a class="headerlink" href="#Step-6-—-Network-sanity-checks-(optional,-but-recommended)" title="Link to this heading"></a></h3>
+<p>First-time graph builds need network access to Ensembl services. This cell performs <strong>non-destructive</strong> checks:</p>
+<ul class="simple">
+<li><p>Can we reach the Ensembl REST API?</p></li>
+<li><p>(If IDTrack is installed) what MySQL host does IDTrack expect?</p></li>
+</ul>
+<blockquote>
+<div><p><strong>Warning:</strong> Some institutions block outbound database ports. If REST works but MySQL fails, you may need a VPN or firewall exception for Ensembl MySQL.</p>
+</div></blockquote>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;https://rest.ensembl.org/info/ping&#39;</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Content-Type&#39;</span><span class="p">:</span> <span class="s1">&#39;application/json&#39;</span><span class="p">},</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">15</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Ensembl REST:&#39;</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()[:</span><span class="mi">80</span><span class="p">])</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Ensembl REST check failed -&gt;&#39;</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;requests not available -&gt;&#39;</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+
+<span class="k">if</span> <span class="n">IDTRACK_OK</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
+
+    <span class="n">host</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">mysql_host</span>
+    <span class="n">ports</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">,</span> <span class="mi">3337</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">ports</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">socket</span><span class="o">.</span><span class="n">create_connection</span><span class="p">((</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">),</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Ensembl MySQL: OK (</span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Ensembl MySQL: not reachable (</span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s1">) -&gt; </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Skipping MySQL check (IDTrack not imported).&#39;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="What’s-next?">
+<h3>What’s next?<a class="headerlink" href="#What’s-next?" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Part 0</strong> (concepts): <code class="docutils literal notranslate"><span class="pre">00_idtrack_overview.ipynb</span></code></p></li>
+<li><p><strong>Part 2</strong> (external database configuration): <code class="docutils literal notranslate"><span class="pre">prepare_new_external_yaml.ipynb</span></code></p></li>
+<li><p><strong>Part 3</strong> (graph builds): <code class="docutils literal notranslate"><span class="pre">initialization_graph.ipynb</span></code></p></li>
+</ul>
+<blockquote>
+<div><p><strong>Expected milestone after Part 3:</strong> you have a cached graph snapshot on disk, and conversions become fast and reproducible.</p>
+</div></blockquote>
+</section>
+<section id="Troubleshooting-(common-issues)">
+<h3>Troubleshooting (common issues)<a class="headerlink" href="#Troubleshooting-(common-issues)" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>``ImportError: … h5py …`` (often on macOS):</strong> install <code class="docutils literal notranslate"><span class="pre">hdf5</span></code> via conda, then reinstall <code class="docutils literal notranslate"><span class="pre">h5py</span></code>.</p></li>
+<li><p><strong>REST works but MySQL ports fail:</strong> try a different network (VPN, hotspot), or ask IT about outbound ports <code class="docutils literal notranslate"><span class="pre">3306/5306/3337</span></code>.</p></li>
+<li><p><strong>Permission errors in the cache directory:</strong> choose a different <code class="docutils literal notranslate"><span class="pre">IDTRACK_LOCAL_REPO</span></code> you can write to.</p></li>
+<li><p><strong>Slow first run:</strong> normal. The first build populates caches; later runs reuse them.</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="00_idtrack_overview.html" class="btn btn-neutral float-left" title="Part 0 — Conceptual Foundation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="prepare_new_external_yaml.html" class="btn btn-neutral float-right" title="Part 2 — External Database Configuration" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

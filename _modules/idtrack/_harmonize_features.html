@@ -8,14 +8,17 @@
   <title>idtrack._harmonize_features &mdash; idtrack 0.0.4 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=15bcc2cf" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=f6ff1e94" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
-      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/design-tabs.js?v=f930bc37"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -44,8 +47,9 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
@@ -82,7 +86,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">gc</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>  <span class="c1"># noqa: S403</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">cached_property</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
@@ -319,10 +323,8 @@
 <span class="sd">        Returns ``None``: The :py:attr:`idt` attribute is populated and ready for queries.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">idt_initialized</span><span class="p">:</span>
-            <span class="n">organism_formal_name</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">idt</span><span class="o">.</span><span class="n">get_ensembl_organism</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">organism_name</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">idt</span><span class="o">.</span><span class="n">initialize_graph</span><span class="p">(</span>
-                <span class="n">organism_name</span><span class="o">=</span><span class="n">organism_formal_name</span><span class="p">,</span> <span class="n">last_ensembl_release</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">graph_last_ensembl_release</span>
-            <span class="p">)</span>
+            <span class="n">organism_formal_name</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">idt</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">organism_name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">idt</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism_formal_name</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">graph_last_ensembl_release</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">idt</span><span class="o">.</span><span class="n">calculate_graph_caches</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">idt_initialized</span> <span class="o">=</span> <span class="kc">True</span></div>
 
@@ -620,7 +622,9 @@
 <span class="sd">        diagnostic structure.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            set[str]: Todo.</span>
+<span class="sd">            set[str]: Identifiers that failed conversion in at least one dataset</span>
+<span class="sd">                or have inconsistent mappings (1-to-0, 1-to-n, or n-to-1 where not</span>
+<span class="sd">                all datasets share the same mapping).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">result</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
 
@@ -713,7 +717,7 @@
             <span class="n">switch_inconsistency</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">dataset_pickle</span><span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">dataset_pickle</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">):</span>
                 <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dataset_pickle</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
-                    <span class="n">matching_list</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>
+                    <span class="n">matching_list</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>  <span class="c1"># noqa: S301</span>
                 <span class="n">_saved_id_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">([</span><span class="n">i</span><span class="p">[</span><span class="s2">&quot;query_id&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">matching_list</span><span class="p">])</span>
                 <span class="n">_dataset_id_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">extract_source_identifiers_from_anndata</span><span class="p">(</span><span class="n">dataset_path</span><span class="o">=</span><span class="n">dataset_path</span><span class="p">))</span>
 
@@ -730,7 +734,7 @@
                     <span class="p">)</span>
                 <span class="n">matching_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_idtrack_for_single_dataset</span><span class="p">(</span><span class="n">dataset_name</span><span class="p">,</span> <span class="n">dataset_path</span><span class="p">)</span>
                 <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dataset_pickle</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
-                    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">matching_list</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span>
+                    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">matching_list</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span>  <span class="c1"># noqa: S301</span>
 
             <span class="n">result_dataset</span><span class="p">[</span><span class="n">dataset_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">matching_list</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose_level</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>

@@ -1,0 +1,396 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack._external_mappers._backend_mygene &mdash; idtrack 0.0.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/tutorials.css?v=f6ff1e94" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack._external_mappers._backend_mygene</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack._external_mappers._backend_mygene</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="sd">&quot;&quot;&quot;MyGene.info backend for ID mapping.</span>
+
+<span class="sd">This module provides the map_with_mygene() function for querying</span>
+<span class="sd">the MyGene.info API to convert biological identifiers.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Kemal Inecik</span>
+<span class="c1"># k.inecik@gmail.com</span>
+
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">_t</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers._constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">_MG_FIELDS_SUPERSET</span><span class="p">,</span> <span class="n">_MG_SCOPES</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers._utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">_as_list</span><span class="p">,</span>
+    <span class="n">_chunker</span><span class="p">,</span>
+    <span class="n">_empty_result</span><span class="p">,</span>
+    <span class="n">_ensure_all_inputs</span><span class="p">,</span>
+    <span class="n">_json</span><span class="p">,</span>
+    <span class="n">_species_for_mygene</span><span class="p">,</span>
+    <span class="n">_suppress_stdout_stderr</span><span class="p">,</span>
+    <span class="n">_unique_not_null</span><span class="p">,</span>
+    <span class="n">canonical_db</span><span class="p">,</span>
+    <span class="n">logger</span><span class="p">,</span>
+    <span class="n">raise_missing_dependency</span><span class="p">,</span>
+    <span class="n">strip_version</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="_mg_extract">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._backend_mygene._mg_extract">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_mg_extract</span><span class="p">(</span><span class="n">rec</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">_t</span><span class="o">.</span><span class="n">Any</span><span class="p">],</span> <span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract target identifiers from a MyGene.info record.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        rec: One record from the MyGene.info ``querymany`` response.</span>
+<span class="sd">        target: Canonical target database name (e.g. ``&quot;hgnc_symbol&quot;``, ``&quot;uniprot&quot;``).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Extracted target identifiers (may be empty).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">canonical_db</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">target</span> <span class="o">==</span> <span class="s2">&quot;hgnc_symbol&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_unique_not_null</span><span class="p">([</span><span class="n">rec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;symbol&quot;</span><span class="p">)])</span>
+    <span class="k">if</span> <span class="n">target</span> <span class="o">==</span> <span class="s2">&quot;entrez_gene&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_unique_not_null</span><span class="p">([</span><span class="n">rec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;entrezgene&quot;</span><span class="p">)])</span>
+    <span class="k">if</span> <span class="n">target</span> <span class="o">==</span> <span class="s2">&quot;hgnc_id&quot;</span><span class="p">:</span>
+        <span class="n">vals</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">hg</span> <span class="o">=</span> <span class="n">rec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;hgnc&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">hg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">vals</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">_as_list</span><span class="p">(</span><span class="n">hg</span><span class="p">))</span>
+        <span class="n">hg2</span> <span class="o">=</span> <span class="n">rec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;HGNC&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">hg2</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">vals</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">_as_list</span><span class="p">(</span><span class="n">hg2</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">_unique_not_null</span><span class="p">(</span>
+            <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;HGNC:</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;HGNC:HGNC:&quot;</span><span class="p">,</span> <span class="s2">&quot;HGNC:&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vals</span><span class="p">]</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">target</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;ensembl_gene&quot;</span><span class="p">,</span> <span class="s2">&quot;ensembl_transcript&quot;</span><span class="p">,</span> <span class="s2">&quot;ensembl_protein&quot;</span><span class="p">):</span>
+        <span class="n">ens</span> <span class="o">=</span> <span class="n">rec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ensembl&quot;</span><span class="p">)</span>
+        <span class="n">vals</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ens</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">target</span> <span class="o">==</span> <span class="s2">&quot;ensembl_gene&quot;</span><span class="p">:</span>
+                <span class="n">vals</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">_as_list</span><span class="p">(</span><span class="n">ens</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gene&quot;</span><span class="p">)))</span>
+            <span class="k">elif</span> <span class="n">target</span> <span class="o">==</span> <span class="s2">&quot;ensembl_transcript&quot;</span><span class="p">:</span>
+                <span class="n">vals</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">_as_list</span><span class="p">(</span><span class="n">ens</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;transcript&quot;</span><span class="p">)))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">vals</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">_as_list</span><span class="p">(</span><span class="n">ens</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;protein&quot;</span><span class="p">)))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ens</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">ens</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">target</span> <span class="o">==</span> <span class="s2">&quot;ensembl_gene&quot;</span> <span class="ow">and</span> <span class="s2">&quot;gene&quot;</span> <span class="ow">in</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">target</span> <span class="o">==</span> <span class="s2">&quot;ensembl_transcript&quot;</span> <span class="ow">and</span> <span class="s2">&quot;transcript&quot;</span> <span class="ow">in</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;transcript&quot;</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">target</span> <span class="o">==</span> <span class="s2">&quot;ensembl_protein&quot;</span> <span class="ow">and</span> <span class="s2">&quot;protein&quot;</span> <span class="ow">in</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;protein&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">_unique_not_null</span><span class="p">(</span><span class="n">vals</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">target</span> <span class="o">==</span> <span class="s2">&quot;uniprot&quot;</span><span class="p">:</span>
+        <span class="n">up</span> <span class="o">=</span> <span class="n">rec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;uniprot&quot;</span><span class="p">)</span>
+        <span class="n">vals</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">up</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;Swiss-Prot&quot;</span><span class="p">,</span> <span class="s2">&quot;TrEMBL&quot;</span><span class="p">,</span> <span class="s2">&quot;SWISS-PROT&quot;</span><span class="p">,</span> <span class="s2">&quot;trembl&quot;</span><span class="p">,</span> <span class="s2">&quot;SwissProt&quot;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">up</span><span class="p">:</span>
+                    <span class="n">vals</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">_as_list</span><span class="p">(</span><span class="n">up</span><span class="p">[</span><span class="n">k</span><span class="p">]))</span>
+        <span class="k">elif</span> <span class="n">up</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">vals</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">_as_list</span><span class="p">(</span><span class="n">up</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">_unique_not_null</span><span class="p">(</span><span class="n">vals</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">target</span> <span class="o">==</span> <span class="s2">&quot;refseq_mrna&quot;</span><span class="p">:</span>
+        <span class="n">rf</span> <span class="o">=</span> <span class="n">rec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;refseq&quot;</span><span class="p">)</span>
+        <span class="n">vals</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rf</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">vals</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">_as_list</span><span class="p">(</span><span class="n">rf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;rna&quot;</span><span class="p">)))</span>
+            <span class="n">vals</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">_as_list</span><span class="p">(</span><span class="n">rf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mRNA&quot;</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">_unique_not_null</span><span class="p">(</span><span class="n">vals</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">target</span> <span class="o">==</span> <span class="s2">&quot;refseq_protein&quot;</span><span class="p">:</span>
+        <span class="n">rf</span> <span class="o">=</span> <span class="n">rec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;refseq&quot;</span><span class="p">)</span>
+        <span class="n">vals</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rf</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">vals</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">_as_list</span><span class="p">(</span><span class="n">rf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;protein&quot;</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">_unique_not_null</span><span class="p">(</span><span class="n">vals</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">target</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;wormbase&quot;</span><span class="p">,</span> <span class="s2">&quot;flybase&quot;</span><span class="p">}:</span>
+        <span class="k">return</span> <span class="n">_unique_not_null</span><span class="p">([</span><span class="n">rec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">target</span><span class="p">)])</span>
+
+    <span class="k">return</span> <span class="p">[]</span></div>
+
+
+
+<div class="viewcode-block" id="map_with_mygene">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._backend_mygene.map_with_mygene">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">map_with_mygene</span><span class="p">(</span>
+    <span class="n">ids</span><span class="p">:</span> <span class="n">_t</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">input_db</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">output_db</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">species</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;hsapiens&quot;</span><span class="p">,</span>
+    <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span>
+    <span class="n">pause</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">max_retries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">strip_versions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">suppress_method_verbosity</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Map identifiers using the MyGene.info API.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ids: Input identifiers to map.</span>
+<span class="sd">        input_db: Source database type (e.g. ``&quot;ensembl_gene&quot;``, ``&quot;hgnc_symbol&quot;``, ``&quot;entrez_gene&quot;``).</span>
+<span class="sd">        output_db: Target database type (e.g. ``&quot;uniprot&quot;``, ``&quot;hgnc_symbol&quot;``, ``&quot;entrez_gene&quot;``).</span>
+<span class="sd">        species: Species code (e.g. ``&quot;hsapiens&quot;``, ``&quot;mmusculus&quot;``, ``&quot;sscrofa&quot;``).</span>
+<span class="sd">        chunk_size: Number of IDs per API request.</span>
+<span class="sd">        pause: Pause in seconds between API requests.</span>
+<span class="sd">        max_retries: Maximum retry attempts per chunk on failure.</span>
+<span class="sd">        strip_versions: Strip version suffixes from Ensembl/RefSeq IDs.</span>
+<span class="sd">        show_progress: Display progress bar.</span>
+<span class="sd">        suppress_method_verbosity: Suppress stdout/stderr from the mygene library.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pd.DataFrame: Standardized mapping DataFrame.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If ``input_db`` is not supported by MyGene.info.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">mygene</span>  <span class="c1"># type: ignore</span>
+    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">raise_missing_dependency</span><span class="p">(</span><span class="s2">&quot;mygene&quot;</span><span class="p">,</span> <span class="n">feature</span><span class="o">=</span><span class="s2">&quot;mygene ID mapping backend&quot;</span><span class="p">,</span> <span class="n">original_error</span><span class="o">=</span><span class="n">e</span><span class="p">)</span>
+
+    <span class="n">species</span> <span class="o">=</span> <span class="n">_species_for_mygene</span><span class="p">(</span><span class="n">species</span><span class="p">)</span>
+    <span class="n">inp</span> <span class="o">=</span> <span class="n">canonical_db</span><span class="p">(</span><span class="n">input_db</span><span class="p">)</span>
+    <span class="n">outp</span> <span class="o">=</span> <span class="n">canonical_db</span><span class="p">(</span><span class="n">output_db</span><span class="p">)</span>
+
+    <span class="n">clean_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">strip_version</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">if</span> <span class="n">strip_versions</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ids</span><span class="p">]</span>
+    <span class="n">uniq_ids</span> <span class="o">=</span> <span class="n">_unique_not_null</span><span class="p">(</span><span class="n">clean_ids</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">uniq_ids</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_ensure_all_inputs</span><span class="p">(</span><span class="n">_empty_result</span><span class="p">(),</span> <span class="n">clean_ids</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">,</span> <span class="s2">&quot;mygene&quot;</span><span class="p">,</span> <span class="n">release_used</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+    <span class="n">mg</span> <span class="o">=</span> <span class="n">mygene</span><span class="o">.</span><span class="n">MyGeneInfo</span><span class="p">()</span>
+
+    <span class="n">scope</span> <span class="o">=</span> <span class="n">_MG_SCOPES</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">inp</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">scope</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MyGene: unsupported input scope for </span><span class="si">{</span><span class="n">inp</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">fields</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">_MG_FIELDS_SUPERSET</span><span class="p">)))</span>
+    <span class="n">frames</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">n_batches</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">uniq_ids</span><span class="p">)</span> <span class="o">/</span> <span class="n">chunk_size</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">tqdm</span><span class="p">(</span>
+        <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">uniq_ids</span><span class="p">),</span>
+        <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;mygene&quot;</span><span class="p">,</span>
+        <span class="n">mininterval</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
+        <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">show_progress</span><span class="p">,</span>
+        <span class="n">ncols</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+        <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;ids&quot;</span><span class="p">,</span>
+    <span class="p">)</span> <span class="k">as</span> <span class="n">progress</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">b_idx</span><span class="p">,</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">_chunker</span><span class="p">(</span><span class="n">uniq_ids</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">),</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MyGene: querying batch </span><span class="si">{</span><span class="n">b_idx</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">n_batches</span><span class="si">}</span><span class="s2"> (n=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+            <span class="n">attempt</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">attempt</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">with</span> <span class="n">_suppress_stdout_stderr</span><span class="p">(</span><span class="n">suppress_method_verbosity</span><span class="p">):</span>
+                        <span class="n">res</span> <span class="o">=</span> <span class="n">mg</span><span class="o">.</span><span class="n">querymany</span><span class="p">(</span>
+                            <span class="n">chunk</span><span class="p">,</span>
+                            <span class="n">scopes</span><span class="o">=</span><span class="n">scope</span><span class="p">,</span>
+                            <span class="n">fields</span><span class="o">=</span><span class="n">fields</span><span class="p">,</span>
+                            <span class="n">species</span><span class="o">=</span><span class="n">species</span><span class="p">,</span>
+                            <span class="n">returnall</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                            <span class="n">as_dataframe</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                            <span class="n">batch_size</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="n">chunk_size</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span>
+                        <span class="p">)</span>
+                    <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">res</span><span class="p">:</span>
+                        <span class="n">q</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;query&quot;</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">q</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">q</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MyGene returned a result without a valid &#39;query&#39; field: </span><span class="si">{</span><span class="n">r</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                            <span class="k">continue</span>
+                        <span class="n">notfound</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;notfound&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+                        <span class="n">meta</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">r</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;_score&quot;</span><span class="p">,</span> <span class="s2">&quot;taxid&quot;</span><span class="p">,</span> <span class="s2">&quot;notfound&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">r</span><span class="p">}</span>
+                        <span class="n">outs</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">notfound</span> <span class="k">else</span> <span class="n">_mg_extract</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">outp</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">strip_versions</span><span class="p">:</span>
+                            <span class="n">outs</span> <span class="o">=</span> <span class="p">[</span><span class="n">strip_version</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">outs</span><span class="p">]</span>
+                        <span class="k">if</span> <span class="n">outs</span><span class="p">:</span>
+                            <span class="k">for</span> <span class="n">ov</span> <span class="ow">in</span> <span class="n">outs</span><span class="p">:</span>
+                                <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                                    <span class="p">{</span>
+                                        <span class="s2">&quot;input_id&quot;</span><span class="p">:</span> <span class="n">q</span><span class="p">,</span>
+                                        <span class="s2">&quot;input_db&quot;</span><span class="p">:</span> <span class="n">inp</span><span class="p">,</span>
+                                        <span class="s2">&quot;output_id&quot;</span><span class="p">:</span> <span class="n">ov</span><span class="p">,</span>
+                                        <span class="s2">&quot;output_db&quot;</span><span class="p">:</span> <span class="n">outp</span><span class="p">,</span>
+                                        <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;mygene&quot;</span><span class="p">,</span>
+                                        <span class="s2">&quot;release_used&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                                        <span class="s2">&quot;metadata_json&quot;</span><span class="p">:</span> <span class="n">_json</span><span class="p">(</span><span class="n">meta</span><span class="p">),</span>
+                                    <span class="p">}</span>
+                                <span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                                <span class="p">{</span>
+                                    <span class="s2">&quot;input_id&quot;</span><span class="p">:</span> <span class="n">q</span><span class="p">,</span>
+                                    <span class="s2">&quot;input_db&quot;</span><span class="p">:</span> <span class="n">inp</span><span class="p">,</span>
+                                    <span class="s2">&quot;output_id&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                                    <span class="s2">&quot;output_db&quot;</span><span class="p">:</span> <span class="n">outp</span><span class="p">,</span>
+                                    <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;mygene&quot;</span><span class="p">,</span>
+                                    <span class="s2">&quot;release_used&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                                    <span class="s2">&quot;metadata_json&quot;</span><span class="p">:</span> <span class="n">_json</span><span class="p">(</span><span class="n">meta</span><span class="p">),</span>
+                                <span class="p">}</span>
+                            <span class="p">)</span>
+                    <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">))</span>
+                    <span class="k">break</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MyGene batch failed (attempt </span><span class="si">{</span><span class="n">attempt</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">attempt</span> <span class="o">&gt;=</span> <span class="n">max_retries</span><span class="p">:</span>
+                        <span class="n">meta_err</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span>
+                        <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                            <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+                                <span class="p">{</span>
+                                    <span class="s2">&quot;input_id&quot;</span><span class="p">:</span> <span class="n">chunk</span><span class="p">,</span>
+                                    <span class="s2">&quot;input_db&quot;</span><span class="p">:</span> <span class="n">inp</span><span class="p">,</span>
+                                    <span class="s2">&quot;output_id&quot;</span><span class="p">:</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">),</span>
+                                    <span class="s2">&quot;output_db&quot;</span><span class="p">:</span> <span class="n">outp</span><span class="p">,</span>
+                                    <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;mygene&quot;</span><span class="p">,</span>
+                                    <span class="s2">&quot;release_used&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                                    <span class="s2">&quot;metadata_json&quot;</span><span class="p">:</span> <span class="n">_json</span><span class="p">(</span><span class="n">meta_err</span><span class="p">),</span>
+                                <span class="p">}</span>
+                            <span class="p">)</span>
+                        <span class="p">)</span>
+                        <span class="k">break</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">pause</span> <span class="o">*</span> <span class="n">attempt</span><span class="p">)</span>
+
+            <span class="n">progress</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">))</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">pause</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">frames</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_ensure_all_inputs</span><span class="p">(</span><span class="n">_empty_result</span><span class="p">(),</span> <span class="n">clean_ids</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">,</span> <span class="s2">&quot;mygene&quot;</span><span class="p">,</span> <span class="n">release_used</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+    <span class="n">out</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">_ensure_all_inputs</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">clean_ids</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">,</span> <span class="s2">&quot;mygene&quot;</span><span class="p">,</span> <span class="n">release_used</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span><span class="p">[</span>
+        <span class="p">[</span>
+            <span class="s2">&quot;input_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;input_db&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;mapping&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;output_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;output_db&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;method&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;release_used&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;metadata_json&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+    <span class="p">]</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

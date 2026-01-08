@@ -8,14 +8,17 @@
   <title>idtrack._verify_organism &mdash; idtrack 0.0.4 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=15bcc2cf" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=f6ff1e94" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
-      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/design-tabs.js?v=f930bc37"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -44,8 +47,9 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
@@ -93,21 +97,40 @@
 <div class="viewcode-block" id="VerifyOrganism">
 <a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">VerifyOrganism</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Finds the formal organism name and associated latest Ensembl release given a tentative organism name.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve a tentative organism identifier to the formal Ensembl species name and its latest supported release.</span>
 
-<span class="sd">    This class is designed to aid the user regarding the organism name accepted by the program and latest Ensembl</span>
-<span class="sd">    release possible without manually looking online resources. Every time of use, the class uses Ensembl REST API to</span>
-<span class="sd">    get the information regarding the organisms and associated Ensembl releases, so the class requires an active</span>
-<span class="sd">    Internet connection.</span>
+<span class="sd">    The class shields end-users from the quirks of the Ensembl REST payload by converting any synonym—common name,</span>
+<span class="sd">    scientific name, assembly accession, or NCBI taxon ID—into the canonical Ensembl species identifier</span>
+<span class="sd">    (e.g. ``homo_sapiens``) and the newest Ensembl release that still hosts that species.  Because the mapping is</span>
+<span class="sd">    refreshed on every instantiation through a live call to the Ensembl REST API, downstream workflows in *idtrack*</span>
+<span class="sd">    always rely on up-to-date metadata rather than a possibly stale local cache.</span>
+
+<span class="sd">    After construction the instance offers two high-level helpers::</span>
+
+<span class="sd">        &gt;&gt;&gt; resolver = VerifyOrganism(&quot;human&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; resolver.get_formal_name()      # &#39;homo_sapiens&#39;</span>
+<span class="sd">        &gt;&gt;&gt; resolver.get_latest_release()   # 117  (example)</span>
+
+<span class="sd">    Both helpers are backed by two public dataframes created during initialisation:</span>
+
+<span class="sd">    * :py:attr:`~VerifyOrganism.name_synonyms_dataframe` — maps every synonym returned by the REST service to the chosen</span>
+<span class="sd">      formal name and flags synonyms that are ambiguous across species.</span>
+<span class="sd">    * :py:attr:`~VerifyOrganism.ensembl_release_dataframe` — one-row table (indexed by *formal_name*) holding the latest</span>
+<span class="sd">      Ensembl release number.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">organism_query</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Class initialization.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialise the resolver and pre-fetch synonym/release tables from the Ensembl REST API.</span>
+
+<span class="sd">        The constructor immediately invokes :py:meth:`~VerifyOrganism.fetch_organism_and_latest_release`, downloading</span>
+<span class="sd">        the complete species list from ``{DB.rest_server_api}{DB.rest_server_ext}`` so that all subsequent look-ups run</span>
+<span class="sd">        entirely in-memory.  Any exceptions raised during that fetch are allowed to propagate unchanged so that callers</span>
+<span class="sd">        can handle network or data-quality issues explicitly.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            organism_query: Organism of interest.</span>
-<span class="sd">                This does not have to be formal name. For example, &#39;human&#39;, &#39;hsapiens&#39; as well as formal name</span>
-<span class="sd">                &#39;homo_sapiens&#39; is accepted by the program.</span>
+<span class="sd">            organism_query (str): Organism identifier supplied by the user—common name (``&quot;human&quot;``),</span>
+<span class="sd">                shorthand (``&quot;hsapiens&quot;``), taxon ID (``9606``), or fully qualified Ensembl species name</span>
+<span class="sd">                (``&quot;homo_sapiens&quot;``).  The value is converted to lower case before processing.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Instance attributes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;verify_organism&quot;</span><span class="p">)</span>
@@ -115,16 +138,22 @@
         <span class="c1"># Fetch the latest information from the Ensembl resources regarding</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">organism_query</span> <span class="o">=</span> <span class="n">organism_query</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name_synonyms_dataframe</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release_dataframe</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fetch_organism_and_latest_release</span><span class="p">(</span>
-            <span class="n">DB</span><span class="o">.</span><span class="n">connection_timeout</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">reading_timeout</span>
+            <span class="n">connect_timeout</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_timeout</span><span class="p">,</span> <span class="n">read_timeout</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">reading_timeout</span>
         <span class="p">)</span>
 
 <div class="viewcode-block" id="VerifyOrganism.get_latest_release">
 <a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism.get_latest_release">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_latest_release</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Using the API response and queried organism name, find the latest Ensembl release to be used for the program.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the latest Ensembl release number associated with the queried organism.</span>
+
+<span class="sd">        This helper calls :py:meth:`~VerifyOrganism.get_formal_name` to resolve the user-supplied organism query</span>
+<span class="sd">        to the canonical Ensembl species name, then looks up that key in the dataframe prepared at instantiation</span>
+<span class="sd">        time.  Down-stream routines (e.g. database connectors, file download helpers) rely on this value to decide</span>
+<span class="sd">        which Ensembl release to fetch, ensuring the entire pipeline stays on a single, internally consistent</span>
+<span class="sd">        genome build.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Latest Ensembl release.</span>
+<span class="sd">            int: The most recent Ensembl release available for the resolved organism.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">formal_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_formal_name</span><span class="p">()</span>
         <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release_dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">formal_name</span><span class="p">][</span><span class="s2">&quot;ensembl_release&quot;</span><span class="p">])</span></div>
@@ -133,14 +162,20 @@
 <div class="viewcode-block" id="VerifyOrganism.get_formal_name">
 <a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism.get_formal_name">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_formal_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Using the API response and queried organism name, find the formal organism name to be used for the program.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve the user&#39;s organism query to the canonical Ensembl species name.</span>
+
+<span class="sd">        The method performs an exact match against the *synonym* column of</span>
+<span class="sd">        :py:data:`~VerifyOrganism.name_synonyms_dataframe`, which was pre-populated from the Ensembl REST *species*</span>
+<span class="sd">        endpoint.  Synonyms include scientific names, common names, NCBI TaxIDs, assembly accessions and other</span>
+<span class="sd">        aliases, allowing flexible user input while guaranteeing that only one formally recognised organism is</span>
+<span class="sd">        selected before any expensive data retrieval begins.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Formal organism name.</span>
+<span class="sd">            str: The canonical Ensembl species identifier (always lower-case, e.g. ``&quot;homo_sapiens&quot;``).</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            KeyError: If the query is not defined in the pre-created dataframes.</span>
-<span class="sd">            ValueError: If there are multiple entries for query and hence the query is ambiguous.&quot;</span>
+<span class="sd">            KeyError: If the query string does not match any synonym in the dataframe.</span>
+<span class="sd">            ValueError: If the query matches more than one formal name, indicating an ambiguous synonym.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">the_search</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_synonyms_dataframe</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">name_synonyms_dataframe</span><span class="p">[</span><span class="s2">&quot;synonym&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism_query</span><span class="p">]</span>
         <span class="n">cm</span> <span class="o">=</span> <span class="s2">&quot;Please inspect &#39;name_synonyms_dataframe&#39; variable of this instance for troubleshooting.&quot;</span>
@@ -162,22 +197,32 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">fetch_organism_and_latest_release</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">connect_timeout</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">read_timeout</span><span class="p">:</span> <span class="nb">int</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates a query and process the data to construct two dataframes for Ensembl release and organism names.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Query the Ensembl REST API once and build lookup tables for species synonyms and latest releases.</span>
 
-<span class="sd">        The query to get the name of the organisms defined in the database, but also to get the latest</span>
-<span class="sd">        ensembl release to go through. This method is actually main functionality of the class; in general uses, the</span>
-<span class="sd">        user is not expected to use this method directly.</span>
+<span class="sd">        This internal utility performs a single call to ``/info/species`` on the Ensembl REST server, parses the</span>
+<span class="sd">        returned JSON, and constructs two pandas dataframes:</span>
+
+<span class="sd">        * ``name_synonyms_df`` - one row per synonym, with columns ``synonym``, ``formal_name`` and ``ambiguous``</span>
+<span class="sd">            (``True`` if the synonym belongs to more than one species).</span>
+<span class="sd">        * ``latest_ensembl_releases_df`` - indexed by ``formal_name`` and holding a single ``ensembl_release``</span>
+<span class="sd">            integer column.</span>
+
+<span class="sd">        Consolidating the REST query in one place avoids repeated network traffic and provides a cache-friendly</span>
+<span class="sd">        structure for subsequent lookups.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            connect_timeout: The number of seconds the requests will wait to establish a connection to a remote machine.</span>
-<span class="sd">            read_timeout: The number of seconds the client will wait for the server to send a response</span>
+<span class="sd">            connect_timeout (int): Seconds to wait while establishing the TCP connection to the Ensembl server.</span>
+<span class="sd">            read_timeout (int): Seconds to wait for the server to send the full response after the connection</span>
+<span class="sd">                has been established.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            Two dataframes to be used by the instance methods later on.</span>
+<span class="sd">            tuple[pandas.DataFrame, pandas.DataFrame]:</span>
+<span class="sd">                ``(name_synonyms_df, latest_ensembl_releases_df)`` as described above.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Unexpected error.</span>
-<span class="sd">            TimeoutError: If allowed time is passed.</span>
+<span class="sd">            TimeoutError: If the combined *(connect_timeout, read_timeout)* limit is exceeded.</span>
+<span class="sd">            ValueError: If the JSON schema differs from the expected ``{&quot;species&quot;: [...]}`` structure or required</span>
+<span class="sd">                keys are missing.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Ensembl Rest API query to get the organism names and associated releases.&quot;</span><span class="p">)</span>
 
@@ -216,7 +261,10 @@
 
             <span class="c1"># In very early releases, there are floating releases like &quot;18.2&quot;. This package does not support those.</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">float</span><span class="p">(</span><span class="n">organism</span><span class="p">[</span><span class="s2">&quot;release&quot;</span><span class="p">])</span> <span class="o">==</span> <span class="nb">int</span><span class="p">(</span><span class="n">organism</span><span class="p">[</span><span class="s2">&quot;release&quot;</span><span class="p">]):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Ensembl release is not in integer format. </span><span class="si">{}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Ensembl release is not in integer format: </span><span class="si">{</span><span class="n">organism</span><span class="p">[</span><span class="s1">&#39;release&#39;</span><span class="p">]</span><span class="si">!r}</span><span class="s2"> &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;(organism: </span><span class="si">{</span><span class="n">organism</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="si">!r}</span><span class="s2">)&quot;</span>
+                <span class="p">)</span>
 
             <span class="c1"># Save the associated the latest release</span>
             <span class="n">latest_ensembl_releases</span><span class="p">[</span><span class="n">organism</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">organism</span><span class="p">[</span><span class="s2">&quot;release&quot;</span><span class="p">])</span>

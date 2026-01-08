@@ -1,0 +1,692 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack._external_mappers._utils &mdash; idtrack 0.0.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/tutorials.css?v=f6ff1e94" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack._external_mappers._utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack._external_mappers._utils</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="sd">&quot;&quot;&quot;Utility functions for the _external_mappers module.</span>
+
+<span class="sd">This module provides:</span>
+<span class="sd">- Database and species name canonicalization</span>
+<span class="sd">- ID version stripping for Ensembl and RefSeq identifiers</span>
+<span class="sd">- DataFrame utilities for standardizing output format</span>
+<span class="sd">- Helper functions for chunking, JSON serialization, etc.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Kemal Inecik</span>
+<span class="c1"># k.inecik@gmail.com</span>
+
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">contextlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">typing</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers._constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">_DB_ALIASES</span><span class="p">,</span> <span class="n">_SPECIES_ALIASES</span><span class="p">,</span> <span class="n">SUPPORTED_DBS</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;canonical_db&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;canonical_species&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;_species_for_mygene&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;strip_version&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;_as_list&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;_unique_not_null&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;_chunker&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;_json&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;_is_bare_numeric&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;_empty_result&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;_add_mapping_column&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;_ensure_all_inputs&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;_suppress_stdout_stderr&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;logger&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;check_optional_dependencies&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;raise_missing_dependency&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+
+<span class="c1"># ----------------------------- Dependency Info ------------------------------ #</span>
+
+<span class="c1"># Registry of optional dependencies for this module</span>
+<span class="n">OPTIONAL_DEPENDENCIES</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;gget&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;import_name&quot;</span><span class="p">:</span> <span class="s2">&quot;gget&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;pip_name&quot;</span><span class="p">:</span> <span class="s2">&quot;gget&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;features&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;gget backend&quot;</span><span class="p">,</span> <span class="s2">&quot;ortholog utilities&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Query Ensembl REST API for gene information&quot;</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;mygene&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;import_name&quot;</span><span class="p">:</span> <span class="s2">&quot;mygene&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;pip_name&quot;</span><span class="p">:</span> <span class="s2">&quot;mygene&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;features&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;mygene backend&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Query MyGene.info API for ID mapping&quot;</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;pybiomart&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;import_name&quot;</span><span class="p">:</span> <span class="s2">&quot;pybiomart&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;pip_name&quot;</span><span class="p">:</span> <span class="s2">&quot;pybiomart&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;features&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;pybiomart backend&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Query Ensembl BioMart for ID mapping&quot;</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;gprofiler-official&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;import_name&quot;</span><span class="p">:</span> <span class="s2">&quot;gprofiler&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;pip_name&quot;</span><span class="p">:</span> <span class="s2">&quot;gprofiler-official&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;features&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;gprofiler backend&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Query g:Profiler API for ID mapping&quot;</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;biopython&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;import_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Bio&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;pip_name&quot;</span><span class="p">:</span> <span class="s2">&quot;biopython&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;features&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;ortholog utilities&quot;</span><span class="p">,</span> <span class="s2">&quot;sequence alignment&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Biological sequence analysis tools&quot;</span><span class="p">,</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_dependency</span><span class="p">(</span><span class="n">dep_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if a single dependency is available.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">dep_key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">OPTIONAL_DEPENDENCIES</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">import_name</span> <span class="o">=</span> <span class="n">OPTIONAL_DEPENDENCIES</span><span class="p">[</span><span class="n">dep_key</span><span class="p">][</span><span class="s2">&quot;import_name&quot;</span><span class="p">]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="nb">__import__</span><span class="p">(</span><span class="n">import_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="check_optional_dependencies">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers.check_optional_dependencies">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_optional_dependencies</span><span class="p">(</span><span class="n">warn</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check which optional dependencies are installed.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        warn: When ``True``, emit a warning summarizing missing packages.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Mapping from dependency key to availability.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+
+    <span class="n">status</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">missing</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">dep_key</span> <span class="ow">in</span> <span class="n">OPTIONAL_DEPENDENCIES</span><span class="p">:</span>
+        <span class="n">available</span> <span class="o">=</span> <span class="n">_check_dependency</span><span class="p">(</span><span class="n">dep_key</span><span class="p">)</span>
+        <span class="n">status</span><span class="p">[</span><span class="n">dep_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">available</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">available</span><span class="p">:</span>
+            <span class="n">missing</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dep_key</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">warn</span> <span class="ow">and</span> <span class="n">missing</span><span class="p">:</span>
+        <span class="n">pip_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">OPTIONAL_DEPENDENCIES</span><span class="p">[</span><span class="n">d</span><span class="p">][</span><span class="s2">&quot;pip_name&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">missing</span><span class="p">]</span>
+        <span class="n">warning_msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">70</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;idtrack._external_mappers: Missing optional dependencies</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">70</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;The following optional packages are not installed:</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">dep_key</span> <span class="ow">in</span> <span class="n">missing</span><span class="p">:</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="n">OPTIONAL_DEPENDENCIES</span><span class="p">[</span><span class="n">dep_key</span><span class="p">]</span>
+            <span class="n">features</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;features&quot;</span><span class="p">])</span>
+            <span class="n">warning_msg</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">info</span><span class="p">[</span><span class="s1">&#39;pip_name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">info</span><span class="p">[</span><span class="s1">&#39;description&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (used by: </span><span class="si">{</span><span class="n">features</span><span class="si">}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">&quot;</span>
+
+        <span class="n">warning_msg</span> <span class="o">+=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;To install all external mapper dependencies:</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;  pip install </span><span class="si">{</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pip_names</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Or install individually as needed.</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">70</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">warning_msg</span><span class="p">,</span> <span class="ne">UserWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">status</span></div>
+
+
+
+<div class="viewcode-block" id="raise_missing_dependency">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers.raise_missing_dependency">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">raise_missing_dependency</span><span class="p">(</span>
+    <span class="n">dep_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">feature</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">original_error</span><span class="p">:</span> <span class="ne">BaseException</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">typing</span><span class="o">.</span><span class="n">NoReturn</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Raise a detailed error for a missing optional dependency.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dep_key: Key in :py:data:`OPTIONAL_DEPENDENCIES` (e.g. ``&quot;gget&quot;``, ``&quot;mygene&quot;``).</span>
+<span class="sd">        feature: Description of the feature that requires the dependency.</span>
+<span class="sd">        original_error: Optional original ImportError to chain.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        RuntimeError: Always, with detailed installation instructions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">dep_key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">OPTIONAL_DEPENDENCIES</span><span class="p">:</span>
+        <span class="c1"># Fallback for unknown dependencies</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">70</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Missing dependency: </span><span class="si">{</span><span class="n">dep_key</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">70</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Please install the required package:</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;  pip install </span><span class="si">{</span><span class="n">dep_key</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">70</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">original_error</span>
+
+    <span class="n">info</span> <span class="o">=</span> <span class="n">OPTIONAL_DEPENDENCIES</span><span class="p">[</span><span class="n">dep_key</span><span class="p">]</span>
+    <span class="n">pip_name</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;pip_name&quot;</span><span class="p">]</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">]</span>
+    <span class="n">features</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">info</span><span class="p">[</span><span class="s2">&quot;features&quot;</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="n">feature</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">feature</span> <span class="o">=</span> <span class="n">features</span>
+
+    <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">70</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;Missing optional dependency: </span><span class="si">{</span><span class="n">pip_name</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">70</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;The </span><span class="si">{</span><span class="n">feature</span><span class="si">!r}</span><span class="s2"> feature requires </span><span class="si">{</span><span class="n">pip_name</span><span class="si">!r}</span><span class="s2">.</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;Package info:</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;  - Name: </span><span class="si">{</span><span class="n">pip_name</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;  - Description: </span><span class="si">{</span><span class="n">description</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;  - Used by: </span><span class="si">{</span><span class="n">features</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;To install this dependency:</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;  pip install </span><span class="si">{</span><span class="n">pip_name</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;To install all external mapper dependencies:</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;  pip install gget mygene pybiomart gprofiler-official biopython</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">70</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">original_error</span></div>
+
+
+
+<span class="c1"># ------------------------------- Logging ------------------------------------ #</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_setup_logger</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Set up and return the module logger with proper configuration.&quot;&quot;&quot;</span>
+    <span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;idtrack.external_mappers&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">log</span><span class="o">.</span><span class="n">handlers</span><span class="p">:</span>
+        <span class="n">handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">()</span>
+        <span class="n">handler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="s2">&quot;[</span><span class="si">%(levelname)s</span><span class="s2">] </span><span class="si">%(message)s</span><span class="s2">&quot;</span><span class="p">))</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">handler</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">log</span>
+
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">_setup_logger</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="_suppress_stdout_stderr">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._suppress_stdout_stderr">[docs]</a>
+<span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_suppress_stdout_stderr</span><span class="p">(</span><span class="n">enabled</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Context manager to squelch noisy stdout/stderr emissions.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">enabled</span><span class="p">:</span>
+        <span class="k">yield</span>
+        <span class="k">return</span>
+    <span class="k">with</span> <span class="n">contextlib</span><span class="o">.</span><span class="n">redirect_stdout</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">StringIO</span><span class="p">()),</span> <span class="n">contextlib</span><span class="o">.</span><span class="n">redirect_stderr</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">StringIO</span><span class="p">()):</span>
+        <span class="k">yield</span></div>
+
+
+
+<span class="c1"># ----------------------------- Canonical DBs -------------------------------- #</span>
+
+
+<div class="viewcode-block" id="canonical_db">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers.canonical_db">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">canonical_db</span><span class="p">(</span><span class="n">db</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return canonical DB key given a user-friendly/alias string.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">db</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;db must be a non-empty string&quot;</span><span class="p">)</span>
+    <span class="n">db_norm</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">db_norm</span> <span class="ow">in</span> <span class="n">_DB_ALIASES</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_DB_ALIASES</span><span class="p">[</span><span class="n">db_norm</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">db_norm</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;ensg&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;ensembl_gene&quot;</span>
+    <span class="k">if</span> <span class="n">db_norm</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;enst&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;ensembl_transcript&quot;</span>
+    <span class="k">if</span> <span class="n">db_norm</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;ensp&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;ensembl_protein&quot;</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported or unknown db alias: </span><span class="si">{</span><span class="n">db</span><span class="si">!r}</span><span class="s2">. &quot;</span> <span class="sa">f</span><span class="s2">&quot;Supported canonical DBs: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">SUPPORTED_DBS</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># -------------------------- Species normalization --------------------------- #</span>
+
+
+<div class="viewcode-block" id="canonical_species">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers.canonical_species">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">canonical_species</span><span class="p">(</span><span class="n">species</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return canonical organism code (g:Profiler / Ensembl style).</span>
+
+<span class="sd">    Supported out-of-the-box: human → ``hsapiens``, mouse → ``mmusculus``, pig → ``sscrofa``.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        species: Species code/alias. If ``None`` or empty, defaults to ``&quot;hsapiens&quot;``.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: Canonical organism code.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">species</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;hsapiens&quot;</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">species</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">_SPECIES_ALIASES</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="_species_for_mygene">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._species_for_mygene">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_species_for_mygene</span><span class="p">(</span><span class="n">species</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the MyGene-compatible common name for a canonical species code.&quot;&quot;&quot;</span>
+    <span class="n">cs</span> <span class="o">=</span> <span class="n">canonical_species</span><span class="p">(</span><span class="n">species</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cs</span> <span class="o">==</span> <span class="s2">&quot;hsapiens&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;human&quot;</span>
+    <span class="k">if</span> <span class="n">cs</span> <span class="o">==</span> <span class="s2">&quot;mmusculus&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;mouse&quot;</span>
+    <span class="k">if</span> <span class="n">cs</span> <span class="o">==</span> <span class="s2">&quot;sscrofa&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;pig&quot;</span>
+    <span class="k">return</span> <span class="n">cs</span></div>
+
+
+
+<span class="c1"># ----------------------------- Helper utils -------------------------------- #</span>
+
+<span class="c1"># Regex patterns for ID version stripping</span>
+<span class="n">_ENS_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^(ENS[A-Z]*\d+)&quot;</span><span class="p">)</span>
+<span class="n">_REFSEQ_VER_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^([NX][MRP]_\d+)&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="strip_version">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers.strip_version">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">strip_version</span><span class="p">(</span><span class="n">ididid</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Strip version suffixes from Ensembl and RefSeq identifiers.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ididid: Identifier to strip.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Identifier without a version suffix (or unchanged if none is present).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ididid</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ididid</span>  <span class="c1"># type: ignore[return-value]</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">ididid</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+    <span class="n">m</span> <span class="o">=</span> <span class="n">_ENS_RE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">m</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">m</span> <span class="o">=</span> <span class="n">_REFSEQ_VER_RE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">m</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">x</span></div>
+
+
+
+<div class="viewcode-block" id="_as_list">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._as_list">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_as_list</span><span class="p">(</span><span class="n">v</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Coerce a value to a list.</span>
+
+<span class="sd">    - ``None`` returns ``[]``</span>
+<span class="sd">    - list/tuple/set returns ``list(v)``</span>
+<span class="sd">    - scalar values return ``[v]``</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        v: Value to coerce.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list[Any]: ``v`` represented as a list.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">,</span> <span class="nb">set</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">v</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="_unique_not_null">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._unique_not_null">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_unique_not_null</span><span class="p">(</span><span class="n">seq</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return unique non-null string values from a sequence, preserving order.</span>
+
+<span class="sd">    Filters out:</span>
+<span class="sd">    - ``None`` values</span>
+<span class="sd">    - empty / whitespace-only strings</span>
+<span class="sd">    - stringified null values (``&quot;nan&quot;``, ``&quot;none&quot;``, ``&quot;null&quot;``; case-insensitive)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        seq: Sequence of values to normalize and filter.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list[str]: Unique non-null string values in first-seen order.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">seen</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">out</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">seq</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">s</span> <span class="ow">or</span> <span class="n">s</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;nan&quot;</span><span class="p">,</span> <span class="s2">&quot;none&quot;</span><span class="p">,</span> <span class="s2">&quot;null&quot;</span><span class="p">}:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+            <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+
+
+<div class="viewcode-block" id="_chunker">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._chunker">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_chunker</span><span class="p">(</span><span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">typing</span><span class="o">.</span><span class="n">Iterator</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Yield successive chunks of a list.&quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">items</span><span class="p">),</span> <span class="n">size</span><span class="p">):</span>
+        <span class="k">yield</span> <span class="n">items</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">size</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="_json">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._json">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_json</span><span class="p">(</span><span class="n">obj</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Serialize an object to a compact JSON string (unicode preserved).&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">separators</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="s2">&quot;:&quot;</span><span class="p">),</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="_is_bare_numeric">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._is_bare_numeric">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_bare_numeric</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return ``True`` if a string consists entirely of digits.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\d+&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()))</span></div>
+
+
+
+<span class="c1"># ---------------------------- Utilities/Finalizers -------------------------- #</span>
+
+
+<div class="viewcode-block" id="_empty_result">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._empty_result">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_empty_result</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return an empty standardized mapping result DataFrame.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="n">columns</span><span class="o">=</span><span class="p">[</span>
+            <span class="s2">&quot;input_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;input_db&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;output_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;output_db&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;method&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;release_used&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;mapping&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;metadata_json&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="_add_mapping_column">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._add_mapping_column">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_add_mapping_column</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add or recompute the ``mapping`` column on a standardized mapping DataFrame.</span>
+
+<span class="sd">    The ``mapping`` value is the per-input cardinality:</span>
+<span class="sd">    ``1:0`` (no outputs), ``1:1`` (one unique output), ``1:n`` (multiple outputs).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        df: Standardized mapping DataFrame.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pd.DataFrame: DataFrame with a (re)computed ``mapping`` column.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">df</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_empty_result</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">&quot;mapping&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">df</span><span class="p">[</span><span class="s2">&quot;mapping&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span>
+
+    <span class="k">if</span> <span class="s2">&quot;output_id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="ow">or</span> <span class="s2">&quot;input_id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="c1"># Fallback: mark everything as unmapped</span>
+        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;mapping&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1:0&quot;</span>
+        <span class="k">return</span> <span class="n">df</span>
+
+    <span class="c1"># Drop any existing mapping column; we&#39;ll recompute it from scratch.</span>
+    <span class="k">if</span> <span class="s2">&quot;mapping&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;mapping&quot;</span><span class="p">])</span>
+
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;input_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">outputs</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;output_id&quot;</span><span class="p">]</span>
+
+    <span class="n">out_str</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">valid_mask</span> <span class="o">=</span> <span class="o">~</span><span class="n">outputs</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">out_str</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">ne</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">out_str</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">isin</span><span class="p">({</span><span class="s2">&quot;nan&quot;</span><span class="p">,</span> <span class="s2">&quot;none&quot;</span><span class="p">,</span> <span class="s2">&quot;null&quot;</span><span class="p">})</span>
+
+    <span class="c1"># Number of unique valid outputs per input</span>
+    <span class="n">counts_by_input</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">valid_mask</span><span class="p">]</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="n">valid_mask</span><span class="p">])[</span><span class="s2">&quot;output_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">nunique</span><span class="p">(</span><span class="n">dropna</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">mapping_by_input</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">inp_val</span> <span class="ow">in</span> <span class="n">inputs</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">inp_val</span><span class="p">)</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">counts_by_input</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">mapping_by_input</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1:0&quot;</span>
+        <span class="k">elif</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">mapping_by_input</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1:1&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mapping_by_input</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1:n&quot;</span>
+
+    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;mapping&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">inputs</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">mapping_by_input</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">df</span></div>
+
+
+
+<div class="viewcode-block" id="_ensure_all_inputs">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ensure_all_inputs">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_ensure_all_inputs</span><span class="p">(</span>
+    <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">original_inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">inp</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">outp</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">method</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">release_used</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Ensure each input appears at least once in the output.</span>
+
+<span class="sd">    Missing inputs are appended with ``output_id=None``. Input order is preserved and the</span>
+<span class="sd">    ``mapping`` column is (re)computed.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        df: Partially populated standardized mapping DataFrame.</span>
+<span class="sd">        original_inputs: Original input identifiers (order is preserved).</span>
+<span class="sd">        inp: Canonical input database key.</span>
+<span class="sd">        outp: Canonical output database key.</span>
+<span class="sd">        method: Backend method name.</span>
+<span class="sd">        release_used: Backend-provided release/host label (if any).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pd.DataFrame: Standardized mapping DataFrame containing at least one row per input.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">df</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;input_id&quot;</span><span class="p">:</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">original_inputs</span><span class="p">],</span>
+                <span class="s2">&quot;input_db&quot;</span><span class="p">:</span> <span class="n">inp</span><span class="p">,</span>
+                <span class="s2">&quot;output_id&quot;</span><span class="p">:</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">original_inputs</span><span class="p">),</span>
+                <span class="s2">&quot;output_db&quot;</span><span class="p">:</span> <span class="n">outp</span><span class="p">,</span>
+                <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="n">method</span><span class="p">,</span>
+                <span class="s2">&quot;release_used&quot;</span><span class="p">:</span> <span class="n">release_used</span><span class="p">,</span>
+                <span class="s2">&quot;metadata_json&quot;</span><span class="p">:</span> <span class="n">_json</span><span class="p">({}),</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="n">_add_mapping_column</span><span class="p">(</span><span class="n">base</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">base</span>
+
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">(</span>
+        <span class="s2">&quot;input_id&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;input_db&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;output_id&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;output_db&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;method&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;release_used&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;metadata_json&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;input_db&quot;</span><span class="p">,</span> <span class="s2">&quot;output_db&quot;</span><span class="p">,</span> <span class="s2">&quot;method&quot;</span><span class="p">}:</span>
+                <span class="n">default_map</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;input_db&quot;</span><span class="p">:</span> <span class="n">inp</span><span class="p">,</span> <span class="s2">&quot;output_db&quot;</span><span class="p">:</span> <span class="n">outp</span><span class="p">,</span> <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="n">method</span><span class="p">}</span>
+                <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">default_map</span><span class="p">[</span><span class="n">col</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="n">col</span> <span class="o">==</span> <span class="s2">&quot;release_used&quot;</span><span class="p">:</span>
+                <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">release_used</span>
+            <span class="k">elif</span> <span class="n">col</span> <span class="o">==</span> <span class="s2">&quot;metadata_json&quot;</span><span class="p">:</span>
+                <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">_json</span><span class="p">({})</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">present</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;input_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">))</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">original_inputs</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">present</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+        <span class="n">tail</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;input_id&quot;</span><span class="p">:</span> <span class="n">missing</span><span class="p">,</span>
+                <span class="s2">&quot;input_db&quot;</span><span class="p">:</span> <span class="n">inp</span><span class="p">,</span>
+                <span class="s2">&quot;output_id&quot;</span><span class="p">:</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">),</span>
+                <span class="s2">&quot;output_db&quot;</span><span class="p">:</span> <span class="n">outp</span><span class="p">,</span>
+                <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="n">method</span><span class="p">,</span>
+                <span class="s2">&quot;release_used&quot;</span><span class="p">:</span> <span class="n">release_used</span><span class="p">,</span>
+                <span class="s2">&quot;metadata_json&quot;</span><span class="p">:</span> <span class="n">_json</span><span class="p">({}),</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span><span class="p">,</span> <span class="n">tail</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">order_map</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">):</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">original_inputs</span><span class="p">)}</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;__ord&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;input_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">order_map</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s2">&quot;__ord&quot;</span><span class="p">,</span> <span class="s2">&quot;output_id&quot;</span><span class="p">],</span> <span class="n">na_position</span><span class="o">=</span><span class="s2">&quot;last&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s2">&quot;__ord&quot;</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">_add_mapping_column</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">df</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

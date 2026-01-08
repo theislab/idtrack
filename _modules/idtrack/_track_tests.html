@@ -8,14 +8,17 @@
   <title>idtrack._track_tests &mdash; idtrack 0.0.4 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=15bcc2cf" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=f6ff1e94" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
-      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/design-tabs.js?v=f930bc37"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -44,8 +47,9 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
@@ -681,7 +685,7 @@
             <span class="k">pass</span>
         <span class="k">elif</span> <span class="mf">0.0</span> <span class="o">&lt;</span> <span class="n">from_fraction</span> <span class="o">&lt;</span> <span class="mf">1.0</span><span class="p">:</span>
             <span class="n">from_faction_count</span> <span class="o">=</span> <span class="n">ceil</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ids_from</span><span class="p">)</span> <span class="o">*</span> <span class="n">from_fraction</span><span class="p">)</span>
-            <span class="n">ids_from</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">ids_from</span><span class="p">,</span> <span class="n">from_faction_count</span><span class="p">))</span>
+            <span class="n">ids_from</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">ids_from</span><span class="p">,</span> <span class="n">from_faction_count</span><span class="p">))</span>  <span class="c1"># noqa: S311</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span>
 
@@ -834,7 +838,7 @@
 
 <div class="viewcode-block" id="TrackTests.history_travel_testing_random_arguments_generator">
 <a class="viewcode-back" href="../../reference.html#idtrack._track_tests.TrackTests.history_travel_testing_random_arguments_generator">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">history_travel_testing_random_arguments_generator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">strict_forward</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">include_exclude_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">history_travel_testing_random_arguments_generator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">strict_forward</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">include_exclude_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">bool</span><span class="p">]):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Generate a plausible random parameter set for :py:meth:`history_travel_testing`.</span>
 
 <span class="sd">        The helper picks **compatible** source/target assemblies, releases and</span>
@@ -843,8 +847,10 @@
 <span class="sd">        guaranteed to be **≥** the source release (no time-travel back).</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            strict_forward: Enforce a non-decreasing release direction.</span>
-<span class="sd">            include_exclude_list: Todo.</span>
+<span class="sd">            strict_forward (bool): Enforce a non-decreasing release direction.</span>
+<span class="sd">            include_exclude_list (list[bool]): A 4-element list of booleans controlling</span>
+<span class="sd">                inclusion of ``[include_ensembl_source, include_external_source,</span>
+<span class="sd">                include_ensembl_destination, include_external_destination]``.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            dict: Keys ``from_assembly``, ``from_release``, ``to_release``,</span>
@@ -855,13 +861,14 @@
         <span class="n">only_backbone_tests_1</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">([</span><span class="n">include_ensembl_1</span><span class="p">,</span> <span class="n">include_external_1</span><span class="p">])</span> <span class="k">else</span> <span class="kc">False</span>
         <span class="n">only_backbone_tests_2</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">([</span><span class="n">include_ensembl_2</span><span class="p">,</span> <span class="n">include_external_2</span><span class="p">])</span> <span class="k">else</span> <span class="kc">False</span>
 
+        <span class="n">main_assembly</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;genome_assembly&quot;</span><span class="p">])</span>
         <span class="n">from_assembly</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+            <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">available_genome_assemblies</span><span class="p">))</span>  <span class="c1"># noqa: S311</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">only_backbone_tests_1</span>
-            <span class="k">else</span> <span class="n">DB</span><span class="o">.</span><span class="n">main_assembly</span>
+            <span class="k">else</span> <span class="n">main_assembly</span>
         <span class="p">)</span>
-        <span class="c1"># as the final release should be always the main assembly</span>
-        <span class="n">to_assembly</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;genome_assembly&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">only_backbone_tests_2</span> <span class="k">else</span> <span class="n">DB</span><span class="o">.</span><span class="n">main_assembly</span>
+        <span class="c1"># Final conversions are always evaluated on the graph&#39;s primary assembly.</span>
+        <span class="n">to_assembly</span> <span class="o">=</span> <span class="n">main_assembly</span>
         <span class="n">the_key1</span><span class="p">,</span> <span class="n">the_key2</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
         <span class="k">while</span> <span class="n">the_key1</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">the_key2</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">the_key1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">random_dataset_source_generator</span><span class="p">(</span>
@@ -922,13 +929,13 @@
 <span class="sd">                :py:meth:`history_travel_testing`.</span>
 <span class="sd">            prioritize_to_one_filter: Forwarded to</span>
 <span class="sd">                :py:meth:`history_travel_testing`.</span>
-<span class="sd">            verbose: Show coarse progress information.</span>
-<span class="sd">            verbose_detailed: Include extended per-ID counters in the progress bar.</span>
-<span class="sd">            return_result: Todo.</span>
-<span class="sd">            include_ensembl_source: Todo.</span>
-<span class="sd">            include_external_source: Todo.</span>
-<span class="sd">            include_ensembl_destination: Todo.</span>
-<span class="sd">            include_external_destination: Todo.</span>
+<span class="sd">            verbose (bool): Show coarse progress information.</span>
+<span class="sd">            verbose_detailed (bool): Include extended per-ID counters in the progress bar.</span>
+<span class="sd">            return_result (bool): If ``True``, return the metrics dictionary.</span>
+<span class="sd">            include_ensembl_source (bool): Include Ensembl databases as valid sources.</span>
+<span class="sd">            include_external_source (bool): Include external databases as valid sources.</span>
+<span class="sd">            include_ensembl_destination (bool): Include Ensembl databases as valid destinations.</span>
+<span class="sd">            include_external_destination (bool): Include external databases as valid destinations.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            dict: The *metrics* dictionary returned by</span>
@@ -946,7 +953,7 @@
         <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
-            <span class="n">printable1</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">format_history_travel_testing_report_header</span><span class="p">(</span><span class="n">parameters</span><span class="p">))</span>
+            <span class="n">printable1</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_format_history_travel_testing_report_header</span><span class="p">(</span><span class="n">parameters</span><span class="p">))</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">printable1</span><span class="p">)</span>
 
         <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">history_travel_testing</span><span class="p">(</span>
@@ -962,7 +969,7 @@
 
         <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
             <span class="n">printable2</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">linesep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">format_history_travel_testing_report</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">include_header</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_format_history_travel_testing_report</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">include_header</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">printable2</span><span class="p">)</span>
 
@@ -989,26 +996,30 @@
 <span class="sd">        graph-IDs with :py:meth:`idtrack.Track.convert`.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            convert_using_release: Whether to pin the *from_release* when</span>
+<span class="sd">            convert_using_release (bool): Whether to pin the *from_release* when</span>
 <span class="sd">                calling the converter.  Keeping this *True* usually speeds up</span>
 <span class="sd">                the search and mimics user-facing behaviour.</span>
-<span class="sd">            verbose: Print the current assembly/database/release being tested.</span>
-<span class="sd">            prioritize_to_one_filter: Todo.</span>
-<span class="sd">            ens_rel: Todo.</span>
-<span class="sd">            from_fraction: Todo.</span>
-<span class="sd">            database: Todo.</span>
+<span class="sd">            verbose (bool): Print the current assembly/database/release being tested.</span>
+<span class="sd">            prioritize_to_one_filter (bool): If ``True``, apply tie-breaking to</span>
+<span class="sd">                select a single best target when multiple candidates exist.</span>
+<span class="sd">            ens_rel (int | None): Specific Ensembl release to test. If ``None``,</span>
+<span class="sd">                a random release is chosen.</span>
+<span class="sd">            from_fraction (float): Fraction of identifiers to sample for testing</span>
+<span class="sd">                (0.0-1.0). Defaults to 1.0 (all identifiers).</span>
+<span class="sd">            database (str | None): Specific external database to test. If ``None``,</span>
+<span class="sd">                a random database is chosen.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            bool: *True* if every converted set equals the MySQL reference,</span>
 <span class="sd">                *False* upon the first deviation.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Todo.</span>
+<span class="sd">            ValueError: Raised when test parameters are invalid or incompatible.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">issues_t1</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">issues_t2</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">issues_t3</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">assembly</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">main_assembly</span>
+        <span class="n">assembly</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;genome_assembly&quot;</span><span class="p">])</span>
 
         <span class="k">if</span> <span class="n">database</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">ens_rel</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Random database and Ensembl release.&quot;</span><span class="p">)</span>
@@ -1097,23 +1108,27 @@
 <span class="sd">        release constraint.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            assembly: NCBI assembly code (integer).</span>
-<span class="sd">            include_ensembl: Whether Ensembl backbone databases may be returned</span>
+<span class="sd">            assembly (int): Genome assembly code used in Ensembl core schema names</span>
+<span class="sd">                (e.g. ``38`` = human GRCh38, ``39`` = mouse GRCm39, ``111`` = pig Sscrofa11.1).</span>
+<span class="sd">            include_ensembl (bool): Whether Ensembl backbone databases may be returned</span>
 <span class="sd">                as *database*.</span>
-<span class="sd">            release_lower_limit: Smallest permissible Ensembl release number</span>
+<span class="sd">            release_lower_limit (int | None): Smallest permissible Ensembl release number</span>
 <span class="sd">                for the returned triple.  *None* disables the filter.</span>
-<span class="sd">            form: Restrict the draw to a particular connection *form*</span>
+<span class="sd">            form (str | None): Restrict the draw to a particular connection *form*</span>
 <span class="sd">                (protein/coding/gene).  *None* means no restriction.</span>
-<span class="sd">            only_backbone_tests: Todo.</span>
-<span class="sd">            include_external: Todo.</span>
-<span class="sd">            for_final_database: Todo.</span>
+<span class="sd">            only_backbone_tests (bool): If ``True``, restrict selection to backbone-only</span>
+<span class="sd">                databases (skip external databases entirely).</span>
+<span class="sd">            include_external (bool): Whether external (non-Ensembl) databases may be</span>
+<span class="sd">                included in the selection pool.</span>
+<span class="sd">            for_final_database (bool): If ``True``, exclude Ensembl assembly-specific</span>
+<span class="sd">                databases from selection (useful when selecting final conversion targets).</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            tuple | None: ``(&lt;database&gt;, &lt;assembly&gt;, &lt;release&gt;)`` or *None* when</span>
 <span class="sd">            no matching release exists.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: Todo.</span>
+<span class="sd">            ValueError: Raised when no valid database/release combination can be found.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">only_backbone_tests</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">include_external</span><span class="p">:</span>
@@ -1142,13 +1157,13 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">all_possible_sources</span> <span class="o">=</span> <span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">]]</span>
 
-        <span class="n">selected_database</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">all_possible_sources</span><span class="p">)</span>
+        <span class="n">selected_database</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">all_possible_sources</span><span class="p">)</span>  <span class="c1"># noqa: S311</span>
         <span class="n">possible_releases</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">available_releases_given_database_assembly</span><span class="p">[(</span><span class="n">selected_database</span><span class="p">,</span> <span class="n">assembly</span><span class="p">)]</span>
         <span class="k">if</span> <span class="n">release_lower_limit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">possible_releases</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">possible_releases</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="n">release_lower_limit</span><span class="p">}</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">possible_releases</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">selected_release</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">possible_releases</span><span class="p">))</span>
+            <span class="n">selected_release</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">possible_releases</span><span class="p">))</span>  <span class="c1"># noqa: S311</span>
             <span class="n">the_key</span> <span class="o">=</span> <span class="p">(</span><span class="n">selected_database</span><span class="p">,</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">selected_release</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">the_key</span>
         <span class="k">else</span><span class="p">:</span>
@@ -1192,16 +1207,17 @@
         <span class="k">return</span> <span class="kc">True</span></div>
 
 
-<div class="viewcode-block" id="TrackTests.format_history_travel_testing_report_header">
-<a class="viewcode-back" href="../../reference.html#idtrack._track_tests.TrackTests.format_history_travel_testing_report_header">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">format_history_travel_testing_report_header</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+<div class="viewcode-block" id="TrackTests._format_history_travel_testing_report_header">
+<a class="viewcode-back" href="../../reference.html#idtrack._track_tests.TrackTests._format_history_travel_testing_report_header">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_format_history_travel_testing_report_header</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format the header section for a history travel testing report.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            p (dict[str, Any]): Todo.</span>
+<span class="sd">            p (dict[str, Any]): Parameters dictionary containing ``from_database``,</span>
+<span class="sd">                ``from_assembly``, ``from_release``, ``to_database``, and ``to_release``.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            str: Todo.</span>
+<span class="sd">            list[str]: Lines of formatted text for the report header.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">header</span> <span class="o">=</span> <span class="p">[</span>
             <span class="s2">&quot;╔═ History-Travel-Testing Report ═╗&quot;</span><span class="p">,</span>
@@ -1213,20 +1229,23 @@
         <span class="k">return</span> <span class="n">header</span></div>
 
 
-<div class="viewcode-block" id="TrackTests.format_history_travel_testing_report">
-<a class="viewcode-back" href="../../reference.html#idtrack._track_tests.TrackTests.format_history_travel_testing_report">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">format_history_travel_testing_report</span><span class="p">(</span>
+<div class="viewcode-block" id="TrackTests._format_history_travel_testing_report">
+<a class="viewcode-back" href="../../reference.html#idtrack._track_tests.TrackTests._format_history_travel_testing_report">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_format_history_travel_testing_report</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">res</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">include_header</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">line_separation_at_end</span><span class="o">=</span><span class="kc">True</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Todo.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format a complete history travel testing report with metrics.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            res (dict[str, Any]): Todo.</span>
-<span class="sd">            include_header (bool): Todo. Defaults to False.</span>
-<span class="sd">            line_separation_at_end (bool): Todo.. Defaults to True.</span>
+<span class="sd">            res (dict[str, Any]): Results dictionary from history_travel_testing</span>
+<span class="sd">                containing conversion metrics and parameters.</span>
+<span class="sd">            include_header (bool): If ``True``, include the header section with</span>
+<span class="sd">                source/target information. Defaults to ``False``.</span>
+<span class="sd">            line_separation_at_end (bool): If ``True``, append a blank line</span>
+<span class="sd">                separator at the end of the report. Defaults to ``True``.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            str: Todo.</span>
+<span class="sd">            list[str]: Lines of formatted text for the complete report.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">cnt</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
@@ -1239,7 +1258,7 @@
 
         <span class="k">if</span> <span class="n">include_header</span><span class="p">:</span>
             <span class="n">p</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;parameters&quot;</span><span class="p">,</span> <span class="p">{})</span>
-            <span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format_history_travel_testing_report_header</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+            <span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format_history_travel_testing_report_header</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
             <span class="n">header_extension</span> <span class="o">=</span> <span class="p">[</span>
                 <span class="sa">f</span><span class="s2">&quot;External: </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;go_external&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">   &quot;</span> <span class="sa">f</span><span class="s2">&quot;1→1-pref.: </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;prioritize_to_one_filter&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
                 <span class="sa">f</span><span class="s2">&quot;Sample  : </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;from_fraction&#39;</span><span class="p">)</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> of source IDs&quot;</span><span class="p">,</span>

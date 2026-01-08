@@ -6,26 +6,29 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Initialization and Tests &mdash; idtrack 0.0.4 documentation</title>
+  <title>Appendix — Self-tests &amp; Sanity Checks (Human, Mouse, Pig) &mdash; idtrack 0.0.4 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
-      <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=15bcc2cf" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=f6ff1e94" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="../_static/documentation_options.js?v=8c5712d9"></script>
-      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
       <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/design-tabs.js?v=f930bc37"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
       <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
       <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Manual Identifier Conversion Example" href="example_manual_running.html" />
-    <link rel="prev" title="Initialize Graph Object" href="initialization_graph.html" /> 
+    <link rel="next" title="Installation" href="../installation.html" />
+    <link rel="prev" title="Part 7 — Advanced Topics" href="08_advanced_topics.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -50,27 +53,32 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../tutorials.html">Tutorials</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="00_idtrack_overview.html">Part 0 — Conceptual Foundation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="01_installation_guide.html">Part 1 — Environment Setup &amp; Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prepare_new_external_yaml.html">Part 2 — External Database Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialization_graph.html">Part 3 — Graph Initialization &amp; Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_deep_dive_human.html">Part 4 — Core API Deep-Dive (Human Example)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial_harmonization.html">Part 5 — Real-World Experiments: Harmonization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial_humanization_mouse_pig_to_human.html">Part 6 — Cross-Species Workflows: Humanization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="08_advanced_topics.html">Part 7 — Advanced Topics</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Appendix</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#1.-Setup">1. Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.-Helper:-pick-a-representative-gene-ID-from-a-built-graph">2. Helper: pick a representative gene ID from a built graph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3.-The-checklist-(repeat-per-organism)">3. The checklist (repeat per organism)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#3A.-Human">3A. Human</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#3B.-Mouse">3B. Mouse</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#3C.-Pig">3C. Pig</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#4.-Optional:-deeper-integrity-checks-(advanced)">4. Optional: deeper integrity checks (advanced)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#5.-If-something-fails">5. If something fails</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="../usage.html">Usage</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="prepare_new_external_yaml.html">External Database Description Initialization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="initialization_graph.html">Initialize Graph Object</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Initialization and Tests</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#Structural-Tests">Structural Tests</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#Conversion-Tests">Conversion Tests</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#External-conversion">External conversion</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#History-travel-only-on-Ensembl-backbone">History travel only on Ensembl backbone</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#History-travel-from-anywhere-to-Ensembl-backbone">History travel from anywhere to Ensembl backbone</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#History-travel-from-anywhere-to-anywhere">History travel from anywhere to anywhere</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="example_manual_running.html">Manual Identifier Conversion Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_harmonization.html">Multiple Dataset Harmonization Tutorial</a></li>
-<li class="toctree-l2"><a class="reference internal" href="random_data.html">Calculations with Random Data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="comparison.html">Comparison with Available Tools</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
@@ -91,8 +99,8 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="../usage.html">Usage</a></li>
-      <li class="breadcrumb-item active">Initialization and Tests</li>
+          <li class="breadcrumb-item"><a href="../tutorials.html">Tutorials</a></li>
+      <li class="breadcrumb-item active">Appendix — Self-tests &amp; Sanity Checks (Human, Mouse, Pig)</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/_notebooks/initialization_test.ipynb.txt" rel="nofollow"> View page source</a>
       </li>
@@ -102,808 +110,236 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="Initialization-and-Tests">
-<h1>Initialization and Tests<a class="headerlink" href="#Initialization-and-Tests" title="Link to this heading"></a></h1>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="mi">1</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-1
-</pre></div></div>
-</div>
+  <div class="idtrack-notebook-meta">
+  <a class="idtrack-notebook-download" href="../_sources/_notebooks/initialization_test.ipynb">Download notebook</a>
+</div><section id="Appendix-—-Self-tests-&amp;-Sanity-Checks-(Human,-Mouse,-Pig)">
+<h1>Appendix — Self-tests &amp; Sanity Checks (Human, Mouse, Pig)<a class="headerlink" href="#Appendix-—-Self-tests-&-Sanity-Checks-(Human,-Mouse,-Pig)" title="Link to this heading"></a></h1>
+<p><em>Last updated:</em> 2026-01-08</p>
+<p>Use this notebook when you want to <strong>confirm your setup is correct</strong> after building graphs.</p>
+<p>It checks:</p>
+<ul class="simple">
+<li><p>external YAML files exist</p></li>
+<li><p>graphs can be built/loaded</p></li>
+<li><p>a few representative conversions work</p></li>
+<li><p>(optional) deeper integrity checks via <code class="docutils literal notranslate"><span class="pre">TrackTests</span></code></p></li>
+</ul>
+<blockquote>
+<div><p><strong>Tip:</strong> If you hit an error, cross-reference Part 7.3 (<code class="docutils literal notranslate"><span class="pre">08_advanced_topics.ipynb</span></code>) for a diagnostic checklist.</p>
+</div></blockquote>
+<section id="1.-Setup">
+<h2>1. Setup<a class="headerlink" href="#1.-Setup" title="Link to this heading"></a></h2>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
-<span class="o">%</span><span class="k">autoreload</span> 2
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;/home/icb/kemal.inecik/work/codes/idtrack&quot;</span><span class="p">)</span>
-
-<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">local_dir</span> <span class="o">=</span> <span class="s2">&quot;/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/&quot;</span>
-<span class="n">test_results_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">local_dir</span><span class="p">,</span> <span class="s2">&quot;tests&quot;</span><span class="p">)</span>
 
-<span class="n">idt</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="n">local_dir</span><span class="p">)</span>
-<span class="n">idt</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
-<span class="n">idt</span><span class="o">.</span><span class="n">get_ensembl_organism</span><span class="p">(</span><span class="s2">&quot;homo sapiens&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-2025-05-31 17:19:20 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-(&#39;homo_sapiens&#39;, 114)
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>ls<span class="w"> </span>-l<span class="w"> </span>/lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-total 42110132
--rw-r--r--. 1 kemal.inecik OG-ICB-User   852126351 May 27 20:30 graph_homo_sapiens_min79_max114_narrow.pickle
--rw-r--r--. 1 kemal.inecik OG-ICB-User 21376563160 May 27 20:28 homo_sapiens_assembly-37.h5
--rw-r--r--. 1 kemal.inecik OG-ICB-User 20891831455 May 27 20:28 homo_sapiens_assembly-38.h5
--rw-r--r--. 1 kemal.inecik OG-ICB-User       65514 May 27 17:59 homo_sapiens_externals_modified.yml
--rw-r--r--. 1 kemal.inecik OG-ICB-User       55077 May 27 17:26 homo_sapiens_externals_template.yml
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">initialize_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s2">&quot;homo_sapiens&quot;</span><span class="p">,</span> <span class="n">last_ensembl_release</span><span class="o">=</span><span class="mi">114</span><span class="p">,</span> <span class="n">return_test</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-2025-05-31 17:19:23 INFO:graph_maker: The graph is being read: /lustre/groups/ml01/workspace/kemal.inecik/idtrack_temp/graph_homo_sapiens_min79_max114_narrow.pickle
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">calculate_graph_caches</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-2025-05-31 17:20:12 INFO:the_graph: Cached properties being calculated: combined_edges
-2025-05-31 17:20:54 INFO:the_graph: Cached properties being calculated: combined_edges_assembly_specific_genes
-2025-05-31 17:20:57 INFO:the_graph: Cached properties being calculated: combined_edges_genes
-2025-05-31 17:21:34 INFO:the_graph: Cached properties being calculated: lower_chars_graph
-2025-05-31 17:21:35 INFO:the_graph: Cached properties being calculated: get_active_ranges_of_id
-2025-05-31 17:21:56 INFO:the_graph: Cached properties being calculated: available_external_databases
-2025-05-31 17:21:57 INFO:the_graph: Cached properties being calculated: available_genome_assemblies
-2025-05-31 17:21:58 INFO:the_graph: Cached properties being calculated: available_external_databases_assembly
-2025-05-31 17:21:59 INFO:the_graph: Cached properties being calculated: node_trios
-2025-05-31 17:22:43 INFO:the_graph: Cached properties being calculated: hyperconnective_nodes
-2025-05-31 17:22:47 INFO:the_graph: Cached properties being calculated (for tests): external_database_connection_form
-2025-05-31 17:23:29 INFO:the_graph: Cached properties being calculated (for tests): available_releases_given_database_assembly
-</pre></div></div>
-</div>
-<section id="Structural-Tests">
-<h2>Structural Tests<a class="headerlink" href="#Structural-Tests" title="Link to this heading"></a></h2>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_id_functions_consistent_ensembl</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-100%|██████████████████████████████████████████████████████████████████████████████████████████████| 36/36 [01:17&lt;00:00,  2.14s/it, Item:114]
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-True
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_id_functions_consistent_ensembl_2</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████████████████████████| 165093/165093 [00:00&lt;00:00, 176122.22it/s, Item:LRG_99.1]
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-True
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_range_functions_robust</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-100%|██████████████████████████████████████████████████████████████████████| 100842/100842 [00:00&lt;00:00, 239189.69it/s, Item:ENSG00000169933]
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-True
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_base_is_range_correct</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-100%|███████████████████████████████████████████████████████████████████████| 100842/100842 [00:03&lt;00:00, 29035.43it/s, Item:ENSG00000169933]
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-True
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_combined_edges_dicts_overlapping_and_complete</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-True
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_edge_with_same_nts_only_at_backbone_nodes</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-True
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_node_consistency_robust</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-100%|██████████████████████████████████████████████████████████████████████████████████████████| 2507048/2507048 [00:08&lt;00:00, 309828.55it/s]
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-True
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_id_functions_consistent_external</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-Assembly 37: 100%|█████████████████████████████████████████████████████████████████████████████████| 36/36 [28:41&lt;00:00, 47.81s/it, Item:114]
-Assembly 38: 100%|█████████████████████████████████████████████████████████████████████████████████| 36/36 [34:12&lt;00:00, 57.00s/it, Item:114]
-</pre></div></div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-True
-</pre></div></div>
-</div>
-</section>
-<section id="Conversion-Tests">
-<h2>Conversion Tests<a class="headerlink" href="#Conversion-Tests" title="Link to this heading"></a></h2>
-<section id="External-conversion">
-<h3>External conversion<a class="headerlink" href="#External-conversion" title="Link to this heading"></a></h3>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
-    <span class="n">response</span><span class="p">,</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_final_external_conversion_robust</span><span class="p">(</span>
-        <span class="n">from_fraction</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">False</span>
-    <span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
-    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;IDTRACK_LOCAL_REPO&#39;</span><span class="p">,</span> <span class="s1">&#39;./idtrack_cache&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">output_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="s2">&quot;travel_v0_conversion_results.pkl&quot;</span><span class="p">)</span>
-<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Results saved to </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<p><strong>Note:</strong> the role of <code class="docutils literal notranslate"><span class="pre">prioritize_to_one_filter</span></code> for final external conversion</p>
-<p>Nevertheless, we recommend using the filter to minimize 1-to-n matching.</p>
-<p>To show more in-depth what is happening:</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[88]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">release</span> <span class="o">=</span> <span class="mi">81</span>
-<span class="n">database</span> <span class="o">=</span> <span class="s2">&quot;Vega gene&quot;</span>
+<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
+<span class="n">api</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
 
-<span class="n">dm_original</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">db_manager</span>
-<span class="n">dm</span> <span class="o">=</span> <span class="n">dm_original</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">release</span><span class="p">)</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">main_assembly</span><span class="p">)</span>
-<span class="n">df_a</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;external_relevant&quot;</span><span class="p">)</span>
-<span class="n">df</span> <span class="o">=</span> <span class="n">df_a</span><span class="p">[</span><span class="n">df_a</span><span class="p">[</span><span class="s2">&quot;name_db&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">database</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-
-<span class="n">base_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-<span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
-    <span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;graph_id&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">base_dict</span><span class="p">:</span>
-        <span class="n">base_dict</span><span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;graph_id&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-    <span class="n">base_dict</span><span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;graph_id&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;id_db&quot;</span><span class="p">])</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[89]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">response</span><span class="p">,</span> <span class="p">(</span><span class="n">issues_t1</span><span class="p">,</span> <span class="n">issues_t2</span><span class="p">,</span> <span class="n">issues_t3</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_final_external_conversion_robust</span><span class="p">(</span>
-    <span class="n">from_fraction</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
-    <span class="n">database</span><span class="o">=</span><span class="n">database</span><span class="p">,</span>
-    <span class="n">ens_rel</span><span class="o">=</span><span class="n">release</span><span class="p">,</span>
-    <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-2025-05-31 09:50:34 INFO:track_tests: Assembly: 38, Database: Vega gene, Release: 81
-Mapping: 100%|█████████████████████████████████████████████████████| 6657/6657 [00:31&lt;00:00, 208.49it/s, Item:LRG_784.1]
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[90]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">response</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="s2">&quot;conversion&quot;</span><span class="p">]),</span> <span class="nb">len</span><span class="p">(</span><span class="n">issues_t1</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">issues_t2</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">issues_t3</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span>
-    <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;graph_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">issues_t3</span><span class="p">)]</span>
-<span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[90]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-(True, 5522, 0, 0, 1135, True)
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[91]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span>
-    <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">format_history_travel_testing_report</span><span class="p">(</span>
-        <span class="n">res</span><span class="p">,</span> <span class="n">include_header</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">printable</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">line_separation_at_end</span><span class="o">=</span><span class="kc">False</span>
-    <span class="p">)</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-╔═ History-Travel-Testing Report ═╗
-Source  : assembly_38_ensembl_gene (Assembly 38, Release 81)
-Target  : Vega gene (Release 81)
-External: True   1→1-pref.: False
-Sample  : 0.1 of source IDs
-Failure / Anomaly Counts:
-  - Voyage failed (graceful)       : 1,135
-  - Voyage failed (unknown)        : 0
-  - Query not in graph             : 0
-  - Lost item                      : 0
-  - Lost item, but ID exists       : 0
-  - Found IDs not accurate         : 0
-Mapping Statistics:
-  - One→one IDs                    : 0
-  - One→many IDs                   : 5,522
-  - One→many (single conv.)        : 5,522
-  - Successfully converted IDs     : 5,522
-  - Clash one→one                  : 0
-  - Clash many→many                : 74
-  - Clash mixed                    : 0
-Total runtime: 31.94 s
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[92]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">response</span><span class="p">,</span> <span class="p">(</span><span class="n">issues_t1</span><span class="p">,</span> <span class="n">issues_t2</span><span class="p">,</span> <span class="n">issues_t3</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_final_external_conversion_robust</span><span class="p">(</span>
-    <span class="n">from_fraction</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
-    <span class="n">database</span><span class="o">=</span><span class="n">database</span><span class="p">,</span>
-    <span class="n">ens_rel</span><span class="o">=</span><span class="n">release</span><span class="p">,</span>
-    <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-2025-05-31 09:51:15 INFO:track_tests: Assembly: 38, Database: Vega gene, Release: 81
-Mapping: 100%|██████████████████████████████████████████████████████| 6657/6657 [00:32&lt;00:00, 203.92it/s, Item:LRG_92.1]
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[93]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">response</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="s2">&quot;conversion&quot;</span><span class="p">]),</span> <span class="nb">len</span><span class="p">(</span><span class="n">issues_t1</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">issues_t2</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">issues_t3</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span>
-    <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;graph_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">issues_t3</span><span class="p">)]</span>
-<span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[93]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-(False, 5498, 510, 0, 1159, True)
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[94]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span>
-    <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">format_history_travel_testing_report</span><span class="p">(</span>
-        <span class="n">res</span><span class="p">,</span> <span class="n">include_header</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">printable</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">line_separation_at_end</span><span class="o">=</span><span class="kc">False</span>
-    <span class="p">)</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-╔═ History-Travel-Testing Report ═╗
-Source  : assembly_38_ensembl_gene (Assembly 38, Release 81)
-Target  : Vega gene (Release 81)
-External: True   1→1-pref.: True
-Sample  : 0.1 of source IDs
-Failure / Anomaly Counts:
-  - Voyage failed (graceful)       : 1,159
-  - Voyage failed (unknown)        : 0
-  - Query not in graph             : 0
-  - Lost item                      : 0
-  - Lost item, but ID exists       : 0
-  - Found IDs not accurate         : 0
-Mapping Statistics:
-  - One→one IDs                    : 510
-  - One→many IDs                   : 4,988
-  - One→many (single conv.)        : 4,988
-  - Successfully converted IDs     : 5,498
-  - Clash one→one                  : 0
-  - Clash many→many                : 66
-  - Clash mixed                    : 0
-Total runtime: 32.65 s
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[95]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">issues_t1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[95]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-{&#39;database&#39;: &#39;Vega gene&#39;,
- &#39;asym&#39;: 38,
- &#39;ens_rel&#39;: 81,
- &#39;id&#39;: &#39;ENSG00000117242.7&#39;,
- &#39;converted&#39;: [&#39;OTTHUMG00000002840&#39;],
- &#39;base_expectation&#39;: {&#39;OTTHUMG00000002840&#39;, &#39;RP11-401M16.7&#39;}}
-</pre></div></div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[96]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">id_from</span> <span class="o">=</span> <span class="s2">&quot;ENSG00000008197.4&quot;</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[97]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;graph_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">id_from</span><span class="p">]</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[97]:
-</pre></div>
-</div>
-<div class="output_area rendered_html docutils container">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>release</th>
-      <th>graph_id</th>
-      <th>id_db</th>
-      <th>name_db</th>
-      <th>ensembl_identity</th>
-      <th>xref_identity</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>355949</th>
-      <td>81</td>
-      <td>ENSG00000008197.4</td>
-      <td>OTTHUMG00000014832</td>
-      <td>Vega gene</td>
-      <td>NaN</td>
-      <td>NaN</td>
-    </tr>
-    <tr>
-      <th>355950</th>
-      <td>81</td>
-      <td>ENSG00000008197.4</td>
-      <td>RP3-336H9.2</td>
-      <td>Vega gene</td>
-      <td>NaN</td>
-      <td>NaN</td>
-    </tr>
-  </tbody>
-</table>
-</div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[98]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
-    <span class="n">id_from</span><span class="p">,</span>
-    <span class="n">to_release</span><span class="o">=</span><span class="n">release</span><span class="p">,</span>
-    <span class="n">from_release</span><span class="o">=</span><span class="n">release</span><span class="p">,</span>
-    <span class="n">final_database</span><span class="o">=</span><span class="n">database</span><span class="p">,</span>
-    <span class="n">return_path</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[98]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-{&#39;ENSG00000008197.4&#39;: {&#39;from_id&#39;: &#39;ENSG00000008197.4&#39;,
-  &#39;assembly_jump&#39;: 0,
-  &#39;external_jump&#39;: 0,
-  &#39;external_step&#39;: 0,
-  &#39;initial_conversion_conf&#39;: 1,
-  &#39;edge_scores_reduced&#39;: nan,
-  &#39;ensembl_step&#39;: 1,
-  &#39;final_assembly_priority&#39;: ([1, 2], 2),
-  &#39;the_path&#39;: ((None, &#39;ENSG00000008197.4&#39;, None),),
-  &#39;final_conversion&#39;: {&#39;final_conversion_confidence&#39;: 0,
-   &#39;final_database&#39;: &#39;Vega gene&#39;,
-   &#39;final_elements&#39;: {&#39;OTTHUMG00000014832&#39;: {&#39;final_assembly_priority_count&#39;: 2,
-     &#39;final_assembly_min_priority&#39;: 1,
-     &#39;additional_assembly_jump&#39;: 0,
-     &#39;the_path&#39;: ((&#39;ENSG00000008197.4&#39;, &#39;OTTHUMG00000014832&#39;, 0, 81),),
-     &#39;filter_scores&#39;: {&#39;initial_filter&#39;: [0, 1, 0, 0, 1, -2, -2],
-      &#39;same_as_input_filter&#39;: False,
-      &#39;node_importance_filter&#39;: None}}}}}}
-</pre></div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[99]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span>
-    <span class="n">id_from</span><span class="p">,</span>
-    <span class="n">to_release</span><span class="o">=</span><span class="n">release</span><span class="p">,</span>
-    <span class="n">from_release</span><span class="o">=</span><span class="n">release</span><span class="p">,</span>
-    <span class="n">final_database</span><span class="o">=</span><span class="n">database</span><span class="p">,</span>
-    <span class="n">return_path</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[99]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-{&#39;ENSG00000008197.4&#39;: {&#39;from_id&#39;: &#39;ENSG00000008197.4&#39;,
-  &#39;assembly_jump&#39;: 0,
-  &#39;external_jump&#39;: 0,
-  &#39;external_step&#39;: 0,
-  &#39;initial_conversion_conf&#39;: 1,
-  &#39;edge_scores_reduced&#39;: nan,
-  &#39;ensembl_step&#39;: 1,
-  &#39;final_assembly_priority&#39;: ([1, 2], 2),
-  &#39;the_path&#39;: ((None, &#39;ENSG00000008197.4&#39;, None),),
-  &#39;final_conversion&#39;: {&#39;final_conversion_confidence&#39;: 0,
-   &#39;final_database&#39;: &#39;Vega gene&#39;,
-   &#39;final_elements&#39;: {&#39;OTTHUMG00000014832&#39;: {&#39;final_assembly_priority_count&#39;: 2,
-     &#39;final_assembly_min_priority&#39;: 1,
-     &#39;additional_assembly_jump&#39;: 0,
-     &#39;the_path&#39;: ((&#39;ENSG00000008197.4&#39;, &#39;OTTHUMG00000014832&#39;, 0, 81),)},
-    &#39;RP3-336H9.2&#39;: {&#39;final_assembly_priority_count&#39;: 1,
-     &#39;final_assembly_min_priority&#39;: 1,
-     &#39;additional_assembly_jump&#39;: 0,
-     &#39;the_path&#39;: ((&#39;ENSG00000008197.4&#39;, &#39;RP3-336H9.2&#39;, 0, 81),)}}}}}
-</pre></div></div>
-</div>
-</section>
-<section id="History-travel-only-on-Ensembl-backbone">
-<h3>History travel only on Ensembl backbone<a class="headerlink" href="#History-travel-only-on-Ensembl-backbone" title="Link to this heading"></a></h3>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">history_results</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
-    <span class="n">r</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">history_travel_testing_random</span><span class="p">(</span>
-        <span class="n">from_fraction</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
-        <span class="n">include_external_destination</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-        <span class="n">include_external_source</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-        <span class="n">include_ensembl_destination</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-        <span class="n">include_ensembl_source</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-        <span class="n">return_result</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="n">history_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
-
-<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">output_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="s2">&quot;travel_v1_conversion_results.pkl&quot;</span><span class="p">)</span>
-<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Results saved to </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</pre></div>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Local repository:&#39;</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
+<br/></pre></div>
 </div>
 </div>
 </section>
-<section id="History-travel-from-anywhere-to-Ensembl-backbone">
-<h3>History travel from anywhere to Ensembl backbone<a class="headerlink" href="#History-travel-from-anywhere-to-Ensembl-backbone" title="Link to this heading"></a></h3>
+<section id="2.-Helper:-pick-a-representative-gene-ID-from-a-built-graph">
+<h2>2. Helper: pick a representative gene ID from a built graph<a class="headerlink" href="#2.-Helper:-pick-a-representative-gene-ID-from-a-built-graph" title="Link to this heading"></a></h2>
+<p>We avoid hard-coding gene IDs for mouse/pig by selecting an example <strong>base Ensembl gene ID</strong> directly from the graph (these look like <code class="docutils literal notranslate"><span class="pre">ENSG...</span></code>, <code class="docutils literal notranslate"><span class="pre">ENSMUSG...</span></code>, <code class="docutils literal notranslate"><span class="pre">ENSSSCG...</span></code>).</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">history_results</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
-    <span class="n">r</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">history_travel_testing_random</span><span class="p">(</span>
-        <span class="n">from_fraction</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
-        <span class="n">include_external_destination</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-        <span class="n">include_external_source</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">include_ensembl_destination</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-        <span class="n">include_ensembl_source</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">return_result</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="n">history_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
-
-<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">output_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="s2">&quot;travel_v2_conversion_results.pkl&quot;</span><span class="p">)</span>
-<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Results saved to </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</pre></div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">pick_example_base_gene_id</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">)</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_base_ensembl</span><span class="p">[</span><span class="s1">&#39;gene&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;No base_ensembl_gene node found in the graph.&#39;</span><span class="p">)</span>
+<br/></pre></div>
 </div>
 </div>
 </section>
-<section id="History-travel-from-anywhere-to-anywhere">
-<h3>History travel from anywhere to anywhere<a class="headerlink" href="#History-travel-from-anywhere-to-anywhere" title="Link to this heading"></a></h3>
+<section id="3.-The-checklist-(repeat-per-organism)">
+<h2>3. The checklist (repeat per organism)<a class="headerlink" href="#3.-The-checklist-(repeat-per-organism)" title="Link to this heading"></a></h2>
+<p>For each organism we will:</p>
+<ol class="arabic simple">
+<li><p>confirm the YAML exists (or explain defaults)</p></li>
+<li><p>build/load the graph snapshot</p></li>
+<li><p>run a small conversion smoke test</p></li>
+</ol>
+<section id="3A.-Human">
+<h3>3A. Human<a class="headerlink" href="#3A.-Human" title="Link to this heading"></a></h3>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">history_results</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
-    <span class="n">r</span> <span class="o">=</span> <span class="n">idt</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">history_travel_testing_random</span><span class="p">(</span>
-        <span class="n">from_fraction</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
-        <span class="n">include_external_destination</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">include_external_source</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">include_ensembl_destination</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">include_ensembl_source</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-        <span class="n">return_result</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="p">)</span>
-    <span class="n">history_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 3A.1 YAML presence</span>
+<span class="n">human_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;homo_sapiens_externals_modified.yml&#39;</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;OK&#39;</span> <span class="k">if</span> <span class="n">human_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;NOTE: missing (IDTrack can fall back to packaged default for human)&#39;</span><span class="p">,</span> <span class="n">human_yaml</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 3A.2 Build/load graph</span>
+<span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;human&#39;</span><span class="p">)</span>
+<span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="n">latest_release</span>
+<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">output_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">test_results_dir</span><span class="p">,</span> <span class="s2">&quot;travel_v3_conversion_results.pkl&quot;</span><span class="p">)</span>
-<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Results saved to </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</pre></div>
+<span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Organism:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;organism&#39;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Release:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;ensembl_release&#39;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assembly:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;genome_assembly&#39;</span><span class="p">])</span>
+<br/></pre></div>
 </div>
 </div>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 3A.3 Smoke conversion</span>
+<span class="n">example_id</span> <span class="o">=</span> <span class="n">pick_example_base_gene_id</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="n">example_id</span><span class="p">,</span> <span class="n">from_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
+<span class="n">result</span>
+<br/></pre></div>
+</div>
+</div>
+<p>Interpretation tips:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">no_corresponding=True</span></code> means the input ID didn’t match anything in the graph.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">no_conversion=True</span></code> means it matched, but IDTrack could not find a path to the target release.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">target_id</span></code> is a list because ambiguity is possible (1→n).</p></li>
+</ul>
+</section>
+<section id="3B.-Mouse">
+<h3>3B. Mouse<a class="headerlink" href="#3B.-Mouse" title="Link to this heading"></a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
 </pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mouse_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;mus_musculus_externals_modified.yml&#39;</span>
+<span class="n">HAS_MOUSE_YAML</span> <span class="o">=</span> <span class="n">mouse_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;OK&#39;</span> <span class="k">if</span> <span class="n">HAS_MOUSE_YAML</span> <span class="k">else</span> <span class="s1">&#39;MISSING (create this in Part 2 for mouse)&#39;</span><span class="p">,</span> <span class="n">mouse_yaml</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_MOUSE_YAML</span><span class="p">:</span>
+    <span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;mus musculus&#39;</span><span class="p">)</span>
+    <span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="n">latest_release</span>
+    <span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Organism:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;organism&#39;</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Release:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;ensembl_release&#39;</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assembly:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;genome_assembly&#39;</span><span class="p">])</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Skipping mouse tests: missing mus_musculus_externals_modified.yml&#39;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_MOUSE_YAML</span><span class="p">:</span>
+    <span class="n">example_id</span> <span class="o">=</span> <span class="n">pick_example_base_gene_id</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="n">example_id</span><span class="p">,</span> <span class="n">from_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
+    <span class="n">result</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Skipping mouse smoke conversion (mouse graph not built).&#39;</span><span class="p">)</span>
+<br/></pre></div>
 </div>
 </div>
 </section>
+<section id="3C.-Pig">
+<h3>3C. Pig<a class="headerlink" href="#3C.-Pig" title="Link to this heading"></a></h3>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pig_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;sus_scrofa_externals_modified.yml&#39;</span>
+<span class="n">HAS_PIG_YAML</span> <span class="o">=</span> <span class="n">pig_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;OK&#39;</span> <span class="k">if</span> <span class="n">HAS_PIG_YAML</span> <span class="k">else</span> <span class="s1">&#39;MISSING (create this in Part 2 for pig)&#39;</span><span class="p">,</span> <span class="n">pig_yaml</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_PIG_YAML</span><span class="p">:</span>
+    <span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;sus scrofa&#39;</span><span class="p">)</span>
+    <span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="n">latest_release</span>
+    <span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Organism:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;organism&#39;</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Release:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;ensembl_release&#39;</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assembly:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;genome_assembly&#39;</span><span class="p">])</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Skipping pig tests: missing sus_scrofa_externals_modified.yml&#39;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_PIG_YAML</span><span class="p">:</span>
+    <span class="n">example_id</span> <span class="o">=</span> <span class="n">pick_example_base_gene_id</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="n">example_id</span><span class="p">,</span> <span class="n">from_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
+    <span class="n">result</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Skipping pig smoke conversion (pig graph not built).&#39;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="4.-Optional:-deeper-integrity-checks-(advanced)">
+<h2>4. Optional: deeper integrity checks (advanced)<a class="headerlink" href="#4.-Optional:-deeper-integrity-checks-(advanced)" title="Link to this heading"></a></h2>
+<p>IDTrack exposes a developer-focused test harness called <code class="docutils literal notranslate"><span class="pre">TrackTests</span></code>.</p>
+<p>If you are a power user and want extra confidence, you can build the graph in test mode and run invariants. These tests can be slow on large graphs.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Example: build TrackTests for human and run one invariant</span>
+<span class="c1"># (This is optional; skip if you just want to use IDTrack.)</span>
+
+<span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;human&#39;</span><span class="p">)</span>
+<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">latest_release</span><span class="p">,</span> <span class="n">return_test</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="n">tests</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span>  <span class="c1"># TrackTests instance</span>
+<span class="c1"># A relatively small check compared to full history stress-tests:</span>
+<span class="n">tests</span><span class="o">.</span><span class="n">is_base_is_range_correct</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="5.-If-something-fails">
+<h2>5. If something fails<a class="headerlink" href="#5.-If-something-fails" title="Link to this heading"></a></h2>
+<p>Common failure modes and fixes:</p>
+<ol class="arabic simple">
+<li><p><strong>Missing YAML</strong> (mouse/pig): run <code class="docutils literal notranslate"><span class="pre">prepare_new_external_yaml.ipynb</span></code> and create the <code class="docutils literal notranslate"><span class="pre">_modified.yml</span></code>.</p></li>
+<li><p><strong>Permission errors</strong>: change <code class="docutils literal notranslate"><span class="pre">IDTRACK_LOCAL_REPO</span></code> to a writable path.</p></li>
+<li><p><strong>Network / MySQL issues</strong>: try again later, or run on a network that allows outbound connections.</p></li>
+<li><p><strong>Disk full</strong>: graphs can be large; move your local repository to a larger disk.</p></li>
+</ol>
 </section>
 </section>
 
@@ -911,8 +347,8 @@ Total runtime: 32.65 s
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="initialization_graph.html" class="btn btn-neutral float-left" title="Initialize Graph Object" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="example_manual_running.html" class="btn btn-neutral float-right" title="Manual Identifier Conversion Example" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="08_advanced_topics.html" class="btn btn-neutral float-left" title="Part 7 — Advanced Topics" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

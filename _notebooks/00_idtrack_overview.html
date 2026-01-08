@@ -1,0 +1,433 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Part 0 — Conceptual Foundation &mdash; idtrack 0.0.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=f6ff1e94" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Part 1 — Environment Setup &amp; Installation" href="01_installation_guide.html" />
+    <link rel="prev" title="Tutorials" href="../tutorials.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            idtrack
+              <img src="../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../tutorials.html">Tutorials</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Part 0 — Conceptual Foundation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#0.1-—-What-is-IDTrack?">0.1 — What is IDTrack?</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#When-should-you-use-IDTrack-(vs-alternatives)?">When should you use IDTrack (vs alternatives)?</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#0.2-—-Architecture-&amp;-Workflow-Overview">0.2 — Architecture &amp; Workflow Overview</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#0.2.1-—-Graph-Snapshots-and-the-Snapshot-Boundary">0.2.1 — Graph Snapshots and the Snapshot Boundary</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#0.2.2-—-Backbone-vs-External-Namespaces-(and-the-External-YAML)">0.2.2 — Backbone vs External Namespaces (and the External YAML)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#0.2.3-—-Understanding-Mapping-Outcomes-(1→0,-1→1,-1→n)">0.2.3 — Understanding Mapping Outcomes (1→0, 1→1, 1→n)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#0.2.4-—-Genome-assemblies-are-part-of-the-mapping">0.2.4 — Genome assemblies are part of the mapping</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#0.2.5-—-Key-Abstractions-You-Will-Use">0.2.5 — Key Abstractions You Will Use</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#0.3-—-Assumptions-&amp;-Limitations">0.3 — Assumptions &amp; Limitations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#0.4-—-Tutorial-Roadmap-(Recommended-Order)">0.4 — Tutorial Roadmap (Recommended Order)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#0.5-—-Quick-Troubleshooting-(Fast-Wins)">0.5 — Quick Troubleshooting (Fast Wins)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="01_installation_guide.html">Part 1 — Environment Setup &amp; Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prepare_new_external_yaml.html">Part 2 — External Database Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialization_graph.html">Part 3 — Graph Initialization &amp; Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_deep_dive_human.html">Part 4 — Core API Deep-Dive (Human Example)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial_harmonization.html">Part 5 — Real-World Experiments: Harmonization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial_humanization_mouse_pig_to_human.html">Part 6 — Cross-Species Workflows: Humanization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="08_advanced_topics.html">Part 7 — Advanced Topics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialization_test.html">Appendix</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../tutorials.html">Tutorials</a></li>
+      <li class="breadcrumb-item active">Part 0 — Conceptual Foundation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_notebooks/00_idtrack_overview.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="idtrack-notebook-meta">
+  <a class="idtrack-notebook-download" href="../_sources/_notebooks/00_idtrack_overview.ipynb">Download notebook</a>
+</div><section id="Part-0-—-Conceptual-Foundation">
+<h1>Part 0 — Conceptual Foundation<a class="headerlink" href="#Part-0-—-Conceptual-Foundation" title="Link to this heading"></a></h1>
+<p><em>Last updated:</em> 2026-01-08</p>
+<p>This section builds the mental model you need <strong>before touching code</strong>. It is written for <strong>wet-lab researchers</strong> and <strong>bioinformaticians</strong> who want reliable, reproducible identifier conversion across Ensembl releases and external databases.</p>
+<p><strong>Learning objectives</strong></p>
+<ul class="simple">
+<li><p>Understand what <em>identifier drift</em> is and why it breaks analyses.</p></li>
+<li><p>Understand the two axes: <strong>time</strong> (Ensembl release) and <strong>space</strong> (namespace/database).</p></li>
+<li><p>Understand what a <strong>snapshot boundary</strong> is and why it makes results reproducible.</p></li>
+<li><p>Know how to interpret IDTrack outcomes: <strong>1→0</strong>, <strong>1→1</strong>, <strong>1→n</strong>.</p></li>
+</ul>
+<blockquote>
+<div><p><strong>Tip:</strong> If you remember one sentence: <em>IDTrack does time travel on the Ensembl backbone, then optional hops into external namespaces, all inside a bounded snapshot so results are auditable and reproducible.</em></p>
+</div></blockquote>
+<section id="0.1-—-What-is-IDTrack?">
+<h2>0.1 — What is IDTrack?<a class="headerlink" href="#0.1-—-What-is-IDTrack?" title="Link to this heading"></a></h2>
+<p>In modern biology you rarely analyze a single dataset in isolation. You compare:</p>
+<ul class="simple">
+<li><p>older vs newer studies (different Ensembl releases)</p></li>
+<li><p>different technologies (bulk vs scRNA-seq)</p></li>
+<li><p>different annotation sources (Ensembl IDs vs HGNC symbols vs RefSeq vs UniProt)</p></li>
+</ul>
+<p>The challenge: <strong>identifiers change</strong> (this is called <em>identifier drift</em>).</p>
+<ul class="simple">
+<li><p>Ensembl stable IDs can be <em>retired</em>, <em>merged</em>, <em>split</em>, or <em>re-assigned across releases</em>.</p></li>
+<li><p>Gene symbols are convenient but can be <strong>ambiguous</strong> (one symbol can refer to multiple genes) and can change over time.</p></li>
+<li><p>External databases provide cross-references, but they overlap and can introduce many-to-many ambiguity.</p></li>
+</ul>
+<p>IDTrack solves this by building a <strong>time-aware graph</strong> of identifier relationships and answering: “Given this ID, what does it correspond to at release X (and optionally in database Y), inside a reproducible snapshot?”</p>
+<section id="When-should-you-use-IDTrack-(vs-alternatives)?">
+<h3>When should you use IDTrack (vs alternatives)?<a class="headerlink" href="#When-should-you-use-IDTrack-(vs-alternatives)?" title="Link to this heading"></a></h3>
+<p>Use IDTrack when you need:</p>
+<ul class="simple">
+<li><p><strong>Reproducibility across time</strong>: “map everything to Ensembl release X and keep that fixed for the project”.</p></li>
+<li><p><strong>Auditability</strong>: you want to inspect <em>why</em> a mapping happened (or why it didn’t).</p></li>
+<li><p><strong>Mixed namespaces</strong>: your inputs are a mix of Ensembl IDs, symbols, UniProt/RefSeq/Entrez, etc.</p></li>
+<li><p><strong>Honest ambiguity handling</strong>: you prefer explicit 1→n results to silent coercion.</p></li>
+</ul>
+<p>You might <em>not</em> need IDTrack if you only need:</p>
+<ul class="simple">
+<li><p>a quick “latest release only” mapping for a handful of genes and you do not care about snapshot reproducibility.</p></li>
+</ul>
+</section>
+</section>
+<section id="0.2-—-Architecture-&amp;-Workflow-Overview">
+<h2>0.2 — Architecture &amp; Workflow Overview<a class="headerlink" href="#0.2-—-Architecture-&-Workflow-Overview" title="Link to this heading"></a></h2>
+<p>IDTrack is easiest to understand with two axes:</p>
+<ol class="arabic simple">
+<li><p><strong>Time axis</strong> → <em>Ensembl releases</em> (e.g. 90, 100, 110, 115)</p></li>
+<li><p><strong>Space axis</strong> → <em>identifier namespaces</em> (Ensembl gene IDs, gene symbols, UniProt accessions, RefSeq IDs, …)</p></li>
+</ol>
+<p>Most real tasks are:</p>
+<ul class="simple">
+<li><p><strong>Time travel on the backbone</strong> (move an Ensembl identifier from one release to another)</p></li>
+<li><p>then optionally <strong>switch namespaces</strong> (e.g. Ensembl → HGNC Symbol, or Ensembl → UniProt)</p></li>
+</ul>
+<p>A useful picture (the conversion pipeline):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Your ID (some database, some year)
+        |
+        v
+  [Normalize + match to graph node]
+        |
+        v
+  [Time travel across Ensembl releases]
+        |
+        +--&gt; (optional) [external hop(s) if needed]
+        |
+        v
+  [Arrive at target release]
+        |
+        v
+  (optional) [Convert to requested external database]
+</pre></div>
+</div>
+<blockquote>
+<div><p><strong>Why this matters:</strong> If you say “convert to release 115”, you are choosing a point on the time axis. If you say “give me HGNC symbols”, you are choosing a coordinate on the space axis. The rest is controlled path-finding inside a reproducible snapshot.</p>
+</div></blockquote>
+<section id="0.2.1-—-Graph-Snapshots-and-the-Snapshot-Boundary">
+<h3>0.2.1 — Graph Snapshots and the Snapshot Boundary<a class="headerlink" href="#0.2.1-—-Graph-Snapshots-and-the-Snapshot-Boundary" title="Link to this heading"></a></h3>
+<p>IDTrack builds a <strong>graph</strong> where:</p>
+<ul class="simple">
+<li><p>nodes are identifiers (Ensembl IDs, base IDs, external IDs)</p></li>
+<li><p>edges encode relationships (release-to-release history, gene↔transcript↔protein links, external cross-references)</p></li>
+</ul>
+<p>A key feature is the <strong>snapshot boundary</strong> (also called the <em>snapshot release</em>):</p>
+<ul class="simple">
+<li><p>you choose a <em>maximum Ensembl release</em> (e.g. 115)</p></li>
+<li><p>IDTrack ignores anything newer</p></li>
+</ul>
+<p>This matters because it makes results <strong>reproducible</strong>:</p>
+<ul class="simple">
+<li><p>same snapshot boundary + same external YAML → same graph → same conversions</p></li>
+</ul>
+<p>A practical metaphor: you are doing “time travel” in a museum that you <em>freeze in time</em>. The outside world (newer releases) keeps changing, but your museum exhibits do not.</p>
+</section>
+<section id="0.2.2-—-Backbone-vs-External-Namespaces-(and-the-External-YAML)">
+<h3>0.2.2 — Backbone vs External Namespaces (and the External YAML)<a class="headerlink" href="#0.2.2-—-Backbone-vs-External-Namespaces-(and-the-External-YAML)" title="Link to this heading"></a></h3>
+<p>IDTrack does <em>not</em> automatically include every external database Ensembl knows about. Instead, you explicitly opt in via a small YAML file (the <strong>external YAML</strong>).</p>
+<p>Why? Because including everything would:</p>
+<ul class="simple">
+<li><p>make the graph huge</p></li>
+<li><p>slow down path-finding</p></li>
+<li><p>increase ambiguity (many-to-many relationships)</p></li>
+</ul>
+<p>So the workflow is:</p>
+<ol class="arabic simple">
+<li><p>generate a template YAML for an organism</p></li>
+<li><p>enable a curated set of external databases (set <code class="docutils literal notranslate"><span class="pre">Include:</span> <span class="pre">true</span></code>)</p></li>
+<li><p>build the graph snapshot</p></li>
+</ol>
+<blockquote>
+<div><p><strong>Tip:</strong> Think of Ensembl IDs as the “backbone” (the timeline). External databases are “bridges” you can enable when you need them.</p>
+</div></blockquote>
+</section>
+<section id="0.2.3-—-Understanding-Mapping-Outcomes-(1→0,-1→1,-1→n)">
+<h3>0.2.3 — Understanding Mapping Outcomes (1→0, 1→1, 1→n)<a class="headerlink" href="#0.2.3-—-Understanding-Mapping-Outcomes-(1→0,-1→1,-1→n)" title="Link to this heading"></a></h3>
+<p>When you convert one identifier, three outcomes are common:</p>
+<ul class="simple">
+<li><p><strong>1→0</strong>: nothing matches (unknown ID, or no path exists in the snapshot)</p></li>
+<li><p><strong>1→1</strong>: clean conversion</p></li>
+<li><p><strong>1→n</strong>: ambiguous conversion (splits, merged history, promiscuous external IDs, symbols, …)</p></li>
+</ul>
+<p>IDTrack will <em>tell you which case you are in</em>. This is a feature, not a failure: it prevents silent mistakes.</p>
+</section>
+<section id="0.2.4-—-Genome-assemblies-are-part-of-the-mapping">
+<h3>0.2.4 — Genome assemblies are part of the mapping<a class="headerlink" href="#0.2.4-—-Genome-assemblies-are-part-of-the-mapping" title="Link to this heading"></a></h3>
+<p>A <strong>genome assembly</strong> (also called a “build”) is the reference coordinate system used to define genes and transcripts. Common examples:</p>
+<ul class="simple">
+<li><p>human: <strong>GRCh38</strong> and <strong>GRCh37</strong></p></li>
+<li><p>mouse: <strong>GRCm39</strong> and <strong>GRCm38</strong></p></li>
+<li><p>pig: <strong>Sscrofa11.1</strong> and <strong>Sscrofa10.2</strong></p></li>
+</ul>
+<p>Why this matters in practice: two datasets can use the “same kind of identifiers” but still be anchored to different builds because they were annotated with different GTFs or reference packages. That is a very common atlas-building situation.</p>
+<p>IDTrack treats assemblies as a first-class part of the graph. A snapshot is not only “release-bounded in time” — it can also be <strong>multi-assembly</strong>:</p>
+<ul class="simple">
+<li><p>nodes/edges carry assembly context where needed</p></li>
+<li><p>the path-finder can move across <strong>releases</strong> and across <strong>assemblies</strong> to reach a unified target space</p></li>
+<li><p>some external databases are only present (or only reliable) on specific assembly/release combinations, so having multiple assemblies available can increase connectivity</p></li>
+</ul>
+<p>In most projects you choose a single <strong>target</strong> (a snapshot boundary + a primary assembly for output), and use IDTrack to bring mixed inputs into that target in a reproducible way.</p>
+</section>
+<section id="0.2.5-—-Key-Abstractions-You-Will-Use">
+<h3>0.2.5 — Key Abstractions You Will Use<a class="headerlink" href="#0.2.5-—-Key-Abstractions-You-Will-Use" title="Link to this heading"></a></h3>
+<p>You do not need to be a developer to use these, but knowing the names helps you navigate the tutorials:</p>
+<ol class="arabic simple">
+<li><p><strong>``idtrack.API``</strong> — the high-level entry point</p>
+<ul class="simple">
+<li><p>resolves organism names</p></li>
+<li><p>builds/loads the graph snapshot</p></li>
+<li><p>provides <code class="docutils literal notranslate"><span class="pre">convert_identifier(...)</span></code> and batch helpers</p></li>
+</ul>
+</li>
+<li><p><strong>``idtrack.DatabaseManager``</strong> — data access + caching</p>
+<ul class="simple">
+<li><p>downloads tables from Ensembl MySQL</p></li>
+<li><p>manages your external YAML (<code class="docutils literal notranslate"><span class="pre">*_externals_modified.yml</span></code>)</p></li>
+</ul>
+</li>
+<li><p><strong>``idtrack.Track``</strong> — the conversion engine</p>
+<ul class="simple">
+<li><p>performs path-finding and scoring in the graph</p></li>
+<li><p>you usually access it as <code class="docutils literal notranslate"><span class="pre">api.track</span></code></p></li>
+</ul>
+</li>
+<li><p><strong>``idtrack.HarmonizeFeatures``</strong> — multi-dataset harmonization</p>
+<ul class="simple">
+<li><p>converts gene identifiers across multiple <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> datasets</p></li>
+<li><p>helps build a unified integrated dataset</p></li>
+</ul>
+</li>
+<li><p><strong>``idtrack._external_mappers`` (optional)</strong> — orthologs and external mapping services</p>
+<ul class="simple">
+<li><p>advanced features that require extra dependencies</p></li>
+</ul>
+</li>
+</ol>
+</section>
+</section>
+<section id="0.3-—-Assumptions-&amp;-Limitations">
+<h2>0.3 — Assumptions &amp; Limitations<a class="headerlink" href="#0.3-—-Assumptions-&-Limitations" title="Link to this heading"></a></h2>
+<p>IDTrack is deliberately opinionated about <strong>reproducibility</strong> and <strong>transparency</strong>. That comes with assumptions and limits.</p>
+<p>IDTrack assumes you have:</p>
+<ul class="simple">
+<li><p>a writable <strong>local repository folder</strong> (cache + graphs + YAML configs)</p></li>
+<li><p>network access the first time you build a graph (REST + MySQL; later runs reuse the cache)</p></li>
+<li><p>enough disk space (graphs and cached tables can be large)</p></li>
+</ul>
+<p>IDTrack can:</p>
+<ul class="simple">
+<li><p>time-travel identifiers across Ensembl releases inside a chosen snapshot boundary</p></li>
+<li><p>optionally hop into external namespaces you explicitly enabled</p></li>
+<li><p>surface ambiguity (1→n) instead of hiding it</p></li>
+</ul>
+<p>IDTrack cannot magically fix upstream ambiguity:</p>
+<ul class="simple">
+<li><p>if Ensembl history says a gene split into multiple descendants, the correct answer may be <strong>1→n</strong></p></li>
+<li><p>if a symbol is reused across multiple genes, symbols can stay ambiguous</p></li>
+<li><p>mapping quality is bounded by upstream metadata quality</p></li>
+</ul>
+<blockquote>
+<div><p><strong>Why this matters:</strong> IDTrack prefers to be “honestly ambiguous” rather than silently wrong. If you need a single answer from a 1→n case, you should make that choice explicitly (and record how you did it).</p>
+</div></blockquote>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1) Minimal setup cell (safe to run in any notebook)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+
+<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;IDTRACK_LOCAL_REPO&#39;</span><span class="p">,</span> <span class="s1">&#39;./idtrack_cache&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
+<span class="n">api</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;IDTrack version:&#39;</span><span class="p">,</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Local repository:&#39;</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<p>The cell above does three things:</p>
+<ol class="arabic simple">
+<li><p>chooses a cache directory (your <em>local repository</em>)</p></li>
+<li><p>creates the high-level <code class="docutils literal notranslate"><span class="pre">idtrack.API</span></code> object</p></li>
+<li><p>enables logging so you can see progress (downloads, caching, graph build)</p></li>
+</ol>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 2) Resolve organism names the way IDTrack expects</span>
+<span class="c1"># You can use common names (&#39;human&#39;), scientific names, taxon IDs, or Ensembl-style names.</span>
+
+<span class="k">for</span> <span class="n">query</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;human&#39;</span><span class="p">,</span> <span class="s1">&#39;mus musculus&#39;</span><span class="p">,</span> <span class="s1">&#39;sus scrofa&#39;</span><span class="p">]:</span>
+    <span class="n">formal_name</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">query</span><span class="si">!r}</span><span class="s1"> -&gt; </span><span class="si">{</span><span class="n">formal_name</span><span class="si">!r}</span><span class="s1"> (latest Ensembl release: </span><span class="si">{</span><span class="n">latest_release</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<p>You will see outputs like:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">'human'</span> <span class="pre">-&gt;</span> <span class="pre">'homo_sapiens'</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'mus</span> <span class="pre">musculus'</span> <span class="pre">-&gt;</span> <span class="pre">'mus_musculus'</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'sus</span> <span class="pre">scrofa'</span> <span class="pre">-&gt;</span> <span class="pre">'sus_scrofa'</span></code></p></li>
+</ul>
+<p>From now on, the tutorials use the <strong>formal Ensembl names</strong> (snake_case).</p>
+</section>
+<section id="0.4-—-Tutorial-Roadmap-(Recommended-Order)">
+<h2>0.4 — Tutorial Roadmap (Recommended Order)<a class="headerlink" href="#0.4-—-Tutorial-Roadmap-(Recommended-Order)" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Install + verify</strong> (Part 1)</p></li>
+<li><p><strong>Prepare external YAMLs</strong> (Part 2)</p></li>
+<li><p><strong>Build graph snapshots</strong> (Part 3)</p></li>
+<li><p><strong>Run self-tests / sanity checks</strong> (initialization tests)</p></li>
+<li><p><strong>Human API deep dive</strong> (Part 4)</p></li>
+<li><p><strong>Harmonization tutorial (HLCA-style)</strong> (Part 5)</p></li>
+<li><p><strong>HLCA experiments case study</strong> (Part 5, advanced)</p></li>
+<li><p><strong>Cross-species humanization</strong> (Part 6, advanced)</p></li>
+<li><p><strong>Advanced topics</strong> (Part 7)</p></li>
+</ol>
+</section>
+<section id="0.5-—-Quick-Troubleshooting-(Fast-Wins)">
+<h2>0.5 — Quick Troubleshooting (Fast Wins)<a class="headerlink" href="#0.5-—-Quick-Troubleshooting-(Fast-Wins)" title="Link to this heading"></a></h2>
+<p>If something fails, check these first:</p>
+<ol class="arabic simple">
+<li><p><strong>Permissions</strong>: is your local repository writable?</p></li>
+<li><p><strong>Network</strong>: first-time runs need to reach Ensembl services (REST + MySQL).</p></li>
+<li><p><strong>Disk space</strong>: building graphs can use multiple GB.</p></li>
+<li><p><strong>Snapshot boundary + assemblies</strong>: the snapshot release must exist for the organism and the chosen primary assembly. Older assemblies have different release coverage; a multi-assembly snapshot can still include them when they exist within the release window.</p></li>
+<li><p><strong>External YAML</strong>: for mouse/pig you must create a <code class="docutils literal notranslate"><span class="pre">*_externals_modified.yml</span></code> in your local repository.</p></li>
+</ol>
+<blockquote>
+<div><p><strong>Tip:</strong> For a deeper checklist (including diagnostics helpers), see Part 7.3 in <code class="docutils literal notranslate"><span class="pre">08_advanced_topics.ipynb</span></code>.</p>
+</div></blockquote>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../tutorials.html" class="btn btn-neutral float-left" title="Tutorials" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="01_installation_guide.html" class="btn btn-neutral float-right" title="Part 1 — Environment Setup &amp; Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

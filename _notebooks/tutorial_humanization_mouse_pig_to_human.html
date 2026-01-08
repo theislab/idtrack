@@ -1,0 +1,413 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Part 6 — Cross-Species Workflows: Humanization &mdash; idtrack 0.0.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=f6ff1e94" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Part 7 — Advanced Topics" href="08_advanced_topics.html" />
+    <link rel="prev" title="Part 5 — Real-World Experiments: Harmonization" href="tutorial_harmonization.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            idtrack
+              <img src="../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../tutorials.html">Tutorials</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="00_idtrack_overview.html">Part 0 — Conceptual Foundation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="01_installation_guide.html">Part 1 — Environment Setup &amp; Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="prepare_new_external_yaml.html">Part 2 — External Database Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialization_graph.html">Part 3 — Graph Initialization &amp; Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_deep_dive_human.html">Part 4 — Core API Deep-Dive (Human Example)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial_harmonization.html">Part 5 — Real-World Experiments: Harmonization</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Part 6 — Cross-Species Workflows: Humanization</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#6.1-—-Humanization-workflow-(what-it-is,-and-when-to-use-it)">6.1 — Humanization workflow (what it is, and when to use it)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#6.1.1-Pre-requisites">6.1.1 Pre-requisites</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#6.1.1.1-IDTrack-graphs">6.1.1.1 IDTrack graphs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#6.1.1.2-Optional-dependencies-for-ortholog-utilities">6.1.1.2 Optional dependencies for ortholog utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#6.1.2-Step-by-step:-mouse-→-human">6.1.2 Step-by-step: mouse → human</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#6.1.2.1-Convert-a-mouse-identifier-to-a-mouse-Ensembl-gene-ID-(IDTrack)">6.1.2.1 Convert a mouse identifier to a mouse Ensembl gene ID (IDTrack)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#6.1.2.2-Find-human-ortholog(s)-(ortholog-utilities)">6.1.2.2 Find human ortholog(s) (ortholog utilities)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#6.1.2.3-Convert-human-Ensembl-IDs-into-HGNC-symbols-(IDTrack)">6.1.2.3 Convert human Ensembl IDs into HGNC symbols (IDTrack)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#6.1.3-Step-by-step:-pig-→-human-(same-pattern)">6.1.3 Step-by-step: pig → human (same pattern)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#6.1.4-Advanced:-choose-among-multiple-ortholog-candidates">6.1.4 Advanced: choose among multiple ortholog candidates</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#6.1.5-Practical-cautions-(please-read)">6.1.5 Practical cautions (please read)</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#6.2-—-Comparative-Analysis-Preparation">6.2 — Comparative Analysis Preparation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="08_advanced_topics.html">Part 7 — Advanced Topics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initialization_test.html">Appendix</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../tutorials.html">Tutorials</a></li>
+      <li class="breadcrumb-item active">Part 6 — Cross-Species Workflows: Humanization</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_notebooks/tutorial_humanization_mouse_pig_to_human.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="idtrack-notebook-meta">
+  <a class="idtrack-notebook-download" href="../_sources/_notebooks/tutorial_humanization_mouse_pig_to_human.ipynb">Download notebook</a>
+</div><section id="Part-6-—-Cross-Species-Workflows:-Humanization">
+<h1>Part 6 — Cross-Species Workflows: Humanization<a class="headerlink" href="#Part-6-—-Cross-Species-Workflows:-Humanization" title="Link to this heading"></a></h1>
+<p><em>Last updated:</em> 2026-01-08</p>
+<p>This tutorial shows a practical <strong>humanization</strong> workflow: mapping mouse/pig genes into a human gene space so you can run human-centric downstream analyses (pathways, marker lists, integration, annotation).</p>
+<p><strong>Learning objectives</strong></p>
+<ul class="simple">
+<li><p>Understand what humanization is (and when it is appropriate).</p></li>
+<li><p>Run a step-by-step mouse → human and pig → human mapping.</p></li>
+<li><p>Validate results and handle 1→n orthology ambiguity explicitly.</p></li>
+<li><p>Prepare outputs in a tidy, analysis-friendly format for comparative workflows.</p></li>
+</ul>
+<blockquote>
+<div><p><strong>Warning:</strong> Orthology is not always one-to-one. This notebook focuses on making ambiguity visible and manageable.</p>
+</div></blockquote>
+<section id="6.1-—-Humanization-workflow-(what-it-is,-and-when-to-use-it)">
+<h2>6.1 — Humanization workflow (what it is, and when to use it)<a class="headerlink" href="#6.1-—-Humanization-workflow-(what-it-is,-and-when-to-use-it)" title="Link to this heading"></a></h2>
+<p>This notebook shows a <strong>reproducible, step-by-step pipeline</strong>:</p>
+<ol class="arabic simple">
+<li><p><strong>Within-species cleanup (IDTrack)</strong></p>
+<ul class="simple">
+<li><p>Map mouse/pig identifiers to consistent Ensembl gene IDs within that species.</p></li>
+</ul>
+</li>
+<li><p><strong>Cross-species mapping (orthologs)</strong></p>
+<ul class="simple">
+<li><p>Map mouse/pig Ensembl gene IDs to human ortholog Ensembl gene IDs.</p></li>
+</ul>
+</li>
+<li><p><strong>Human naming (optional, IDTrack)</strong></p>
+<ul class="simple">
+<li><p>Convert human Ensembl gene IDs into HGNC symbols (or other human namespaces).</p></li>
+</ul>
+</li>
+</ol>
+<p>This notebook does <strong>not</strong> decide the ‘correct’ ortholog for you in complex families — it shows how to surface the candidates and (optionally) score them with sequence-based heuristics.</p>
+<section id="6.1.1-Pre-requisites">
+<h3>6.1.1 Pre-requisites<a class="headerlink" href="#6.1.1-Pre-requisites" title="Link to this heading"></a></h3>
+</section>
+<section id="6.1.1.1-IDTrack-graphs">
+<h3>6.1.1.1 IDTrack graphs<a class="headerlink" href="#6.1.1.1-IDTrack-graphs" title="Link to this heading"></a></h3>
+<p>You should have built graphs for the organisms you use:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">mus_musculus</span></code> and/or <code class="docutils literal notranslate"><span class="pre">sus_scrofa</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">homo_sapiens</span></code></p></li>
+</ul>
+</section>
+<section id="6.1.1.2-Optional-dependencies-for-ortholog-utilities">
+<h3>6.1.1.2 Optional dependencies for ortholog utilities<a class="headerlink" href="#6.1.1.2-Optional-dependencies-for-ortholog-utilities" title="Link to this heading"></a></h3>
+<p>Ortholog utilities require optional packages. Install one of:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">idtrack[ortholog]</span></code></p></li>
+<li><p>or <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">idtrack[all-external]</span></code></p></li>
+</ul>
+<p>If you don’t install these extras, the ortholog steps will raise a helpful error.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Check optional dependency status (ortholog utilities require gget + biopython)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">_external_mappers</span>
+
+<span class="n">dep_status</span> <span class="o">=</span> <span class="n">_external_mappers</span><span class="o">.</span><span class="n">check_optional_dependencies</span><span class="p">(</span><span class="n">warn</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ORTHOLOG_OK</span> <span class="o">=</span> <span class="n">dep_status</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;gget&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">and</span> <span class="n">dep_status</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;biopython&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Optional dependency status:&#39;</span><span class="p">,</span> <span class="n">dep_status</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Ortholog utilities available:&#39;</span><span class="p">,</span> <span class="n">ORTHOLOG_OK</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="6.1.2-Step-by-step:-mouse-→-human">
+<h3>6.1.2 Step-by-step: mouse → human<a class="headerlink" href="#6.1.2-Step-by-step:-mouse-→-human" title="Link to this heading"></a></h3>
+</section>
+<section id="6.1.2.1-Convert-a-mouse-identifier-to-a-mouse-Ensembl-gene-ID-(IDTrack)">
+<h3>6.1.2.1 Convert a mouse identifier to a mouse Ensembl gene ID (IDTrack)<a class="headerlink" href="#6.1.2.1-Convert-a-mouse-identifier-to-a-mouse-Ensembl-gene-ID-(IDTrack)" title="Link to this heading"></a></h3>
+<p>Start with whatever you have (often an MGI symbol). Convert to a <strong>base Ensembl gene ID</strong> in mouse.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+
+<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;IDTRACK_LOCAL_REPO&#39;</span><span class="p">,</span> <span class="s1">&#39;./idtrack_cache&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">api_mouse</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
+<span class="n">api_mouse</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
+
+<span class="n">mouse_name</span><span class="p">,</span> <span class="n">mouse_latest</span> <span class="o">=</span> <span class="n">api_mouse</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;mouse&#39;</span><span class="p">)</span>
+<span class="n">api_mouse</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">mouse_name</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">mouse_latest</span><span class="p">)</span>
+
+<span class="n">mouse_query</span> <span class="o">=</span> <span class="s1">&#39;Trp53&#39;</span>  <span class="c1"># example MGI symbol; replace with your gene</span>
+<span class="n">mouse_to_ensembl</span> <span class="o">=</span> <span class="n">api_mouse</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span>
+    <span class="n">mouse_query</span><span class="p">,</span>
+    <span class="n">to_release</span><span class="o">=</span><span class="n">mouse_latest</span><span class="p">,</span>
+    <span class="n">final_database</span><span class="o">=</span><span class="s1">&#39;base_ensembl_gene&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">mouse_to_ensembl</span>
+<br/></pre></div>
+</div>
+</div>
+<p>Take one of the returned <code class="docutils literal notranslate"><span class="pre">target_id</span></code> entries as your mouse Ensembl gene ID. If you get multiple candidates, you are in a 1→n case — you may need to decide how to handle it.</p>
+</section>
+<section id="6.1.2.2-Find-human-ortholog(s)-(ortholog-utilities)">
+<h3>6.1.2.2 Find human ortholog(s) (ortholog utilities)<a class="headerlink" href="#6.1.2.2-Find-human-ortholog(s)-(ortholog-utilities)" title="Link to this heading"></a></h3>
+<p>We use Bgee orthologs via <code class="docutils literal notranslate"><span class="pre">gget</span></code> (optional dependency).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">human_ensembl_gene_ids</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">if</span> <span class="ow">not</span> <span class="n">mouse_to_ensembl</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;target_id&#39;</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;No mouse Ensembl gene ID found; check your input ID and mouse graph/YAML.&#39;</span><span class="p">)</span>
+<span class="k">elif</span> <span class="ow">not</span> <span class="n">ORTHOLOG_OK</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Ortholog utilities are not available (install extras: `pip install idtrack[ortholog]`).&#39;</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_ortholog_table</span><span class="p">,</span> <span class="n">get_ortholog_ids_for_species</span>
+
+    <span class="n">mouse_ensembl_gene_id</span> <span class="o">=</span> <span class="n">mouse_to_ensembl</span><span class="p">[</span><span class="s1">&#39;target_id&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># choose one</span>
+    <span class="n">ortholog_df</span> <span class="o">=</span> <span class="n">get_ortholog_table</span><span class="p">(</span><span class="n">mouse_ensembl_gene_id</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">human_ensembl_gene_ids</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">get_ortholog_ids_for_species</span><span class="p">(</span><span class="n">ortholog_df</span><span class="p">,</span> <span class="n">target_species</span><span class="o">=</span><span class="s1">&#39;human&#39;</span><span class="p">))</span>
+
+<span class="n">human_ensembl_gene_ids</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="6.1.2.3-Convert-human-Ensembl-IDs-into-HGNC-symbols-(IDTrack)">
+<h3>6.1.2.3 Convert human Ensembl IDs into HGNC symbols (IDTrack)<a class="headerlink" href="#6.1.2.3-Convert-human-Ensembl-IDs-into-HGNC-symbols-(IDTrack)" title="Link to this heading"></a></h3>
+<p>Now we switch to the human graph and convert the human Ensembl IDs into HGNC symbols (optional but common).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="ow">not</span> <span class="n">human_ensembl_gene_ids</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;No human ortholog IDs available; skipping human conversion step.&#39;</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">api_human</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
+    <span class="n">api_human</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
+
+    <span class="n">human_name</span><span class="p">,</span> <span class="n">human_latest</span> <span class="o">=</span> <span class="n">api_human</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;human&#39;</span><span class="p">)</span>
+    <span class="n">api_human</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">human_name</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">human_latest</span><span class="p">)</span>
+
+    <span class="c1"># Convert all candidate orthologs (if many-to-many, you will see it here)</span>
+    <span class="n">human_results</span> <span class="o">=</span> <span class="n">api_human</span><span class="o">.</span><span class="n">convert_identifier_multiple</span><span class="p">(</span>
+        <span class="nb">list</span><span class="p">(</span><span class="n">human_ensembl_gene_ids</span><span class="p">),</span>
+        <span class="n">to_release</span><span class="o">=</span><span class="n">human_latest</span><span class="p">,</span>
+        <span class="n">final_database</span><span class="o">=</span><span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">human_results</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="6.1.3-Step-by-step:-pig-→-human-(same-pattern)">
+<h3>6.1.3 Step-by-step: pig → human (same pattern)<a class="headerlink" href="#6.1.3-Step-by-step:-pig-→-human-(same-pattern)" title="Link to this heading"></a></h3>
+<p>Replace <code class="docutils literal notranslate"><span class="pre">api_mouse</span></code> with a pig API instance and start from your pig identifiers. Many pig pipelines start from Ensembl IDs or Entrez IDs; adjust <code class="docutils literal notranslate"><span class="pre">final_database</span></code> accordingly.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">api_pig</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
+<span class="n">api_pig</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
+
+<span class="n">pig_name</span><span class="p">,</span> <span class="n">pig_latest</span> <span class="o">=</span> <span class="n">api_pig</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;pig&#39;</span><span class="p">)</span>
+<span class="n">api_pig</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">pig_name</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">pig_latest</span><span class="p">)</span>
+
+<span class="n">pig_query</span> <span class="o">=</span> <span class="s1">&#39;TP53&#39;</span>  <span class="c1"># example; replace with your pig gene symbol or ID</span>
+<span class="n">pig_to_ensembl</span> <span class="o">=</span> <span class="n">api_pig</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span>
+    <span class="n">pig_query</span><span class="p">,</span>
+    <span class="n">to_release</span><span class="o">=</span><span class="n">pig_latest</span><span class="p">,</span>
+    <span class="n">final_database</span><span class="o">=</span><span class="s1">&#39;base_ensembl_gene&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">pig_to_ensembl</span>
+<br/></pre></div>
+</div>
+</div>
+<p>From here, reuse the same ortholog + human conversion steps as in the mouse section.</p>
+</section>
+<section id="6.1.4-Advanced:-choose-among-multiple-ortholog-candidates">
+<h3>6.1.4 Advanced: choose among multiple ortholog candidates<a class="headerlink" href="#6.1.4-Advanced:-choose-among-multiple-ortholog-candidates" title="Link to this heading"></a></h3>
+<p>When you have multiple orthologs, IDTrack can optionally compute additional features for ranking. This is for advanced use and requires extra dependencies.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Example (advanced): compute sequence-based alignment features for each ortholog candidate</span>
+<span class="c1"># from idtrack._external_mappers import align_ortholog_pair_with_features</span>
+<span class="c1">#</span>
+<span class="c1"># features = align_ortholog_pair_with_features(mouse_ensembl_gene_id, target_species=&#39;human&#39;, verbose=True)</span>
+<span class="c1"># features</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="6.1.5-Practical-cautions-(please-read)">
+<h3>6.1.5 Practical cautions (please read)<a class="headerlink" href="#6.1.5-Practical-cautions-(please-read)" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Orthology is context-dependent</strong>: paralogs, gene family expansions, and annotation differences matter.</p></li>
+<li><p><strong>Do not silently pick one</strong> in many-to-many cases without recording the rule you used.</p></li>
+<li><p><strong>Record provenance</strong>: snapshot releases + YAML configs + ortholog source/version.</p></li>
+</ol>
+</section>
+</section>
+<section id="6.2-—-Comparative-Analysis-Preparation">
+<h2>6.2 — Comparative Analysis Preparation<a class="headerlink" href="#6.2-—-Comparative-Analysis-Preparation" title="Link to this heading"></a></h2>
+<p>Once you have humanized identifiers, you can prepare a comparative workflow that is <strong>reproducible</strong> and <strong>auditable</strong>.</p>
+<p>Recommended preparation steps:</p>
+<ol class="arabic simple">
+<li><p><strong>Within each species:</strong> harmonize identifiers into stable Ensembl gene IDs at a fixed snapshot boundary.</p></li>
+<li><p><strong>Across species:</strong> map to human orthologs, but <strong>keep ambiguity visible</strong> (store 1→n mappings as lists).</p></li>
+<li><p><strong>Record provenance:</strong> snapshot boundaries, assemblies, and the orthology source/method.</p></li>
+<li><p><strong>Define a policy for ambiguous cases:</strong> drop / keep-all / choose-best (and justify it).</p></li>
+</ol>
+<p>A practical output format is a tidy table with one row per input gene and explicit columns for provenance. The next cell shows a minimal schema you can reuse.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Example: a tidy, audit-friendly mapping table schema</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="n">mapping_table</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s1">&#39;source_species&#39;</span><span class="p">:</span> <span class="s1">&#39;mus_musculus&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;source_namespace&#39;</span><span class="p">:</span> <span class="s1">&#39;MGI Symbol&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;source_id&#39;</span><span class="p">:</span> <span class="s1">&#39;Trp53&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;human_ensembl_gene_id&#39;</span><span class="p">:</span> <span class="s1">&#39;ENSG00000141510&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;human_hgnc_symbol&#39;</span><span class="p">:</span> <span class="s1">&#39;TP53&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;orthology_candidates&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;ENSG00000141510&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;snapshot_release_human&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s1">&#39;snapshot_release_source&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s1">&#39;notes&#39;</span><span class="p">:</span> <span class="s1">&#39;Example row; fill with your real results.&#39;</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="s1">&#39;source_species&#39;</span><span class="p">:</span> <span class="s1">&#39;sus_scrofa&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;source_namespace&#39;</span><span class="p">:</span> <span class="s1">&#39;Ensembl Gene ID&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;source_id&#39;</span><span class="p">:</span> <span class="s1">&#39;ENSSSCG00000000001&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;human_ensembl_gene_id&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s1">&#39;human_hgnc_symbol&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s1">&#39;orthology_candidates&#39;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s1">&#39;snapshot_release_human&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s1">&#39;snapshot_release_source&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s1">&#39;notes&#39;</span><span class="p">:</span> <span class="s1">&#39;Example 1→0 / not found; keep these rows for reporting.&#39;</span>
+        <span class="p">},</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+
+<span class="n">mapping_table</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="tutorial_harmonization.html" class="btn btn-neutral float-left" title="Part 5 — Real-World Experiments: Harmonization" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="08_advanced_topics.html" class="btn btn-neutral float-right" title="Part 7 — Advanced Topics" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

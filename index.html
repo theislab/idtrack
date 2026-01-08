@@ -6,24 +6,25 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>idtrack &mdash; idtrack 0.0.4 documentation</title>
+  <title>IDTrack &mdash; idtrack 0.0.4 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="_static/custom_settings.css?v=15bcc2cf" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="_static/tutorials.css?v=f6ff1e94" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=8c5712d9"></script>
-      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/design-tabs.js?v=f930bc37"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Installation" href="installation.html" /> 
+    <link rel="next" title="Tutorials" href="tutorials.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -48,8 +49,9 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="authors.html">Credits</a></li>
@@ -70,7 +72,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active"><strong>idtrack</strong></li>
+      <li class="breadcrumb-item active"><strong>IDTrack</strong></li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -81,13 +83,49 @@
            <div itemprop="articleBody">
              
   <section id="idtrack">
-<h1><strong>idtrack</strong><a class="headerlink" href="#idtrack" title="Link to this heading"></a></h1>
-<p><a class="reference external" href="https://pypi.org/project/idtrack/"><img alt="PyPI" src="https://img.shields.io/pypi/v/idtrack.svg" /></a> <a class="reference external" href="https://pepy.tech/project/idtrack"><img alt="downloads" src="https://pepy.tech/badge/idtrack" /></a> <a class="reference external" href="https://pypi.org/project/idtrack"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/idtrack" /></a> <a class="reference external" href="https://opensource.org/licenses/BSD-3-Clause"><img alt="License" src="https://img.shields.io/github/license/theislab/idtrack" /></a> <a class="reference external" href="https://idtrack.readthedocs.io/"><img alt="Read the documentation at https://idtrack.readthedocs.io/" src="https://img.shields.io/readthedocs/idtrack/latest.svg?label=Read%20the%20Docs" /></a> <a class="reference external" href="https://github.com/theislab/idtrack/actions?workflow=Package"><img alt="Build Package Status" src="https://github.com/theislab/idtrack/workflows/Build%20idtrack%20Package/badge.svg" /></a> <a class="reference external" href="https://github.com/theislab/idtrack/actions?workflow=Tests"><img alt="Run Tests Status" src="https://github.com/theislab/idtrack/workflows/Run%20idtrack%20Tests/badge.svg" /></a></p>
-<section id="key-features">
-<h2>Key Features<a class="headerlink" href="#key-features" title="Link to this heading"></a></h2>
+<h1><strong>IDTrack</strong><a class="headerlink" href="#idtrack" title="Link to this heading"></a></h1>
+<p><a class="reference external" href="https://pypi.org/project/idtrack/"><img alt="PyPI" src="https://img.shields.io/pypi/v/idtrack.svg" /></a> <a class="reference external" href="https://pepy.tech/project/idtrack"><img alt="downloads" src="https://pepy.tech/badge/idtrack" /></a> <a class="reference external" href="https://pypi.org/project/idtrack"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/idtrack" /></a> <a class="reference external" href="https://opensource.org/licenses/BSD-3-Clause"><img alt="License" src="https://img.shields.io/github/license/theislab/idtrack" /></a> <a class="reference external" href="https://idtrack.readthedocs.io/"><img alt="Read the documentation at https://idtrack.readthedocs.io/" src="https://img.shields.io/readthedocs/idtrack/latest.svg?label=Read%20the%20Docs" /></a> <a class="reference external" href="https://github.com/theislab/idtrack/actions/workflows/build_package.yml"><img alt="Build Package Status" src="https://github.com/theislab/idtrack/actions/workflows/build_package.yml/badge.svg?branch=main" /></a> <a class="reference external" href="https://github.com/theislab/idtrack/actions/workflows/run_tests.yml"><img alt="Tests status" src="https://github.com/theislab/idtrack/actions/workflows/run_tests.yml/badge.svg?branch=main" /></a> <a class="reference external" href="https://codecov.io/gh/theislab/idtrack"><img alt="Codecov" src="https://codecov.io/gh/theislab/idtrack/branch/main/graph/badge.svg" /></a></p>
+<section id="cross-temporal-and-cross-database-biological-identifier-mapping">
+<h2>Cross-Temporal and Cross-Database Biological Identifier Mapping<a class="headerlink" href="#cross-temporal-and-cross-database-biological-identifier-mapping" title="Link to this heading"></a></h2>
+<p>Modern biology constantly mixes identifiers from different years, databases, and genome builds. The result is a familiar set of problems:
+IDs disappear, symbols change, references disagree, and “the same gene” isn’t always represented the same way across datasets.</p>
+<p><strong>IDTrack</strong> is built for that reality. It provides a <strong>time-aware, audit-friendly</strong> way to translate and harmonize biological identifiers
+across <strong>Ensembl releases</strong> and across <strong>external namespaces</strong> (HGNC, UniProt, RefSeq, Entrez, …), while keeping ambiguity explicit
+instead of silently forcing a single answer.</p>
+</section>
+<section id="what-makes-idtrack-different">
+<h2>What makes IDTrack different<a class="headerlink" href="#what-makes-idtrack-different" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p>TODO</p></li>
-<li><p>TODO</p></li>
+<li><p><strong>Time-aware mapping</strong>: treat Ensembl releases as a “time axis” and travel forward/backward through identifier history.</p></li>
+<li><p><strong>Assembly-aware mapping</strong>: harmonize identifiers across genome builds (e.g. GRCh37 ↔ GRCh38) and respect external databases that are assembly-scoped.</p></li>
+<li><p><strong>Snapshot boundary for reproducibility</strong>: build a release-bounded graph snapshot so results are stable and repeatable.</p></li>
+<li><p><strong>Explicit external database opt-in</strong>: choose which external namespaces participate via a small, editable YAML contract.</p></li>
+<li><p><strong>Transparency over coercion</strong>: conversions are naturally classified as <strong>1→0</strong> (no match), <strong>1→1</strong> (clean), or <strong>1→n</strong> (ambiguous).</p></li>
+<li><p><strong>Scale-ready workflows</strong>: caching and snapshot reuse make repeated conversions and multi-dataset harmonization practical.</p></li>
+</ul>
+</section>
+<section id="who-is-it-for">
+<h2>Who is it for?<a class="headerlink" href="#who-is-it-for" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Wet-lab researchers who need a reliable, step-by-step path from “my gene list is old” to “my analysis is reproducible”.</p></li>
+<li><p>Bioinformaticians who want release-pinned, auditable conversions in notebooks, pipelines, and integration workflows.</p></li>
+<li><p>Atlas builders / integrators who need to harmonize gene identifiers across many cohorts (different Ensembl releases, symbols, and external IDs), keep an explicit audit trail of what mapped/failed/was ambiguous, and ship a release-pinned, reproducible feature space for downstream integration and publication.</p></li>
+</ul>
+</section>
+<section id="common-use-cases">
+<h2>Common use cases<a class="headerlink" href="#common-use-cases" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Dataset harmonization</strong> before integration (single-cell, bulk, atlas-scale collections).</p></li>
+<li><p><strong>Legacy data rescue</strong> (old Ensembl releases, mixed symbols/IDs, retired identifiers).</p></li>
+<li><p><strong>Publication-grade reproducibility</strong> (pin a snapshot boundary + share the exact external configuration).</p></li>
+<li><p><strong>Cross-database interoperability</strong> when collaborators use different identifier conventions.</p></li>
+</ul>
+</section>
+<section id="start-here">
+<h2>Start here<a class="headerlink" href="#start-here" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="tutorials.html"><span class="doc">Tutorials</span></a> — the full tutorial suite (Part 0 → Part 7); primary learning resource</p></li>
+<li><p><a class="reference internal" href="usage.html"><span class="doc">Quickstart</span></a> — a minimal quickstart</p></li>
 </ul>
 <div class="toctree-wrapper compound">
 </div>
@@ -106,7 +144,7 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="tutorials.html" class="btn btn-neutral float-right" title="Tutorials" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

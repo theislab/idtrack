@@ -1,0 +1,273 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack._external_mappers._convert &mdash; idtrack 0.0.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/tutorials.css?v=f6ff1e94" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack._external_mappers._convert</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack._external_mappers._convert</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+
+<span class="c1"># Kemal Inecik</span>
+<span class="c1"># k.inecik@gmail.com</span>
+
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">typing</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers._backend_gget</span><span class="w"> </span><span class="kn">import</span> <span class="n">map_with_gget</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers._backend_gprofiler</span><span class="w"> </span><span class="kn">import</span> <span class="n">map_with_gprofiler</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers._backend_mygene</span><span class="w"> </span><span class="kn">import</span> <span class="n">map_with_mygene</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers._backend_pybiomart</span><span class="w"> </span><span class="kn">import</span> <span class="n">map_with_pybiomart</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers._constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">SUPPORTED_METHODS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers._utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">_empty_result</span><span class="p">,</span> <span class="n">canonical_db</span><span class="p">,</span> <span class="n">logger</span>
+
+<span class="n">_VERBOSE_LEVELS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="mi">1</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">,</span>
+    <span class="mi">2</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
+    <span class="mi">3</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">_VERBOSE_NAMES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;warn&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;warning&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;info&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="s2">&quot;debug&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_normalize_verbose_level</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mi">3</span> <span class="k">if</span> <span class="n">value</span> <span class="k">else</span> <span class="mi">2</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_VERBOSE_NAMES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown verbose level </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">. Use 1, 2, 3 or &#39;error&#39;, &#39;warning&#39;, &#39;info&#39;, &#39;debug&#39;.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_VERBOSE_NAMES</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">level</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Unknown verbose level </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">. Use 1, 2, 3 or &#39;error&#39;, &#39;warning&#39;, &#39;info&#39;, &#39;debug&#39;.&quot;</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+    <span class="k">if</span> <span class="n">level</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_VERBOSE_LEVELS</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown verbose level </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">. Use 1, 2, 3 or &#39;error&#39;, &#39;warning&#39;, &#39;info&#39;, &#39;debug&#39;.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">level</span>
+
+
+<div class="viewcode-block" id="convert_ids">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers.convert_ids">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">convert_ids</span><span class="p">(</span>
+    <span class="n">ids</span><span class="p">:</span> <span class="n">typing</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">input_db</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">output_db</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">method</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">species</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">drop_metadata_json_column</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span>
+    <span class="n">pause</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span>
+    <span class="n">max_retries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">strip_versions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">release_for_pybiomart</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">strict_input_db_gprofiler</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">suppress_method_verbosity</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">bool</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert identifiers using an external mapper backend.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ids: Input identifiers to map.</span>
+<span class="sd">        input_db: Source database type.</span>
+<span class="sd">        output_db: Target database type.</span>
+<span class="sd">        method: Backend method name (one of :py:data:`~idtrack._external_mappers._constants.SUPPORTED_METHODS`).</span>
+<span class="sd">        species: Species code (e.g. ``&quot;hsapiens&quot;``).</span>
+<span class="sd">        drop_metadata_json_column: If ``True``, drop the ``metadata_json`` column from the returned DataFrame.</span>
+<span class="sd">        chunk_size: Number of IDs per API request.</span>
+<span class="sd">        pause: Pause in seconds between requests.</span>
+<span class="sd">        max_retries: Maximum retry attempts per chunk on failure (for backends that support it).</span>
+<span class="sd">        strip_versions: Strip version suffixes from Ensembl/RefSeq IDs.</span>
+<span class="sd">        release_for_pybiomart: Ensembl release/key for the pybiomart backend. Must be ``None`` unless</span>
+<span class="sd">            ``method=&quot;pybiomart&quot;``.</span>
+<span class="sd">        strict_input_db_gprofiler: If ``True``, enforce strict input-db filtering in the gprofiler backend.</span>
+<span class="sd">        suppress_method_verbosity: Suppress stdout/stderr from the underlying backend library.</span>
+<span class="sd">        verbose: Verbosity level (``1``/``2``/``3``) or string alias (``&quot;error&quot;``, ``&quot;warning&quot;``, ``&quot;info&quot;``,</span>
+<span class="sd">            ``&quot;debug&quot;``).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pd.DataFrame: Standardized mapping DataFrame.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If ``method``/``verbose`` is invalid, or if ``release_for_pybiomart`` is used with a</span>
+<span class="sd">            non-pybiomart backend.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">verbose_level</span> <span class="o">=</span> <span class="n">_normalize_verbose_level</span><span class="p">(</span><span class="n">verbose</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">_VERBOSE_LEVELS</span><span class="p">[</span><span class="n">verbose_level</span><span class="p">])</span>
+    <span class="n">show_progress</span> <span class="o">=</span> <span class="n">verbose_level</span> <span class="o">&gt;=</span> <span class="mi">2</span>
+
+    <span class="n">id_list</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">ids</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">id_list</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_empty_result</span><span class="p">()</span>
+
+    <span class="n">inp</span> <span class="o">=</span> <span class="n">canonical_db</span><span class="p">(</span><span class="n">input_db</span><span class="p">)</span>
+    <span class="n">outp</span> <span class="o">=</span> <span class="n">canonical_db</span><span class="p">(</span><span class="n">output_db</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">method</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;method must be a non-empty string&quot;</span><span class="p">)</span>
+
+    <span class="n">method_key</span> <span class="o">=</span> <span class="n">method</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">method_key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">SUPPORTED_METHODS</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;method must be one of </span><span class="si">{</span><span class="n">SUPPORTED_METHODS</span><span class="si">}</span><span class="s2">, got </span><span class="si">{</span><span class="n">method</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">release_for_pybiomart</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">method_key</span> <span class="o">!=</span> <span class="s2">&quot;pybiomart&quot;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;release parameter can only be used with method=&#39;pybiomart&#39;&quot;</span><span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;convert_ids: using backend </span><span class="si">{</span><span class="n">method_key</span><span class="si">!r}</span><span class="s2"> for </span><span class="si">{</span><span class="n">inp</span><span class="si">}</span><span class="s2">-&gt;</span><span class="si">{</span><span class="n">outp</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">common_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;species&quot;</span><span class="p">:</span> <span class="n">species</span><span class="p">,</span>
+        <span class="s2">&quot;chunk_size&quot;</span><span class="p">:</span> <span class="n">chunk_size</span><span class="p">,</span>
+        <span class="s2">&quot;pause&quot;</span><span class="p">:</span> <span class="n">pause</span><span class="p">,</span>
+        <span class="s2">&quot;strip_versions&quot;</span><span class="p">:</span> <span class="n">strip_versions</span><span class="p">,</span>
+        <span class="s2">&quot;show_progress&quot;</span><span class="p">:</span> <span class="n">show_progress</span><span class="p">,</span>
+        <span class="s2">&quot;suppress_method_verbosity&quot;</span><span class="p">:</span> <span class="n">suppress_method_verbosity</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="n">backend_configs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">typing</span><span class="o">.</span><span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">typing</span><span class="o">.</span><span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;pybiomart&quot;</span><span class="p">:</span> <span class="p">(</span>
+            <span class="n">map_with_pybiomart</span><span class="p">,</span>
+            <span class="p">{</span><span class="o">**</span><span class="n">common_kwargs</span><span class="p">,</span> <span class="s2">&quot;release&quot;</span><span class="p">:</span> <span class="n">release_for_pybiomart</span><span class="p">},</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;mygene&quot;</span><span class="p">:</span> <span class="p">(</span>
+            <span class="n">map_with_mygene</span><span class="p">,</span>
+            <span class="p">{</span><span class="o">**</span><span class="n">common_kwargs</span><span class="p">,</span> <span class="s2">&quot;max_retries&quot;</span><span class="p">:</span> <span class="n">max_retries</span><span class="p">},</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;gprofiler&quot;</span><span class="p">:</span> <span class="p">(</span>
+            <span class="n">map_with_gprofiler</span><span class="p">,</span>
+            <span class="p">{</span><span class="o">**</span><span class="n">common_kwargs</span><span class="p">,</span> <span class="s2">&quot;max_retries&quot;</span><span class="p">:</span> <span class="n">max_retries</span><span class="p">,</span> <span class="s2">&quot;strict_input_db&quot;</span><span class="p">:</span> <span class="n">strict_input_db_gprofiler</span><span class="p">},</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;gget&quot;</span><span class="p">:</span> <span class="p">(</span>
+            <span class="n">map_with_gget</span><span class="p">,</span>
+            <span class="p">{</span><span class="o">**</span><span class="n">common_kwargs</span><span class="p">,</span> <span class="s2">&quot;max_retries&quot;</span><span class="p">:</span> <span class="n">max_retries</span><span class="p">},</span>
+        <span class="p">),</span>
+    <span class="p">}</span>
+
+    <span class="n">func</span><span class="p">,</span> <span class="n">backend_kwargs</span> <span class="o">=</span> <span class="n">backend_configs</span><span class="p">[</span><span class="n">method_key</span><span class="p">]</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">id_list</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">,</span> <span class="o">**</span><span class="n">backend_kwargs</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">drop_metadata_json_column</span> <span class="ow">and</span> <span class="s2">&quot;metadata_json&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">del</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;metadata_json&quot;</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

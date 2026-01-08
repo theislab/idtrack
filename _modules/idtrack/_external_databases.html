@@ -8,14 +8,17 @@
   <title>idtrack._external_databases &mdash; idtrack 0.0.4 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=15bcc2cf" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=f6ff1e94" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
-      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/design-tabs.js?v=f930bc37"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -44,8 +47,9 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
@@ -146,8 +150,9 @@
 <span class="sd">                value raises :py:class:`ValueError` in higher-level validation.</span>
 <span class="sd">            local_repository (str): Writable directory where YAML files and downloads are cached.</span>
 <span class="sd">                The directory need not pre-exist; if missing, most public methods will attempt to create it.</span>
-<span class="sd">            genome_assembly (int): NCBI genome assembly version (e.g. ``38`` for GRCh38).  Used to</span>
-<span class="sd">                disambiguate multiple assemblies available for the same *organism*/*release* pair.</span>
+<span class="sd">            genome_assembly (int): Genome assembly code as used in Ensembl core schema naming</span>
+<span class="sd">                (e.g. ``38`` = human GRCh38, ``37`` = human GRCh37, ``39`` = mouse GRCm39, ``111`` = pig Sscrofa11.1).</span>
+<span class="sd">                Used to disambiguate multiple assemblies available for the same *organism*/*release* pair.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># The logger for informing the user about the progress.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;external_databases&quot;</span><span class="p">)</span>
@@ -460,15 +465,12 @@
                 <span class="n">res_ens</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;Ensembl release&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">))</span>
 
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span> <span class="ow">in</span> <span class="n">res_ens</span> <span class="ow">and</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;Include&quot;</span><span class="p">]:</span>
-                    <span class="k">if</span> <span class="n">give_type</span> <span class="o">==</span> <span class="s2">&quot;db&quot;</span> <span class="ow">and</span> <span class="nb">int</span><span class="p">(</span><span class="n">asm</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">:</span>
-                        <span class="n">result</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">db_name</span><span class="p">)</span>
-
-                    <span class="k">elif</span> <span class="n">give_type</span> <span class="o">==</span> <span class="s2">&quot;db&quot;</span><span class="p">:</span>
-                        <span class="k">pass</span>
-
+                    <span class="k">if</span> <span class="n">give_type</span> <span class="o">==</span> <span class="s2">&quot;db&quot;</span><span class="p">:</span>
+                        <span class="c1"># Only add db_name if assembly matches</span>
+                        <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">asm</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">:</span>
+                            <span class="n">result</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">db_name</span><span class="p">)</span>
                     <span class="k">elif</span> <span class="n">give_type</span> <span class="o">==</span> <span class="s2">&quot;assembly&quot;</span><span class="p">:</span>
                         <span class="n">result</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">asm</span><span class="p">))</span>
-
                     <span class="k">else</span><span class="p">:</span>
                         <span class="k">raise</span> <span class="ne">ValueError</span>
 

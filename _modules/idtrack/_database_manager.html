@@ -8,14 +8,17 @@
   <title>idtrack._database_manager &mdash; idtrack 0.0.4 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=15bcc2cf" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=f6ff1e94" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
-      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/design-tabs.js?v=f930bc37"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -44,8 +47,9 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
@@ -136,6 +140,141 @@
 <span class="sd">    concise, human-readable dump of that state.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="n">_core_db_index_cache</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="DatabaseManager._get_core_db_index">
+<a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager._get_core_db_index">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_core_db_index</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">genome_assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return cached core-DB availability for an (organism, assembly) pair across all configured ports.</span>
+
+<span class="sd">        The Ensembl public MySQL service can host the same assembly on multiple ports depending on release</span>
+<span class="sd">        (e.g. *sus_scrofa* assembly 102). To support full-history workflows we build a small in-memory index:</span>
+
+<span class="sd">        - `ports`: ports probed for this (organism, assembly) in preference order</span>
+<span class="sd">        - `releases_by_port`: releases available for this assembly on each reachable port</span>
+<span class="sd">        - `db_by_port_release`: schema name for each available release on each reachable port</span>
+<span class="sd">        - `releases`: sorted union of all releases across ports</span>
+<span class="sd">        - `port_for_release`: deterministic choice of port for each release (first configured port that has it)</span>
+<span class="sd">        - `db_for_release`: chosen schema name for each release (matching `port_for_release`, includes patch-letter suffixes)</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            organism: Canonical Ensembl organism name (e.g. ``&quot;homo_sapiens&quot;``).</span>
+<span class="sd">            genome_assembly: Genome assembly version (e.g. ``38`` for GRCh38).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict[str, Any]: Mapping describing reachable releases/ports for this organism/assembly.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If *organism* or *genome_assembly* is not configured.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">genome_assembly</span><span class="p">))</span>
+        <span class="n">cached</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_core_db_index_cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cached</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">cached</span>
+
+        <span class="k">if</span> <span class="n">organism</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2"> is not configured. Supported organisms: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">genome_assembly</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="n">organism</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Genome assembly </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">genome_assembly</span><span class="p">)</span><span class="si">}</span><span class="s2"> is not configured for organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Supported assemblies: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="n">organism</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">ports</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="n">organism</span><span class="p">][</span><span class="nb">int</span><span class="p">(</span><span class="n">genome_assembly</span><span class="p">)][</span><span class="s2">&quot;Ports&quot;</span><span class="p">])</span>
+        <span class="c1"># Some Ensembl releases encode patch builds as a trailing letter, e.g. `homo_sapiens_core_56_37a`.</span>
+        <span class="c1"># Treat these as part of the same &quot;base assembly&quot; (37) for configuration and graph-level purposes.</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">rf</span><span class="s2">&quot;^</span><span class="si">{</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">organism</span><span class="p">)</span><span class="si">}</span><span class="s2">_core_([0-9]+)_</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">genome_assembly</span><span class="p">)</span><span class="si">}</span><span class="s2">[a-z]*$&quot;</span><span class="p">)</span>
+        <span class="c1"># Use an information_schema filter to avoid `SHOW DATABASES` timeouts on busy ports.</span>
+        <span class="n">escaped_organism</span> <span class="o">=</span> <span class="n">organism</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\\\\</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;%&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">%&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">_&quot;</span><span class="p">)</span>
+        <span class="n">like_pattern</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">escaped_organism</span><span class="si">}</span><span class="se">\\</span><span class="s2">_core</span><span class="se">\\</span><span class="s2">_%</span><span class="se">\\</span><span class="s2">_</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">genome_assembly</span><span class="p">)</span><span class="si">}</span><span class="s2">%&quot;</span>
+
+        <span class="n">releases_by_port</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">db_by_port_release</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">connection_errors</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">ports</span><span class="p">:</span>
+            <span class="n">results_query</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">last_exc</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="ne">Exception</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">with</span> <span class="n">pymysql</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+                        <span class="n">host</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">mysql_host</span><span class="p">,</span>
+                        <span class="n">user</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">myqsl_user</span><span class="p">,</span>
+                        <span class="n">password</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">mysql_togo</span><span class="p">,</span>
+                        <span class="n">port</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">port</span><span class="p">),</span>
+                        <span class="n">connect_timeout</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_timeout</span><span class="p">,</span> <span class="mi">30</span><span class="p">),</span>
+                        <span class="n">read_timeout</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">reading_timeout</span><span class="p">,</span> <span class="mi">60</span><span class="p">),</span>
+                    <span class="p">)</span> <span class="k">as</span> <span class="n">connection</span><span class="p">:</span>
+                        <span class="k">with</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur</span><span class="p">:</span>
+                            <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                                <span class="s2">&quot;SELECT SCHEMA_NAME FROM information_schema.SCHEMATA &quot;</span>
+                                <span class="s2">&quot;WHERE SCHEMA_NAME LIKE </span><span class="si">%s</span><span class="s2"> ESCAPE &#39;</span><span class="se">\\\\</span><span class="s2">&#39;&quot;</span><span class="p">,</span>
+                                <span class="p">(</span><span class="n">like_pattern</span><span class="p">,),</span>
+                            <span class="p">)</span>
+                            <span class="n">results_query</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+                    <span class="k">break</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                    <span class="n">last_exc</span> <span class="o">=</span> <span class="n">exc</span>
+                    <span class="n">results_query</span> <span class="o">=</span> <span class="kc">None</span>
+                    <span class="k">if</span> <span class="n">attempt</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">results_query</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">connection_errors</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">port</span><span class="p">)]</span> <span class="o">=</span> <span class="n">last_exc</span> <span class="ow">or</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Unknown MySQL connection error&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="n">rels</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="n">db_for_release_on_port</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">db_name</span><span class="p">,)</span> <span class="ow">in</span> <span class="n">results_query</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">db_name</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+                    <span class="n">db_name</span> <span class="o">=</span> <span class="n">db_name</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+                <span class="n">db_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">db_name</span><span class="p">)</span>
+                <span class="n">m</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">db_name</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">m</span><span class="p">:</span>
+                    <span class="n">rel</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+                    <span class="n">rels</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rel</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">rel</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">db_for_release_on_port</span><span class="p">:</span>
+                        <span class="n">db_for_release_on_port</span><span class="p">[</span><span class="n">rel</span><span class="p">]</span> <span class="o">=</span> <span class="n">db_name</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="c1"># Extremely rare: multiple schema suffixes for the same (release, base-assembly).</span>
+                        <span class="c1"># Prefer the shortest name (e.g. `_37` over `_37a`) for determinism.</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">db_name</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">db_for_release_on_port</span><span class="p">[</span><span class="n">rel</span><span class="p">]):</span>
+                            <span class="n">db_for_release_on_port</span><span class="p">[</span><span class="n">rel</span><span class="p">]</span> <span class="o">=</span> <span class="n">db_name</span>
+
+            <span class="n">releases_by_port</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">port</span><span class="p">)]</span> <span class="o">=</span> <span class="n">rels</span>
+            <span class="n">db_by_port_release</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">port</span><span class="p">)]</span> <span class="o">=</span> <span class="n">db_for_release_on_port</span>
+
+        <span class="n">releases_union</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">r</span> <span class="k">for</span> <span class="n">rs</span> <span class="ow">in</span> <span class="n">releases_by_port</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rs</span><span class="p">})</span>
+        <span class="n">port_for_release</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">db_for_release</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">releases_union</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">ports</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">releases_by_port</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">port</span><span class="p">),</span> <span class="nb">set</span><span class="p">()):</span>
+                    <span class="n">port_for_release</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">rel</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">port</span><span class="p">)</span>
+                    <span class="n">db_for_release</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">rel</span><span class="p">)]</span> <span class="o">=</span> <span class="n">db_by_port_release</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">port</span><span class="p">)][</span><span class="nb">int</span><span class="p">(</span><span class="n">rel</span><span class="p">)]</span>
+                    <span class="k">break</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">releases_union</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;No Ensembl core databases found for </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2"> on assembly </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">genome_assembly</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;across ports </span><span class="si">{</span><span class="n">ports</span><span class="si">}</span><span class="s2">. Connection errors: </span><span class="si">{</span><span class="n">connection_errors</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">index</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;organism&quot;</span><span class="p">:</span> <span class="n">organism</span><span class="p">,</span>
+            <span class="s2">&quot;genome_assembly&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">genome_assembly</span><span class="p">),</span>
+            <span class="s2">&quot;ports&quot;</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">ports</span><span class="p">),</span>
+            <span class="s2">&quot;releases_by_port&quot;</span><span class="p">:</span> <span class="n">releases_by_port</span><span class="p">,</span>
+            <span class="s2">&quot;db_by_port_release&quot;</span><span class="p">:</span> <span class="n">db_by_port_release</span><span class="p">,</span>
+            <span class="s2">&quot;releases&quot;</span><span class="p">:</span> <span class="n">releases_union</span><span class="p">,</span>
+            <span class="s2">&quot;port_for_release&quot;</span><span class="p">:</span> <span class="n">port_for_release</span><span class="p">,</span>
+            <span class="s2">&quot;db_for_release&quot;</span><span class="p">:</span> <span class="n">db_for_release</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_core_db_index_cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
+        <span class="k">return</span> <span class="n">index</span></div>
+
+
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -165,38 +304,151 @@
 <span class="sd">                ``np.inf`` (the default) disables the upper bound and includes all newer releases.</span>
 <span class="sd">            store_raw_always (bool): When ``True`` raw MySQL tables are *always* copied to</span>
 <span class="sd">                ``local_repository`` before conversion; when ``False`` they are kept only in memory.</span>
-<span class="sd">            genome_assembly (Optional[int]): NCBI assembly version (e.g. ``38`` for GRCh38). If</span>
-<span class="sd">                omitted, the assembly with the highest priority for *organism* is used.</span>
+<span class="sd">            genome_assembly (Optional[int]): Genome assembly code used in Ensembl core schema names</span>
+<span class="sd">                (``&lt;organism&gt;_core_&lt;release&gt;_&lt;assembly&gt;``). This selects the **primary** assembly used for data access</span>
+<span class="sd">                (e.g. ``38`` = human GRCh38, ``39`` = mouse GRCm39, ``111`` = pig Sscrofa11.1). If omitted, the</span>
+<span class="sd">                highest-priority assembly for *organism* is used. If *ensembl_release* is provided, the selection is</span>
+<span class="sd">                restricted to assemblies that actually contain that release.</span>
 
 <span class="sd">        Raises:</span>
 <span class="sd">            ValueError: If *form* is not in the supported list or *local_repository* fails basic</span>
 <span class="sd">                path/read/write checks.</span>
+<span class="sd">            RuntimeError: If internal port/release configuration is inconsistent.</span>
 <span class="sd">            NotImplementedError: If *organism* is not yet supported by the package.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">organism</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;homo_sapiens&quot;</span><span class="p">,</span> <span class="s2">&quot;mus_musculus&quot;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">organism</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">supported_organisms</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
-                <span class="s2">&quot;Organisms other than human and mouse is not implemented. In theory, it should work but &quot;</span>
-                <span class="s2">&quot;no tests have been conducted yet. In the next version of the package, other &quot;</span>
-                <span class="s2">&quot;organisms will be available. Please note that adding new organisms necessitates &quot;</span>
-                <span class="s2">&quot;to determine which external databases to include using ExternalDatabase class.&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2"> is not configured. Supported organisms: </span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">supported_organisms</span><span class="si">}</span><span class="s2">. &quot;</span>
+                <span class="s2">&quot;To add a new organism, extend `idtrack._db.DB.assembly_mysqlport_priority` and review external &quot;</span>
+                <span class="s2">&quot;database support via `idtrack._external_databases.ExternalDatabases`.&quot;</span>
             <span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">genome_assembly</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># Set default genome assembly when not specified specifically.</span>
-            <span class="n">genome_assembly</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
-                <span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;Priority&quot;</span><span class="p">],</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span>
-            <span class="p">)[</span><span class="mi">0</span><span class="p">][</span>
-                <span class="mi">1</span>
-            <span class="p">]</span>  <span class="c1"># Have the most important priority genome assembly as the default value.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">local_repository</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;`local_repository` must be an existing directory: </span><span class="si">{</span><span class="n">local_repository</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">local_repository</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">local_repository</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">W_OK</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;`local_repository` must be readable and writable: </span><span class="si">{</span><span class="n">local_repository</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">form</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">forms_in_order</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Form </span><span class="si">{</span><span class="n">form</span><span class="si">!r}</span><span class="s2"> is not supported. Supported forms: </span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">forms_in_order</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">ignore_before_effective</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">ignore_before</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ignore_before_effective</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">ignore_before_float</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">ignore_before</span><span class="p">)</span>
+                <span class="n">ignore_before_int</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ignore_before_float</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - defensive</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;ignore_before must be an integer Ensembl release number.&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+            <span class="k">if</span> <span class="n">ignore_before_float</span> <span class="o">!=</span> <span class="n">ignore_before_int</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;ignore_before must be an integer Ensembl release number.&quot;</span><span class="p">)</span>
+            <span class="n">ignore_before_effective</span> <span class="o">=</span> <span class="n">ignore_before_int</span>
+
+        <span class="k">if</span> <span class="n">ignore_after</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ignore_after_effective</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">ignore_after_float</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">ignore_after</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - defensive</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;ignore_after must be an integer Ensembl release number or np.inf.&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">ignore_after_float</span><span class="p">):</span>
+                <span class="n">ignore_after_effective</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ignore_after_int</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ignore_after_float</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">ignore_after_float</span> <span class="o">!=</span> <span class="n">ignore_after_int</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;ignore_after must be an integer Ensembl release number or np.inf.&quot;</span><span class="p">)</span>
+                <span class="n">ignore_after_effective</span> <span class="o">=</span> <span class="n">ignore_after_int</span>
+
+        <span class="k">if</span> <span class="n">ignore_before_effective</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">ignore_after_effective</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">ignore_after_effective</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">int</span><span class="p">(</span><span class="n">ignore_before_effective</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;ignore_after must be &gt;= ignore_before (got ignore_before=</span><span class="si">{</span><span class="n">ignore_before_effective</span><span class="si">}</span><span class="s2">, &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;ignore_after=</span><span class="si">{</span><span class="n">ignore_after_effective</span><span class="si">}</span><span class="s2">).&quot;</span>
+                <span class="p">)</span>
+
+        <span class="n">configured_assemblies</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="n">organism</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">ensembl_release</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">float</span><span class="p">(</span><span class="n">ensembl_release</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ensembl_release</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Floating-point Ensembl releases (e.g. 18.2) are not supported; pass an integer release.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">genome_assembly</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Pick the highest-priority assembly that is *actually available* on the public MySQL service.</span>
+            <span class="c1"># If the user requested an explicit release, further restrict to assemblies that contain that release.</span>
+            <span class="n">requested_release</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ensembl_release</span><span class="p">)</span> <span class="k">if</span> <span class="n">ensembl_release</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="n">assemblies_by_priority</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+                <span class="n">configured_assemblies</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">a</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">configured_assemblies</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">a</span><span class="p">)][</span><span class="s2">&quot;Priority&quot;</span><span class="p">])</span>
+            <span class="p">)</span>
+
+            <span class="n">candidate_indexes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">last_exc</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="ne">Exception</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="k">for</span> <span class="n">asm</span> <span class="ow">in</span> <span class="n">assemblies_by_priority</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">candidate_indexes</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">asm</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_core_db_index</span><span class="p">(</span><span class="n">organism</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">genome_assembly</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">asm</span><span class="p">))</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                    <span class="n">last_exc</span> <span class="o">=</span> <span class="n">exc</span>
+                    <span class="k">continue</span>
+
+                <span class="k">if</span> <span class="n">requested_release</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">requested_release</span> <span class="ow">in</span> <span class="n">candidate_indexes</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">asm</span><span class="p">)][</span><span class="s2">&quot;port_for_release&quot;</span><span class="p">]:</span>
+                    <span class="n">genome_assembly</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">asm</span><span class="p">)</span>
+                    <span class="k">break</span>
+
+            <span class="k">if</span> <span class="n">genome_assembly</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">available_summary</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="n">asm</span><span class="p">:</span> <span class="p">(</span>
+                        <span class="nb">min</span><span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="s2">&quot;releases&quot;</span><span class="p">])</span> <span class="k">if</span> <span class="n">idx</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;releases&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                        <span class="nb">max</span><span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="s2">&quot;releases&quot;</span><span class="p">])</span> <span class="k">if</span> <span class="n">idx</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;releases&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="k">for</span> <span class="n">asm</span><span class="p">,</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">candidate_indexes</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="p">}</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Unable to infer a default genome assembly for </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2"> &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;with requested release </span><span class="si">{</span><span class="n">requested_release</span><span class="si">!r}</span><span class="s2">. &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Available (min,max) release ranges by assembly: </span><span class="si">{</span><span class="n">available_summary</span><span class="si">}</span><span class="s2">. &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Last error while probing assemblies: </span><span class="si">{</span><span class="n">last_exc</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">genome_assembly</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">configured_assemblies</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Genome assembly </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">genome_assembly</span><span class="p">)</span><span class="si">}</span><span class="s2"> is not configured for organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">. &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Supported assemblies: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">configured_assemblies</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+            <span class="n">genome_assembly</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">genome_assembly</span><span class="p">)</span>
 
         <span class="c1"># MYSQL Settings</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span> <span class="o">=</span> <span class="n">genome_assembly</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">mysql_settings</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">core_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_core_db_index</span><span class="p">(</span><span class="n">organism</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">genome_assembly</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">ensembl_release</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">core_index</span><span class="p">[</span><span class="s2">&quot;releases&quot;</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;No Ensembl core databases found for </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2"> on assembly </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="si">}</span><span class="s2"> &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;(tried MySQL ports </span><span class="si">{</span><span class="n">core_index</span><span class="p">[</span><span class="s1">&#39;ports&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">).&quot;</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">ignore_after_effective</span><span class="p">):</span>
+                <span class="n">eligible</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">core_index</span><span class="p">[</span><span class="s2">&quot;releases&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">r</span> <span class="o">&lt;=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ignore_after_effective</span><span class="p">)]</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">eligible</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;No Ensembl core database found for </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2"> on assembly </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="si">}</span><span class="s2"> &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;at or before ignore_after=</span><span class="si">{</span><span class="n">ignore_after_effective</span><span class="si">!r}</span><span class="s2">. &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;Available releases: </span><span class="si">{</span><span class="n">core_index</span><span class="p">[</span><span class="s1">&#39;releases&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+                <span class="n">ensembl_release</span> <span class="o">=</span> <span class="n">eligible</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ensembl_release</span> <span class="o">=</span> <span class="n">core_index</span><span class="p">[</span><span class="s2">&quot;releases&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">ensembl_release</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ensembl_release</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ensembl_release</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">core_index</span><span class="p">[</span><span class="s2">&quot;port_for_release&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;No Ensembl core database found for </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2"> release </span><span class="si">{</span><span class="n">ensembl_release</span><span class="si">}</span><span class="s2"> on assembly </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="si">}</span><span class="s2">. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Tried MySQL ports </span><span class="si">{</span><span class="n">core_index</span><span class="p">[</span><span class="s1">&#39;ports&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">. Available releases: </span><span class="si">{</span><span class="n">core_index</span><span class="p">[</span><span class="s1">&#39;releases&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="n">selected_port</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">core_index</span><span class="p">[</span><span class="s2">&quot;port_for_release&quot;</span><span class="p">][</span><span class="n">ensembl_release</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mysql_settings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;host&quot;</span><span class="p">:</span> <span class="n">DB</span><span class="o">.</span><span class="n">mysql_host</span><span class="p">,</span>
             <span class="s2">&quot;user&quot;</span><span class="p">:</span> <span class="n">DB</span><span class="o">.</span><span class="n">myqsl_user</span><span class="p">,</span>
             <span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="n">DB</span><span class="o">.</span><span class="n">mysql_togo</span><span class="p">,</span>
-            <span class="c1"># Port depends on which genome assembly is of interest. Refer to the following link.</span>
-            <span class="c1"># https://www.ensembl.org/info/data/mysql.html</span>
-            <span class="s2">&quot;port&quot;</span><span class="p">:</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">][</span><span class="s2">&quot;Port&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;port&quot;</span><span class="p">:</span> <span class="n">selected_port</span><span class="p">,</span>
         <span class="p">}</span>
 
         <span class="c1"># The logger for informing the user about the progress.</span>
@@ -207,11 +459,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">organism</span> <span class="o">=</span> <span class="n">organism</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">form</span> <span class="o">=</span> <span class="n">form</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">store_raw_always</span> <span class="o">=</span> <span class="n">store_raw_always</span>
-        <span class="c1"># If ignore_before is not specified clearly, than use the lowest possible priority defined by the MySQL server.</span>
-        <span class="n">default_min_er</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;MinRelease&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">ignore_before</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">ignore_before</span> <span class="k">if</span> <span class="n">ignore_before</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">default_min_er</span>
-        <span class="c1"># If ignore_after is not specified, than set it to infinite.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">ignore_after</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">ignore_after</span> <span class="k">if</span> <span class="n">ignore_after</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+        <span class="k">if</span> <span class="n">ignore_before_effective</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ignore_before_effective</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">core_index</span><span class="p">[</span><span class="s2">&quot;releases&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ignore_before</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ignore_before_effective</span><span class="p">)</span>
+        <span class="c1"># If ignore_after is not specified, then set it to infinite.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ignore_after</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">ignore_after_effective</span>
 
         <span class="c1"># Protected attributes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">available_form_of_interests</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">forms_in_order</span><span class="p">)</span>  <span class="c1"># Warning: the order is important.</span>
@@ -219,29 +471,36 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_column_sep</span> <span class="o">=</span> <span class="s2">&quot;_COL_&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_identifiers</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">form</span><span class="si">}</span><span class="s2">_stable_id&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">form</span><span class="si">}</span><span class="s2">_version&quot;</span><span class="p">]</span>
 
-        <span class="k">if</span> <span class="n">ensembl_release</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># Set last possible Ensembl release for given genome assembly.</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># placeholder value for for file naming method, it is not gonna be saved anyway.</span>
-            <span class="n">ensembl_release</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">available_releases_no_save</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ensembl_release</span><span class="p">)</span>
         <span class="c1"># _ = self.external_inst.load_modified_yaml()</span>
 
-        <span class="c1"># Check if it seems ok.</span>
-        <span class="n">checkers</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="c1"># In very early releases, there are floating ensembl releases like &quot;18.2&quot;. This package does not support.</span>
-            <span class="nb">float</span><span class="p">(</span><span class="n">ensembl_release</span><span class="p">)</span> <span class="o">==</span> <span class="nb">int</span><span class="p">(</span><span class="n">ensembl_release</span><span class="p">),</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ignore_after</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_before</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_releases</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">form</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">available_form_of_interests</span><span class="p">,</span>
-            <span class="p">(</span>
-                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">local_repository</span><span class="p">)</span>
-                <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">local_repository</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">W_OK</span><span class="p">)</span>
-                <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">local_repository</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">)</span>
-            <span class="p">),</span>
-            <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span> <span class="o">&lt;</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">][</span><span class="s2">&quot;MinRelease&quot;</span><span class="p">]),</span>
-        <span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">checkers</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&#39;DatabaseManager&#39; could not pass the &#39;checkers&#39;: </span><span class="si">{</span><span class="n">checkers</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_after</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_after</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_before</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;ignore_after must be &gt;= ignore_before (got ignore_before=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_before</span><span class="si">}</span><span class="s2">, ignore_after=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_after</span><span class="si">}</span><span class="s2">).&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">releases_in_window</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">core_index</span><span class="p">[</span><span class="s2">&quot;releases&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_after</span> <span class="o">&gt;=</span> <span class="n">r</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_before</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">releases_in_window</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;No Ensembl releases remain after applying &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;ignore_before=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_before</span><span class="si">}</span><span class="s2"> and ignore_after=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_after</span><span class="si">}</span><span class="s2"> &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">!r}</span><span class="s2"> assembly </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">)</span><span class="si">}</span><span class="s2">. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Available releases: </span><span class="si">{</span><span class="n">core_index</span><span class="p">[</span><span class="s1">&#39;releases&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">releases_in_window</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;ensembl_release=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span><span class="si">}</span><span class="s2"> is outside the ignore window &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_before</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_after</span><span class="si">}</span><span class="s2">] for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">!r}</span><span class="s2"> assembly </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">)</span><span class="si">}</span><span class="s2">. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Releases within window: </span><span class="si">{</span><span class="n">releases_in_window</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">min_port_release</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">mysql_port_min_release</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mysql_settings</span><span class="p">[</span><span class="s2">&quot;port&quot;</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">min_port_release</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span> <span class="o">&lt;</span> <span class="nb">int</span><span class="p">(</span><span class="n">min_port_release</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Internal configuration error: selected port </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mysql_settings</span><span class="p">[</span><span class="s1">&#39;port&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2"> has min release &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">min_port_release</span><span class="p">)</span><span class="si">}</span><span class="s2"> but release </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span><span class="p">)</span><span class="si">}</span><span class="s2"> was selected.&quot;</span>
+            <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a multi-line snapshot of the manager&#39;s current configuration.</span>
@@ -319,59 +578,19 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">available_releases_versions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Discover valid Ensembl releases for the configured organism and assembly.</span>
 
-<span class="sd">        A ``SHOW DATABASES`` query is issued against the configured MySQL mirror.  Results are matched</span>
-<span class="sd">        against the pattern ``^{organism}_core_&lt;release&gt;_.*$``; the captured ``&lt;release&gt;`` component is</span>
-<span class="sd">        converted to ``int`` (floating-point labels are rejected), range-checked against the manager&#39;s</span>
-<span class="sd">        ``ignore_before`` / ``ignore_after`` bounds, and finally sorted. Optional keyword arguments are</span>
-<span class="sd">        forwarded verbatim to :py:meth:`DatabaseManager.get_db`, allowing callers to tweak connection or</span>
-<span class="sd">        caching behaviour.</span>
+<span class="sd">        Availability is discovered via the cached, multi-port aware core index built by</span>
+<span class="sd">        :py:meth:`_get_core_db_index`. The resulting union of releases is filtered against the manager&#39;s</span>
+<span class="sd">        ``ignore_before`` / ``ignore_after`` bounds and returned in ascending order.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            kwargs: Arbitrary keyword arguments passed straight through to</span>
-<span class="sd">                :py:meth:`DatabaseManager.get_db` (e.g., ``mysql_conn``, ``force_refresh``).</span>
+<span class="sd">            kwargs: Kept for backward compatibility; currently unused.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            list[int]: Sorted list of release numbers that exist on the mirror and comply with the ignore window.</span>
-
-<span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If a database name does not match the expected regex, if floating-point release</span>
-<span class="sd">                labels are encountered, or if other inconsistencies arise while parsing server results.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># Get all possible ensembl releases for a given organism</span>
-        <span class="n">dbs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;availabledatabases&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)[</span><span class="s2">&quot;available_databases&quot;</span><span class="p">]</span>  <span class="c1"># Obtain the databases dataframe</span>
-        <span class="n">pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;^</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">_core_([0-9]+)_.+$&quot;</span><span class="p">)</span>
-        <span class="c1"># Search organism name in a specified format. Extract ensembl release number</span>
-        <span class="n">releases</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">dbs_i</span> <span class="ow">in</span> <span class="n">dbs</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">pattern</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">dbs_i</span><span class="p">):</span>
-                <span class="n">dbs_ps</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">dbs_i</span><span class="p">)</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">dbs_ps</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span>
-                <span class="n">releases</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">dbs_ps</span><span class="o">.</span><span class="n">groups</span><span class="p">()[</span><span class="mi">0</span><span class="p">]))</span>
-
-        <span class="c1"># Get rid of floating ensembl releases if exists: In very early releases, there are floating releases</span>
-        <span class="c1"># like &quot;18.2&quot;. This Python package does not support those.</span>
-        <span class="n">floating_ensembl</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
-        <span class="n">releases_final</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">releases</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">==</span> <span class="nb">int</span><span class="p">(</span><span class="n">r</span><span class="p">):</span>
-                <span class="n">releases_final</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">r</span><span class="p">))</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">floating_ensembl</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">floating_ensembl</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Some ensembl releases are included for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">. &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;There are floating ensembl releases: </span><span class="si">{</span><span class="n">floating_ensembl</span><span class="si">}</span><span class="s2">.&quot;</span>
-            <span class="p">)</span>
-
-        <span class="c1"># Sort in ascending order and return the result.</span>
-        <span class="n">releases_final</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
-            <span class="n">i</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">releases_final</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_after</span> <span class="o">&gt;=</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_before</span>  <span class="c1"># Filter out the releases that are not of interest.</span>
-        <span class="p">)</span>
-
+        <span class="c1"># Use the pre-built core-DB index (union across ports) so multi-port assemblies work correctly.</span>
+        <span class="n">core_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_core_db_index</span><span class="p">(</span><span class="n">organism</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">,</span> <span class="n">genome_assembly</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">)</span>
+        <span class="n">releases_final</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">core_index</span><span class="p">[</span><span class="s2">&quot;releases&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_after</span> <span class="o">&gt;=</span> <span class="n">r</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_before</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">releases_final</span></div>
 
 
@@ -379,35 +598,27 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">mysql_database</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the canonical Ensembl Core schema name for the current organism, release, and assembly.</span>
 
-<span class="sd">        The manager must resolve exactly one MySQL schema on the remote Ensembl server whose name encodes the</span>
-<span class="sd">        *organism* (e.g. ``homo_sapiens``), *release* (e.g. ``111``), and *genome assembly* (e.g. ``38``).  This</span>
-<span class="sd">        helper centralises that lookup, guaranteeing that downstream calls—such as :py:meth:`download_table`—always</span>
-<span class="sd">        talk to the correct database.  The search relies on :py:meth:`get_db` to fetch the server&#39;s catalogue and</span>
-<span class="sd">        then filters it by a strict regular expression; any ambiguity is treated as fatal because it would break</span>
-<span class="sd">        reproducibility.</span>
+<span class="sd">        The schema naming convention is deterministic:</span>
+
+<span class="sd">        ``{organism}_core_{ensembl_release}_{genome_assembly}[&lt;patch&gt;]``</span>
+
+<span class="sd">        For multi-port assemblies (e.g. *sus_scrofa* assembly ``102``), the *port* is selected in</span>
+<span class="sd">        :py:meth:`__init__` using :py:meth:`_get_core_db_index`.  Once the release is validated to exist on that</span>
+<span class="sd">        chosen port, the schema name itself does not require another server-side discovery query.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            str: A single schema name like ``&quot;homo_sapiens_core_111_38&quot;`` that uniquely matches the manager&#39;s</span>
-<span class="sd">                configuration.</span>
+<span class="sd">            str: Schema name like ``&quot;homo_sapiens_core_111_38&quot;``.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If zero **or** more than one schema satisfies the search criteria, signalling server</span>
-<span class="sd">                misconfiguration or an invalid combination of *organism* and *ensembl_release*.</span>
+<span class="sd">            ValueError: If the current release is not available for this (organism, assembly) pair.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">dbs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;availabledatabases&quot;</span><span class="p">)[</span><span class="s2">&quot;available_databases&quot;</span><span class="p">]</span>  <span class="c1"># Obtain the databases dataframe</span>
-
-        <span class="n">pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;^</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">_core_</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span><span class="p">)</span><span class="si">}</span><span class="s2">_.+$&quot;</span><span class="p">)</span>
-        <span class="n">located</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">dbs</span> <span class="k">if</span> <span class="n">pattern</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span>
-        <span class="c1"># Search database in a specified format. Extract ensembl release number</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">located</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">core_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_core_db_index</span><span class="p">(</span><span class="n">organism</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">,</span> <span class="n">genome_assembly</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">core_index</span><span class="p">[</span><span class="s2">&quot;port_for_release&quot;</span><span class="p">]:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;There are more than one &#39;MySQL database&#39; in the server &quot;</span>
-                <span class="s2">&quot;satisfying given ensembl release and organism name.&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;No Ensembl core database found for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">!r}</span><span class="s2"> release </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;on assembly </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">)</span><span class="si">}</span><span class="s2">. Available releases: </span><span class="si">{</span><span class="n">core_index</span><span class="p">[</span><span class="s1">&#39;releases&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="p">)</span>
-        <span class="c1"># Make sure there are only one database in the server satisfying given ensembl release and organism name.</span>
-
-        <span class="k">return</span> <span class="n">located</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">core_index</span><span class="p">[</span><span class="s2">&quot;db_for_release&quot;</span><span class="p">][</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span><span class="p">)])</span>
 
 <div class="viewcode-block" id="DatabaseManager.change_form">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.change_form">[docs]</a>
@@ -472,13 +683,14 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Clone the manager while targeting a new genome assembly (e.g. GRCh38 → GRCh37).</span>
 
 <span class="sd">        Genome assemblies are encoded as integers in Ensembl&#39;s schema naming (``38`` for *GRCh38*,</span>
-<span class="sd">        ``37`` for *GRCh37*, ``102`` for *GRCm39*, …).  When *last_possible_ensembl_release* is ``True`` the</span>
+<span class="sd">        ``37`` for *GRCh37*, ``39`` for *GRCm39*, ``111`` for *Sscrofa11.1*, …).  When</span>
+<span class="sd">        *last_possible_ensembl_release* is ``True`` the</span>
 <span class="sd">        method automatically picks the most recent Ensembl release that **still** provides MySQL dumps for the</span>
 <span class="sd">        requested assembly, ensuring compatibility.  All other settings are copied verbatim.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            genome_assembly (int): Key from :py:data:`DB.assembly_mysqlport_priority` mapping—see Ensembl</span>
-<span class="sd">                documentation for valid values.</span>
+<span class="sd">            genome_assembly (int): Assembly code configured under</span>
+<span class="sd">                :py:attr:`DB.assembly_mysqlport_priority` for this manager&#39;s organism.</span>
 <span class="sd">            last_possible_ensembl_release (bool): When ``True`` override *ensembl_release* with the</span>
 <span class="sd">                newest version available for *genome_assembly*.  Defaults to ``False``.</span>
 
@@ -640,14 +852,26 @@
 <span class="sd">            ValueError: If any element of *usecols* is missing from *table_key*, or if the query returns</span>
 <span class="sd">                binary payloads that cannot be coerced into native Python types.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">usecols</span> <span class="o">==</span> <span class="p">[]:</span>
+            <span class="n">usecols</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">_quote_identifier</span><span class="p">(</span><span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">identifier</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsafe SQL identifier type: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[0-9A-Za-z_]+&quot;</span><span class="p">,</span> <span class="n">identifier</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsafe SQL identifier: </span><span class="si">{</span><span class="n">identifier</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;`</span><span class="si">{</span><span class="n">identifier</span><span class="si">}</span><span class="s2">`&quot;</span>
+
         <span class="c1"># Base settings for MYSQL server.</span>
         <span class="n">which_mysql_server</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">mysql_settings</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="s2">&quot;database&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">mysql_database</span><span class="p">})</span>
 
         <span class="c1"># Connect to the MYSQL server, close the connection after the code block</span>
         <span class="k">with</span> <span class="n">pymysql</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="o">**</span><span class="n">which_mysql_server</span><span class="p">)</span> <span class="k">as</span> <span class="n">connection</span><span class="p">:</span>
+            <span class="n">table_sql</span> <span class="o">=</span> <span class="n">_quote_identifier</span><span class="p">(</span><span class="n">table_key</span><span class="p">)</span>
+
             <span class="c1"># Create a cursor to be able to make some queries: First get the associated column names.</span>
             <span class="k">with</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur1</span><span class="p">:</span>
-                <span class="n">cur1</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;SHOW columns FROM </span><span class="si">{</span><span class="n">table_key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">cur1</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;SHOW columns FROM </span><span class="si">{</span><span class="n">table_sql</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># noqa: S608</span>
                 <span class="n">column_names</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">cur1</span><span class="o">.</span><span class="n">fetchall</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
 
                 <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">column_names</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
@@ -664,9 +888,16 @@
 
             <span class="c1"># Create a cursor to be able to make some queries: Second get the associated table content.</span>
             <span class="k">with</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span> <span class="k">as</span> <span class="n">cur2</span><span class="p">:</span>
-                <span class="c1"># Convert the list of column names into string to be used in MYSQL query</span>
-                <span class="n">usecol_sql</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">usecols</span><span class="p">)</span> <span class="k">if</span> <span class="n">usecols</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
-                <span class="n">cur2</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;SELECT </span><span class="si">{</span><span class="s1">&#39;*&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">usecols</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="kc">None</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="n">usecol_sql</span><span class="si">}</span><span class="s2"> FROM </span><span class="si">{</span><span class="n">table_key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">usecols</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">select_sql</span> <span class="o">=</span> <span class="s2">&quot;*&quot;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">col_set</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">column_names</span><span class="o">.</span><span class="n">tolist</span><span class="p">()}</span>
+                    <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">usecols</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">col_set</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Missing columns in </span><span class="si">{</span><span class="n">table_key</span><span class="si">!r}</span><span class="s2">: </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="n">select_sql</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_quote_identifier</span><span class="p">(</span><span class="n">col</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">usecols</span><span class="p">)</span>
+
+                <span class="n">cur2</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;SELECT </span><span class="si">{</span><span class="n">select_sql</span><span class="si">}</span><span class="s2"> FROM </span><span class="si">{</span><span class="n">table_sql</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># noqa: S608</span>
                 <span class="c1"># Fetch all the content and save as a tuple file.</span>
                 <span class="n">results_content</span> <span class="o">=</span> <span class="n">cur2</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
 
@@ -1314,8 +1545,8 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">create_database_content</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">just_download</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve and optionally cache external-database metadata for every assembly, release, and form.</span>
 
-<span class="sd">        The helper iterates over *all* genome assemblies defined in</span>
-<span class="sd">        :py:data:`idtrack._db.DB.assembly_mysqlport_priority`, every available Ensembl release for each assembly,</span>
+<span class="sd">        The helper iterates over every genome assembly configured for the current organism in</span>
+<span class="sd">        :py:attr:`idtrack._db.DB.assembly_mysqlport_priority`, every available Ensembl release for each assembly,</span>
 <span class="sd">        and every identifier *form* supported by the package, downloading the ``external_database`` table for</span>
 <span class="sd">        each combination.  The resulting frames are concatenated, enriched with ``assembly``, ``release``,</span>
 <span class="sd">        ``form``, and ``organism`` columns, and returned to the caller.  When ``just_download`` is ``True`` the</span>
@@ -1332,8 +1563,11 @@
 <span class="sd">                columns.  Empty when ``just_download`` is ``True``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>  <span class="c1"># For all assemblies possible.</span>
-            <span class="n">dm_assembly</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">last_possible_ensembl_release</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">dm_assembly</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">last_possible_ensembl_release</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">continue</span>
             <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">dm_assembly</span><span class="o">.</span><span class="n">available_form_of_interests</span><span class="p">:</span>  <span class="c1"># For all assemblies possible.</span>
                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">dm_assembly</span><span class="o">.</span><span class="n">available_releases</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
@@ -1402,7 +1636,7 @@
 <span class="sd">        Args:</span>
 <span class="sd">            db_manager (DatabaseManager): Manager instance to probe.</span>
 <span class="sd">            target_assembly (int): Genome-assembly code to test (a key of</span>
-<span class="sd">                :py:data:`idtrack._db.DB.assembly_mysqlport_priority`).</span>
+<span class="sd">                :py:attr:`idtrack._db.DB.assembly_mysqlport_priority` for the manager&#39;s organism).</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            bool: ``True`` if the assembly switch succeeds without raising :py:class:`ValueError`; ``False`` otherwise.</span>
@@ -1416,18 +1650,24 @@
 
 <div class="viewcode-block" id="DatabaseManager.create_external_all">
 <a class="viewcode-back" href="../../reference.html#idtrack._database_manager.DatabaseManager.create_external_all">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">create_external_all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">return_mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">groupby</span><span class="o">.</span><span class="n">generic</span><span class="o">.</span><span class="n">DataFrameGroupBy</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_external_all</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">return_mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">narrow_external</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">groupby</span><span class="o">.</span><span class="n">generic</span><span class="o">.</span><span class="n">DataFrameGroupBy</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Download and collate cross-reference mappings from every supported genome assembly.</span>
 
 <span class="sd">        The manager cycles through every genome assembly recognised for the current organism (ordered by</span>
-<span class="sd">        :py:data:`idtrack._db.DB.assembly_mysqlport_priority`), fetches the *external_relevant* mapping table</span>
-<span class="sd">        for each via :py:meth:`~DatabaseManager.get_db`, labels every row with its source assembly, and finally</span>
-<span class="sd">        concatenates the tables.  Because this helper is intended for **ad-hoc inspection only**, it bypasses</span>
-<span class="sd">        the :py:meth:`~DatabaseManager.get_db` caching layer and therefore **never writes** the result to the</span>
-<span class="sd">        local repository.</span>
+<span class="sd">        :py:data:`idtrack._db.DB.assembly_mysqlport_priority`), fetches either the filtered</span>
+<span class="sd">        *external_relevant* mapping table (when ``narrow_external=True``) or the full *external* mapping table</span>
+<span class="sd">        (when ``narrow_external=False``) for each via :py:meth:`~DatabaseManager.get_db`, labels every row with</span>
+<span class="sd">        its source assembly, and finally concatenates the tables. Because this helper is intended for</span>
+<span class="sd">        **ad-hoc inspection only**, it bypasses the :py:meth:`~DatabaseManager.get_db` caching layer and</span>
+<span class="sd">        therefore **never writes** the result to the local repository.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            return_mode (str): Strategy for handling rows that appear in more than one assembly.</span>
+<span class="sd">            narrow_external (bool): If ``True`` (default), restrict results to databases enabled in the external</span>
+<span class="sd">                YAML configuration (``external_relevant``). If ``False``, include all external databases provided by</span>
+<span class="sd">                the Ensembl MySQL server (``external``).</span>
 
 <span class="sd">                - ``&quot;all&quot;``</span>
 <span class="sd">                    Keep one copy of every unique</span>
@@ -1459,14 +1699,20 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">ass</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="n">give_type</span><span class="o">=</span><span class="s2">&quot;assembly&quot;</span><span class="p">)</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
-        <span class="n">assembly_priority</span> <span class="o">=</span> <span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;Priority&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ass</span><span class="p">]</span>
 
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">assembly_priority</span><span class="p">,</span> <span class="n">ass</span><span class="p">))]:</span>  <span class="c1"># sort according to priority</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_if_change_assembly_works</span><span class="p">(</span><span class="n">db_manager</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="n">target_assembly</span><span class="o">=</span><span class="n">i</span><span class="p">):</span>
+        <span class="n">df_indicator</span> <span class="o">=</span> <span class="s2">&quot;external_relevant&quot;</span> <span class="k">if</span> <span class="n">narrow_external</span> <span class="k">else</span> <span class="s2">&quot;external&quot;</span>
+
+        <span class="n">cfg</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">]</span>
+        <span class="n">ass_supported</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">ass</span> <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">]</span>
+        <span class="n">ass_sorted</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">ass_supported</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">a</span><span class="p">:</span> <span class="n">cfg</span><span class="p">[</span><span class="n">a</span><span class="p">][</span><span class="s2">&quot;Priority&quot;</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ass_sorted</span><span class="p">:</span>  <span class="c1"># sort according to per-organism priority (1 = newest)</span>
+            <span class="k">try</span><span class="p">:</span>
                 <span class="n">dm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
-                <span class="n">df_temp</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;external_relevant&quot;</span><span class="p">)</span>
-                <span class="n">df_temp</span><span class="p">[</span><span class="s2">&quot;assembly&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
-                <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span><span class="p">,</span> <span class="n">df_temp</span><span class="p">])</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">df_temp</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="n">df_indicator</span><span class="p">)</span>
+            <span class="n">df_temp</span><span class="p">[</span><span class="s2">&quot;assembly&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span><span class="p">,</span> <span class="n">df_temp</span><span class="p">])</span>
         <span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="n">compare_columns</span> <span class="o">=</span> <span class="p">[</span>
@@ -1648,11 +1894,13 @@
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">split_ind</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span>
 
-        <span class="c1"># For &#39;availabledatabases&#39; accept different files explained in the below functions.</span>
+        <span class="c1"># For &#39;availabledatabases&#39;, do *not* reuse another release&#39;s cached result.</span>
+        <span class="c1">#</span>
+        <span class="c1"># Multi-port assemblies can resolve to different ports depending on release. Since the server-side</span>
+        <span class="c1"># database catalogue is port-specific, reusing a &quot;later&quot; release&#39;s cached catalogue can silently</span>
+        <span class="c1"># drop earlier releases that only exist on a different port.</span>
         <span class="k">if</span> <span class="n">main_ind</span> <span class="o">==</span> <span class="s2">&quot;availabledatabases&quot;</span> <span class="ow">and</span> <span class="n">param1_ind</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">xr1</span><span class="p">,</span> <span class="n">xr1_a</span> <span class="o">=</span> <span class="n">check_exist_as_diff_release</span><span class="p">(</span><span class="s2">&quot;common&quot;</span><span class="p">,</span> <span class="n">df_indicator</span><span class="p">)</span>
-            <span class="n">remove_redundant_exist</span><span class="p">(</span><span class="s2">&quot;common&quot;</span><span class="p">,</span> <span class="n">df_indicator</span><span class="p">,</span> <span class="n">xr1</span><span class="p">,</span> <span class="n">xr1_a</span><span class="p">)</span>
-            <span class="n">hierarchy</span><span class="p">,</span> <span class="n">file_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="p">(</span><span class="s2">&quot;common&quot;</span><span class="p">,</span> <span class="n">df_indicator</span><span class="p">,</span> <span class="n">ensembl_release</span><span class="o">=</span><span class="n">xr1</span><span class="p">)</span>
+            <span class="n">hierarchy</span><span class="p">,</span> <span class="n">file_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="p">(</span><span class="s2">&quot;common&quot;</span><span class="p">,</span> <span class="n">df_indicator</span><span class="p">)</span>
 
         <span class="k">elif</span> <span class="n">main_ind</span> <span class="o">==</span> <span class="s2">&quot;versioninfo&quot;</span> <span class="ow">and</span> <span class="n">param1_ind</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">xr1</span><span class="p">,</span> <span class="n">xr1_a</span> <span class="o">=</span> <span class="n">check_exist_as_diff_release</span><span class="p">(</span><span class="s2">&quot;processed&quot;</span><span class="p">,</span> <span class="n">df_indicator</span><span class="p">)</span>
