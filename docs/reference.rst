@@ -63,5 +63,13 @@ Reference
 
 .. automodule:: idtrack._db
     :members:
+    :exclude-members: EmptyConversionMetricsError
     :private-members:
     :show-inheritance:
+
+
+.. toctree::
+    :maxdepth: 1
+    :hidden:
+
+    reference/external_mappers

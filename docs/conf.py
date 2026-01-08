@@ -26,6 +26,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
+    "sphinx_design",
     # "sphinx_rtd_dark_mode",
     "nbsphinx",
 ]
@@ -47,17 +48,18 @@ nbsphinx_execute = "never"
 nbsphinx_input_prompt = "%s"
 nbsphinx_output_prompt = "%s"
 
-# Add a small, consistent banner to every rendered notebook page.
+# Add a small, consistent "Download notebook" link to every rendered notebook page.
 nbsphinx_prolog = r"""
 {% set docname = env.docname %}
 .. raw:: html
 
-   <div class="admonition note">
-     <p class="admonition-title">Notebook tutorial</p>
-     <p>This page is generated from a Jupyter notebook. Code cells are not executed during the documentation build.</p>
-     <p><a href="../_sources/{{ docname }}.ipynb">Download the notebook</a> to run it locally.</p>
+   <div class="idtrack-notebook-meta">
+     <a class="idtrack-notebook-download" href="../_sources/{{ docname }}.ipynb">Download notebook</a>
    </div>
 """
+
+# Disable nbsphinx's default footer ("This page was generated from a Jupyter notebook.").
+nbsphinx_epilog = ""
 
 # If this option is true (the default option), users will start in dark mode when first visiting the site.
 # If this option is false, users will start in light mode when they first visit the site.
@@ -106,6 +108,7 @@ exclude_patterns = [
     "_notebooks/example_manual_running.ipynb",
     "_notebooks/random_data.ipynb",
     "_notebooks/prepare_new_external_yaml-2.ipynb",
+    "_notebooks/tutorial_hlca_experiments.ipynb",
     "_notebooks/experiment_cellranger_idtrack/**",
     "_notebooks/figure_rcparams/**",
     "_notebooks/src/**",
@@ -214,6 +217,7 @@ texinfo_documents = [
 
 html_css_files = [
     "custom_settings.css",
+    "tutorials.css",
 ]
 
 autoclass_content = "both"  # add init into the file class description

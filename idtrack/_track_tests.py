@@ -985,7 +985,8 @@ class TrackTests(Track, ABC):
         release constraint.
 
         Args:
-            assembly (int): NCBI assembly code (integer).
+            assembly (int): Genome assembly code used in Ensembl core schema names
+                (e.g. ``38`` = human GRCh38, ``39`` = mouse GRCm39, ``111`` = pig Sscrofa11.1).
             include_ensembl (bool): Whether Ensembl backbone databases may be returned
                 as *database*.
             release_lower_limit (int | None): Smallest permissible Ensembl release number

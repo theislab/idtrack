@@ -142,9 +142,12 @@ class API:
             organism_name (str): Canonical Ensembl species name (e.g. ``"homo_sapiens"``).
             snapshot_release (int): Most recent Ensembl release to include; later releases are ignored for
                 reproducibility.
-            genome_assembly (int | None): NCBI assembly version to build against (e.g. ``38`` for GRCh38,
-                ``37`` for GRCh37, ``39`` for GRCm39). If ``None`` (default), the highest-priority assembly configured
-                for the organism is used.
+            genome_assembly (int | None): Genome assembly code used in Ensembl core schema names
+                (``<organism>_core_<release>_<assembly>``). This selects the **primary** assembly for the snapshot
+                (e.g. ``38`` = human GRCh38, ``37`` = human GRCh37, ``39`` = mouse GRCm39, ``111`` = pig Sscrofa11.1).
+                If ``None`` (default), the highest-priority assembly configured for the organism is used. Note that
+                the resulting snapshot graph can still include additional assemblies within the snapshot window;
+                use :py:meth:`idtrack.API.list_genome_assemblies` to inspect what is present.
 
         Returns:
             idtrack._database_manager.DatabaseManager: A manager ready for use by graph-building and
@@ -184,8 +187,11 @@ class API:
                 :py:meth:`idtrack.API.resolve_organism`.
             snapshot_release (int): Ensembl release anchoring this build. Data from later releases are ignored to ensure
                 reproducible results.
-            genome_assembly (int | None): NCBI assembly version to build against (e.g. ``38`` for GRCh38). If ``None``,
-                IDTrack selects the highest-priority assembly configured for the organism.
+            genome_assembly (int | None): Genome assembly code used in Ensembl core schema names
+                (``<organism>_core_<release>_<assembly>``). This selects the **primary** assembly for the snapshot
+                (default: highest-priority/newest configured for the organism). The snapshot graph can still include
+                additional assemblies within the snapshot window; use :py:meth:`idtrack.API.list_genome_assemblies`
+                to inspect what is present.
             return_test (bool): If ``True``, initialise :py:class:`idtrack._track_tests.TrackTests` instead of the
                 standard :py:class:`idtrack._track.Track` to enable test and diagnostics helpers. Defaults to ``False``.
             calculate_caches (bool): If ``True``, eagerly compute the graph’s cached properties. When combined with

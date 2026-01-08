@@ -1,0 +1,101 @@
+/* Tutorial-specific styling shared across notebook tutorials and the landing page. */
+
+/* "Download notebook" link injected by nbsphinx_prolog */
+.idtrack-notebook-meta {
+    margin: 0 0 1rem 0;
+    text-align: right;
+}
+
+.idtrack-notebook-download {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.03);
+    font-size: 0.9em;
+    text-decoration: none;
+}
+
+.idtrack-notebook-download:hover {
+    background: rgba(0, 0, 0, 0.06);
+    text-decoration: none;
+}
+
+/* Tutorial callouts: notebooks use Markdown blockquotes for Tip/Warning style guidance. */
+.rst-content blockquote {
+    margin: 1rem 0;
+    padding: 0.85rem 1rem;
+    border-left: 4px solid #2980b9; /* RTD blue */
+    background: rgba(41, 128, 185, 0.08);
+    border-radius: 6px;
+}
+
+.rst-content blockquote p {
+    margin: 0.25rem 0;
+}
+
+.rst-content blockquote p strong {
+    font-weight: 700;
+}
+
+/* Tutorial landing tables */
+table.idtrack-tutorials-table {
+    max-width: 72rem;
+    width: 100%;
+    table-layout: fixed;
+    margin: 0.5rem auto 1.25rem auto;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+table.idtrack-tutorials-table th {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+table.idtrack-tutorials-table td {
+    vertical-align: top;
+}
+
+/* RTD theme forces `white-space: nowrap` inside responsive tables; override for our tutorials table. */
+.wy-table-responsive table.idtrack-tutorials-table th,
+.wy-table-responsive table.idtrack-tutorials-table td {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+/* Balanced column widths: Part (narrow), Description (wide), Start here (medium) */
+table.idtrack-tutorials-table th:nth-child(1),
+table.idtrack-tutorials-table td:nth-child(1) {
+    width: 7rem;
+}
+
+table.idtrack-tutorials-table th:nth-child(3),
+table.idtrack-tutorials-table td:nth-child(3) {
+    width: 14rem;
+}
+
+table.idtrack-tutorials-table tr:nth-child(even) td {
+    background: rgba(0, 0, 0, 0.015);
+}
+
+/* Sidebar: avoid horizontal “jitter” from long titles and keep clicks predictable. */
+.wy-side-scroll {
+    overflow-x: hidden;
+}
+
+.wy-menu-vertical a {
+    white-space: normal;
+}
+
+/* Sphinx-design cards used on tutorial part pages */
+.sd-card {
+    border-radius: 10px;
+}
+
+.sd-card .sd-card-title {
+    font-weight: 700;
+}

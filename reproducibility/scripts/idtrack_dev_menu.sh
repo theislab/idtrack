@@ -63,10 +63,10 @@ show_envs() {
 
 choose_env() {
   echo "Which conda environment should be used?"
-  echo "Examples: idtrack_poetry_3_9_env, idtrack_poetry_11_env"
+  echo "Examples: idtrack_poetry_3_9_env, idtrack_poetry_3_11_env"
   show_envs
-  read -rp "Enter env name [idtrack_poetry_3_9_env]: " _env
-  ENV_NAME="${_env:-idtrack_poetry_3_9_env}"
+  read -rp "Enter env name [idtrack_poetry_3_11_env]: " _env
+  ENV_NAME="${_env:-idtrack_poetry_3_11_env}"
   echo "Using conda env: $ENV_NAME"
 }
 

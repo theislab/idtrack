@@ -290,6 +290,7 @@ def docs_build(session: Session) -> None:
     session.install(".")
     session.install(
         "sphinx",
+        "sphinx-design",
         "sphinx-click",
         "sphinx-rtd-theme",
         "sphinx-rtd-dark-mode",
@@ -312,6 +313,7 @@ def docs(session: Session) -> None:
     session.install(
         "sphinx",
         "sphinx-autobuild",
+        "sphinx-design",
         "sphinx-click",
         "sphinx-rtd-theme",
         "sphinx-rtd-dark-mode",

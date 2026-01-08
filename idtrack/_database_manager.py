@@ -216,9 +216,11 @@ class DatabaseManager:
                 ``np.inf`` (the default) disables the upper bound and includes all newer releases.
             store_raw_always (bool): When ``True`` raw MySQL tables are *always* copied to
                 ``local_repository`` before conversion; when ``False`` they are kept only in memory.
-            genome_assembly (Optional[int]): NCBI assembly version (e.g. ``38`` for GRCh38). If
-                omitted, the highest-priority assembly for *organism* is used. If *ensembl_release* is
-                provided, the selection is restricted to assemblies that actually contain that release.
+            genome_assembly (Optional[int]): Genome assembly code used in Ensembl core schema names
+                (``<organism>_core_<release>_<assembly>``). This selects the **primary** assembly used for data access
+                (e.g. ``38`` = human GRCh38, ``39`` = mouse GRCm39, ``111`` = pig Sscrofa11.1). If omitted, the
+                highest-priority assembly for *organism* is used. If *ensembl_release* is provided, the selection is
+                restricted to assemblies that actually contain that release.
 
         Raises:
             ValueError: If *form* is not in the supported list or *local_repository* fails basic

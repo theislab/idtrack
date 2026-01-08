@@ -1201,7 +1201,8 @@ class TheGraph(nx.MultiDiGraph):
         order (see :py:attr:`DB.assembly_mysqlport_priority` for organism-scoped priorities).
 
         Returns:
-            set[int]: Unique genome assembly identifiers (e.g. ``104``, ``108``) present anywhere in the graph.
+            set[int]: Unique genome assembly identifiers (e.g. ``38`` for human GRCh38, ``37`` for human GRCh37,
+            ``39`` for mouse GRCm39) present anywhere in the graph.
         """
         self.log.info(f"Cached properties being calculated: {'available_genome_assemblies'}")
 
@@ -1304,7 +1305,7 @@ class TheGraph(nx.MultiDiGraph):
             database (str): External database name for *external* nodes (e.g. ``"uniprot"``, ``"refseq"``) **or** an
                 Ensembl node-type label such as ``"gene"``, ``"transcript"``, or ``"translation"``.  Ensembl labels must
                 match the keys defined in :py:data:`idtrack._db.DB.nts_ensembl`.
-            assembly (int): Genome assembly identifier (e.g. ``1`` for GRCh38) that must be present in
+            assembly (int): Genome assembly identifier (e.g. ``38`` for human GRCh38) that must be present in
                 :py:meth:`~TheGraph.available_genome_assemblies`.
             release (int): Ensembl release number (e.g. ``111``) corresponding to the graph snapshot of interest.
 

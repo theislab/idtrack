@@ -1,151 +1,563 @@
+=================
 Contributor Guide
 =================
 
-Thank you for your interest in improving this project.
-This project is open-source under the `BSD license`_ and
-highly welcomes contributions in the form of bug reports, feature requests, and pull requests.
+Thank you for your interest in contributing to IDTrack! This project is open-source
+under the `BSD 3-Clause License`_ and welcomes contributions from the community.
 
-Here is a list of important resources for contributors:
+.. contents::
+    :local:
+    :depth: 2
+    :backlinks: none
 
-- `Source Code`_
-- `Documentation`_
-- `Issue Tracker`_
-- `Code of Conduct`_
 
-.. _BSD license: https://opensource.org/licenses/BSD-3-Clause
-.. _Source Code: https://github.com/theislab/idtrack
-.. _Documentation: https://idtrack.readthedocs.io/
-.. _Issue Tracker: https://github.com/theislab/idtrack/issues
+Ways to Contribute
+------------------
 
-How to report a bug
+There are many ways to contribute to IDTrack, regardless of your experience level:
+
+.. list-table::
+    :header-rows: 1
+    :widths: 25 75
+
+    * - Contribution Type
+      - Description
+    * - **Report Bugs**
+      - Help us identify issues and improve reliability
+    * - **Request Features**
+      - Suggest new functionality or enhancements
+    * - **Improve Documentation**
+      - Fix typos, clarify explanations, add examples
+    * - **Submit Code**
+      - Fix bugs or implement new features
+    * - **Add Organism Support**
+      - Configure external databases for new species
+    * - **Answer Questions**
+      - Help other users in discussions and issues
+
+
+Quick Links
+-----------
+
+.. list-table::
+    :widths: 30 70
+
+    * - Source Code
+      - `github.com/theislab/idtrack <https://github.com/theislab/idtrack>`_
+    * - Documentation
+      - `idtrack.readthedocs.io <https://idtrack.readthedocs.io/>`_
+    * - Issue Tracker
+      - `GitHub Issues <https://github.com/theislab/idtrack/issues>`_
+    * - Pull Requests
+      - `GitHub Pull Requests <https://github.com/theislab/idtrack/pulls>`_
+    * - Discussions
+      - `GitHub Discussions <https://github.com/theislab/idtrack/discussions>`_
+    * - Code of Conduct
+      - :doc:`code_of_conduct`
+
+
+Reporting Bugs
+--------------
+
+Found a bug? Please report it on the `Issue Tracker`_.
+
+A good bug report includes:
+
+1. **Summary** - A clear, concise description of the problem
+2. **Environment** - Python version, IDTrack version, operating system
+3. **Steps to reproduce** - Minimal code example that triggers the bug
+4. **Expected behavior** - What you expected to happen
+5. **Actual behavior** - What actually happened (include error messages)
+
+Bug Report Template
+~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: markdown
+
+    ## Environment
+    - IDTrack version: 0.0.x (run `python -c "import idtrack; print(idtrack.__version__)"`)
+    - Python version: 3.11.x (run `python --version`)
+    - OS: Ubuntu 22.04 / macOS 14.x / Windows 11
+
+    ## Description
+    A clear, concise description of what the bug is.
+
+    ## Steps to Reproduce
+    ```python
+    import idtrack
+
+    # Minimal code that triggers the bug
+    api = idtrack.API(local_repository="./cache")
+    # ...
+    ```
+
+    ## Expected Behavior
+    What you expected to happen.
+
+    ## Actual Behavior
+    What actually happened. Include the complete error traceback if applicable.
+
+    ## Additional Context
+    Any other context about the problem (screenshots, related issues, etc.).
+
+
+Requesting Features
 -------------------
 
-Report bugs on the `Issue Tracker`_.
+Have an idea for a new feature? Open an issue on the `Issue Tracker`_ with:
+
+1. **Use case** - Describe the problem you're trying to solve
+2. **Proposed solution** - Your suggested approach
+3. **Alternatives considered** - Other approaches you've thought about
+4. **Impact** - Who would benefit from this feature
+
+.. tip::
+
+    It's a good idea to open an issue before starting work on a feature.
+    This allows maintainers to discuss the approach and avoid duplicate effort.
 
 
-How to request a feature
-------------------------
+Development Setup
+-----------------
 
-Request features on the `Issue Tracker`_.
+Prerequisites
+~~~~~~~~~~~~~
 
+Before setting up your development environment, ensure you have:
 
-How to set up your development environment
-------------------------------------------
+.. list-table::
+    :header-rows: 1
+    :widths: 25 75
 
-You should the ``Pandoc`` installation already to include tutorial Jupter notebooks into the documentation:
+    * - Requirement
+      - Details
+    * - **Python**
+      - 3.9 or later (3.11 recommended)
+    * - **Git**
+      - For version control
+    * - **Pandoc**
+      - Required for building documentation with Jupyter notebooks
+
+Install Pandoc:
 
 .. code-block:: console
 
-    $ brew install pandoc  # MacOS
-    $ sudo apt-get install -y pandoc  # Ubuntu
-    $ choco install pandoc  # Windows
+    # macOS
+    $ brew install pandoc
 
-You need Python 3.9+ and the following tools:
+    # Ubuntu/Debian
+    $ sudo apt-get install -y pandoc
 
-- Poetry_
-- Nox_
-- nox-poetry_
+    # Windows (using Chocolatey)
+    $ choco install pandoc
 
-You can install them with:
+    # Or download from https://pandoc.org/installing.html
 
-.. code:: console
+Development Tools
+~~~~~~~~~~~~~~~~~
+
+IDTrack uses the following tools for development:
+
+.. list-table::
+    :header-rows: 1
+    :widths: 20 40 40
+
+    * - Tool
+      - Purpose
+      - Installation
+    * - Poetry_
+      - Dependency management
+      - ``pip install poetry``
+    * - Nox_
+      - Test automation
+      - ``pip install nox``
+    * - nox-poetry_
+      - Nox + Poetry integration
+      - ``pip install nox-poetry``
+
+Install all development tools:
+
+.. code-block:: console
 
     $ pip install poetry poetry-plugin-export nox nox-poetry
-    # If you installed Poetry via pipx instead:
+
+    # Alternative: If you installed Poetry via pipx
     $ pipx install poetry
     $ pipx inject poetry poetry-plugin-export
 
-Install the package with development requirements:
+Setting Up the Project
+~~~~~~~~~~~~~~~~~~~~~~
 
-.. code:: console
+**Step 1: Fork and clone**
 
-   $ make install
+.. code-block:: console
 
-You can now run an interactive Python session,
-or the command-line interface:
+    # Fork on GitHub, then clone your fork
+    $ git clone https://github.com/YOUR_USERNAME/idtrack.git
+    $ cd idtrack
+    $ git remote add upstream https://github.com/theislab/idtrack.git
 
-.. code:: console
+**Step 2: Install dependencies with Poetry**
 
-   $ poetry run python
-   $ poetry run idtrack
+.. code-block:: console
 
-Please, also have a look at Installation_ to learn any other required packages needed such as ``HDF5``.
+    $ make install
 
-.. _Poetry: https://python-poetry.org/
-.. _Nox: https://nox.thea.codes/
-.. _nox-poetry: https://nox-poetry.readthedocs.io/
-.. _Installation: installation.rst
+This installs IDTrack in development mode with all dependencies.
 
-How to test the project
------------------------
+**Step 3: Verify your setup**
 
-Run the full test suite:
+.. code-block:: console
 
-.. code:: console
+    # Start an interactive Python session
+    $ poetry run python
 
-   $ nox
+    # Or run the CLI
+    $ poetry run idtrack --help
 
-List the available Nox sessions:
+**Step 4: Install pre-commit hooks (recommended)**
 
-.. code:: console
+.. code-block:: console
 
-   $ nox --list-sessions
+    $ nox --session=pre-commit -- install
 
-You can also run a specific Nox session.
-For example, invoke the unit test suite like this:
+This automatically runs code formatting and linting checks before each commit.
 
-.. code:: console
+.. note::
 
-   $ nox --session=tests
+    See :doc:`installation` for additional requirements like HDF5 on Apple Silicon.
 
-Unit tests are located in the ``tests`` directory,
-and are written using the pytest_ testing framework.
 
-.. _pytest: https://pytest.readthedocs.io/
+Running Tests
+-------------
 
-How to build and view the documentation
----------------------------------------
+IDTrack uses pytest_ for testing and Nox_ for test automation.
 
-This project uses Sphinx_ together with several extensions to build the documentation.
-It further requires Pandoc_ to translate various formats.
+Run the Full Test Suite
+~~~~~~~~~~~~~~~~~~~~~~~
 
-To install all required dependencies for the documentation run:
+.. code-block:: console
 
-.. code:: console
+    $ nox
+
+This runs all tests, linting, and type checking.
+
+Run Specific Test Sessions
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+List available sessions:
+
+.. code-block:: console
+
+    $ nox --list-sessions
+
+Run only unit tests:
+
+.. code-block:: console
+
+    $ nox --session=tests
+
+Run tests with a specific Python version:
+
+.. code-block:: console
+
+    $ nox --session=tests --python=3.11
+
+Run Tests Directly with pytest
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For faster iteration during development:
+
+.. code-block:: console
+
+    # Run all tests
+    $ poetry run pytest
+
+    # Run a specific test file
+    $ poetry run pytest tests/test_api.py
+
+    # Run tests matching a pattern
+    $ poetry run pytest -k "test_convert"
+
+    # Run with verbose output
+    $ poetry run pytest -v
+
+    # Run with coverage report
+    $ poetry run pytest --cov=idtrack --cov-report=html
+
+Test Organization
+~~~~~~~~~~~~~~~~~
+
+Tests are located in the ``tests/`` directory:
+
+.. code-block:: text
+
+    tests/
+    ├── test_api.py           # Public API tests
+    ├── test_graph.py         # Graph engine tests
+    ├── test_harmonize.py     # Harmonization tests
+    ├── conftest.py           # Shared fixtures
+    └── ...
+
+
+Building Documentation
+----------------------
+
+IDTrack uses Sphinx_ with nbsphinx_ to build documentation from reStructuredText
+files and Jupyter notebooks.
+
+Install Documentation Dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: console
 
     $ pip install -r docs/requirements.txt
 
-Please note that IDTrack itself must also be installed. To build the documentation run:
+Build the Documentation
+~~~~~~~~~~~~~~~~~~~~~~~
 
-.. code:: console
+.. code-block:: console
 
+    $ cd docs
     $ make html
 
-from inside the docs folder. The generated static HTML files can be found in the `_build/html` folder.
-Simply open them with your favorite browser.
+The generated HTML files are in ``docs/_build/html/``. Open ``index.html`` in your browser.
 
-.. _sphinx: https://www.sphinx-doc.org/en/master/
-.. _pandoc: https://pandoc.org/
+Live Preview During Editing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-How to submit changes
----------------------
+For automatic rebuilds while editing:
 
-Open a `pull request`_ to submit changes to this project against the ``development`` branch.
+.. code-block:: console
 
-Your pull request needs to meet the following guidelines for acceptance:
+    $ pip install sphinx-autobuild
+    $ cd docs
+    $ sphinx-autobuild . _build/html
 
-- The Nox test suite must pass without errors and warnings.
-- Include unit tests when possible.
-- If your changes add functionality, update the documentation accordingly.
+Then open http://localhost:8000 in your browser.
 
-To run linting and code formatting checks before committing your change, you can install pre-commit as a Git hook by running the following command:
+.. note::
 
-.. code:: console
+    IDTrack itself must be installed for the API documentation to build correctly.
+    Notebooks are not executed during builds (``nbsphinx_execute = "never"``);
+    they are rendered with pre-existing outputs.
 
-   $ nox --session=pre-commit -- install
+Documentation Guidelines
+------------------------
 
-It is recommended to open an issue before starting work on anything.
-This will allow a chance to talk it over with the owners and validate your approach.
+When contributing to the documentation website:
 
-.. _pull request: https://github.com/theislab/idtrack/pulls
-.. _Code of Conduct: CODE_OF_CONDUCT.rst
+- **Keep pages scannable**: start with a short summary, then use ``.. contents::`` and tables for structured material.
+- **Prefer cross-links over duplication**: use ``:doc:`...``` for pages and ``:meth:`...``` / ``:class:`...``` for API items.
+- **Tutorial notebooks are source of truth for narrative workflows**: notebooks live in ``docs/_notebooks`` and are
+  rendered by *nbsphinx* without execution during builds.
+- **Avoid huge notebook outputs**: keep outputs concise and deterministic so the rendered docs remain readable.
+
+
+Submitting Changes
+------------------
+
+Workflow Overview
+~~~~~~~~~~~~~~~~~
+
+.. list-table::
+    :header-rows: 1
+    :widths: 10 30 60
+
+    * - Step
+      - Action
+      - Details
+    * - 1
+      - Fork & Clone
+      - Create your own copy of the repository
+    * - 2
+      - Branch
+      - Create a feature branch from ``development``
+    * - 3
+      - Develop
+      - Make your changes with tests
+    * - 4
+      - Test
+      - Run tests and linting locally
+    * - 5
+      - Submit
+      - Create a pull request
+
+Step-by-Step Guide
+~~~~~~~~~~~~~~~~~~
+
+**Step 1: Fork and clone**
+
+.. code-block:: console
+
+    # Fork on GitHub, then clone your fork
+    $ git clone https://github.com/YOUR_USERNAME/idtrack.git
+    $ cd idtrack
+    $ git remote add upstream https://github.com/theislab/idtrack.git
+
+**Step 2: Create a feature branch**
+
+.. code-block:: console
+
+    $ git checkout development
+    $ git pull upstream development
+    $ git checkout -b feature/your-feature-name
+
+Use descriptive branch names:
+
+- ``feature/add-zebrafish-support``
+- ``fix/hgnc-download-timeout``
+- ``docs/improve-quickstart``
+
+**Step 3: Make your changes**
+
+- Write clear, focused commits
+- Follow the existing code style
+- Add tests for new functionality
+- Update documentation if needed
+
+**Step 4: Run tests and linting**
+
+.. code-block:: console
+
+    $ nox
+
+All tests and checks must pass before submitting.
+
+**Step 5: Push and create a pull request**
+
+.. code-block:: console
+
+    $ git push origin feature/your-feature-name
+
+Then open a pull request on GitHub against the ``development`` branch.
+
+Pull Request Guidelines
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Your pull request should:
+
+- **Pass all tests** - The Nox test suite must pass without errors
+- **Include tests** - Add tests for bug fixes and new features
+- **Update documentation** - If your changes affect user-facing behavior
+- **Have a clear description** - Explain what the PR does and why
+- **Reference issues** - Link to related issues (e.g., "Fixes #123")
+
+Pull Request Template
+~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: markdown
+
+    ## Summary
+    Brief description of what this PR does.
+
+    ## Changes
+    - Added support for X
+    - Fixed bug in Y
+    - Updated documentation for Z
+
+    ## Testing
+    - [ ] Unit tests added/updated
+    - [ ] All tests pass locally (`nox`)
+    - [ ] Documentation builds without errors
+
+    ## Related Issues
+    Fixes #123
+
+
+Code Style
+----------
+
+IDTrack follows these conventions:
+
+.. list-table::
+    :header-rows: 1
+    :widths: 25 75
+
+    * - Aspect
+      - Convention
+    * - **Formatting**
+      - Black (automatically applied by pre-commit)
+    * - **Linting**
+      - Ruff
+    * - **Type hints**
+      - Use type annotations for public APIs
+    * - **Docstrings**
+      - NumPy style
+
+Example Function
+~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    def convert_identifier(
+        self,
+        identifier: str,
+        to_release: int,
+        explain: bool = False,
+    ) -> ConversionResult:
+        """Convert a biological identifier to a target release.
+
+        Parameters
+        ----------
+        identifier
+            The identifier to convert (e.g., gene symbol, Ensembl ID).
+        to_release
+            Target Ensembl release number.
+        explain
+            If True, include detailed mapping information.
+
+        Returns
+        -------
+        ConversionResult
+            The conversion result with mapped identifiers.
+
+        Raises
+        ------
+        ValueError
+            If the identifier format is not recognized.
+
+        Examples
+        --------
+        >>> api.convert_identifier("TP53", to_release=112)
+        ConversionResult(...)
+        """
+        ...
+
+
+Adding Organism Support
+-----------------------
+
+Want to add support for a new organism? This involves configuring external databases
+for the species.
+
+See the detailed tutorial: :doc:`_notebooks/prepare_new_external_yaml`
+
+The general process is:
+
+1. **Create a YAML configuration** for external databases
+2. **Test the configuration** with graph builds
+3. **Validate conversion accuracy** against known mappings
+4. **Submit a pull request** with the new configuration
+
+
+Getting Help
+------------
+
+If you have questions or need help:
+
+- **General questions**: Open a `GitHub Discussion <https://github.com/theislab/idtrack/discussions>`_
+- **Bug reports and features**: Use the `Issue Tracker`_
+- **Direct contact**: See :doc:`authors`
+
+We appreciate all contributions, no matter how small. Thank you for helping make IDTrack better!
+
+
+.. _BSD 3-Clause License: https://opensource.org/licenses/BSD-3-Clause
+.. _Issue Tracker: https://github.com/theislab/idtrack/issues
+.. _Poetry: https://python-poetry.org/
+.. _Nox: https://nox.thea.codes/
+.. _nox-poetry: https://nox-poetry.readthedocs.io/
+.. _pytest: https://pytest.readthedocs.io/
+.. _Sphinx: https://www.sphinx-doc.org/
+.. _nbsphinx: https://nbsphinx.readthedocs.io/

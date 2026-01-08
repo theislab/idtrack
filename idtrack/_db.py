@@ -219,7 +219,7 @@ class DB:
 
     # HDF5 Settings
     placeholder_na = "_PLACEHOLDER_NA_"
-    UTF8 = "utf-8"  # Define a UTF-8 string dtype for HDF5
+    UTF8 = "utf-8"
     UTF8_STR = h5py.string_dtype(encoding=UTF8)
 
 

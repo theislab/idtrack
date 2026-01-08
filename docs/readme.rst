@@ -42,6 +42,7 @@ What makes IDTrack different
 ----------------------------
 
 * **Time-aware mapping**: treat Ensembl releases as a “time axis” and travel forward/backward through identifier history.
+* **Assembly-aware mapping**: harmonize identifiers across genome builds (e.g. GRCh37 ↔ GRCh38) and respect external databases that are assembly-scoped.
 * **Snapshot boundary for reproducibility**: build a release-bounded graph snapshot so results are stable and repeatable.
 * **Explicit external database opt-in**: choose which external namespaces participate via a small, editable YAML contract.
 * **Transparency over coercion**: conversions are naturally classified as **1→0** (no match), **1→1** (clean), or **1→n** (ambiguous).
