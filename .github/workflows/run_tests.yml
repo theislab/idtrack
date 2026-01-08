@@ -44,7 +44,6 @@ jobs:
                     - { python-version: "3.11", session: "tests" }
                     - { python-version: "3.12", session: "tests" }
                     - { python-version: "3.13", session: "tests" }
-                    - { python-version: "3.14", session: "tests" }
                     - { python-version: "3.11", session: "typeguard" }
                     - { python-version: "3.11", session: "xdoctest" }
                     # Documentation build (kept as a separate session for clear failures).

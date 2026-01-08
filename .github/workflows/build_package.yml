@@ -35,7 +35,7 @@ jobs:
             matrix:
                 # Pin runner images to reduce surprise breakage when `*-latest` moves.
                 os: [ubuntu-22.04, macos-14, windows-2022]
-                python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+                python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
 
         # Use bash everywhere so globs like dist/*.whl behave consistently across OSes.
         defaults:

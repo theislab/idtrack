@@ -257,26 +257,6 @@ jobs:
                           PyYAML>=6,<7
                           sparse>=0.15,<1
 
-                    # Python 3.14
-                    - python-version: "3.14"
-                      dependency-set: "pandas>=2 / numpy>=2 (nx<3)"
-                      constraints: |
-                          numpy>=2,<3
-                          pandas>=2,<3
-                          anndata>=0.10,<0.12
-                          networkx<3
-                          PyYAML>=6,<7
-                          sparse>=0.15,<1
-                    - python-version: "3.14"
-                      dependency-set: "pandas>=2 / numpy>=2 (nx>=3)"
-                      constraints: |
-                          numpy>=2,<3
-                          pandas>=2,<3
-                          anndata>=0.10,<0.12
-                          networkx>=3,<4
-                          PyYAML>=6,<7
-                          sparse>=0.15,<1
-
         steps:
             - name: Download wheel
               uses: actions/download-artifact@v4

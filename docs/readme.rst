@@ -28,7 +28,7 @@
    :target: https://codecov.io/gh/theislab/idtrack
    :alt: Codecov
 
-Reproducible biological identifier mapping across time and databases
+Cross-Temporal and Cross-Database Biological Identifier Mapping
 --------------------------------------------------------------------
 
 Modern biology constantly mixes identifiers from different years, databases, and genome builds. The result is a familiar set of problems:

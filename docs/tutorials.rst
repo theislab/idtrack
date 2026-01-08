@@ -12,11 +12,6 @@ How to use the tutorials
 3. Run **Part 2–3** once per organism/configuration (YAML + graph snapshots).
 4. Reuse the built snapshots for all downstream work (Parts 4–7).
 
-.. note::
-
-   Notebook pages are rendered as documentation and are **not executed** during the docs build.
-   Download the notebooks and run them locally if you want to execute the code cells.
-
 .. list-table:: Quick map (by task)
     :header-rows: 1
 
