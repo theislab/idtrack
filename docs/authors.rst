@@ -142,7 +142,7 @@ For academic publications, you may also cite the specific version you used:
     @software{idtrack_version,
       author = {Inecik, Kemal},
       title = {IDTrack},
-      version = {0.0.4},
+      version = {0.0.5},
       url = {https://github.com/theislab/idtrack},
       year = {2025}
     }

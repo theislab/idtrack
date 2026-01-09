@@ -20,7 +20,7 @@ __email__: str = "k.inecik@gmail.com"
 try:  # pragma: no cover
     __version__: str = _metadata.version(__name__)
 except _metadata.PackageNotFoundError:  # Local/editable install
-    __version__ = "0.0.4"
+    __version__ = "0.0.5"
 
 
 # Public re-exports
