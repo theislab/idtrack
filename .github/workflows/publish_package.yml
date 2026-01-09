@@ -47,7 +47,7 @@ jobs:
                   from pathlib import Path
 
                   tag = os.environ["RELEASE_TAG"].strip()
-                  match = re.search(r"(\\d+\\.\\d+\\.\\d+(?:[a-zA-Z0-9\\.\\-]*)?)", tag)
+                  match = re.search(r"(\d+\.\d+\.\d+(?:[a-zA-Z0-9.\-]*)?)", tag)
                   if not match:
                       raise SystemExit(f"Could not parse a version from release tag: {tag!r}")
 
