@@ -25,6 +25,7 @@ except _metadata.PackageNotFoundError:  # Local/editable install
 
 # Public re-exports
 from idtrack._api import API as API  # noqa: F401
+from idtrack._connection_bridge import ConnectionBridge as ConnectionBridge  # noqa: F401
 from idtrack._database_manager import DatabaseManager as DatabaseManager  # noqa: F401
 from idtrack._db import DB as DB  # noqa: F401
 from idtrack._external_databases import ExternalDatabases as ExternalDatabases  # noqa: F401
@@ -37,6 +38,7 @@ from idtrack._verify_organism import VerifyOrganism as VerifyOrganism  # noqa: F
 
 __all__: list[str] = [
     "API",
+    "ConnectionBridge",
     "DatabaseManager",
     "DB",
     "ExternalDatabases",

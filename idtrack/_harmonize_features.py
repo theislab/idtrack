@@ -134,7 +134,7 @@ class HarmonizeFeatures:
         elif verbose_level == 3:
             _logging = logging.DEBUG
         else:
-            raise ValueError
+            raise ValueError(f"verbose_level must be 0, 1, 2, or 3, got {verbose_level!r}.")
         self.verbose_level = verbose_level
 
         self.idt = idtrack.API(local_repository=self.idtrack_local_repository)
@@ -979,7 +979,7 @@ class HarmonizeFeatures:
                 remove_var_columns.append(new_final_database_var_column)
 
             else:
-                raise ValueError
+                raise ValueError(f"Unexpected harmonization state for dataset {handle!r}.")
 
             # create a mask to array and put it in `uns`, to specify which
             # are added `0`s because of the `idtrack` process.

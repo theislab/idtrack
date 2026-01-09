@@ -8,13 +8,13 @@ Tutorials
 
    _notebooks/00_idtrack_overview
    _notebooks/01_installation_guide
-   _notebooks/prepare_new_external_yaml
-   _notebooks/initialization_graph
-   _notebooks/api_deep_dive_human
-   _notebooks/tutorial_harmonization
-   _notebooks/tutorial_humanization_mouse_pig_to_human
-   _notebooks/08_advanced_topics
-   Appendix <_notebooks/initialization_test>
+   _notebooks/02_prepare_new_external_yaml
+   _notebooks/03_initialization_graph
+   _notebooks/04_api_deep_dive_human
+   _notebooks/05_tutorial_harmonization
+   _notebooks/06_tutorial_humanization_mouse_pig_to_human
+   _notebooks/07_advanced_topics
+   Appendix <_notebooks/99_initialization_test>
 
 These tutorials are the **primary learning resource** for IDTrack. They are written for wet-lab researchers (basic Python familiarity) and bioinformaticians (advanced patterns), and they cover both cross-release and cross-assembly identifier mapping.
 
@@ -35,22 +35,22 @@ These tutorials are the **primary learning resource** for IDTrack. They are writ
       - :doc:`_notebooks/01_installation_guide`
     * - Part 2
       - External database configuration (YAML) for human, mouse, pig (and how to add a new organism)
-      - :doc:`_notebooks/prepare_new_external_yaml`
+      - :doc:`_notebooks/02_prepare_new_external_yaml`
     * - Part 3
-      - Build snapshot graphs (multi-assembly by default), reuse caches, and manage rebuilds across organisms and output assemblies
-      - :doc:`_notebooks/initialization_graph`
+      - Build snapshot graphs (multi-assembly where applicable), reuse caches, and manage rebuilds across organisms and output assemblies
+      - :doc:`_notebooks/03_initialization_graph`
     * - Part 4
       - Core API usage (single + batch conversion, explainability, introspection)
-      - :doc:`_notebooks/api_deep_dive_human`
+      - :doc:`_notebooks/04_api_deep_dive_human`
     * - Part 5
       - Real dataset workflows (harmonization, integration hygiene, legacy rescue)
-      - :doc:`_notebooks/tutorial_harmonization`
+      - :doc:`_notebooks/05_tutorial_harmonization`
     * - Part 6
       - Cross-species “humanization” workflows and comparative-analysis preparation
-      - :doc:`_notebooks/tutorial_humanization_mouse_pig_to_human`
+      - :doc:`_notebooks/06_tutorial_humanization_mouse_pig_to_human`
     * - Part 7
       - Production patterns (profiles, automation, diagnostics, pipelines)
-      - :doc:`_notebooks/08_advanced_topics`
+      - :doc:`_notebooks/07_advanced_topics`
     * - Appendix
       - Self-tests, sanity checks, and troubleshooting helpers
-      - :doc:`Appendix <_notebooks/initialization_test>`
+      - :doc:`Appendix <_notebooks/99_initialization_test>`

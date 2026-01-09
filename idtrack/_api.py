@@ -306,7 +306,7 @@ class API:
         elif strategy == "all":
             prioritize_to_one_filter = False
         else:
-            raise ValueError("Invalid choice for `strategy`.")
+            raise ValueError(f"Invalid strategy={strategy!r}. Valid options are 'best' or 'all'.")
 
         # Get the graph ID if possible.
         track = self._require_track()
@@ -503,7 +503,10 @@ class API:
                 continue
 
             if len(i["target_id"]) == 0:
-                raise ValueError("Unexpected error.")
+                raise ValueError(
+                    f"Unexpected conversion result: query_id={i.get('query_id')!r} returned an empty target_id list. "
+                    "This indicates an internal error in the conversion logic. Please report this issue."
+                )
 
             if i["no_target"]:
                 if len(i["target_id"]) == 1:

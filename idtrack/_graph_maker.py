@@ -231,7 +231,7 @@ class GraphMaker:
                     sly = int(entry["assembly"])
 
                     if sly not in DB.all_assemblies:
-                        raise ValueError
+                        raise ValueError(f"Unknown assembly {sly!r}. Valid assemblies: {sorted(DB.all_assemblies)}.")
 
                     if e1 and e2 and er and edb and sly:
                         if e1 not in graph_nodes_before_external:
@@ -250,8 +250,9 @@ class GraphMaker:
                             elif any(
                                 [e1 in graph_nodes_added_assembly[i] for i in graph_nodes_added_assembly if i != sly]
                             ):
-                                # Hypothetical statement for now, as there are only two assembly in Ensembl.
-                                # 'create_external_all' method should have resolve the issue.
+                                # The same Ensembl node should not need to be introduced via multiple *non-primary*
+                                # assemblies. If it happens, it means assembly-prioritised de-duplication did not
+                                # behave as expected upstream (see `create_external_all`).
                                 raise ValueError("Node should have been already added by a higher priority assembly.")
 
                             elif e1 not in graph_nodes_added_assembly[sly]:
@@ -262,7 +263,8 @@ class GraphMaker:
                                     # IDs retired before `min(db_manager.available_releases)` will be missing only.
                                     # In the first possible release, all should have been already added.
 
-                                    # Here, the if-elif statement is written in case of third assembly in the future.
+                                    # Multiple assemblies are supported; new nodes must be introduced at the first
+                                    # release where they become available for that assembly.
                                     raise ValueError(
                                         "The new nodes here should have been added in "
                                         "the first Ensembl release possible."
@@ -496,7 +498,9 @@ class GraphMaker:
                 node_att = g.nodes[m]
                 for na in node_att:
                     if na not in merged_node_attributes:
-                        raise ValueError
+                        raise ValueError(
+                            f"Node attribute {na!r} in {m!r} not found in merged attributes {list(merged_node_attributes.keys())}."
+                        )
                     # Only node_type_str is allowed, and it must match across merged nodes
                     if na != DB.node_type_str or merged_node_attributes[na] != node_att[na]:
                         raise NotImplementedError
@@ -713,7 +717,10 @@ class GraphMaker:
             # defined available release for the given organism.
             _or, _nr = int(e["old_release"]), int(e["new_release"])
             if _or not in _available_set or _nr not in _available_set:
-                raise ValueError
+                raise ValueError(
+                    f"Release {_or} or {_nr} not in available releases {sorted(_available_set)}. "
+                    f"Row: old_stable_id={e['old_stable_id']}, new_stable_id={e['new_stable_id']}."
+                )
 
             # Create the edge using the pipe function.
             edge_maker_pipe(
@@ -793,7 +800,7 @@ class GraphMaker:
                         # Self loops can be further defined after the first appearance of the latest_id, so keep the
                         # last possible old_release to use afterwards.
                         if int(from_db) != from_db:
-                            raise ValueError
+                            raise ValueError(f"Expected integer release for {lat_id!r}, got {from_db!r}.")
                         latest_nodes_last_rel[lat_id] = int(from_db)
                     else:
                         latest_nodes_last_rel[lat_id] = rel_re
@@ -881,7 +888,10 @@ class GraphMaker:
             self.log.warning(f"Retired ID come alive again: {reassignment_retirement}.")
         # Make sure all latest releases IDs are visited at least once.
         if not np.all([isinstance(latest_nodes_last_rel[i], int) for i in latest_nodes_last_rel]):
-            raise ValueError
+            non_int_ids = [i for i in latest_nodes_last_rel if not isinstance(latest_nodes_last_rel[i], int)]
+            raise ValueError(
+                f"Not all latest node releases are integers. Non-integer IDs: {non_int_ids[:5]}{'...' if len(non_int_ids) > 5 else ''}."
+            )
 
         # Then, very similar to above reverse loop, but in forward direction.
         # Main aim of this loop is to add Retired information to the nodes.
@@ -994,7 +1004,7 @@ class GraphMaker:
                 id_to_split.split(DB.id_ver_delimiter)[1] if id_to_split.count(DB.id_ver_delimiter) == 1 else np.nan
             )  # there are max 1 as checked previously
         else:
-            raise ValueError
+            raise ValueError(f"which_part must be 'ID' or 'Version', got {which_part!r}.")
 
     @staticmethod
     def remove_non_gene_trees(graph: TheGraph, forms_remove: Optional[list] = None) -> TheGraph:

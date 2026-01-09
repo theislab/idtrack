@@ -763,10 +763,10 @@ def read_exported(hierarchy: str, file_path: str) -> Union[pd.DataFrame, pd.Seri
         conflicts with writers operating on the same file.
     """
     if not os.access(file_path, os.R_OK):
-        raise FileNotFoundError("The file is not exist or not readable.")
+        raise FileNotFoundError(f"The file {file_path!r} does not exist or is not readable.")
 
     if not check_h5_key(file_path, hierarchy):
-        raise KeyError
+        raise KeyError(f"Key {hierarchy!r} not found in HDF5 file {file_path!r}.")
 
     df = read_hdf(path=file_path, key=hierarchy, mode="r")
     return df

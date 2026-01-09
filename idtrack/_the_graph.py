@@ -386,7 +386,10 @@ class TheGraph(nx.MultiDiGraph):
             if j not in result:  # Make sure there is only one and only one after lower conversion.
                 result[j] = i
             else:
-                raise ValueError(f"The node {i} and {result[j]} has the same lower character formats.")
+                raise ValueError(
+                    f"Node name collision: {i!r} and {result[j]!r} both normalize to {j!r}. "
+                    f"This may indicate duplicate entries in the graph data."
+                )
 
         return result
 
@@ -654,7 +657,10 @@ class TheGraph(nx.MultiDiGraph):
             t_ins = self.get_next_edge_releases(from_id=the_id, reverse=False)
 
             if len(t_outs) == 0 and len(t_ins) == 0:
-                raise ValueError(f"No out and in edges for the given ID: {the_id}.")
+                raise ValueError(
+                    f"Node {the_id!r} has no incoming or outgoing edges. "
+                    f"This may indicate an orphaned node or data integrity issue in the graph."
+                )
 
             elif len(t_outs) == 0:
                 if self.nodes[the_id]["Version"] != DB.no_old_node_id:
@@ -772,7 +778,10 @@ class TheGraph(nx.MultiDiGraph):
             return self.get_active_ranges_of_id[the_id]
 
         else:
-            raise ValueError(f"Query `{the_id}` isn't `{DB.nts_ensembl['gene']}` or in `{DB.nts_assembly_gene}`.")
+            raise ValueError(
+                f"Cannot get active ranges for {the_id!r}: node type {ndt!r} is not a gene type. "
+                f"Expected 'ensembl_gene' or an assembly-specific gene type."
+            )
 
     def get_next_edge_releases(self, from_id: str, reverse: bool) -> list[int]:
         """List the Ensembl releases reachable by the **next** (or **previous**) edges from *from_id*.
@@ -950,7 +959,7 @@ class TheGraph(nx.MultiDiGraph):
                 ValueError: If *l1* ≤ 0, *l1* > *l2*, or *l2* is neither an integer nor ``np.inf``.
             """
             if not 0 < l1 <= l2:
-                raise ValueError
+                raise ValueError(f"Invalid release range: l1={l1}, l2={l2}. Expected 0 < l1 <= l2.")
 
             if not np.isinf(l2) and isinstance(l2, int):
                 right_l2 = l2

@@ -563,7 +563,10 @@ class TrackTests(Track, ABC):
               healthy build.
         """
         if from_database in DB.nts_ensembl or to_database in DB.nts_ensembl:
-            raise ValueError
+            raise ValueError(
+                f"Cannot use Ensembl node types directly. "
+                f"from_database={from_database!r}, to_database={to_database!r} must not be in {DB.nts_ensembl}."
+            )
 
         ids_from = sorted(self.graph.get_id_list(from_database, from_assembly, from_release))
         ids_to = set(self.graph.get_id_list(to_database, self.graph.graph["genome_assembly"], to_release))
@@ -576,7 +579,7 @@ class TrackTests(Track, ABC):
             from_faction_count = ceil(len(ids_from) * from_fraction)
             ids_from = sorted(random.sample(ids_from, from_faction_count))  # noqa: S311
         else:
-            raise ValueError
+            raise ValueError(f"from_fraction must be in range (0.0, 1.0], got {from_fraction!r}.")
 
         # Metric scaffold
         parameters: dict[str, Union[bool, str, int, float]] = {
@@ -675,7 +678,7 @@ class TrackTests(Track, ABC):
                         if len(converted_item) == 1:
                             metrics["one_to_multiple_final_conversion"].append(the_id)
                     else:
-                        raise ValueError
+                        raise ValueError(f"Unexpected empty conversion result for ID {the_id!r}.")
 
                     # How much of the converted IDs show the same ID
                     for c in covr:
@@ -701,7 +704,7 @@ class TrackTests(Track, ABC):
         # `converted_item_dict_reversed` maps every target ID to the list of
         # source IDs that converted to it (built earlier inside the big mapping
         # loop).  We inspect only those targets hit by ≥ 2 sources - a “clash”.
-        for _, cidr_val in metrics["converted_item_dict_reversed"].items():
+        for target_id, cidr_val in metrics["converted_item_dict_reversed"].items():
 
             # Skip non-clashing targets (exactly one source mapped here).
             if len(cidr_val) > 1:
@@ -717,7 +720,7 @@ class TrackTests(Track, ABC):
                 elif s2:  # only 1→1 sources present
                     clash_one_one += 1
                 else:
-                    raise ValueError
+                    raise ValueError(f"Unexpected state: no sources found for clashing ID {target_id!r}.")
         metrics["clashing_id_type"] = [clash_one_one, clash_multi_multi, clash_multi_one]
 
         t2 = time.time()
@@ -915,7 +918,10 @@ class TrackTests(Track, ABC):
         if not self.db_manager.check_if_change_assembly_works(
             db_manager=self.db_manager.change_release(ens_rel), target_assembly=assembly
         ):
-            raise ValueError
+            raise ValueError(
+                f"Cannot change to assembly {assembly} at release {ens_rel}. "
+                f"The target assembly is not available for this release."
+            )
 
         dm = self.db_manager.change_release(ens_rel).change_assembly(assembly)
 

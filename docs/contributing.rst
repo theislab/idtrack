@@ -531,7 +531,7 @@ Adding Organism Support
 Want to add support for a new organism? This involves configuring external databases
 for the species.
 
-See the detailed tutorial: :doc:`_notebooks/prepare_new_external_yaml`
+See the detailed tutorial: :doc:`_notebooks/02_prepare_new_external_yaml`
 
 The general process is:
 

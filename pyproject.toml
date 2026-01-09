@@ -45,6 +45,7 @@ numpy = ">=1.17.4"
 networkx = ">=2.4"
 requests = ">=2.32.4"  # fixes CVE-2024-47081
 urllib3 = ">=2.5.0"  # fixes CVE-2025-50181/50182 (add this line explicitly)
+PySocks = ">=1.7.1"
 PyMySQL = ">=0.9.3"
 tqdm = ">=4.37.0"
 anndata = ">=0.7"

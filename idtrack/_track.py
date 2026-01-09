@@ -2091,14 +2091,14 @@ class Track:
                 def _get_edge_data(u, v):
                     e1 = self.graph.get_edge_data(u, v)
                     e2 = self.graph.get_edge_data(v, u)
-                    if e1 and e2 is None:
+                    if e1 is not None and e2 is None:
                         return e1
-                    elif e2 and e1 is None:
+                    elif e2 is not None and e1 is None:
                         return e2
                     elif e1 is None and e2 is None:
                         raise ValueError(f"No edge between {u!r} and {v!r}.")
                     else:
-                        raise ValueError(f"Two directional edge between {u!r} and {v!r}.")
+                        raise ValueError(f"Bidirectional edge between {u!r} and {v!r}.")
 
                 # these are for external jumps to make it allowed in only assembly defined
                 switch_1 = False

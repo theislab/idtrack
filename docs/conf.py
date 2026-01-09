@@ -103,15 +103,6 @@ exclude_patterns = [
     "Thumbs.db",
     ".DS_Store",
     "**.ipynb_checkpoints",
-    # Legacy/dev notebooks and helper assets not meant for the user-facing tutorial flow.
-    "_notebooks/comparison.ipynb",
-    "_notebooks/example_manual_running.ipynb",
-    "_notebooks/random_data.ipynb",
-    "_notebooks/prepare_new_external_yaml-2.ipynb",
-    "_notebooks/tutorial_hlca_experiments.ipynb",
-    "_notebooks/experiment_cellranger_idtrack/**",
-    "_notebooks/figure_rcparams/**",
-    "_notebooks/src/**",
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
