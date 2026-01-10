@@ -5,17 +5,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>idtrack._api &mdash; idtrack 0.0.4 documentation</title>
+  <title>idtrack._api &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
-      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=f6ff1e94" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
       <script src="../../_static/design-tabs.js?v=f930bc37"></script>
@@ -227,7 +227,11 @@
 <div class="viewcode-block" id="API.get_database_manager">
 <a class="viewcode-back" href="../../reference.html#idtrack._api.API.get_database_manager">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_database_manager</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">organism_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">genome_assembly</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">organism_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">snapshot_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">genome_assembly</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ignore_before</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;DatabaseManager&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a database manager configured for an organism and a release-bounded snapshot.</span>
 
@@ -247,6 +251,11 @@
 <span class="sd">                If ``None`` (default), the highest-priority assembly configured for the organism is used. Note that</span>
 <span class="sd">                the resulting snapshot graph can still include additional assemblies within the snapshot window;</span>
 <span class="sd">                use :py:meth:`idtrack.API.list_genome_assemblies` to inspect what is present.</span>
+<span class="sd">            ignore_before (int | None): Earliest Ensembl release to include in the snapshot window. When ``None``</span>
+<span class="sd">                (default), use the earliest release supported by the public Ensembl MySQL/FTP dumps (see</span>
+<span class="sd">                :py:data:`idtrack._db.DB.mysql_port_min_release`). This default ensures multi-assembly history is</span>
+<span class="sd">                retained for clean-handoff species (e.g. mouse) where older assemblies live entirely in earlier</span>
+<span class="sd">                releases.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            idtrack._database_manager.DatabaseManager: A manager ready for use by graph-building and</span>
@@ -255,9 +264,12 @@
 <span class="sd">        Notes:</span>
 <span class="sd">            Any exceptions raised by :py:class:`idtrack._database_manager.DatabaseManager` propagate unchanged.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">ignore_before</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ignore_before</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">mysql_port_min_release</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
         <span class="k">return</span> <span class="n">DatabaseManager</span><span class="p">(</span>
             <span class="n">organism</span><span class="o">=</span><span class="n">organism_name</span><span class="p">,</span>
             <span class="n">ensembl_release</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">ignore_before</span><span class="o">=</span><span class="n">ignore_before</span><span class="p">,</span>
             <span class="n">ignore_after</span><span class="o">=</span><span class="n">snapshot_release</span><span class="p">,</span>
             <span class="n">form</span><span class="o">=</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">),</span>
             <span class="n">local_repository</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">local_repository</span><span class="p">,</span>
@@ -411,7 +423,7 @@
         <span class="k">elif</span> <span class="n">strategy</span> <span class="o">==</span> <span class="s2">&quot;all&quot;</span><span class="p">:</span>
             <span class="n">prioritize_to_one_filter</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid choice for `strategy`.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid strategy=</span><span class="si">{</span><span class="n">strategy</span><span class="si">!r}</span><span class="s2">. Valid options are &#39;best&#39; or &#39;all&#39;.&quot;</span><span class="p">)</span>
 
         <span class="c1"># Get the graph ID if possible.</span>
         <span class="n">track</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_require_track</span><span class="p">()</span>
@@ -614,7 +626,10 @@
                 <span class="k">continue</span>
 
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unexpected error.&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Unexpected conversion result: query_id=</span><span class="si">{</span><span class="n">i</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;query_id&#39;</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> returned an empty target_id list. &quot;</span>
+                    <span class="s2">&quot;This indicates an internal error in the conversion logic. Please report this issue.&quot;</span>
+                <span class="p">)</span>
 
             <span class="k">if</span> <span class="n">i</span><span class="p">[</span><span class="s2">&quot;no_target&quot;</span><span class="p">]:</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>

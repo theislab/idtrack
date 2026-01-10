@@ -5,17 +5,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>idtrack._the_graph &mdash; idtrack 0.0.4 documentation</title>
+  <title>idtrack._the_graph &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
-      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=f6ff1e94" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
       <script src="../../_static/design-tabs.js?v=f930bc37"></script>
@@ -483,7 +483,10 @@
             <span class="k">if</span> <span class="n">j</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>  <span class="c1"># Make sure there is only one and only one after lower conversion.</span>
                 <span class="n">result</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The node </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="si">}</span><span class="s2"> has the same lower character formats.&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Node name collision: </span><span class="si">{</span><span class="n">i</span><span class="si">!r}</span><span class="s2"> and </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="si">!r}</span><span class="s2"> both normalize to </span><span class="si">{</span><span class="n">j</span><span class="si">!r}</span><span class="s2">. &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;This may indicate duplicate entries in the graph data.&quot;</span>
+                <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">result</span>
 
@@ -756,7 +759,10 @@
             <span class="n">t_ins</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_next_edge_releases</span><span class="p">(</span><span class="n">from_id</span><span class="o">=</span><span class="n">the_id</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t_outs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">t_ins</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No out and in edges for the given ID: </span><span class="si">{</span><span class="n">the_id</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Node </span><span class="si">{</span><span class="n">the_id</span><span class="si">!r}</span><span class="s2"> has no incoming or outgoing edges. &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;This may indicate an orphaned node or data integrity issue in the graph.&quot;</span>
+                <span class="p">)</span>
 
             <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">t_outs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">the_id</span><span class="p">][</span><span class="s2">&quot;Version&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">no_old_node_id</span><span class="p">:</span>
@@ -877,7 +883,10 @@
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_active_ranges_of_id</span><span class="p">[</span><span class="n">the_id</span><span class="p">]</span>
 
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Query `</span><span class="si">{</span><span class="n">the_id</span><span class="si">}</span><span class="s2">` isn&#39;t `</span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="s1">&#39;gene&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">` or in `</span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">nts_assembly_gene</span><span class="si">}</span><span class="s2">`.&quot;</span><span class="p">)</span></div>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Cannot get active ranges for </span><span class="si">{</span><span class="n">the_id</span><span class="si">!r}</span><span class="s2">: node type </span><span class="si">{</span><span class="n">ndt</span><span class="si">!r}</span><span class="s2"> is not a gene type. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Expected &#39;ensembl_gene&#39; or an assembly-specific gene type.&quot;</span>
+            <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="TheGraph.get_next_edge_releases">
@@ -1070,7 +1079,7 @@
 <span class="sd">                ValueError: If *l1* ≤ 0, *l1* &gt; *l2*, or *l2* is neither an integer nor ``np.inf``.</span>
 <span class="sd">            &quot;&quot;&quot;</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">l1</span> <span class="o">&lt;=</span> <span class="n">l2</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid release range: l1=</span><span class="si">{</span><span class="n">l1</span><span class="si">}</span><span class="s2">, l2=</span><span class="si">{</span><span class="n">l2</span><span class="si">}</span><span class="s2">. Expected 0 &lt; l1 &lt;= l2.&quot;</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">l2</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">l2</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
                 <span class="n">right_l2</span> <span class="o">=</span> <span class="n">l2</span>

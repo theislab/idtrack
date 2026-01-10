@@ -6,18 +6,18 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Part 1 — Environment Setup &amp; Installation &mdash; idtrack 0.0.4 documentation</title>
+  <title>Part 1 — Environment Setup &amp; Installation &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
       <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
-      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=f6ff1e94" />
+      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=0e72a3a5" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../_static/doctools.js?v=9bcbadda"></script>
       <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
       <script src="../_static/design-tabs.js?v=f930bc37"></script>
@@ -27,7 +27,7 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Part 2 — External Database Configuration" href="prepare_new_external_yaml.html" />
+    <link rel="next" title="Part 2 — External Database Configuration" href="02_prepare_new_external_yaml.html" />
     <link rel="prev" title="Part 0 — Conceptual Foundation" href="00_idtrack_overview.html" /> 
 </head>
 
@@ -69,13 +69,13 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="prepare_new_external_yaml.html">Part 2 — External Database Configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="initialization_graph.html">Part 3 — Graph Initialization &amp; Management</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api_deep_dive_human.html">Part 4 — Core API Deep-Dive (Human Example)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_harmonization.html">Part 5 — Real-World Experiments: Harmonization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_humanization_mouse_pig_to_human.html">Part 6 — Cross-Species Workflows: Humanization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="08_advanced_topics.html">Part 7 — Advanced Topics</a></li>
-<li class="toctree-l2"><a class="reference internal" href="initialization_test.html">Appendix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_prepare_new_external_yaml.html">Part 2 — External Database Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_initialization_graph.html">Part 3 — Graph Initialization &amp; Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_api_deep_dive_human.html">Part 4 — Core API Deep-Dive (Human Example)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_tutorial_harmonization.html">Part 5 — Real-World Experiments: Harmonization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_tutorial_humanization_mouse_pig_to_human.html">Part 6 — Cross-Species Workflows: Humanization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_advanced_topics.html">Part 7 — Advanced Topics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="99_initialization_test.html">Appendix</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
@@ -175,11 +175,11 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
 <blockquote>
 <div><p><strong>Expected result:</strong> If installation succeeded, you will see an IDTrack version. If it failed, you will see a helpful error message (and the notebook continues).</p>
 </div></blockquote>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">platform</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">platform</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
@@ -200,6 +200,18 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Python: 3.11.12
+Executable: /Users/kemalinecik/tools/apps/mamba/envs/idtrack_dev_env/bin/python
+Platform: macOS-15.7.2-arm64-arm-64bit
+idtrack version: 0.0.5
+idtrack package path: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/idtrack/__init__.py
+</pre></div></div>
+</div>
 </section>
 <section id="Step-4-—-Choose-your-local-repository-directory-(IDTRACK_LOCAL_REPO)">
 <h3>Step 4 — Choose your local repository directory (<code class="docutils literal notranslate"><span class="pre">IDTRACK_LOCAL_REPO</span></code>)<a class="headerlink" href="#Step-4-—-Choose-your-local-repository-directory-(IDTRACK_LOCAL_REPO)" title="Link to this heading"></a></h3>
@@ -219,11 +231,11 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
 <blockquote>
 <div><p><strong>Expected result:</strong> You should see <code class="docutils literal notranslate"><span class="pre">OK</span></code> and the resolved path.</p>
 </div></blockquote>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="n">local_repo</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;IDTRACK_LOCAL_REPO&#39;</span><span class="p">,</span> <span class="s1">&#39;./idtrack_cache&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
@@ -237,6 +249,15 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache
+Write test: OK
+</pre></div></div>
+</div>
 </section>
 <section id="Step-6-—-Network-sanity-checks-(optional,-but-recommended)">
 <h3>Step 6 — Network sanity checks (optional, but recommended)<a class="headerlink" href="#Step-6-—-Network-sanity-checks-(optional,-but-recommended)" title="Link to this heading"></a></h3>
@@ -246,13 +267,13 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
 <li><p>(If IDTrack is installed) what MySQL host does IDTrack expect?</p></li>
 </ul>
 <blockquote>
-<div><p><strong>Warning:</strong> Some institutions block outbound database ports. If REST works but MySQL fails, you may need a VPN or firewall exception for Ensembl MySQL.</p>
+<div><p><strong>Note:</strong> Some institutions block outbound MySQL ports. IDTrack can still work via the HTTPS/FTP MySQL dumps when MySQL is unreachable (slower but functional).</p>
 </div></blockquote>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
 
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
@@ -272,7 +293,7 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
     <span class="n">ports</span> <span class="o">=</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">,</span> <span class="mi">3337</span><span class="p">]</span>
     <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">ports</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="k">with</span> <span class="n">socket</span><span class="o">.</span><span class="n">create_connection</span><span class="p">((</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">),</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+            <span class="k">with</span> <span class="n">socket</span><span class="o">.</span><span class="n">create_connection</span><span class="p">((</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">),</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
                 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Ensembl MySQL: OK (</span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Ensembl MySQL: not reachable (</span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s1">) -&gt; </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
@@ -281,13 +302,24 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Ensembl REST: 200 {&#34;ping&#34;:1}
+Ensembl MySQL: OK (ensembldb.ensembl.org:3306)
+Ensembl MySQL: OK (ensembldb.ensembl.org:5306)
+Ensembl MySQL: OK (ensembldb.ensembl.org:3337)
+</pre></div></div>
+</div>
 </section>
 <section id="What’s-next?">
 <h3>What’s next?<a class="headerlink" href="#What’s-next?" title="Link to this heading"></a></h3>
 <ul class="simple">
 <li><p><strong>Part 0</strong> (concepts): <code class="docutils literal notranslate"><span class="pre">00_idtrack_overview.ipynb</span></code></p></li>
-<li><p><strong>Part 2</strong> (external database configuration): <code class="docutils literal notranslate"><span class="pre">prepare_new_external_yaml.ipynb</span></code></p></li>
-<li><p><strong>Part 3</strong> (graph builds): <code class="docutils literal notranslate"><span class="pre">initialization_graph.ipynb</span></code></p></li>
+<li><p><strong>Part 2</strong> (external database configuration): <code class="docutils literal notranslate"><span class="pre">02_prepare_new_external_yaml.ipynb</span></code></p></li>
+<li><p><strong>Part 3</strong> (graph builds): <code class="docutils literal notranslate"><span class="pre">03_initialization_graph.ipynb</span></code></p></li>
 </ul>
 <blockquote>
 <div><p><strong>Expected milestone after Part 3:</strong> you have a cached graph snapshot on disk, and conversions become fast and reproducible.</p>
@@ -297,7 +329,7 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
 <h3>Troubleshooting (common issues)<a class="headerlink" href="#Troubleshooting-(common-issues)" title="Link to this heading"></a></h3>
 <ul class="simple">
 <li><p><strong>``ImportError: … h5py …`` (often on macOS):</strong> install <code class="docutils literal notranslate"><span class="pre">hdf5</span></code> via conda, then reinstall <code class="docutils literal notranslate"><span class="pre">h5py</span></code>.</p></li>
-<li><p><strong>REST works but MySQL ports fail:</strong> try a different network (VPN, hotspot), or ask IT about outbound ports <code class="docutils literal notranslate"><span class="pre">3306/5306/3337</span></code>.</p></li>
+<li><p><strong>REST works but MySQL ports fail:</strong> this is common; IDTrack will fall back to HTTPS/FTP dumps. If you want live-MySQL speed, you may need outbound ports <code class="docutils literal notranslate"><span class="pre">3306/5306</span></code> (and <code class="docutils literal notranslate"><span class="pre">3337</span></code> only for the human GRCh37 archive).</p></li>
 <li><p><strong>Permission errors in the cache directory:</strong> choose a different <code class="docutils literal notranslate"><span class="pre">IDTRACK_LOCAL_REPO</span></code> you can write to.</p></li>
 <li><p><strong>Slow first run:</strong> normal. The first build populates caches; later runs reuse them.</p></li>
 </ul>
@@ -310,7 +342,7 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="00_idtrack_overview.html" class="btn btn-neutral float-left" title="Part 0 — Conceptual Foundation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="prepare_new_external_yaml.html" class="btn btn-neutral float-right" title="Part 2 — External Database Configuration" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="02_prepare_new_external_yaml.html" class="btn btn-neutral float-right" title="Part 2 — External Database Configuration" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

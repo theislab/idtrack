@@ -1,0 +1,1092 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Part 3 — Graph Initialization &amp; Management &mdash; idtrack 0.0.5 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=0e72a3a5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=282f96c0"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Part 4 — Core API Deep-Dive (Human Example)" href="04_api_deep_dive_human.html" />
+    <link rel="prev" title="Part 2 — External Database Configuration" href="02_prepare_new_external_yaml.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            idtrack
+              <img src="../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../tutorials.html">Tutorials</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="00_idtrack_overview.html">Part 0 — Conceptual Foundation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="01_installation_guide.html">Part 1 — Environment Setup &amp; Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_prepare_new_external_yaml.html">Part 2 — External Database Configuration</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Part 3 — Graph Initialization &amp; Management</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#3.0-—-What-you-should-expect-(time-/-disk)">3.0 — What you should expect (time / disk)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3.0.1-—-Sanity-check:-do-your-external-YAML-files-exist?">3.0.1 — Sanity check: do your external YAML files exist?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3.1–3.3-—-Build-graph-snapshots-(one-per-organism)">3.1–3.3 — Build graph snapshots (one per organism)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#3.1-—-Human-graph-initialization-(multi-assembly)">3.1 — Human graph initialization (multi-assembly)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#3.2-—-Mouse-graph-initialization-(clean-handoff)">3.2 — Mouse graph initialization (clean handoff)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#3.3-—-Pig-graph-initialization-(clean-handoff)">3.3 — Pig graph initialization (clean handoff)</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#3.4-—-Graph-management-(all-species)">3.4 — Graph management (all species)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Reloading-vs-rebuilding">Reloading vs rebuilding</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Cache-hygiene">Cache hygiene</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Switching-organisms-/-assemblies">Switching organisms / assemblies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Performance-tips">Performance tips</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="04_api_deep_dive_human.html">Part 4 — Core API Deep-Dive (Human Example)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_tutorial_harmonization.html">Part 5 — Real-World Experiments: Harmonization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_tutorial_humanization_mouse_pig_to_human.html">Part 6 — Cross-Species Workflows: Humanization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_advanced_topics.html">Part 7 — Advanced Topics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="99_initialization_test.html">Appendix</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../tutorials.html">Tutorials</a></li>
+      <li class="breadcrumb-item active">Part 3 — Graph Initialization &amp; Management</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_notebooks/03_initialization_graph.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="idtrack-notebook-meta">
+  <a class="idtrack-notebook-download" href="../_sources/_notebooks/03_initialization_graph.ipynb">Download notebook</a>
+</div><section id="Part-3-—-Graph-Initialization-&amp;-Management">
+<h1>Part 3 — Graph Initialization &amp; Management<a class="headerlink" href="#Part-3-—-Graph-Initialization-&-Management" title="Link to this heading"></a></h1>
+<p><em>Last updated:</em> 2026-01-08</p>
+<p>This notebook shows how to <strong>build and cache</strong> an IDTrack graph snapshot for:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">homo_sapiens</span></code> (human)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mus_musculus</span></code> (mouse)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sus_scrofa</span></code> (pig)</p></li>
+</ul>
+<p>A graph build is the most expensive step. The good news:</p>
+<ul class="simple">
+<li><p>you usually do it <strong>once per organism + snapshot boundary + external YAML configuration</strong></p></li>
+<li><p>the snapshot can be <strong>multi-assembly</strong> (human has overlapping GRCh38/GRCh37; mouse/pig are clean-handoff by release but legacy builds are supported)</p></li>
+<li><p>then you reuse the cached graph for fast conversions</p></li>
+</ul>
+<p><strong>Learning objectives</strong></p>
+<ul class="simple">
+<li><p>Build (or load) a graph snapshot for each organism.</p></li>
+<li><p>Verify that the snapshot exists on disk.</p></li>
+<li><p>Learn practical graph-management habits (reload vs rebuild, cache hygiene).</p></li>
+</ul>
+<blockquote>
+<div><p><strong>Prerequisite:</strong> run <code class="docutils literal notranslate"><span class="pre">02_prepare_new_external_yaml.ipynb</span></code> first (especially important for mouse and pig).</p>
+</div></blockquote>
+<section id="3.0-—-What-you-should-expect-(time-/-disk)">
+<h2>3.0 — What you should expect (time / disk)<a class="headerlink" href="#3.0-—-What-you-should-expect-(time-/-disk)" title="Link to this heading"></a></h2>
+<p>Graph building can take:</p>
+<ul class="simple">
+<li><p>minutes to hours (depends on organism, enabled externals, and cache status)</p></li>
+<li><p>multiple GB of disk for cached tables + the graph pickle</p></li>
+</ul>
+<p>Plan for this like you would plan for downloading a reference genome + annotation.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>1
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load notebook utilities (collapsible output magic for tutorials)</span>
+<span class="o">%</span><span class="k">load_ext</span> _notebook_utils
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>2
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1) Setup</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+
+<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;IDTRACK_LOCAL_REPO&#39;</span><span class="p">,</span> <span class="s1">&#39;./idtrack_cache&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
+<span class="n">api</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Local repository:&#39;</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache
+</pre></div></div>
+</div>
+</section>
+<section id="3.0.1-—-Sanity-check:-do-your-external-YAML-files-exist?">
+<h2>3.0.1 — Sanity check: do your external YAML files exist?<a class="headerlink" href="#3.0.1-—-Sanity-check:-do-your-external-YAML-files-exist?" title="Link to this heading"></a></h2>
+<p>Human has a packaged default, but for mouse and pig you should have local <code class="docutils literal notranslate"><span class="pre">*_externals_modified.yml</span></code> files.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>3
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># External YAML presence (created in Part 2)</span>
+<span class="n">human_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;homo_sapiens_externals_modified.yml&#39;</span>
+<span class="n">mouse_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;mus_musculus_externals_modified.yml&#39;</span>
+<span class="n">pig_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;sus_scrofa_externals_modified.yml&#39;</span>
+
+<span class="n">HAS_HUMAN_YAML</span> <span class="o">=</span> <span class="n">human_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+<span class="n">HAS_MOUSE_YAML</span> <span class="o">=</span> <span class="n">mouse_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+<span class="n">HAS_PIG_YAML</span> <span class="o">=</span> <span class="n">pig_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">((</span><span class="s2">&quot;OK&quot;</span> <span class="k">if</span> <span class="n">HAS_HUMAN_YAML</span> <span class="k">else</span> <span class="s2">&quot;NOTE: missing (human can fall back to packaged default)&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="mi">55</span><span class="p">),</span> <span class="n">human_yaml</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">((</span><span class="s2">&quot;OK&quot;</span> <span class="k">if</span> <span class="n">HAS_MOUSE_YAML</span> <span class="k">else</span> <span class="s2">&quot;MISSING (create in Part 2 for mouse)&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="mi">55</span><span class="p">),</span> <span class="n">mouse_yaml</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">((</span><span class="s2">&quot;OK&quot;</span> <span class="k">if</span> <span class="n">HAS_PIG_YAML</span> <span class="k">else</span> <span class="s2">&quot;MISSING (create in Part 2 for pig)&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="mi">55</span><span class="p">),</span> <span class="n">pig_yaml</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+OK                                                      homo_sapiens_externals_modified.yml
+MISSING (create in Part 2 for mouse)                    mus_musculus_externals_modified.yml
+MISSING (create in Part 2 for pig)                      sus_scrofa_externals_modified.yml
+</pre></div></div>
+</div>
+<p>If a file is missing:</p>
+<ul class="simple">
+<li><p>go back to <code class="docutils literal notranslate"><span class="pre">02_prepare_new_external_yaml.ipynb</span></code></p></li>
+<li><p>generate the template and create the <code class="docutils literal notranslate"><span class="pre">_modified.yml</span></code> file</p></li>
+</ul>
+</section>
+<section id="3.1–3.3-—-Build-graph-snapshots-(one-per-organism)">
+<h2>3.1–3.3 — Build graph snapshots (one per organism)<a class="headerlink" href="#3.1–3.3-—-Build-graph-snapshots-(one-per-organism)" title="Link to this heading"></a></h2>
+<p>The canonical pattern is:</p>
+<ol class="arabic simple">
+<li><p>resolve organism name</p></li>
+<li><p>pick snapshot release</p></li>
+<li><p>(optional) choose a primary genome assembly for output (defaults to the newest/highest-priority assembly for that organism)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">api.build_graph(...)</span></code></p></li>
+<li><p>inspect + reuse</p></li>
+</ol>
+<p>We do this for each organism below. If you only need one organism, run only that section.</p>
+<section id="3.1-—-Human-graph-initialization-(multi-assembly)">
+<h3>3.1 — Human graph initialization (multi-assembly)<a class="headerlink" href="#3.1-—-Human-graph-initialization-(multi-assembly)" title="Link to this heading"></a></h3>
+<p>By default, the human snapshot is built with GRCh38 as the primary assembly (assembly code <code class="docutils literal notranslate"><span class="pre">38</span></code>), while also including GRCh37 (<code class="docutils literal notranslate"><span class="pre">37</span></code>) and older archives when they exist within the snapshot window.</p>
+<p>This is what enables atlas-building workflows where different datasets were annotated with different genome builds, but you want one unified identifier space.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;human&#39;</span><span class="p">)</span>
+<span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="n">latest_release</span>  <span class="c1"># pin to a specific release if needed</span>
+<span class="n">organism</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-01-10 16:42:27 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(&#39;homo_sapiens&#39;, 115)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%</span><span class="k">collapse</span> Click to show build logs
+# Included for tutorial purposes only.
+
+# Build (or load) the graph snapshot
+# - calculate_caches=True speeds up later queries (slower build, faster use).
+api.build_graph(organism_name=organism, snapshot_release=SNAPSHOT_RELEASE, calculate_caches=True)
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<!-- empty output --></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">KeyboardInterrupt</span>                         Traceback (most recent call last)
+<span class="ansi-cyan-fg">Cell</span><span class="ansi-cyan-fg"> </span><span class="ansi-green-fg">In[5]</span><span class="ansi-green-fg">, line 5</span>
+<span class="ansi-green-fg">      1</span> <span style="color: rgb(95,135,135)"># Included for tutorial purposes only.</span>
+<span class="ansi-green-fg">      2</span>
+<span class="ansi-green-fg">      3</span> <span style="color: rgb(95,135,135)"># Build (or load) the graph snapshot</span>
+<span class="ansi-green-fg">      4</span> <span style="color: rgb(95,135,135)"># - calculate_caches=True speeds up later queries (slower build, faster use).</span>
+<span class="ansi-green-fg">----&gt; </span><span class="ansi-green-fg">5</span> <span class="ansi-yellow-bg">api</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">build_graph</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">organism_name</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">organism</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">snapshot_release</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">SNAPSHOT_RELEASE</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">calculate_caches</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(0,135,0)">True</span><span class="ansi-yellow-bg">)</span>
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_api.py:213</span>, in <span class="ansi-cyan-fg">API.build_graph</span><span class="ansi-blue-fg">(self, organism_name, snapshot_release, genome_assembly, return_test, calculate_caches)</span>
+<span class="ansi-green-fg">    211</span>     <span style="color: rgb(0,135,0)">self</span>.track = TrackTests(dm)
+<span class="ansi-green-fg">    212</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
+<span class="ansi-green-fg">--&gt; </span><span class="ansi-green-fg">213</span>     <span style="color: rgb(0,135,0)">self</span>.track = <span class="ansi-yellow-bg">Track</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">dm</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">    215</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> calculate_caches <span class="ansi-bold" style="color: rgb(175,0,255)">and</span> return_test:
+<span class="ansi-green-fg">    216</span>     <span style="color: rgb(0,135,0)">self</span>.calculate_graph_caches(for_test=<span class="ansi-bold" style="color: rgb(0,135,0)">True</span>)
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_track.py:83</span>, in <span class="ansi-cyan-fg">Track.__init__</span><span class="ansi-blue-fg">(self, db_manager, **kwargs)</span>
+<span class="ansi-green-fg">     80</span> graph_creator = GraphMaker(<span style="color: rgb(0,135,0)">self</span>.db_manager)
+<span class="ansi-green-fg">     82</span> <span style="color: rgb(95,135,135)"># Calculate/Load the graph</span>
+<span class="ansi-green-fg">---&gt; </span><span class="ansi-green-fg">83</span> <span style="color: rgb(0,135,0)">self</span>.graph = <span class="ansi-yellow-bg">graph_creator</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">get_graph</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">*</span><span class="ansi-yellow-bg">*</span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">     84</span> <span style="color: rgb(0,135,0)">self</span>.version_info = <span style="color: rgb(0,135,0)">self</span>.graph.graph[<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">version_info</span><span class="ansi-yellow-fg">&#34;</span>]
+<span class="ansi-green-fg">     85</span> <span style="color: rgb(0,135,0)">self</span>._external_entrance_placeholder = {<span class="ansi-bold" style="color: rgb(0,135,0)">False</span>: -<span class="ansi-green-fg">1</span>, <span class="ansi-bold" style="color: rgb(0,135,0)">True</span>: <span class="ansi-green-fg">10001</span>}
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_graph_maker.py:1086</span>, in <span class="ansi-cyan-fg">GraphMaker.get_graph</span><span class="ansi-blue-fg">(self, narrow, create_even_if_exist, save_after_calculation, overwrite_even_if_exist, form_list, narrow_external)</span>
+<span class="ansi-green-fg">   1084</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> os.access(file_path, os.R_OK) <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> create_even_if_exist:
+<span class="ansi-green-fg">   1085</span>     <span style="color: rgb(0,135,0)">self</span>.log.info(<span class="ansi-yellow-fg">f</span><span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">The graph is being constructed: </span><span class="ansi-bold" style="color: rgb(175,95,135)">{</span>file_path<span class="ansi-bold" style="color: rgb(175,95,135)">}</span><span class="ansi-yellow-fg">&#34;</span>)
+<span class="ansi-green-fg">-&gt; </span><span class="ansi-green-fg">1086</span>     g = <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">construct_graph</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">narrow</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">narrow</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">form_list</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">form_list</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">narrow_external</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">narrow_external</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">   1087</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:  <span style="color: rgb(95,135,135)"># Otherwise, just read the file that is already in the directory.</span>
+<span class="ansi-green-fg">   1088</span>     <span style="color: rgb(0,135,0)">self</span>.log.info(<span class="ansi-yellow-fg">f</span><span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">The graph is being read: </span><span class="ansi-bold" style="color: rgb(175,95,135)">{</span>file_path<span class="ansi-bold" style="color: rgb(175,95,135)">}</span><span class="ansi-yellow-fg">&#34;</span>)
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_graph_maker.py:224</span>, in <span class="ansi-cyan-fg">GraphMaker.construct_graph</span><span class="ansi-blue-fg">(self, narrow, form_list, narrow_external)</span>
+<span class="ansi-green-fg">    219</span> <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> ens_rel <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> <span style="color: rgb(0,135,0)">sorted</span>(<span style="color: rgb(0,135,0)">self</span>.db_manager.available_releases):
+<span class="ansi-green-fg">    220</span>     <span style="color: rgb(95,135,135)"># the order is important in adding new nodes into the core graph.</span>
+<span class="ansi-green-fg">    221</span>     <span style="color: rgb(95,135,135)"># it is important to capture correct ens_release in min_ens_release dictionary</span>
+<span class="ansi-green-fg">    223</span>     db_manager = dbman_s[f].change_release(ens_rel)
+<span class="ansi-green-fg">--&gt; </span><span class="ansi-green-fg">224</span>     rc = <span class="ansi-yellow-bg">db_manager</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">create_external_all</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">return_mode</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-fg ansi-yellow-bg">all</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">narrow_external</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">narrow_external</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">    226</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> _ind, entry <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> rc.iterrows():
+<span class="ansi-green-fg">    227</span>         <span style="color: rgb(95,135,135)"># Note that the `rc` dataframe have higher priority assembly entries at the top.</span>
+<span class="ansi-green-fg">    229</span>         e1, e2 = entry[<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">graph_id</span><span class="ansi-yellow-fg">&#34;</span>], entry[<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">id_db</span><span class="ansi-yellow-fg">&#34;</span>]
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_database_manager.py:2279</span>, in <span class="ansi-cyan-fg">DatabaseManager.create_external_all</span><span class="ansi-blue-fg">(self, return_mode, narrow_external)</span>
+<span class="ansi-green-fg">   2277</span> <span class="ansi-bold" style="color: rgb(0,135,0)">except</span> <span class="ansi-bold" style="color: rgb(215,95,95)">ValueError</span>:
+<span class="ansi-green-fg">   2278</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">continue</span>
+<span class="ansi-green-fg">-&gt; </span><span class="ansi-green-fg">2279</span> df_temp = <span class="ansi-yellow-bg">dm</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">get_db</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">df_indicator</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">   2280</span> df_temp[<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">assembly</span><span class="ansi-yellow-fg">&#34;</span>] = i
+<span class="ansi-green-fg">   2281</span> df = pd.concat([df, df_temp])
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_database_manager.py:2484</span>, in <span class="ansi-cyan-fg">DatabaseManager.get_db</span><span class="ansi-blue-fg">(self, df_indicator, create_even_if_exist, save_after_calculation, overwrite_even_if_exist)</span>
+<span class="ansi-green-fg">   2481</span>     df = <span style="color: rgb(0,135,0)">self</span>.create_external_db(filter_mode=<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">all</span><span class="ansi-yellow-fg">&#34;</span>)
+<span class="ansi-green-fg">   2483</span> <span class="ansi-bold" style="color: rgb(0,135,0)">elif</span> main_ind == <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">external</span><span class="ansi-yellow-fg">&#34;</span> <span class="ansi-bold" style="color: rgb(175,0,255)">and</span> param1_ind <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> [<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">relevant</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">database</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">relevant-database</span><span class="ansi-yellow-fg">&#34;</span>]:
+<span class="ansi-green-fg">-&gt; </span><span class="ansi-green-fg">2484</span>     df = <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">create_external_db</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">filter_mode</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">param1_ind</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">   2486</span> <span class="ansi-bold" style="color: rgb(0,135,0)">elif</span> main_ind == <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">idsraw</span><span class="ansi-yellow-fg">&#34;</span>:
+<span class="ansi-green-fg">   2487</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> param1_ind <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> <span style="color: rgb(0,135,0)">self</span>.available_form_of_interests:
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_database_manager.py:1990</span>, in <span class="ansi-cyan-fg">DatabaseManager.create_external_db</span><span class="ansi-blue-fg">(self, filter_mode)</span>
+<span class="ansi-green-fg">   1986</span> a = <span style="color: rgb(0,135,0)">self</span>.get_db(<span class="ansi-yellow-fg">f</span><span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">idsraw_</span><span class="ansi-bold" style="color: rgb(175,95,135)">{</span><span style="color: rgb(0,135,0)">self</span>.form<span class="ansi-bold" style="color: rgb(175,95,135)">}</span><span class="ansi-yellow-fg">&#34;</span>, save_after_calculation=<span style="color: rgb(0,135,0)">self</span>.store_raw_always)
+<span class="ansi-green-fg">   1987</span> ox = <span style="color: rgb(0,135,0)">self</span>.get_table(
+<span class="ansi-green-fg">   1988</span>     <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">object_xref</span><span class="ansi-yellow-fg">&#34;</span>, usecols=[<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">ensembl_id</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">ensembl_object_type</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">xref_id</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">object_xref_id</span><span class="ansi-yellow-fg">&#34;</span>], **m
+<span class="ansi-green-fg">   1989</span> )
+<span class="ansi-green-fg">-&gt; </span><span class="ansi-green-fg">1990</span> x = <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">get_table</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-fg ansi-yellow-bg">xref</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">usecols</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">[</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-fg ansi-yellow-bg">xref_id</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-fg ansi-yellow-bg">external_db_id</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-fg ansi-yellow-bg">dbprimary_acc</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-fg ansi-yellow-bg">display_label</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-bg">]</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">*</span><span class="ansi-yellow-bg">*</span><span class="ansi-yellow-bg">m</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">   1991</span> ed = <span style="color: rgb(0,135,0)">self</span>.get_table(<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">external_db</span><span class="ansi-yellow-fg">&#34;</span>, usecols=[<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">external_db_id</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">db_name</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">db_display_name</span><span class="ansi-yellow-fg">&#34;</span>], **m)
+<span class="ansi-green-fg">   1992</span> ix = <span style="color: rgb(0,135,0)">self</span>.get_table(<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">identity_xref</span><span class="ansi-yellow-fg">&#34;</span>, usecols=[<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">ensembl_identity</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">xref_identity</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">object_xref_id</span><span class="ansi-yellow-fg">&#34;</span>], **m)
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_database_manager.py:1104</span>, in <span class="ansi-cyan-fg">DatabaseManager.get_table</span><span class="ansi-blue-fg">(self, table_key, usecols, create_even_if_exist, save_after_calculation, overwrite_even_if_exist)</span>
+<span class="ansi-green-fg">   1102</span>     df = <span style="color: rgb(0,135,0)">self</span>.download_table(table_key, usecols)
+<span class="ansi-green-fg">   1103</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:  <span style="color: rgb(95,135,135)"># Otherwise, just read the file that is already in the directory.</span>
+<span class="ansi-green-fg">-&gt; </span><span class="ansi-green-fg">1104</span>     df = <span class="ansi-yellow-bg">hs</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">read_exported</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">hierarchy</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">file_path</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">   1106</span> <span style="color: rgb(95,135,135)"># If prompt, save the dataframe in requested format.</span>
+<span class="ansi-green-fg">   1107</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> save_after_calculation:
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_utils_hdf5.py:771</span>, in <span class="ansi-cyan-fg">read_exported</span><span class="ansi-blue-fg">(hierarchy, file_path)</span>
+<span class="ansi-green-fg">    768</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> check_h5_key(file_path, hierarchy):
+<span class="ansi-green-fg">    769</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">raise</span> <span class="ansi-bold" style="color: rgb(215,95,95)">KeyError</span>(<span class="ansi-yellow-fg">f</span><span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">Key </span><span class="ansi-bold" style="color: rgb(175,95,135)">{</span>hierarchy<span class="ansi-bold" style="color: rgb(175,95,135)">!r}</span><span class="ansi-yellow-fg"> not found in HDF5 file </span><span class="ansi-bold" style="color: rgb(175,95,135)">{</span>file_path<span class="ansi-bold" style="color: rgb(175,95,135)">!r}</span><span class="ansi-yellow-fg">.</span><span class="ansi-yellow-fg">&#34;</span>)
+<span class="ansi-green-fg">--&gt; </span><span class="ansi-green-fg">771</span> df = <span class="ansi-yellow-bg">read_hdf</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">file_path</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">key</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">hierarchy</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">mode</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-fg ansi-yellow-bg">r</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">    772</span> <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> df
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_utils_hdf5.py:100</span>, in <span class="ansi-cyan-fg">read_hdf</span><span class="ansi-blue-fg">(path, key, mode)</span>
+<span class="ansi-green-fg">     97</span> index, index_names = _load_index_data(grp)
+<span class="ansi-green-fg">     99</span> <span style="color: rgb(95,135,135)"># Load column data</span>
+<span class="ansi-green-fg">--&gt; </span><span class="ansi-green-fg">100</span> df = <span class="ansi-yellow-bg">_load_column_data</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">grp</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">columns</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">dtypes</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">    102</span> <span style="color: rgb(95,135,135)"># Set index and metadata</span>
+<span class="ansi-green-fg">    103</span> df.index = index
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_utils_hdf5.py:497</span>, in <span class="ansi-cyan-fg">_load_column_data</span><span class="ansi-blue-fg">(grp, columns, dtypes)</span>
+<span class="ansi-green-fg">    495</span> raw = data_grp[col_key][()]
+<span class="ansi-green-fg">    496</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">isinstance</span>(raw[<span class="ansi-green-fg">0</span>], <span style="color: rgb(0,135,0)">bytes</span>):
+<span class="ansi-green-fg">--&gt; </span><span class="ansi-green-fg">497</span>     raw = <span class="ansi-yellow-bg">[</span><span class="ansi-yellow-bg">x</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">decode</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">DB</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">UTF8</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(0,135,0)">for</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">x</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(175,0,255)">in</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">raw</span><span class="ansi-yellow-bg">]</span>
+<span class="ansi-green-fg">    498</span> restored = [pd.NA <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> x == DB.placeholder_na <span class="ansi-bold" style="color: rgb(0,135,0)">else</span> x <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> x <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> raw]
+<span class="ansi-green-fg">    499</span> data_dict[col] = restored
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_utils_hdf5.py:497</span>, in <span class="ansi-cyan-fg">&lt;listcomp&gt;</span><span class="ansi-blue-fg">(.0)</span>
+<span class="ansi-green-fg">    495</span> raw = data_grp[col_key][()]
+<span class="ansi-green-fg">    496</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">isinstance</span>(raw[<span class="ansi-green-fg">0</span>], <span style="color: rgb(0,135,0)">bytes</span>):
+<span class="ansi-green-fg">--&gt; </span><span class="ansi-green-fg">497</span>     raw = [x.decode(DB.UTF8) <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> x <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> raw]
+<span class="ansi-green-fg">    498</span> restored = [pd.NA <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> x == DB.placeholder_na <span class="ansi-bold" style="color: rgb(0,135,0)">else</span> x <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> x <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> raw]
+<span class="ansi-green-fg">    499</span> data_dict[col] = restored
+
+<span class="ansi-red-fg">KeyboardInterrupt</span>:
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<details class="idtrack-collapse">
+<summary>Click to show build logs</summary>
+<pre class="idtrack-collapse-content">2026-01-10 16:43:06 INFO:graph_maker: The graph is being constructed: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache/graph_homo_sapiens_min76_max115_narrow.pickle
+2026-01-10 16:43:06 INFO:graph_maker: Graph is being created: gene
+2026-01-10 16:43:08 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens115_processed_versioninfo_gene`
+2026-01-10 16:43:57 INFO:database_manager: Raw table for `stable_id_event` on ensembl release `115` was downloaded.
+2026-01-10 16:43:57 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens115_mysql_stable_id_event`
+2026-01-10 16:45:07 INFO:database_manager: Raw table for `mapping_session` on ensembl release `115` was downloaded.
+2026-01-10 16:45:07 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens115_mysql_mapping_session`
+2026-01-10 16:45:10 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens115_processed_idhistory_narrow_gene`
+2026-01-10 16:45:14 WARNING:graph_maker: Edge weights ignored due to duplicate entries: 2.
+2026-01-10 16:45:14 INFO:graph_maker: Edges between across different IDs and self loops are being added.
+2026-01-10 16:45:16 INFO:graph_maker: Edges between the same IDs are being added.
+2026-01-10 16:45:34 WARNING:graph_maker: Retired ID come alive again: 3.
+2026-01-10 16:45:34 INFO:graph_maker: Edges showing the retirement of IDs are being added.
+2026-01-10 16:45:40 INFO:graph_maker: Problematic nodes in Ensembl ID history are being removed.
+2026-01-10 16:45:46 WARNING:graph_maker: Nodes are deleted due to Ensembl ID history mistake: 3.
+2026-01-10 16:45:46 INFO:graph_maker: Self-loops for latest release entries are being added.
+2026-01-10 16:45:49 INFO:graph_maker: Node attributes are being added.
+2026-01-10 16:45:50 INFO:graph_maker: Graph is being created: transcript
+2026-01-10 16:45:59 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens115_processed_versioninfo_transcript`
+2026-01-10 16:46:10 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens115_processed_idhistory_narrow_transcript`
+2026-01-10 16:46:27 INFO:graph_maker: Edges between across different IDs and self loops are being added.
+2026-01-10 16:46:33 INFO:graph_maker: Edges between the same IDs are being added.
+2026-01-10 16:48:00 WARNING:graph_maker: Retired ID come alive again: 5.
+2026-01-10 16:48:00 INFO:graph_maker: Edges showing the retirement of IDs are being added.
+2026-01-10 16:48:25 INFO:graph_maker: Problematic nodes in Ensembl ID history are being removed.
+2026-01-10 16:48:47 INFO:graph_maker: Self-loops for latest release entries are being added.
+2026-01-10 16:49:02 INFO:graph_maker: Node attributes are being added.
+2026-01-10 16:49:11 INFO:graph_maker: Graph is being created: translation
+2026-01-10 16:49:14 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens115_processed_versioninfo_translation`
+2026-01-10 16:49:23 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens115_processed_idhistory_narrow_translation`
+2026-01-10 16:49:26 WARNING:graph_maker: Edge weights ignored due to duplicate entries: 4.
+2026-01-10 16:49:26 INFO:graph_maker: Edges between across different IDs and self loops are being added.
+2026-01-10 16:49:27 INFO:graph_maker: Edges between the same IDs are being added.
+2026-01-10 16:49:54 WARNING:graph_maker: Retired ID come alive again: 4.
+2026-01-10 16:49:54 INFO:graph_maker: Edges showing the retirement of IDs are being added.
+2026-01-10 16:50:04 INFO:graph_maker: Problematic nodes in Ensembl ID history are being removed.
+2026-01-10 16:50:14 WARNING:graph_maker: Nodes are deleted due to Ensembl ID history mistake: 1.
+2026-01-10 16:50:14 INFO:graph_maker: Self-loops for latest release entries are being added.
+2026-01-10 16:50:21 INFO:graph_maker: Node attributes are being added.
+2026-01-10 16:50:24 WARNING:graph_maker: Intersecting Ensembl nodes: Nodes in &#x27;transcript&#x27; will be replaced by &#x27;translation&#x27;: &#x27;ENST00000515292.1&#x27;.
+2026-01-10 16:50:28 INFO:graph_maker: Establishing connection between different forms.
+2026-01-10 16:50:29 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens76_processed_idsraw_transcript_gene`
+2026-01-10 16:50:32 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens76_processed_idsraw_translation_gene`
+2026-01-10 16:50:35 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens76_common_relationcurrent`
+2026-01-10 16:50:49 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens77_processed_idsraw_transcript_gene`
+2026-01-10 16:50:52 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens77_processed_idsraw_translation_gene`
+2026-01-10 16:50:55 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens77_common_relationcurrent`
+2026-01-10 16:51:05 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens78_processed_idsraw_transcript_gene`
+2026-01-10 16:51:09 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens78_processed_idsraw_translation_gene`
+2026-01-10 16:51:11 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens78_common_relationcurrent`
+2026-01-10 16:51:20 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens79_processed_idsraw_transcript_gene`
+2026-01-10 16:51:23 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens79_processed_idsraw_translation_gene`
+2026-01-10 16:51:25 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens79_common_relationcurrent`
+2026-01-10 16:51:36 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens80_processed_idsraw_transcript_gene`
+2026-01-10 16:51:40 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens80_processed_idsraw_translation_gene`
+2026-01-10 16:51:42 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens80_common_relationcurrent`
+2026-01-10 16:51:51 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens81_processed_idsraw_transcript_gene`
+2026-01-10 16:51:55 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens81_processed_idsraw_translation_gene`
+2026-01-10 16:51:57 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens81_common_relationcurrent`
+2026-01-10 16:52:09 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens82_processed_idsraw_transcript_gene`
+2026-01-10 16:52:13 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens82_processed_idsraw_translation_gene`
+2026-01-10 16:52:15 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens82_common_relationcurrent`
+2026-01-10 16:52:24 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens83_processed_idsraw_transcript_gene`
+2026-01-10 16:52:28 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens83_processed_idsraw_translation_gene`
+2026-01-10 16:52:30 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens83_common_relationcurrent`
+2026-01-10 16:52:39 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens84_processed_idsraw_transcript_gene`
+2026-01-10 16:52:43 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens84_processed_idsraw_translation_gene`
+2026-01-10 16:52:45 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens84_common_relationcurrent`
+2026-01-10 16:52:55 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens85_processed_idsraw_transcript_gene`
+2026-01-10 16:52:59 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens85_processed_idsraw_translation_gene`
+2026-01-10 16:53:01 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens85_common_relationcurrent`
+2026-01-10 16:53:11 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens86_processed_idsraw_transcript_gene`
+2026-01-10 16:53:15 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens86_processed_idsraw_translation_gene`
+2026-01-10 16:53:17 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens86_common_relationcurrent`
+2026-01-10 16:53:26 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens87_processed_idsraw_transcript_gene`
+2026-01-10 16:53:30 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens87_processed_idsraw_translation_gene`
+2026-01-10 16:53:32 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens87_common_relationcurrent`
+2026-01-10 16:53:42 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens88_processed_idsraw_transcript_gene`
+2026-01-10 16:53:45 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens88_processed_idsraw_translation_gene`
+2026-01-10 16:53:47 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens88_common_relationcurrent`
+2026-01-10 16:53:57 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens89_processed_idsraw_transcript_gene`
+2026-01-10 16:54:01 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens89_processed_idsraw_translation_gene`
+2026-01-10 16:54:03 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens89_common_relationcurrent`
+2026-01-10 16:54:12 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens90_processed_idsraw_transcript_gene`
+2026-01-10 16:54:16 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens90_processed_idsraw_translation_gene`
+2026-01-10 16:54:18 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens90_common_relationcurrent`
+2026-01-10 16:54:28 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens91_processed_idsraw_transcript_gene`
+2026-01-10 16:54:31 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens91_processed_idsraw_translation_gene`
+2026-01-10 16:54:33 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens91_common_relationcurrent`
+2026-01-10 16:54:43 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens92_processed_idsraw_transcript_gene`
+2026-01-10 16:54:47 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens92_processed_idsraw_translation_gene`
+2026-01-10 16:54:49 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens92_common_relationcurrent`
+2026-01-10 16:54:59 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens93_processed_idsraw_transcript_gene`
+2026-01-10 16:55:02 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens93_processed_idsraw_translation_gene`
+2026-01-10 16:55:05 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens93_common_relationcurrent`
+2026-01-10 16:55:14 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens94_processed_idsraw_transcript_gene`
+2026-01-10 16:55:18 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens94_processed_idsraw_translation_gene`
+2026-01-10 16:55:20 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens94_common_relationcurrent`
+2026-01-10 16:55:31 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens95_processed_idsraw_transcript_gene`
+2026-01-10 16:55:34 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens95_processed_idsraw_translation_gene`
+2026-01-10 16:55:37 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens95_common_relationcurrent`
+2026-01-10 16:55:47 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens96_processed_idsraw_transcript_gene`
+2026-01-10 16:55:50 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens96_processed_idsraw_translation_gene`
+2026-01-10 16:55:53 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens96_common_relationcurrent`
+2026-01-10 16:56:03 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens97_processed_idsraw_transcript_gene`
+2026-01-10 16:56:06 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens97_processed_idsraw_translation_gene`
+2026-01-10 16:56:08 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens97_common_relationcurrent`
+2026-01-10 16:56:21 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens98_processed_idsraw_transcript_gene`
+2026-01-10 16:56:24 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens98_processed_idsraw_translation_gene`
+2026-01-10 16:56:27 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens98_common_relationcurrent`
+2026-01-10 16:56:36 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens99_processed_idsraw_transcript_gene`
+2026-01-10 16:56:39 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens99_processed_idsraw_translation_gene`
+2026-01-10 16:56:42 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens99_common_relationcurrent`
+2026-01-10 16:56:51 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens100_processed_idsraw_transcript_gene`
+2026-01-10 16:56:54 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens100_processed_idsraw_translation_gene`
+2026-01-10 16:56:57 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens100_common_relationcurrent`
+2026-01-10 16:57:08 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens101_processed_idsraw_transcript_gene`
+2026-01-10 16:57:10 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens101_processed_idsraw_translation_gene`
+2026-01-10 16:57:13 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens101_common_relationcurrent`
+2026-01-10 16:57:23 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens102_processed_idsraw_transcript_gene`
+2026-01-10 16:57:27 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens102_processed_idsraw_translation_gene`
+2026-01-10 16:57:29 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens102_common_relationcurrent`
+2026-01-10 16:57:40 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens103_processed_idsraw_transcript_gene`
+2026-01-10 16:57:44 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens103_processed_idsraw_translation_gene`
+2026-01-10 16:57:47 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens103_common_relationcurrent`
+2026-01-10 16:57:58 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens104_processed_idsraw_transcript_gene`
+2026-01-10 16:58:01 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens104_processed_idsraw_translation_gene`
+2026-01-10 16:58:04 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens104_common_relationcurrent`
+2026-01-10 16:58:14 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens105_processed_idsraw_transcript_gene`
+2026-01-10 16:58:18 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens105_processed_idsraw_translation_gene`
+2026-01-10 16:58:20 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens105_common_relationcurrent`
+2026-01-10 16:58:31 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens106_processed_idsraw_transcript_gene`
+2026-01-10 16:58:35 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens106_processed_idsraw_translation_gene`
+2026-01-10 16:58:38 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens106_common_relationcurrent`
+2026-01-10 16:58:50 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens107_processed_idsraw_transcript_gene`
+2026-01-10 16:58:53 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens107_processed_idsraw_translation_gene`
+2026-01-10 16:58:56 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens107_common_relationcurrent`
+2026-01-10 16:59:08 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens108_processed_idsraw_transcript_gene`
+2026-01-10 16:59:11 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens108_processed_idsraw_translation_gene`
+2026-01-10 16:59:14 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens108_common_relationcurrent`
+2026-01-10 16:59:25 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens109_processed_idsraw_transcript_gene`
+2026-01-10 16:59:29 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens109_processed_idsraw_translation_gene`
+2026-01-10 16:59:31 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens109_common_relationcurrent`
+2026-01-10 16:59:43 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens110_processed_idsraw_transcript_gene`
+2026-01-10 16:59:47 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens110_processed_idsraw_translation_gene`
+2026-01-10 16:59:49 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens110_common_relationcurrent`
+2026-01-10 17:00:01 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens111_processed_idsraw_transcript_gene`
+2026-01-10 17:00:05 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens111_processed_idsraw_translation_gene`
+2026-01-10 17:00:07 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens111_common_relationcurrent`
+2026-01-10 17:00:19 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens112_processed_idsraw_transcript_gene`
+2026-01-10 17:00:23 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens112_processed_idsraw_translation_gene`
+2026-01-10 17:00:25 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens112_common_relationcurrent`
+2026-01-10 17:00:38 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens113_processed_idsraw_transcript_gene`
+2026-01-10 17:00:44 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens113_processed_idsraw_translation_gene`
+2026-01-10 17:00:47 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens113_common_relationcurrent`
+2026-01-10 17:01:11 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens114_processed_idsraw_transcript_gene`
+2026-01-10 17:01:17 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens114_processed_idsraw_translation_gene`
+2026-01-10 17:01:20 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens114_common_relationcurrent`
+2026-01-10 17:01:39 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens115_processed_idsraw_transcript_gene`
+2026-01-10 17:01:48 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens115_processed_idsraw_translation_gene`
+2026-01-10 17:01:53 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens115_common_relationcurrent`
+2026-01-10 17:02:18 INFO:graph_maker: Edges between external IDs to Ensembl IDs is being added for &#x27;gene&#x27;.
+2026-01-10 17:02:33 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens76_processed_external_relevant_gene`
+2026-01-10 17:03:40 WARNING:database_manager: Dropping 7 malformed rows from `external_db` where `external_db_id` is not numeric (e.g. &#x27;\\&#x27;).
+2026-01-10 17:03:44 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens76_processed_external_relevant_gene`
+2026-01-10 17:04:28 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens77_processed_external_relevant_gene`
+2026-01-10 17:04:59 WARNING:database_manager: Dropping 7 malformed rows from `external_db` where `external_db_id` is not numeric (e.g. &#x27;\\&#x27;).
+2026-01-10 17:05:04 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens77_processed_external_relevant_gene`
+2026-01-10 17:05:52 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens78_processed_external_relevant_gene`
+2026-01-10 17:06:08 WARNING:database_manager: Dropping 7 malformed rows from `external_db` where `external_db_id` is not numeric (e.g. &#x27;\\&#x27;).
+2026-01-10 17:06:13 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens78_processed_external_relevant_gene`
+2026-01-10 17:06:51 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens79_processed_external_relevant_gene`
+2026-01-10 17:07:12 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens79_processed_external_relevant_gene`
+2026-01-10 17:07:50 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens80_processed_external_relevant_gene`
+2026-01-10 17:08:11 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens80_processed_external_relevant_gene`
+2026-01-10 17:08:48 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens81_processed_external_relevant_gene`
+2026-01-10 17:09:08 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens81_processed_external_relevant_gene`
+2026-01-10 17:09:46 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens82_processed_external_relevant_gene`
+2026-01-10 17:10:06 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens82_processed_external_relevant_gene`
+2026-01-10 17:10:44 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens83_processed_external_relevant_gene`
+2026-01-10 17:11:04 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens83_processed_external_relevant_gene`
+2026-01-10 17:11:42 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens84_processed_external_relevant_gene`
+2026-01-10 17:12:02 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens84_processed_external_relevant_gene`
+2026-01-10 17:12:40 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens85_processed_external_relevant_gene`
+2026-01-10 17:13:00 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens85_processed_external_relevant_gene`
+2026-01-10 17:13:40 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens86_processed_external_relevant_gene`
+2026-01-10 17:14:00 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens86_processed_external_relevant_gene`
+2026-01-10 17:14:39 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens87_processed_external_relevant_gene`
+2026-01-10 17:14:59 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens87_processed_external_relevant_gene`
+2026-01-10 17:15:38 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens88_processed_external_relevant_gene`
+2026-01-10 17:15:56 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens88_processed_external_relevant_gene`
+2026-01-10 17:16:31 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens89_processed_external_relevant_gene`
+2026-01-10 17:16:45 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens89_processed_external_relevant_gene`
+2026-01-10 17:17:13 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens90_processed_external_relevant_gene`
+2026-01-10 17:17:28 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens90_processed_external_relevant_gene`
+2026-01-10 17:17:56 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens91_processed_external_relevant_gene`
+2026-01-10 17:18:11 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens91_processed_external_relevant_gene`
+2026-01-10 17:18:39 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens92_processed_external_relevant_gene`
+2026-01-10 17:18:49 WARNING:database_manager: Dropping 7 malformed rows from `external_db` where `external_db_id` is not numeric (e.g. &#x27;\\&#x27;).
+2026-01-10 17:18:53 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens92_processed_external_relevant_gene`
+2026-01-10 17:19:21 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens93_processed_external_relevant_gene`
+2026-01-10 17:19:36 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens93_processed_external_relevant_gene`
+2026-01-10 17:20:03 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens94_processed_external_relevant_gene`
+2026-01-10 17:20:18 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens94_processed_external_relevant_gene`
+2026-01-10 17:20:46 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens95_processed_external_relevant_gene`
+2026-01-10 17:21:01 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens95_processed_external_relevant_gene`
+2026-01-10 17:21:30 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens96_processed_external_relevant_gene`
+2026-01-10 17:21:44 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens96_processed_external_relevant_gene`
+2026-01-10 17:22:13 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens97_processed_external_relevant_gene`
+2026-01-10 17:22:28 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens97_processed_external_relevant_gene`
+2026-01-10 17:22:57 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens98_processed_external_relevant_gene`
+2026-01-10 17:23:13 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens98_processed_external_relevant_gene`
+2026-01-10 17:23:42 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens99_processed_external_relevant_gene`
+2026-01-10 17:23:57 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens99_processed_external_relevant_gene`
+2026-01-10 17:24:28 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens100_processed_external_relevant_gene`
+2026-01-10 17:24:42 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens100_processed_external_relevant_gene`
+2026-01-10 17:25:12 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens101_processed_external_relevant_gene`
+2026-01-10 17:25:26 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens101_processed_external_relevant_gene`
+2026-01-10 17:25:57 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens102_processed_external_relevant_gene`
+2026-01-10 17:26:14 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens102_processed_external_relevant_gene`
+2026-01-10 17:26:43 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens103_processed_external_relevant_gene`
+2026-01-10 17:26:58 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens103_processed_external_relevant_gene`
+2026-01-10 17:27:29 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens104_processed_external_relevant_gene`
+2026-01-10 17:27:43 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens104_processed_external_relevant_gene`
+2026-01-10 17:28:13 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens105_processed_external_relevant_gene`
+2026-01-10 17:28:28 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens105_processed_external_relevant_gene`
+2026-01-10 17:29:32 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens106_processed_external_relevant_gene`
+2026-01-10 17:29:46 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens106_processed_external_relevant_gene`
+2026-01-10 17:30:14 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens107_processed_external_relevant_gene`
+2026-01-10 17:30:29 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens107_processed_external_relevant_gene`
+2026-01-10 17:30:58 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens108_processed_external_relevant_gene`
+2026-01-10 17:31:12 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens108_processed_external_relevant_gene`
+2026-01-10 17:31:42 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens109_processed_external_relevant_gene`
+2026-01-10 17:31:57 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens109_processed_external_relevant_gene`
+2026-01-10 17:32:26 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens110_processed_external_relevant_gene`
+2026-01-10 17:32:43 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens110_processed_external_relevant_gene`
+2026-01-10 17:33:13 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens111_processed_external_relevant_gene`
+2026-01-10 17:33:28 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens111_processed_external_relevant_gene`
+2026-01-10 17:33:59 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens112_processed_external_relevant_gene`
+2026-01-10 17:34:14 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens112_processed_external_relevant_gene`
+2026-01-10 17:34:44 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens113_processed_external_relevant_gene`
+2026-01-10 17:34:59 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens113_processed_external_relevant_gene`
+2026-01-10 17:35:29 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens114_processed_external_relevant_gene`
+2026-01-10 17:35:44 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens114_processed_external_relevant_gene`
+2026-01-10 17:36:15 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens115_processed_external_relevant_gene`
+2026-01-10 17:36:31 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens115_processed_external_relevant_gene`
+2026-01-10 17:36:50 WARNING:graph_maker: New nodes added as assembly nodes: 28738
+2026-01-10 17:36:50 INFO:graph_maker: Edges between external IDs to Ensembl IDs is being added for &#x27;transcript&#x27;.
+2026-01-10 17:37:07 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens76_processed_external_relevant_transcript`
+2026-01-10 17:37:20 WARNING:database_manager: Dropping 7 malformed rows from `external_db` where `external_db_id` is not numeric (e.g. &#x27;\\&#x27;).
+2026-01-10 17:37:32 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens76_processed_external_relevant_transcript`
+2026-01-10 17:38:12 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens77_processed_external_relevant_transcript`
+2026-01-10 17:38:25 WARNING:database_manager: Dropping 7 malformed rows from `external_db` where `external_db_id` is not numeric (e.g. &#x27;\\&#x27;).
+2026-01-10 17:38:34 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens77_processed_external_relevant_transcript`
+2026-01-10 17:39:30 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens78_processed_external_relevant_transcript`
+2026-01-10 17:39:43 WARNING:database_manager: Dropping 7 malformed rows from `external_db` where `external_db_id` is not numeric (e.g. &#x27;\\&#x27;).
+2026-01-10 17:39:52 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens78_processed_external_relevant_transcript`
+2026-01-10 17:40:28 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens79_processed_external_relevant_transcript`
+2026-01-10 17:40:50 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens79_processed_external_relevant_transcript`
+2026-01-10 17:41:28 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens80_processed_external_relevant_transcript`
+2026-01-10 17:41:50 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens80_processed_external_relevant_transcript`
+2026-01-10 17:42:28 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens81_processed_external_relevant_transcript`
+2026-01-10 17:42:50 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens81_processed_external_relevant_transcript`
+2026-01-10 17:43:30 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens82_processed_external_relevant_transcript`
+2026-01-10 17:43:53 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens82_processed_external_relevant_transcript`
+2026-01-10 17:44:32 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens83_processed_external_relevant_transcript`
+2026-01-10 17:44:55 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens83_processed_external_relevant_transcript`
+2026-01-10 17:45:35 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-38.h5` with key `ens84_processed_external_relevant_transcript`
+2026-01-10 17:46:00 INFO:database_manager: Exporting to the following file `homo_sapiens_assembly-37.h5` with key `ens84_processed_external_relevant_transcript`
+<span class="stderr">Traceback (most recent call last):
+  File &quot;/Users/kemalinecik/tools/apps/mamba/envs/idtrack_dev_env/lib/python3.11/site-packages/IPython/core/interactiveshell.py&quot;, line 3670, in run_code
+    exec(code_obj, self.user_global_ns, self.user_ns)
+  File &quot;/var/folders/y7/7c17s0l57szdjc1cdc9dmnpm0000gn/T/ipykernel_5077/295636214.py&quot;, line 5, in &lt;module&gt;
+    api.build_graph(organism_name=organism, snapshot_release=SNAPSHOT_RELEASE, calculate_caches=True)
+  File &quot;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/idtrack/_api.py&quot;, line 213, in build_graph
+    self.track = Track(dm)
+                 ^^^^^^^^^
+  File &quot;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/idtrack/_track.py&quot;, line 83, in __init__
+    self.graph = graph_creator.get_graph(**kwargs)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/idtrack/_graph_maker.py&quot;, line 1086, in get_graph
+    g = self.construct_graph(narrow=narrow, form_list=form_list, narrow_external=narrow_external)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/idtrack/_graph_maker.py&quot;, line 224, in construct_graph
+    rc = db_manager.create_external_all(return_mode=&quot;all&quot;, narrow_external=narrow_external)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/idtrack/_database_manager.py&quot;, line 2279, in create_external_all
+    df_temp = dm.get_db(df_indicator)
+              ^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/idtrack/_database_manager.py&quot;, line 2484, in get_db
+    df = self.create_external_db(filter_mode=param1_ind)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/idtrack/_database_manager.py&quot;, line 1990, in create_external_db
+    x = self.get_table(&quot;xref&quot;, usecols=[&quot;xref_id&quot;, &quot;external_db_id&quot;, &quot;dbprimary_acc&quot;, &quot;display_label&quot;], **m)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/idtrack/_database_manager.py&quot;, line 1104, in get_table
+    df = hs.read_exported(hierarchy, file_path)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/idtrack/_utils_hdf5.py&quot;, line 771, in read_exported
+    df = read_hdf(path=file_path, key=hierarchy, mode=&quot;r&quot;)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/idtrack/_utils_hdf5.py&quot;, line 100, in read_hdf
+    df = _load_column_data(grp, columns, dtypes)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/idtrack/_utils_hdf5.py&quot;, line 497, in _load_column_data
+    raw = [x.decode(DB.UTF8) for x in raw]
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File &quot;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/idtrack/_utils_hdf5.py&quot;, line 497, in &lt;listcomp&gt;
+    raw = [x.decode(DB.UTF8) for x in raw]
+           ^^^^^^^^^^^^^^^^^
+KeyboardInterrupt</span></pre>
+</details></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">KeyboardInterrupt</span>                         Traceback (most recent call last)
+<span class="ansi-cyan-fg">Cell</span><span class="ansi-cyan-fg"> </span><span class="ansi-green-fg">In[5]</span><span class="ansi-green-fg">, line 1</span>
+<span class="ansi-green-fg">----&gt; </span><span class="ansi-green-fg">1</span> <span class="ansi-yellow-bg">get_ipython</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">run_cell_magic</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-fg ansi-yellow-bg">&#39;</span><span class="ansi-yellow-fg ansi-yellow-bg">collapse</span><span class="ansi-yellow-fg ansi-yellow-bg">&#39;</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-fg ansi-yellow-bg">&#39;</span><span class="ansi-yellow-fg ansi-yellow-bg">Click to show build logs</span><span class="ansi-yellow-fg ansi-yellow-bg">&#39;</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-fg ansi-yellow-bg">&#39;</span><span class="ansi-yellow-fg ansi-yellow-bg"># Included for tutorial purposes only.</span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(175,95,0)">\n</span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(175,95,0)">\n</span><span class="ansi-yellow-fg ansi-yellow-bg"># Build (or load) the graph snapshot</span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(175,95,0)">\n</span><span class="ansi-yellow-fg ansi-yellow-bg"># - calculate_caches=True speeds up later queries (slower build, faster use).</span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(175,95,0)">\n</span><span class="ansi-yellow-fg ansi-yellow-bg">api.build_graph(organism_name=organism, snapshot_release=SNAPSHOT_RELEASE, calculate_caches=True)</span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(175,95,0)">\n</span><span class="ansi-yellow-fg ansi-yellow-bg">&#39;</span><span class="ansi-yellow-bg">)</span>
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/tools/apps/mamba/envs/idtrack_dev_env/lib/python3.11/site-packages/IPython/core/interactiveshell.py:2547</span>, in <span class="ansi-cyan-fg">InteractiveShell.run_cell_magic</span><span class="ansi-blue-fg">(self, magic_name, line, cell)</span>
+<span class="ansi-green-fg">   2545</span> <span class="ansi-bold" style="color: rgb(0,135,0)">with</span> <span style="color: rgb(0,135,0)">self</span>.builtin_trap:
+<span class="ansi-green-fg">   2546</span>     args = (magic_arg_s, cell)
+<span class="ansi-green-fg">-&gt; </span><span class="ansi-green-fg">2547</span>     result = <span class="ansi-yellow-bg">fn</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">*</span><span class="ansi-yellow-bg">args</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">*</span><span class="ansi-yellow-bg">*</span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">   2549</span> <span style="color: rgb(95,135,135)"># The code below prevents the output from being displayed</span>
+<span class="ansi-green-fg">   2550</span> <span style="color: rgb(95,135,135)"># when using magics with decorator @output_can_be_silenced</span>
+<span class="ansi-green-fg">   2551</span> <span style="color: rgb(95,135,135)"># when the last Python token in the expression is a &#39;;&#39;.</span>
+<span class="ansi-green-fg">   2552</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">getattr</span>(fn, magic.MAGIC_OUTPUT_CAN_BE_SILENCED, <span class="ansi-bold" style="color: rgb(0,135,0)">False</span>):
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/docs/_notebooks/_notebook_utils.py:376</span>, in <span class="ansi-cyan-fg">CollapseMagics.collapse</span><span class="ansi-blue-fg">(self, line, cell)</span>
+<span class="ansi-green-fg">    374</span> err = <span style="color: rgb(0,135,0)">getattr</span>(exec_result, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">error_before_exec</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-bold" style="color: rgb(0,135,0)">None</span>) <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> <span style="color: rgb(0,135,0)">getattr</span>(exec_result, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">error_in_exec</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-bold" style="color: rgb(0,135,0)">None</span>)
+<span class="ansi-green-fg">    375</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> err <span class="ansi-bold" style="color: rgb(175,0,255)">is</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> <span class="ansi-bold" style="color: rgb(0,135,0)">None</span>:
+<span class="ansi-green-fg">--&gt; </span><span class="ansi-green-fg">376</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">raise</span> err
+
+    <span class="ansi-red-fg">[... skipping hidden 1 frame]</span>
+
+<span class="ansi-cyan-fg">Cell</span><span class="ansi-cyan-fg"> </span><span class="ansi-green-fg">In[5]</span><span class="ansi-green-fg">, line 5</span>
+<span class="ansi-green-fg">      1</span> <span style="color: rgb(95,135,135)"># Included for tutorial purposes only.</span>
+<span class="ansi-green-fg">      2</span>
+<span class="ansi-green-fg">      3</span> <span style="color: rgb(95,135,135)"># Build (or load) the graph snapshot</span>
+<span class="ansi-green-fg">      4</span> <span style="color: rgb(95,135,135)"># - calculate_caches=True speeds up later queries (slower build, faster use).</span>
+<span class="ansi-green-fg">----&gt; </span><span class="ansi-green-fg">5</span> <span class="ansi-yellow-bg">api</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">build_graph</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">organism_name</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">organism</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">snapshot_release</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">SNAPSHOT_RELEASE</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">calculate_caches</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(0,135,0)">True</span><span class="ansi-yellow-bg">)</span>
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_api.py:213</span>, in <span class="ansi-cyan-fg">API.build_graph</span><span class="ansi-blue-fg">(self, organism_name, snapshot_release, genome_assembly, return_test, calculate_caches)</span>
+<span class="ansi-green-fg">    211</span>     <span style="color: rgb(0,135,0)">self</span>.track = TrackTests(dm)
+<span class="ansi-green-fg">    212</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:
+<span class="ansi-green-fg">--&gt; </span><span class="ansi-green-fg">213</span>     <span style="color: rgb(0,135,0)">self</span>.track = <span class="ansi-yellow-bg">Track</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">dm</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">    215</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> calculate_caches <span class="ansi-bold" style="color: rgb(175,0,255)">and</span> return_test:
+<span class="ansi-green-fg">    216</span>     <span style="color: rgb(0,135,0)">self</span>.calculate_graph_caches(for_test=<span class="ansi-bold" style="color: rgb(0,135,0)">True</span>)
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_track.py:83</span>, in <span class="ansi-cyan-fg">Track.__init__</span><span class="ansi-blue-fg">(self, db_manager, **kwargs)</span>
+<span class="ansi-green-fg">     80</span> graph_creator = GraphMaker(<span style="color: rgb(0,135,0)">self</span>.db_manager)
+<span class="ansi-green-fg">     82</span> <span style="color: rgb(95,135,135)"># Calculate/Load the graph</span>
+<span class="ansi-green-fg">---&gt; </span><span class="ansi-green-fg">83</span> <span style="color: rgb(0,135,0)">self</span>.graph = <span class="ansi-yellow-bg">graph_creator</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">get_graph</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">*</span><span class="ansi-yellow-bg">*</span><span class="ansi-yellow-bg">kwargs</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">     84</span> <span style="color: rgb(0,135,0)">self</span>.version_info = <span style="color: rgb(0,135,0)">self</span>.graph.graph[<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">version_info</span><span class="ansi-yellow-fg">&#34;</span>]
+<span class="ansi-green-fg">     85</span> <span style="color: rgb(0,135,0)">self</span>._external_entrance_placeholder = {<span class="ansi-bold" style="color: rgb(0,135,0)">False</span>: -<span class="ansi-green-fg">1</span>, <span class="ansi-bold" style="color: rgb(0,135,0)">True</span>: <span class="ansi-green-fg">10001</span>}
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_graph_maker.py:1086</span>, in <span class="ansi-cyan-fg">GraphMaker.get_graph</span><span class="ansi-blue-fg">(self, narrow, create_even_if_exist, save_after_calculation, overwrite_even_if_exist, form_list, narrow_external)</span>
+<span class="ansi-green-fg">   1084</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> os.access(file_path, os.R_OK) <span class="ansi-bold" style="color: rgb(175,0,255)">or</span> create_even_if_exist:
+<span class="ansi-green-fg">   1085</span>     <span style="color: rgb(0,135,0)">self</span>.log.info(<span class="ansi-yellow-fg">f</span><span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">The graph is being constructed: </span><span class="ansi-bold" style="color: rgb(175,95,135)">{</span>file_path<span class="ansi-bold" style="color: rgb(175,95,135)">}</span><span class="ansi-yellow-fg">&#34;</span>)
+<span class="ansi-green-fg">-&gt; </span><span class="ansi-green-fg">1086</span>     g = <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">construct_graph</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">narrow</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">narrow</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">form_list</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">form_list</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">narrow_external</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">narrow_external</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">   1087</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:  <span style="color: rgb(95,135,135)"># Otherwise, just read the file that is already in the directory.</span>
+<span class="ansi-green-fg">   1088</span>     <span style="color: rgb(0,135,0)">self</span>.log.info(<span class="ansi-yellow-fg">f</span><span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">The graph is being read: </span><span class="ansi-bold" style="color: rgb(175,95,135)">{</span>file_path<span class="ansi-bold" style="color: rgb(175,95,135)">}</span><span class="ansi-yellow-fg">&#34;</span>)
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_graph_maker.py:224</span>, in <span class="ansi-cyan-fg">GraphMaker.construct_graph</span><span class="ansi-blue-fg">(self, narrow, form_list, narrow_external)</span>
+<span class="ansi-green-fg">    219</span> <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> ens_rel <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> <span style="color: rgb(0,135,0)">sorted</span>(<span style="color: rgb(0,135,0)">self</span>.db_manager.available_releases):
+<span class="ansi-green-fg">    220</span>     <span style="color: rgb(95,135,135)"># the order is important in adding new nodes into the core graph.</span>
+<span class="ansi-green-fg">    221</span>     <span style="color: rgb(95,135,135)"># it is important to capture correct ens_release in min_ens_release dictionary</span>
+<span class="ansi-green-fg">    223</span>     db_manager = dbman_s[f].change_release(ens_rel)
+<span class="ansi-green-fg">--&gt; </span><span class="ansi-green-fg">224</span>     rc = <span class="ansi-yellow-bg">db_manager</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">create_external_all</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">return_mode</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-fg ansi-yellow-bg">all</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">narrow_external</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">narrow_external</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">    226</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> _ind, entry <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> rc.iterrows():
+<span class="ansi-green-fg">    227</span>         <span style="color: rgb(95,135,135)"># Note that the `rc` dataframe have higher priority assembly entries at the top.</span>
+<span class="ansi-green-fg">    229</span>         e1, e2 = entry[<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">graph_id</span><span class="ansi-yellow-fg">&#34;</span>], entry[<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">id_db</span><span class="ansi-yellow-fg">&#34;</span>]
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_database_manager.py:2279</span>, in <span class="ansi-cyan-fg">DatabaseManager.create_external_all</span><span class="ansi-blue-fg">(self, return_mode, narrow_external)</span>
+<span class="ansi-green-fg">   2277</span> <span class="ansi-bold" style="color: rgb(0,135,0)">except</span> <span class="ansi-bold" style="color: rgb(215,95,95)">ValueError</span>:
+<span class="ansi-green-fg">   2278</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">continue</span>
+<span class="ansi-green-fg">-&gt; </span><span class="ansi-green-fg">2279</span> df_temp = <span class="ansi-yellow-bg">dm</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">get_db</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">df_indicator</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">   2280</span> df_temp[<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">assembly</span><span class="ansi-yellow-fg">&#34;</span>] = i
+<span class="ansi-green-fg">   2281</span> df = pd.concat([df, df_temp])
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_database_manager.py:2484</span>, in <span class="ansi-cyan-fg">DatabaseManager.get_db</span><span class="ansi-blue-fg">(self, df_indicator, create_even_if_exist, save_after_calculation, overwrite_even_if_exist)</span>
+<span class="ansi-green-fg">   2481</span>     df = <span style="color: rgb(0,135,0)">self</span>.create_external_db(filter_mode=<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">all</span><span class="ansi-yellow-fg">&#34;</span>)
+<span class="ansi-green-fg">   2483</span> <span class="ansi-bold" style="color: rgb(0,135,0)">elif</span> main_ind == <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">external</span><span class="ansi-yellow-fg">&#34;</span> <span class="ansi-bold" style="color: rgb(175,0,255)">and</span> param1_ind <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> [<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">relevant</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">database</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">relevant-database</span><span class="ansi-yellow-fg">&#34;</span>]:
+<span class="ansi-green-fg">-&gt; </span><span class="ansi-green-fg">2484</span>     df = <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">create_external_db</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">filter_mode</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">param1_ind</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">   2486</span> <span class="ansi-bold" style="color: rgb(0,135,0)">elif</span> main_ind == <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">idsraw</span><span class="ansi-yellow-fg">&#34;</span>:
+<span class="ansi-green-fg">   2487</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> param1_ind <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> <span style="color: rgb(0,135,0)">self</span>.available_form_of_interests:
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_database_manager.py:1990</span>, in <span class="ansi-cyan-fg">DatabaseManager.create_external_db</span><span class="ansi-blue-fg">(self, filter_mode)</span>
+<span class="ansi-green-fg">   1986</span> a = <span style="color: rgb(0,135,0)">self</span>.get_db(<span class="ansi-yellow-fg">f</span><span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">idsraw_</span><span class="ansi-bold" style="color: rgb(175,95,135)">{</span><span style="color: rgb(0,135,0)">self</span>.form<span class="ansi-bold" style="color: rgb(175,95,135)">}</span><span class="ansi-yellow-fg">&#34;</span>, save_after_calculation=<span style="color: rgb(0,135,0)">self</span>.store_raw_always)
+<span class="ansi-green-fg">   1987</span> ox = <span style="color: rgb(0,135,0)">self</span>.get_table(
+<span class="ansi-green-fg">   1988</span>     <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">object_xref</span><span class="ansi-yellow-fg">&#34;</span>, usecols=[<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">ensembl_id</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">ensembl_object_type</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">xref_id</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">object_xref_id</span><span class="ansi-yellow-fg">&#34;</span>], **m
+<span class="ansi-green-fg">   1989</span> )
+<span class="ansi-green-fg">-&gt; </span><span class="ansi-green-fg">1990</span> x = <span class="ansi-yellow-bg" style="color: rgb(0,135,0)">self</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">get_table</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-fg ansi-yellow-bg">xref</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">usecols</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">[</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-fg ansi-yellow-bg">xref_id</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-fg ansi-yellow-bg">external_db_id</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-fg ansi-yellow-bg">dbprimary_acc</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-fg ansi-yellow-bg">display_label</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-bg">]</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">*</span><span class="ansi-yellow-bg">*</span><span class="ansi-yellow-bg">m</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">   1991</span> ed = <span style="color: rgb(0,135,0)">self</span>.get_table(<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">external_db</span><span class="ansi-yellow-fg">&#34;</span>, usecols=[<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">external_db_id</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">db_name</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">db_display_name</span><span class="ansi-yellow-fg">&#34;</span>], **m)
+<span class="ansi-green-fg">   1992</span> ix = <span style="color: rgb(0,135,0)">self</span>.get_table(<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">identity_xref</span><span class="ansi-yellow-fg">&#34;</span>, usecols=[<span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">ensembl_identity</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">xref_identity</span><span class="ansi-yellow-fg">&#34;</span>, <span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">object_xref_id</span><span class="ansi-yellow-fg">&#34;</span>], **m)
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_database_manager.py:1104</span>, in <span class="ansi-cyan-fg">DatabaseManager.get_table</span><span class="ansi-blue-fg">(self, table_key, usecols, create_even_if_exist, save_after_calculation, overwrite_even_if_exist)</span>
+<span class="ansi-green-fg">   1102</span>     df = <span style="color: rgb(0,135,0)">self</span>.download_table(table_key, usecols)
+<span class="ansi-green-fg">   1103</span> <span class="ansi-bold" style="color: rgb(0,135,0)">else</span>:  <span style="color: rgb(95,135,135)"># Otherwise, just read the file that is already in the directory.</span>
+<span class="ansi-green-fg">-&gt; </span><span class="ansi-green-fg">1104</span>     df = <span class="ansi-yellow-bg">hs</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">read_exported</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">hierarchy</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">file_path</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">   1106</span> <span style="color: rgb(95,135,135)"># If prompt, save the dataframe in requested format.</span>
+<span class="ansi-green-fg">   1107</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> save_after_calculation:
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_utils_hdf5.py:771</span>, in <span class="ansi-cyan-fg">read_exported</span><span class="ansi-blue-fg">(hierarchy, file_path)</span>
+<span class="ansi-green-fg">    768</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span class="ansi-bold" style="color: rgb(175,0,255)">not</span> check_h5_key(file_path, hierarchy):
+<span class="ansi-green-fg">    769</span>     <span class="ansi-bold" style="color: rgb(0,135,0)">raise</span> <span class="ansi-bold" style="color: rgb(215,95,95)">KeyError</span>(<span class="ansi-yellow-fg">f</span><span class="ansi-yellow-fg">&#34;</span><span class="ansi-yellow-fg">Key </span><span class="ansi-bold" style="color: rgb(175,95,135)">{</span>hierarchy<span class="ansi-bold" style="color: rgb(175,95,135)">!r}</span><span class="ansi-yellow-fg"> not found in HDF5 file </span><span class="ansi-bold" style="color: rgb(175,95,135)">{</span>file_path<span class="ansi-bold" style="color: rgb(175,95,135)">!r}</span><span class="ansi-yellow-fg">.</span><span class="ansi-yellow-fg">&#34;</span>)
+<span class="ansi-green-fg">--&gt; </span><span class="ansi-green-fg">771</span> df = <span class="ansi-yellow-bg">read_hdf</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">path</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">file_path</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">key</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-bg">hierarchy</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">mode</span><span class="ansi-yellow-bg">=</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-fg ansi-yellow-bg">r</span><span class="ansi-yellow-fg ansi-yellow-bg">&#34;</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">    772</span> <span class="ansi-bold" style="color: rgb(0,135,0)">return</span> df
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_utils_hdf5.py:100</span>, in <span class="ansi-cyan-fg">read_hdf</span><span class="ansi-blue-fg">(path, key, mode)</span>
+<span class="ansi-green-fg">     97</span> index, index_names = _load_index_data(grp)
+<span class="ansi-green-fg">     99</span> <span style="color: rgb(95,135,135)"># Load column data</span>
+<span class="ansi-green-fg">--&gt; </span><span class="ansi-green-fg">100</span> df = <span class="ansi-yellow-bg">_load_column_data</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">grp</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">columns</span><span class="ansi-yellow-bg">,</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">dtypes</span><span class="ansi-yellow-bg">)</span>
+<span class="ansi-green-fg">    102</span> <span style="color: rgb(95,135,135)"># Set index and metadata</span>
+<span class="ansi-green-fg">    103</span> df.index = index
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_utils_hdf5.py:497</span>, in <span class="ansi-cyan-fg">_load_column_data</span><span class="ansi-blue-fg">(grp, columns, dtypes)</span>
+<span class="ansi-green-fg">    495</span> raw = data_grp[col_key][()]
+<span class="ansi-green-fg">    496</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">isinstance</span>(raw[<span class="ansi-green-fg">0</span>], <span style="color: rgb(0,135,0)">bytes</span>):
+<span class="ansi-green-fg">--&gt; </span><span class="ansi-green-fg">497</span>     raw = <span class="ansi-yellow-bg">[</span><span class="ansi-yellow-bg">x</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">decode</span><span class="ansi-yellow-bg">(</span><span class="ansi-yellow-bg">DB</span><span class="ansi-yellow-bg">.</span><span class="ansi-yellow-bg">UTF8</span><span class="ansi-yellow-bg">)</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(0,135,0)">for</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">x</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg ansi-bold" style="color: rgb(175,0,255)">in</span><span class="ansi-yellow-bg"> </span><span class="ansi-yellow-bg">raw</span><span class="ansi-yellow-bg">]</span>
+<span class="ansi-green-fg">    498</span> restored = [pd.NA <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> x == DB.placeholder_na <span class="ansi-bold" style="color: rgb(0,135,0)">else</span> x <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> x <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> raw]
+<span class="ansi-green-fg">    499</span> data_dict[col] = restored
+
+<span class="ansi-cyan-fg">File </span><span class="ansi-green-fg">~/git_nosync/master_idtrack/idtrack/idtrack/_utils_hdf5.py:497</span>, in <span class="ansi-cyan-fg">&lt;listcomp&gt;</span><span class="ansi-blue-fg">(.0)</span>
+<span class="ansi-green-fg">    495</span> raw = data_grp[col_key][()]
+<span class="ansi-green-fg">    496</span> <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> <span style="color: rgb(0,135,0)">isinstance</span>(raw[<span class="ansi-green-fg">0</span>], <span style="color: rgb(0,135,0)">bytes</span>):
+<span class="ansi-green-fg">--&gt; </span><span class="ansi-green-fg">497</span>     raw = [x.decode(DB.UTF8) <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> x <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> raw]
+<span class="ansi-green-fg">    498</span> restored = [pd.NA <span class="ansi-bold" style="color: rgb(0,135,0)">if</span> x == DB.placeholder_na <span class="ansi-bold" style="color: rgb(0,135,0)">else</span> x <span class="ansi-bold" style="color: rgb(0,135,0)">for</span> x <span class="ansi-bold" style="color: rgb(175,0,255)">in</span> raw]
+<span class="ansi-green-fg">    499</span> data_dict[col] = restored
+
+<span class="ansi-red-fg">KeyboardInterrupt</span>:
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Quick inspection</span>
+<span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Organism:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;organism&#39;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Snapshot release:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ensembl_release&#39;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Main assembly:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;genome_assembly&#39;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assemblies in this graph:&#39;</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_genome_assemblies</span><span class="p">()))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Nodes:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_nodes</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Edges:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_edges</span><span class="p">())</span>
+
+<span class="n">aed</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="s1">&#39;available_external_databases&#39;</span><span class="p">,</span> <span class="p">[]))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;External DBs enabled (count):&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">aed</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;External DBs (first 20):&#39;</span><span class="p">,</span> <span class="n">aed</span><span class="p">[:</span><span class="mi">20</span><span class="p">])</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Where is the graph file stored?</span>
+<span class="nb">sorted</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;graph_homo_sapiens*.pickle&#39;</span><span class="p">))[</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="3.2-—-Mouse-graph-initialization-(clean-handoff)">
+<h3>3.2 — Mouse graph initialization (clean handoff)<a class="headerlink" href="#3.2-—-Mouse-graph-initialization-(clean-handoff)" title="Link to this heading"></a></h3>
+<p>Mouse is a clean-handoff species (one maintained assembly per release: GRCm37 → GRCm38 → GRCm39). Older assemblies mainly matter for legacy datasets and archive releases; you typically do not have overlapping assemblies within the same release.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;mus musculus&#39;</span><span class="p">)</span>
+<span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="n">latest_release</span>
+<span class="n">organism</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Build (or load) the mouse graph snapshot</span>
+<span class="k">if</span> <span class="n">HAS_MOUSE_YAML</span><span class="p">:</span>
+    <span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Skipping mouse build: mus_musculus_externals_modified.yml is missing (run Part 2 first).&#39;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_MOUSE_YAML</span><span class="p">:</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Organism:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;organism&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Snapshot release:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ensembl_release&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Main assembly:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;genome_assembly&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assemblies in this graph:&#39;</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_genome_assemblies</span><span class="p">()))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Nodes:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_nodes</span><span class="p">())</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Edges:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_edges</span><span class="p">())</span>
+
+    <span class="n">aed</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="s1">&#39;available_external_databases&#39;</span><span class="p">,</span> <span class="p">[]))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;External DBs enabled (count):&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">aed</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;External DBs (first 20):&#39;</span><span class="p">,</span> <span class="n">aed</span><span class="p">[:</span><span class="mi">20</span><span class="p">])</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Mouse graph not built (missing YAML).&#39;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">sorted</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;graph_mus_musculus*.pickle&#39;</span><span class="p">))[</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="3.3-—-Pig-graph-initialization-(clean-handoff)">
+<h3>3.3 — Pig graph initialization (clean handoff)<a class="headerlink" href="#3.3-—-Pig-graph-initialization-(clean-handoff)" title="Link to this heading"></a></h3>
+<p>Pig is a clean-handoff species (one maintained assembly per release: Sscrofa9.2 → Sscrofa10.2 → Sscrofa11.1). Older assemblies mainly matter for legacy datasets and archive releases; you typically do not have overlapping assemblies within the same release.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;sus scrofa&#39;</span><span class="p">)</span>
+<span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="n">latest_release</span>
+<span class="n">organism</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Build (or load) the pig graph snapshot</span>
+<span class="k">if</span> <span class="n">HAS_PIG_YAML</span><span class="p">:</span>
+    <span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Skipping pig build: sus_scrofa_externals_modified.yml is missing (run Part 2 first).&#39;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_PIG_YAML</span><span class="p">:</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Organism:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;organism&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Snapshot release:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ensembl_release&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Main assembly:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;genome_assembly&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assemblies in this graph:&#39;</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_genome_assemblies</span><span class="p">()))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Nodes:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_nodes</span><span class="p">())</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Edges:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_edges</span><span class="p">())</span>
+
+    <span class="n">aed</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="s1">&#39;available_external_databases&#39;</span><span class="p">,</span> <span class="p">[]))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;External DBs enabled (count):&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">aed</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;External DBs (first 20):&#39;</span><span class="p">,</span> <span class="n">aed</span><span class="p">[:</span><span class="mi">20</span><span class="p">])</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Pig graph not built (missing YAML).&#39;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">sorted</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;graph_sus_scrofa*.pickle&#39;</span><span class="p">))[</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="3.4-—-Graph-management-(all-species)">
+<h2>3.4 — Graph management (all species)<a class="headerlink" href="#3.4-—-Graph-management-(all-species)" title="Link to this heading"></a></h2>
+<section id="Reloading-vs-rebuilding">
+<h3>Reloading vs rebuilding<a class="headerlink" href="#Reloading-vs-rebuilding" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">api.build_graph(...)</span></code> is safe to call repeatedly.</p>
+<ul>
+<li><p>If the snapshot already exists on disk, IDTrack will <strong>load</strong> it.</p></li>
+<li><p>If it does not exist yet, IDTrack will <strong>build</strong> it (slow, first-time only).</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="Cache-hygiene">
+<h3>Cache hygiene<a class="headerlink" href="#Cache-hygiene" title="Link to this heading"></a></h3>
+<p>Your local repository can accumulate:</p>
+<ul class="simple">
+<li><p>downloaded tables</p></li>
+<li><p>graph snapshot pickle files</p></li>
+<li><p>intermediate files used during builds</p></li>
+</ul>
+<blockquote>
+<div><p><strong>Tip:</strong> Treat your local repository as <em>project infrastructure</em>. Keep it stable so you get the benefits of caching.</p>
+</div></blockquote>
+</section>
+<section id="Switching-organisms-/-assemblies">
+<h3>Switching organisms / assemblies<a class="headerlink" href="#Switching-organisms-/-assemblies" title="Link to this heading"></a></h3>
+<p>A graph snapshot is specific to:</p>
+<ul class="simple">
+<li><p>organism</p></li>
+<li><p>snapshot boundary (max release)</p></li>
+<li><p>external YAML contents</p></li>
+<li><p>the chosen <strong>primary assembly</strong> (the default output coordinate system)</p></li>
+</ul>
+<p>Even though the snapshot can include multiple assemblies, changing the primary assembly changes the snapshot and requires a rebuild.</p>
+<blockquote>
+<div><p><strong>Tip:</strong> The cached graph filename does not include the assembly. If you want to keep two different primary assemblies side-by-side, use separate local repositories (or copy the graph pickle file).</p>
+</div></blockquote>
+</section>
+<section id="Performance-tips">
+<h3>Performance tips<a class="headerlink" href="#Performance-tips" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">calculate_caches=True</span></code> during builds when you plan to do many conversions afterward.</p></li>
+<li><p>Keep your external YAML allowlist small to reduce ambiguity and search space.</p></li>
+</ul>
+<blockquote>
+<div><p><strong>Warning:</strong> Do not delete caches unless you understand the consequence (you may force a full rebuild).</p>
+</div></blockquote>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Helper: list what IDTrack has cached in your local repository.</span>
+<span class="c1"># Safe: this does NOT delete anything.</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="n">cache</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Local repository:&#39;</span><span class="p">,</span> <span class="n">cache</span><span class="p">)</span>
+
+<span class="n">patterns</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;graph_*.pickle&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;*_externals_modified.yml&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;*_externals_template.yml&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="k">for</span> <span class="n">pat</span> <span class="ow">in</span> <span class="n">patterns</span><span class="p">:</span>
+    <span class="n">hits</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">cache</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">pat</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">pat</span><span class="si">}</span><span class="s1"> (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">hits</span><span class="p">)</span><span class="si">}</span><span class="s1">):&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">hits</span><span class="p">[:</span><span class="mi">10</span><span class="p">]:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  &#39;</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">hits</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  ...&#39;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="02_prepare_new_external_yaml.html" class="btn btn-neutral float-left" title="Part 2 — External Database Configuration" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="04_api_deep_dive_human.html" class="btn btn-neutral float-right" title="Part 4 — Core API Deep-Dive (Human Example)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

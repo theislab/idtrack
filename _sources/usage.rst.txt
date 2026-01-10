@@ -309,7 +309,7 @@ IDTrack currently supports the following organisms:
 
 .. tip::
 
-    Want to add support for another organism? See :doc:`_notebooks/prepare_new_external_yaml`
+    Want to add support for another organism? See :doc:`_notebooks/02_prepare_new_external_yaml`
     for instructions on configuring external databases.
 
 
@@ -354,9 +354,9 @@ IDTrack integrates with AnnData for single-cell analysis workflows:
     api.build_graph(organism_name=organism, snapshot_release=release, calculate_caches=True)
 
     # See the harmonization tutorial for complete workflows
-    # :doc:`_notebooks/tutorial_harmonization`
+    # :doc:`_notebooks/05_tutorial_harmonization`
 
-For complete AnnData harmonization workflows, see :doc:`_notebooks/tutorial_harmonization`.
+For complete AnnData harmonization workflows, see :doc:`_notebooks/05_tutorial_harmonization`.
 
 
 What's Next?
@@ -374,13 +374,13 @@ Now that you've completed the quickstart, explore these resources for deeper und
       - Understand the mental model (time axis, space axis, snapshot boundary)
     * - :doc:`_notebooks/01_installation_guide`
       - Detailed environment setup and configuration
-    * - :doc:`_notebooks/initialization_graph`
+    * - :doc:`_notebooks/03_initialization_graph`
       - Graph building, caching, and management
-    * - :doc:`_notebooks/api_deep_dive_human`
+    * - :doc:`_notebooks/04_api_deep_dive_human`
       - Complete API reference with advanced examples
-    * - :doc:`_notebooks/tutorial_harmonization`
+    * - :doc:`_notebooks/05_tutorial_harmonization`
       - Real-world dataset harmonization workflows
-    * - :doc:`_notebooks/tutorial_humanization_mouse_pig_to_human`
+    * - :doc:`_notebooks/06_tutorial_humanization_mouse_pig_to_human`
       - Cross-species "humanization" workflows
     * - :doc:`tutorials`
       - Complete learning path (Parts 0-7)

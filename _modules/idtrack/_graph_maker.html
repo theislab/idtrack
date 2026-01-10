@@ -5,17 +5,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>idtrack._graph_maker &mdash; idtrack 0.0.4 documentation</title>
+  <title>idtrack._graph_maker &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
-      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=f6ff1e94" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
       <script src="../../_static/design-tabs.js?v=f930bc37"></script>
@@ -280,8 +280,8 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Establishing connection between different forms.&quot;</span><span class="p">)</span>
             <span class="c1"># `relationcurrent` is not form-specific; pick any configured manager.</span>
             <span class="n">dm_rel_base</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">dbman_s</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
-            <span class="k">for</span> <span class="n">ensembl_release</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">:</span>
-                <span class="n">dm_rel</span> <span class="o">=</span> <span class="n">dm_rel_base</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">ensembl_release</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">ensembl_release</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases_all_assemblies</span><span class="p">:</span>
+                <span class="n">dm_rel</span> <span class="o">=</span> <span class="n">dm_rel_base</span><span class="o">.</span><span class="n">change_release_auto_assembly</span><span class="p">(</span><span class="n">ensembl_release</span><span class="p">)</span>
                 <span class="n">rc</span> <span class="o">=</span> <span class="n">dm_rel</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;relationcurrent&quot;</span><span class="p">,</span> <span class="n">save_after_calculation</span><span class="o">=</span><span class="n">dm_rel</span><span class="o">.</span><span class="n">store_raw_always</span><span class="p">)</span>
 
                 <span class="k">for</span> <span class="n">_ind</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">rc</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
@@ -296,7 +296,7 @@
                                     <span class="sa">f</span><span class="s2">&quot;Missing graph node(s) while adding edge: &quot;</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">e1_str</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">e1</span><span class="si">!r}</span><span class="s2"> → </span><span class="si">{</span><span class="n">e2_str</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">e2</span><span class="si">!r}</span><span class="s2">&quot;</span>
                                 <span class="p">)</span>
 
-                            <span class="n">sly</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">genome_assembly</span>
+                            <span class="n">sly</span> <span class="o">=</span> <span class="n">dm_rel</span><span class="o">.</span><span class="n">genome_assembly</span>
                             <span class="n">add_edge</span><span class="p">(</span><span class="n">e1</span><span class="p">,</span> <span class="n">e2</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="n">e1_str</span><span class="p">],</span> <span class="n">sly</span><span class="p">,</span> <span class="n">ensembl_release</span><span class="p">)</span>
 
         <span class="c1"># Establish connection between different databases</span>
@@ -309,12 +309,21 @@
         <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">form_list</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Edges between external IDs to Ensembl IDs is being added for &#39;</span><span class="si">{</span><span class="n">f</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
             <span class="n">nodes_from_previous_release</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">for</span> <span class="n">ens_rel</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">ens_rel</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases_all_assemblies</span><span class="p">):</span>
                 <span class="c1"># the order is important in adding new nodes into the core graph.</span>
                 <span class="c1"># it is important to capture correct ens_release in min_ens_release dictionary</span>
 
-                <span class="n">db_manager</span> <span class="o">=</span> <span class="n">dbman_s</span><span class="p">[</span><span class="n">f</span><span class="p">]</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">ens_rel</span><span class="p">)</span>
-                <span class="n">rc</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">create_external_all</span><span class="p">(</span><span class="n">return_mode</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">,</span> <span class="n">narrow_external</span><span class="o">=</span><span class="n">narrow_external</span><span class="p">)</span>
+                <span class="n">db_manager</span> <span class="o">=</span> <span class="n">dbman_s</span><span class="p">[</span><span class="n">f</span><span class="p">]</span><span class="o">.</span><span class="n">change_release_auto_assembly</span><span class="p">(</span><span class="n">ens_rel</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">rc</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">create_external_all</span><span class="p">(</span><span class="n">return_mode</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">,</span> <span class="n">narrow_external</span><span class="o">=</span><span class="n">narrow_external</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                    <span class="c1"># Older releases may be outside the configured external YAML; skip externals for that release</span>
+                    <span class="c1"># while still allowing the Ensembl-only history graph to be constructed.</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="s2">&quot;is not included in any entry of the YAML config file&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">msg</span><span class="p">:</span>
+                        <span class="k">raise</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Skipping external mappings for release </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">ens_rel</span><span class="p">),</span> <span class="n">msg</span><span class="p">)</span>
+                    <span class="k">continue</span>
 
                 <span class="k">for</span> <span class="n">_ind</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">rc</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
                     <span class="c1"># Note that the `rc` dataframe have higher priority assembly entries at the top.</span>
@@ -324,7 +333,7 @@
                     <span class="n">sly</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">&quot;assembly&quot;</span><span class="p">])</span>
 
                     <span class="k">if</span> <span class="n">sly</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">all_assemblies</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="ne">ValueError</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown assembly </span><span class="si">{</span><span class="n">sly</span><span class="si">!r}</span><span class="s2">. Valid assemblies: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">all_assemblies</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
 
                     <span class="k">if</span> <span class="n">e1</span> <span class="ow">and</span> <span class="n">e2</span> <span class="ow">and</span> <span class="n">er</span> <span class="ow">and</span> <span class="n">edb</span> <span class="ow">and</span> <span class="n">sly</span><span class="p">:</span>
                         <span class="k">if</span> <span class="n">e1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph_nodes_before_external</span><span class="p">:</span>
@@ -343,8 +352,9 @@
                             <span class="k">elif</span> <span class="nb">any</span><span class="p">(</span>
                                 <span class="p">[</span><span class="n">e1</span> <span class="ow">in</span> <span class="n">graph_nodes_added_assembly</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">graph_nodes_added_assembly</span> <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">sly</span><span class="p">]</span>
                             <span class="p">):</span>
-                                <span class="c1"># Hypothetical statement for now, as there are only two assembly in Ensembl.</span>
-                                <span class="c1"># &#39;create_external_all&#39; method should have resolve the issue.</span>
+                                <span class="c1"># The same Ensembl node should not need to be introduced via multiple *non-primary*</span>
+                                <span class="c1"># assemblies. If it happens, it means assembly-prioritised de-duplication did not</span>
+                                <span class="c1"># behave as expected upstream (see `create_external_all`).</span>
                                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Node should have been already added by a higher priority assembly.&quot;</span><span class="p">)</span>
 
                             <span class="k">elif</span> <span class="n">e1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph_nodes_added_assembly</span><span class="p">[</span><span class="n">sly</span><span class="p">]:</span>
@@ -352,10 +362,11 @@
                                     <span class="n">min_ens_release</span><span class="p">[</span><span class="n">sly</span><span class="p">]</span> <span class="o">=</span> <span class="n">ens_rel</span>
                                 <span class="k">elif</span> <span class="n">ens_rel</span> <span class="o">!=</span> <span class="n">min_ens_release</span><span class="p">[</span><span class="n">sly</span><span class="p">]:</span>
                                     <span class="c1"># The duplicate entries were already removed by `create_external_all` method.</span>
-                                    <span class="c1"># IDs retired before `min(db_manager.available_releases)` will be missing only.</span>
+                                    <span class="c1"># IDs retired before `min(available_releases_all_assemblies)` will be missing only.</span>
                                     <span class="c1"># In the first possible release, all should have been already added.</span>
 
-                                    <span class="c1"># Here, the if-elif statement is written in case of third assembly in the future.</span>
+                                    <span class="c1"># Multiple assemblies are supported; new nodes must be introduced at the first</span>
+                                    <span class="c1"># release where they become available for that assembly.</span>
                                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                                         <span class="s2">&quot;The new nodes here should have been added in &quot;</span>
                                         <span class="s2">&quot;the first Ensembl release possible.&quot;</span>
@@ -590,7 +601,9 @@
                 <span class="n">node_att</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">m</span><span class="p">]</span>
                 <span class="k">for</span> <span class="n">na</span> <span class="ow">in</span> <span class="n">node_att</span><span class="p">:</span>
                     <span class="k">if</span> <span class="n">na</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">merged_node_attributes</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="ne">ValueError</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;Node attribute </span><span class="si">{</span><span class="n">na</span><span class="si">!r}</span><span class="s2"> in </span><span class="si">{</span><span class="n">m</span><span class="si">!r}</span><span class="s2"> not found in merged attributes </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">merged_node_attributes</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">.&quot;</span>
+                        <span class="p">)</span>
                     <span class="c1"># Only node_type_str is allowed, and it must match across merged nodes</span>
                     <span class="k">if</span> <span class="n">na</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span> <span class="ow">or</span> <span class="n">merged_node_attributes</span><span class="p">[</span><span class="n">na</span><span class="p">]</span> <span class="o">!=</span> <span class="n">node_att</span><span class="p">[</span><span class="n">na</span><span class="p">]:</span>
                         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
@@ -729,7 +742,8 @@
         <span class="c1"># Initialize important variables</span>
         <span class="n">ms</span> <span class="o">=</span> <span class="n">ms_creator</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">narrow</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="n">version_info</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">check_version_info</span><span class="p">()</span>
-        <span class="n">_available_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">)</span>
+        <span class="n">available_releases</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases_all_assemblies</span>
+        <span class="n">_available_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">available_releases</span><span class="p">)</span>
         <span class="c1"># Create the ID history information from ensembl sources</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="n">df_indicator</span><span class="o">=</span><span class="s2">&quot;idhistory_narrow&quot;</span> <span class="k">if</span> <span class="n">narrow</span> <span class="k">else</span> <span class="s2">&quot;idhistory&quot;</span><span class="p">)</span>
         <span class="n">df</span><span class="p">[</span><span class="s2">&quot;old_stable_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;old_stable_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>  <span class="c1"># Convert back to np.nan</span>
@@ -738,7 +752,7 @@
         <span class="c1"># data already controls that.</span>
 
         <span class="c1"># Split the created edge connection data info two: df, df_w</span>
-        <span class="n">min_available</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">)</span>
+        <span class="n">min_available</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">available_releases</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">version_info</span> <span class="o">==</span> <span class="s2">&quot;without_version&quot;</span><span class="p">:</span>
             <span class="n">graph_down_bool</span> <span class="o">=</span> <span class="p">(</span>
                 <span class="p">(</span>
@@ -797,7 +811,7 @@
             <span class="n">ensembl_release</span><span class="o">=</span><span class="n">db_manager</span><span class="o">.</span><span class="n">ensembl_release</span><span class="p">,</span>
             <span class="n">genome_assembly</span><span class="o">=</span><span class="n">db_manager</span><span class="o">.</span><span class="n">genome_assembly</span><span class="p">,</span>
             <span class="n">organism</span><span class="o">=</span><span class="n">db_manager</span><span class="o">.</span><span class="n">organism</span><span class="p">,</span>
-            <span class="n">confident_for_release</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">,</span>
+            <span class="n">confident_for_release</span><span class="o">=</span><span class="n">available_releases</span><span class="p">,</span>
             <span class="n">version_info</span><span class="o">=</span><span class="n">version_info</span><span class="p">,</span>
             <span class="n">narrow</span><span class="o">=</span><span class="n">narrow</span><span class="p">,</span>
         <span class="p">)</span>
@@ -809,7 +823,10 @@
             <span class="c1"># defined available release for the given organism.</span>
             <span class="n">_or</span><span class="p">,</span> <span class="n">_nr</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;old_release&quot;</span><span class="p">]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;new_release&quot;</span><span class="p">])</span>
             <span class="k">if</span> <span class="n">_or</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_available_set</span> <span class="ow">or</span> <span class="n">_nr</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_available_set</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Release </span><span class="si">{</span><span class="n">_or</span><span class="si">}</span><span class="s2"> or </span><span class="si">{</span><span class="n">_nr</span><span class="si">}</span><span class="s2"> not in available releases </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">_available_set</span><span class="p">)</span><span class="si">}</span><span class="s2">. &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Row: old_stable_id=</span><span class="si">{</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;old_stable_id&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">, new_stable_id=</span><span class="si">{</span><span class="n">e</span><span class="p">[</span><span class="s1">&#39;new_stable_id&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span>
 
             <span class="c1"># Create the edge using the pipe function.</span>
             <span class="n">edge_maker_pipe</span><span class="p">(</span>
@@ -860,9 +877,9 @@
         <span class="c1"># Also, finds the first appearance of an ID, and adds DB.no_old_node_id to ID.</span>
         <span class="c1"># When an ID disappears and then reappears the graph structure should be consistent. In these cases, we</span>
         <span class="c1"># add an edge between Retired-to-ID. This loop also aims to find this re-appearance issues.</span>
-        <span class="k">for</span> <span class="n">ind_re</span><span class="p">,</span> <span class="n">rel_re</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">)):</span>
+        <span class="k">for</span> <span class="n">ind_re</span><span class="p">,</span> <span class="n">rel_re</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="n">available_releases</span><span class="p">)):</span>
             <span class="c1"># Create a DatabaseManager object with the release of interest.</span>
-            <span class="n">rel_db_re</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">rel_re</span><span class="p">)</span>
+            <span class="n">rel_db_re</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">change_release_auto_assembly</span><span class="p">(</span><span class="n">rel_re</span><span class="p">)</span>
 
             <span class="c1"># Get the IDs and create a dictionary from ID to Version.</span>
             <span class="n">ids_re</span> <span class="o">=</span> <span class="n">rel_db_re</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;ids&quot;</span><span class="p">,</span> <span class="n">save_after_calculation</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -889,7 +906,7 @@
                         <span class="c1"># Self loops can be further defined after the first appearance of the latest_id, so keep the</span>
                         <span class="c1"># last possible old_release to use afterwards.</span>
                         <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">from_db</span><span class="p">)</span> <span class="o">!=</span> <span class="n">from_db</span><span class="p">:</span>
-                            <span class="k">raise</span> <span class="ne">ValueError</span>
+                            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected integer release for </span><span class="si">{</span><span class="n">lat_id</span><span class="si">!r}</span><span class="s2">, got </span><span class="si">{</span><span class="n">from_db</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
                         <span class="n">latest_nodes_last_rel</span><span class="p">[</span><span class="n">lat_id</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">from_db</span><span class="p">)</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="n">latest_nodes_last_rel</span><span class="p">[</span><span class="n">lat_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">rel_re</span>
@@ -915,7 +932,7 @@
 
             <span class="c1"># In the last iteration of this loop, dump every ID in current rel, including the ones possibly</span>
             <span class="c1"># postponed adding for a long time as a member of &#39;extend_backwards_candidates&#39;.</span>
-            <span class="k">if</span> <span class="n">ind_re</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">ind_re</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">available_releases</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">ll_re</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="n">re_d</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">itertools</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="kc">True</span><span class="p">))</span>  <span class="c1"># dump everything</span>
 
             <span class="k">for</span> <span class="n">nvic</span><span class="p">,</span> <span class="n">is_ll_re</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">new_void_id_candidates</span><span class="p">,</span> <span class="n">itertools</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="kc">False</span><span class="p">)),</span> <span class="n">ll_re</span><span class="p">):</span>
@@ -977,16 +994,19 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Retired ID come alive again: </span><span class="si">{</span><span class="n">reassignment_retirement</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
         <span class="c1"># Make sure all latest releases IDs are visited at least once.</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">latest_nodes_last_rel</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="nb">int</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">latest_nodes_last_rel</span><span class="p">]):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span>
+            <span class="n">non_int_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">latest_nodes_last_rel</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">latest_nodes_last_rel</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="nb">int</span><span class="p">)]</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Not all latest node releases are integers. Non-integer IDs: </span><span class="si">{</span><span class="n">non_int_ids</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span><span class="si">}{</span><span class="s1">&#39;...&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">non_int_ids</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
 
         <span class="c1"># Then, very similar to above reverse loop, but in forward direction.</span>
         <span class="c1"># Main aim of this loop is to add Retired information to the nodes.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Edges showing the retirement of IDs are being added.&quot;</span><span class="p">)</span>
         <span class="n">fo_d_prev</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>  <span class="c1"># Initialize some variables</span>
         <span class="n">fo_prev_rel</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">rel_fo</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">rel_fo</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">available_releases</span><span class="p">):</span>
             <span class="c1"># Create a DatabaseManager object with the release of interest.</span>
-            <span class="n">rel_db_fo</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">rel_fo</span><span class="p">)</span>
+            <span class="n">rel_db_fo</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">change_release_auto_assembly</span><span class="p">(</span><span class="n">rel_fo</span><span class="p">)</span>
 
             <span class="c1"># Get the IDs and create a dictionary from ID to Version.</span>
             <span class="n">ids_fo</span> <span class="o">=</span> <span class="n">rel_db_fo</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;ids&quot;</span><span class="p">,</span> <span class="n">save_after_calculation</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -1023,9 +1043,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Problematic nodes in Ensembl ID history are being removed.&quot;</span><span class="p">)</span>
         <span class="n">ids_amc</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="n">problematic_nodes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">amc_rel</span> <span class="ow">in</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">available_releases</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">amc_rel</span> <span class="ow">in</span> <span class="n">available_releases</span><span class="p">:</span>
             <span class="c1"># Create a DatabaseManager object with the release of interest.</span>
-            <span class="n">amc_dm</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">amc_rel</span><span class="p">)</span>
+            <span class="n">amc_dm</span> <span class="o">=</span> <span class="n">db_manager</span><span class="o">.</span><span class="n">change_release_auto_assembly</span><span class="p">(</span><span class="n">amc_rel</span><span class="p">)</span>
 
             <span class="c1"># Get the IDs and create a dictionary from ID to Version.</span>
             <span class="n">ids_amc_df</span> <span class="o">=</span> <span class="n">amc_dm</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;ids&quot;</span><span class="p">,</span> <span class="n">save_after_calculation</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -1093,7 +1113,7 @@
                 <span class="n">id_to_split</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">id_ver_delimiter</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">id_to_split</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">id_ver_delimiter</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
             <span class="p">)</span>  <span class="c1"># there are max 1 as checked previously</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span></div>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;which_part must be &#39;ID&#39; or &#39;Version&#39;, got </span><span class="si">{</span><span class="n">which_part</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="GraphMaker.remove_non_gene_trees">

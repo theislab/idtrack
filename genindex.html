@@ -5,17 +5,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Index &mdash; idtrack 0.0.4 documentation</title>
+  <title>Index &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="_static/custom_settings.css?v=04d1a194" />
-      <link rel="stylesheet" type="text/css" href="_static/tutorials.css?v=f6ff1e94" />
+      <link rel="stylesheet" type="text/css" href="_static/tutorials.css?v=0e72a3a5" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="_static/documentation_options.js?v=282f96c0"></script>
       <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
       <script src="_static/design-tabs.js?v=f930bc37"></script>
@@ -121,6 +121,8 @@
 </li>
       <li><a href="reference/external_mappers.html#idtrack._external_mappers._utils._as_list">_as_list() (in module idtrack._external_mappers._utils)</a>
 </li>
+      <li><a href="reference.html#idtrack._connection_bridge.ConnectionBridge._atexit_cleanup">_atexit_cleanup() (ConnectionBridge static method)</a>
+</li>
       <li><a href="reference.html#idtrack._the_graph.TheGraph._attach_included_forms">_attach_included_forms() (TheGraph method)</a>
 </li>
       <li><a href="reference/external_mappers.html#idtrack._external_mappers._backend_pybiomart._biomart_dataset_for_species">_biomart_dataset_for_species() (in module idtrack._external_mappers._backend_pybiomart)</a>
@@ -153,6 +155,12 @@
 </li>
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager._determine_usecols_ids">_determine_usecols_ids() (DatabaseManager static method)</a>
 </li>
+      <li><a href="reference.html#idtrack._database_manager.DatabaseManager._download_table_from_ftp">_download_table_from_ftp() (DatabaseManager method)</a>
+</li>
+      <li><a href="reference.html#idtrack._connection_bridge.ConnectionBridge._emit">_emit() (ConnectionBridge method)</a>
+</li>
+      <li><a href="reference.html#idtrack._connection_bridge.ConnectionBridge._emit_global">_emit_global() (ConnectionBridge class method)</a>
+</li>
       <li><a href="reference/external_mappers.html#idtrack._external_mappers._utils._empty_result">_empty_result() (in module idtrack._external_mappers._utils)</a>
 </li>
       <li><a href="reference/external_mappers.html#idtrack._external_mappers._backend_pybiomart._ensembl_archive_host_for_release">_ensembl_archive_host_for_release() (in module idtrack._external_mappers._backend_pybiomart)</a>
@@ -169,19 +177,35 @@
 </li>
       <li><a href="reference.html#idtrack._track.Track._final_conversion">_final_conversion() (Track method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack._track.Track._final_conversion_dict_prepare">_final_conversion_dict_prepare() (Track static method)</a>
+</li>
+      <li><a href="reference.html#idtrack._connection_bridge.ConnectionBridge._force_disable_bridge">_force_disable_bridge() (ConnectionBridge class method)</a>
 </li>
       <li><a href="reference.html#idtrack._track_tests.TrackTests._format_history_travel_testing_report">_format_history_travel_testing_report() (TrackTests method)</a>
 </li>
       <li><a href="reference.html#idtrack._track_tests.TrackTests._format_history_travel_testing_report_header">_format_history_travel_testing_report_header() (TrackTests method)</a>
+</li>
+      <li><a href="reference.html#idtrack._connection_bridge.ConnectionBridge._format_proxy_url">_format_proxy_url() (ConnectionBridge static method)</a>
+</li>
+      <li><a href="reference.html#idtrack._database_manager.DatabaseManager._ftp_db_dir_url">_ftp_db_dir_url() (DatabaseManager method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack._database_manager.DatabaseManager._ftp_find_core_db_dir">_ftp_find_core_db_dir() (DatabaseManager class method)</a>
+</li>
+      <li><a href="reference.html#idtrack._database_manager.DatabaseManager._ftp_mysql_root_candidates">_ftp_mysql_root_candidates() (DatabaseManager class method)</a>
+</li>
+      <li><a href="reference.html#idtrack._database_manager.DatabaseManager._ftp_schema_for_sql_url">_ftp_schema_for_sql_url() (DatabaseManager class method)</a>
+</li>
+      <li><a href="reference.html#idtrack._database_manager.DatabaseManager._ftp_schema_url">_ftp_schema_url() (DatabaseManager method)</a>
 </li>
       <li><a href="reference.html#idtrack._the_graph.TheGraph._get_active_ranges_of_id">_get_active_ranges_of_id() (TheGraph method)</a>
 </li>
       <li><a href="reference/external_mappers.html#idtrack._external_mappers._ortholog._get_blosum62">_get_blosum62() (in module idtrack._external_mappers._ortholog)</a>
 </li>
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager._get_core_db_index">_get_core_db_index() (DatabaseManager class method)</a>
+</li>
+      <li><a href="reference.html#idtrack._database_manager.DatabaseManager._get_core_db_index_from_ftp">_get_core_db_index_from_ftp() (DatabaseManager class method)</a>
 </li>
       <li><a href="reference/external_mappers.html#idtrack._external_mappers._backend_gget._gget_extract">_gget_extract() (in module idtrack._external_mappers._backend_gget)</a>
 </li>
@@ -193,6 +217,10 @@
 </li>
       <li><a href="reference/external_mappers.html#idtrack._external_mappers._utils._is_bare_numeric">_is_bare_numeric() (in module idtrack._external_mappers._utils)</a>
 </li>
+      <li><a href="reference.html#idtrack._database_manager.DatabaseManager._is_retryable_http_read_error">_is_retryable_http_read_error() (DatabaseManager class method)</a>
+</li>
+      <li><a href="reference.html#idtrack._database_manager.DatabaseManager._iter_exception_chain">_iter_exception_chain() (DatabaseManager static method)</a>
+</li>
       <li><a href="reference/external_mappers.html#idtrack._external_mappers._utils._json">_json() (in module idtrack._external_mappers._utils)</a>
 </li>
       <li><a href="reference/external_mappers.html#idtrack._external_mappers._backend_mygene._mg_extract">_mg_extract() (in module idtrack._external_mappers._backend_mygene)</a>
@@ -203,17 +231,31 @@
 </li>
       <li><a href="reference/external_mappers.html#idtrack._external_mappers._backend_pybiomart._normalize_biomart_host">_normalize_biomart_host() (in module idtrack._external_mappers._backend_pybiomart)</a>
 </li>
+      <li><a href="reference.html#idtrack._database_manager.DatabaseManager._open_decompressed_http_text">_open_decompressed_http_text() (DatabaseManager static method)</a>
+</li>
+      <li><a href="reference.html#idtrack._database_manager.DatabaseManager._parse_apache_dir_listing_dirs">_parse_apache_dir_listing_dirs() (DatabaseManager static method)</a>
+</li>
+      <li><a href="reference.html#idtrack._database_manager.DatabaseManager._parse_apache_dir_listing_files">_parse_apache_dir_listing_files() (DatabaseManager static method)</a>
+</li>
       <li><a href="reference.html#idtrack._track.Track._path_score_sorter_all_targets">_path_score_sorter_all_targets() (Track method)</a>
 </li>
       <li><a href="reference.html#idtrack._track.Track._path_score_sorter_single_target">_path_score_sorter_single_target() (Track static method)</a>
+</li>
+      <li><a href="reference.html#idtrack._database_manager.DatabaseManager._probe_mysql_core_schemas_by_port">_probe_mysql_core_schemas_by_port() (DatabaseManager class method)</a>
 </li>
       <li><a href="reference/external_mappers.html#idtrack._external_mappers._backend_gprofiler._process_gprofiler_response">_process_gprofiler_response() (in module idtrack._external_mappers._backend_gprofiler)</a>
 </li>
       <li><a href="reference.html#idtrack._track.Track._recursive_synonymous">_recursive_synonymous() (Track method)</a>
 </li>
+      <li><a href="reference.html#idtrack._database_manager.DatabaseManager._refresh_core_db_index_mysql">_refresh_core_db_index_mysql() (DatabaseManager class method)</a>
+</li>
       <li><a href="reference/external_mappers.html#idtrack._external_mappers._ortholog._require_ortholog_deps">_require_ortholog_deps() (in module idtrack._external_mappers._ortholog)</a>
 </li>
+      <li><a href="reference.html#idtrack._connection_bridge.ConnectionBridge._require_pysocks">_require_pysocks() (ConnectionBridge static method)</a>
+</li>
       <li><a href="reference.html#idtrack._api.API._require_track">_require_track() (API method)</a>
+</li>
+      <li><a href="reference.html#idtrack._connection_bridge.ConnectionBridge._restore_socks_default_proxy">_restore_socks_default_proxy() (ConnectionBridge static method)</a>
 </li>
       <li><a href="reference/external_mappers.html#idtrack._external_mappers._utils._species_for_mygene">_species_for_mygene() (in module idtrack._external_mappers._utils)</a>
 </li>
@@ -243,15 +285,17 @@
 </li>
       <li><a href="reference.html#idtrack._db.DB.assembly_mysqlport_priority">assembly_mysqlport_priority (DB attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack._the_graph.TheGraph.available_external_databases">available_external_databases (TheGraph property)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack._the_graph.TheGraph.available_external_databases_assembly">available_external_databases_assembly (TheGraph property)</a>
 </li>
       <li><a href="reference.html#idtrack._the_graph.TheGraph.available_genome_assemblies">available_genome_assemblies (TheGraph property)</a>
 </li>
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager.available_releases">available_releases (DatabaseManager property)</a>
+</li>
+      <li><a href="reference.html#idtrack._database_manager.DatabaseManager.available_releases_all_assemblies">available_releases_all_assemblies (DatabaseManager property)</a>
 </li>
       <li><a href="reference.html#idtrack._the_graph.TheGraph.available_releases_given_database_assembly">available_releases_given_database_assembly (TheGraph property)</a>
 </li>
@@ -299,6 +343,8 @@
 </li>
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager.change_release">change_release() (DatabaseManager method)</a>
 </li>
+      <li><a href="reference.html#idtrack._database_manager.DatabaseManager.change_release_auto_assembly">change_release_auto_assembly() (DatabaseManager method)</a>
+</li>
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager.check_if_change_assembly_works">check_if_change_assembly_works() (DatabaseManager method)</a>
 </li>
       <li><a href="reference/external_mappers.html#idtrack._external_mappers.check_optional_dependencies">check_optional_dependencies() (in module idtrack._external_mappers)</a>
@@ -335,6 +381,8 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack._connection_bridge.ConnectionBridge">ConnectionBridge (class in idtrack._connection_bridge)</a>
+</li>
       <li><a href="reference.html#idtrack._graph_maker.GraphMaker.construct_graph">construct_graph() (GraphMaker method)</a>
 </li>
       <li><a href="reference.html#idtrack._graph_maker.GraphMaker.construct_graph_form">construct_graph_form() (GraphMaker method)</a>
@@ -575,6 +623,13 @@
 </li>
       </ul></li>
       <li>
+    idtrack._connection_bridge
+
+      <ul>
+        <li><a href="reference.html#module-idtrack._connection_bridge">module</a>
+</li>
+      </ul></li>
+      <li>
     idtrack._database_manager
 
       <ul>
@@ -706,6 +761,8 @@
 </li>
       <li><a href="reference.html#idtrack._graph_maker.GraphMaker.initialize_downloads">initialize_downloads() (GraphMaker method)</a>
 </li>
+      <li><a href="reference.html#idtrack._connection_bridge.ConnectionBridge.is_active">is_active (ConnectionBridge property)</a>
+</li>
       <li><a href="reference.html#idtrack._track_tests.TrackTests.is_base_is_range_correct">is_base_is_range_correct() (TrackTests method)</a>
 </li>
       <li><a href="reference.html#idtrack._track_tests.TrackTests.is_combined_edges_dicts_overlapping_and_complete">is_combined_edges_dicts_overlapping_and_complete() (TrackTests method)</a>
@@ -750,16 +807,20 @@
 </li>
       <li><a href="reference.html#idtrack._the_graph.TheGraph.list_to_ranges">list_to_ranges() (TheGraph static method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack._external_databases.ExternalDatabases.load_modified_yaml">load_modified_yaml() (ExternalDatabases method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/external_mappers.html#term-Local-repository-cache-directory"><strong>Local repository (cache directory)</strong></a>
 </li>
       <li><a href="reference.html#idtrack._api.API.local_repository">local_repository (API attribute)</a>
 </li>
       <li><a href="reference.html#idtrack._api.API.log">log (API attribute)</a>
+
+      <ul>
+        <li><a href="reference.html#idtrack._connection_bridge.ConnectionBridge.log">(ConnectionBridge attribute)</a>
 </li>
+      </ul></li>
       <li><a href="reference.html#idtrack._api.API.logger_configured">logger_configured (API attribute)</a>
 </li>
       <li><a href="reference.html#idtrack._the_graph.TheGraph.lower_chars_graph">lower_chars_graph (TheGraph property)</a>
@@ -787,6 +848,8 @@
 
       <ul>
         <li><a href="reference.html#module-idtrack._api">idtrack._api</a>
+</li>
+        <li><a href="reference.html#module-idtrack._connection_bridge">idtrack._connection_bridge</a>
 </li>
         <li><a href="reference.html#module-idtrack._database_manager">idtrack._database_manager</a>
 </li>
@@ -893,13 +956,17 @@
 </li>
       <li><a href="reference.html#idtrack._track.Track.path_step_possible_assembly_jumps">path_step_possible_assembly_jumps() (Track method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/external_mappers.html#idtrack._external_mappers._ortholog.pick_ortholog_for_species">pick_ortholog_for_species() (in module idtrack._external_mappers._ortholog)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack._db.DB.placeholder_na">placeholder_na (DB attribute)</a>
 </li>
       <li><a href="reference.html#idtrack._api.API.print_binned_conversion">print_binned_conversion() (API method)</a>
+</li>
+      <li><a href="reference.html#idtrack._connection_bridge.ConnectionBridge.proxy_host">proxy_host (ConnectionBridge attribute)</a>
+</li>
+      <li><a href="reference.html#idtrack._connection_bridge.ConnectionBridge.proxy_port">proxy_port (ConnectionBridge attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -947,14 +1014,20 @@
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack._connection_bridge.ConnectionBridge.set_env_proxy">set_env_proxy (ConnectionBridge attribute)</a>
+</li>
       <li><a href="reference.html#idtrack._track.Track.should_graph_reversed">should_graph_reversed() (Track method)</a>
 </li>
       <li><a href="reference/external_mappers.html#term-Snapshot-release-snapshot-boundary"><strong>Snapshot release (snapshot boundary)</strong></a>
 </li>
       <li><a href="reference.html#idtrack._graph_maker.GraphMaker.split_id">split_id() (GraphMaker static method)</a>
 </li>
+      <li><a href="reference.html#idtrack._connection_bridge.ConnectionBridge.start">start() (ConnectionBridge method)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference.html#idtrack._connection_bridge.ConnectionBridge.stop">stop() (ConnectionBridge method)</a>
+</li>
       <li><a href="reference/external_mappers.html#term-Strategy-best-vs-all"><strong>Strategy (best vs all)</strong></a>
 </li>
       <li><a href="reference/external_mappers.html#idtrack._external_mappers._utils.strip_version">strip_version() (in module idtrack._external_mappers._utils)</a>
@@ -970,6 +1043,8 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference.html#idtrack._database_manager.DatabaseManager.tables_in_disk">tables_in_disk() (DatabaseManager method)</a>
+</li>
+      <li><a href="reference.html#idtrack._connection_bridge.ConnectionBridge.test_connection">test_connection() (ConnectionBridge method)</a>
 </li>
       <li><a href="reference.html#idtrack._the_graph.TheGraph">TheGraph (class in idtrack._the_graph)</a>
 </li>

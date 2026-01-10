@@ -6,18 +6,18 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Part 7 — Advanced Topics &mdash; idtrack 0.0.4 documentation</title>
+  <title>Part 7 — Advanced Topics &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
       <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
-      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=f6ff1e94" />
+      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=0e72a3a5" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../_static/doctools.js?v=9bcbadda"></script>
       <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
       <script src="../_static/design-tabs.js?v=f930bc37"></script>
@@ -27,8 +27,8 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Appendix — Self-tests &amp; Sanity Checks (Human, Mouse, Pig)" href="initialization_test.html" />
-    <link rel="prev" title="Part 6 — Cross-Species Workflows: Humanization" href="tutorial_humanization_mouse_pig_to_human.html" /> 
+    <link rel="next" title="Appendix — Self-tests &amp; Sanity Checks (Human, Mouse, Pig)" href="99_initialization_test.html" />
+    <link rel="prev" title="Part 6 — Cross-Species Workflows: Humanization" href="06_tutorial_humanization_mouse_pig_to_human.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -56,19 +56,29 @@
 <li class="toctree-l1 current"><a class="reference internal" href="../tutorials.html">Tutorials</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="00_idtrack_overview.html">Part 0 — Conceptual Foundation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="01_installation_guide.html">Part 1 — Environment Setup &amp; Installation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="prepare_new_external_yaml.html">Part 2 — External Database Configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="initialization_graph.html">Part 3 — Graph Initialization &amp; Management</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api_deep_dive_human.html">Part 4 — Core API Deep-Dive (Human Example)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_harmonization.html">Part 5 — Real-World Experiments: Harmonization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_humanization_mouse_pig_to_human.html">Part 6 — Cross-Species Workflows: Humanization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_prepare_new_external_yaml.html">Part 2 — External Database Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_initialization_graph.html">Part 3 — Graph Initialization &amp; Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_api_deep_dive_human.html">Part 4 — Core API Deep-Dive (Human Example)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_tutorial_harmonization.html">Part 5 — Real-World Experiments: Harmonization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_tutorial_humanization_mouse_pig_to_human.html">Part 6 — Cross-Species Workflows: Humanization</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Part 7 — Advanced Topics</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#7.1-—-Custom-External-Database-Inclusion">7.1 — Custom External Database Inclusion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#7.2-—-Programmatic-YAML-Management">7.2 — Programmatic YAML Management</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#7.3-—-Troubleshooting-&amp;-Diagnostics">7.3 — Troubleshooting &amp; Diagnostics</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#7.4-—-Integration-Patterns">7.4 — Integration Patterns</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#7.5-—-No-Internet-Servers:-SSH-ConnectionBridge">7.5 — No-Internet Servers: SSH ConnectionBridge</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#The-most-important-rule">The most important rule</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Why-“two-SSH-tabs”-is-normal-(inbound-vs-outbound)">Why “two SSH tabs” is normal (inbound vs outbound)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Scenario-1-—-Python-runs-on-the-server/login-node-(no-compute-node)">Scenario 1 — Python runs on the server/login node (no compute node)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Scenario-2-—-Python-runs-on-a-compute-node-(Slurm),-not-Jupyter-(plain-Python-script)">Scenario 2 — Python runs on a compute node (Slurm), not Jupyter (plain Python script)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Scenario-3-—-Jupyter-kernel-runs-on-a-compute-node-(browser-on-your-local-machine)">Scenario 3 — Jupyter kernel runs on a compute node (browser on your local machine)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#What-ConnectionBridge-changes-(briefly)">What <code class="docutils literal notranslate"><span class="pre">ConnectionBridge</span></code> changes (briefly)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Copy/paste-helper:-ConnectionBridge-SSH-command">Copy/paste helper: ConnectionBridge SSH command</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="initialization_test.html">Appendix</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="99_initialization_test.html">Appendix</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
@@ -96,7 +106,7 @@
           <li class="breadcrumb-item"><a href="../tutorials.html">Tutorials</a></li>
       <li class="breadcrumb-item active">Part 7 — Advanced Topics</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../_sources/_notebooks/08_advanced_topics.ipynb.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/_notebooks/07_advanced_topics.ipynb.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -105,15 +115,16 @@
            <div itemprop="articleBody">
              
   <div class="idtrack-notebook-meta">
-  <a class="idtrack-notebook-download" href="../_sources/_notebooks/08_advanced_topics.ipynb">Download notebook</a>
+  <a class="idtrack-notebook-download" href="../_sources/_notebooks/07_advanced_topics.ipynb">Download notebook</a>
 </div><section id="Part-7-—-Advanced-Topics">
 <h1>Part 7 — Advanced Topics<a class="headerlink" href="#Part-7-—-Advanced-Topics" title="Link to this heading"></a></h1>
-<p><em>Last updated:</em> 2026-01-08</p>
+<p><em>Last updated:</em> 2026-01-09</p>
 <p>This notebook collects advanced, production-oriented topics for power users:</p>
 <ul class="simple">
 <li><p>custom external database profiles (strict vs broad)</p></li>
 <li><p>programmatic YAML management (useful in pipelines)</p></li>
 <li><p>troubleshooting &amp; diagnostics (common failure modes)</p></li>
+<li><p>restricted-server SSH bridging (ConnectionBridge)</p></li>
 <li><p>integration patterns (Snakemake/Nextflow-friendly workflows)</p></li>
 </ul>
 <blockquote>
@@ -273,7 +284,7 @@
     <span class="n">apply_allowlist_to_yaml</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">organism</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">allowlist</span><span class="o">=</span><span class="n">allowlist_mouse</span><span class="p">,</span> <span class="n">out_path</span><span class="o">=</span><span class="n">out_yaml</span><span class="p">)</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Template not found:&#39;</span><span class="p">,</span> <span class="n">template</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Generate it first with Part 2 (prepare_new_external_yaml.ipynb).&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Generate it first with Part 2 (02_prepare_new_external_yaml.ipynb).&#39;</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -284,7 +295,7 @@
 <ul class="simple">
 <li><p><strong>Permission errors in ``IDTRACK_LOCAL_REPO``:</strong> your cache directory is not writable.</p></li>
 <li><p><strong>REST timeouts:</strong> network issues or Ensembl REST is temporarily slow.</p></li>
-<li><p><strong>MySQL connection errors:</strong> firewall/VPN issues (ports <code class="docutils literal notranslate"><span class="pre">3306/5306/3337</span></code>).</p></li>
+<li><p><strong>MySQL connection errors:</strong> outbound MySQL ports may be blocked; IDTrack will fall back to HTTPS/FTP dumps (slower but functional). Port <code class="docutils literal notranslate"><span class="pre">3337</span></code> is used only for the human GRCh37 archive.</p></li>
 <li><p><strong>``ValueError: release not included in YAML``:</strong> your external YAML does not include the snapshot boundary you chose.</p></li>
 <li><p><strong>Unexpected 1→n explosion:</strong> your external allowlist is too broad or contains promiscuous namespaces.</p></li>
 </ul>
@@ -324,6 +335,7 @@
     <span class="n">report</span><span class="p">[</span><span class="s1">&#39;ensembl_rest_status&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;requests_missing: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&#39;</span>
 
 <span class="c1"># MySQL ports (best-effort)</span>
+<span class="c1"># Note: port 3337 is for the human GRCh37 archive; other species typically use 3306/5306.</span>
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
 
@@ -407,14 +419,145 @@
 </div>
 </div>
 </section>
+<section id="7.5-—-No-Internet-Servers:-SSH-ConnectionBridge">
+<h2>7.5 — No-Internet Servers: SSH ConnectionBridge<a class="headerlink" href="#7.5-—-No-Internet-Servers:-SSH-ConnectionBridge" title="Link to this heading"></a></h2>
+<p>Some HPC clusters block outbound internet access from compute nodes. IDTrack needs to contact Ensembl services, so in these environments you can route networking through your <strong>local machine</strong> using:</p>
+<ol class="arabic simple">
+<li><p>an SSH reverse SOCKS proxy (<code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-R</span> <span class="pre">...</span></code>) that creates a SOCKS5 proxy <em>on the remote machine</em>, and</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">idtrack.ConnectionBridge</span></code> inside the Python process so Python uses that proxy.</p></li>
+</ol>
+<section id="The-most-important-rule">
+<h3>The most important rule<a class="headerlink" href="#The-most-important-rule" title="Link to this heading"></a></h3>
+<p><strong>The SOCKS proxy must exist on the same machine where your Python code is running.</strong></p>
+<ul class="simple">
+<li><p>If your Python runs on the login node → the proxy must be on the login node.</p></li>
+<li><p>If your Python runs on a compute node → the proxy must be on that compute node.</p></li>
+<li><p>If your Jupyter kernel runs on a compute node → the proxy must be on that compute node (not on the login node).</p></li>
+</ul>
+</section>
+<section id="Why-“two-SSH-tabs”-is-normal-(inbound-vs-outbound)">
+<h3>Why “two SSH tabs” is normal (inbound vs outbound)<a class="headerlink" href="#Why-“two-SSH-tabs”-is-normal-(inbound-vs-outbound)" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Inbound</strong> traffic: your browser (local) needs to reach Jupyter (remote) → solved with <code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-L</span></code> (Jupyter tunnel).</p></li>
+<li><p><strong>Outbound</strong> traffic: your remote Python process needs to reach the internet (Ensembl) → solved with <code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-R</span></code> + <code class="docutils literal notranslate"><span class="pre">idtrack.ConnectionBridge</span></code>.</p></li>
+</ul>
+<p>These are independent problems, so using two separate SSH sessions/tabs is common. If your cluster allows you to SSH directly to the machine running the kernel (often via <code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-J</span> <span class="pre">login</span> <span class="pre">compute</span></code>), you can also combine <code class="docutils literal notranslate"><span class="pre">-L</span></code> and <code class="docutils literal notranslate"><span class="pre">-R</span></code> in a single SSH command.</p>
+</section>
+<section id="Scenario-1-—-Python-runs-on-the-server/login-node-(no-compute-node)">
+<h3>Scenario 1 — Python runs on the server/login node (no compute node)<a class="headerlink" href="#Scenario-1-—-Python-runs-on-the-server/login-node-(no-compute-node)" title="Link to this heading"></a></h3>
+<p>On your <strong>local machine</strong> (keep this SSH session open):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ssh<span class="w"> </span>-N<span class="w"> </span>-R<span class="w"> </span><span class="m">127</span>.0.0.1:1080<span class="w"> </span>user@server
+</pre></div>
+</div>
+<p>On the <strong>server</strong> (run IDTrack inside this Python process):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+
+<span class="k">with</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">ConnectionBridge</span><span class="p">(</span><span class="n">proxy_port</span><span class="o">=</span><span class="mi">1080</span><span class="p">):</span>
+    <span class="c1"># ... run IDTrack code ...</span>
+    <span class="k">pass</span>
+</pre></div>
+</div>
+</section>
+<section id="Scenario-2-—-Python-runs-on-a-compute-node-(Slurm),-not-Jupyter-(plain-Python-script)">
+<h3>Scenario 2 — Python runs on a compute node (Slurm), not Jupyter (plain Python script)<a class="headerlink" href="#Scenario-2-—-Python-runs-on-a-compute-node-(Slurm),-not-Jupyter-(plain-Python-script)" title="Link to this heading"></a></h3>
+<p>This is the same idea, but the target machine is the <strong>compute node</strong>.</p>
+<ol class="arabic simple">
+<li><p>Start your job and learn the compute node hostname (often from job output or <code class="docutils literal notranslate"><span class="pre">hostname</span></code>).</p></li>
+<li><p>On your <strong>local machine</strong>, create the proxy on that compute node (often via the login node as a jump host):</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ssh<span class="w"> </span>-N<span class="w"> </span>-J<span class="w"> </span>user@login<span class="w"> </span>-R<span class="w"> </span><span class="m">127</span>.0.0.1:1080<span class="w"> </span>user@compute123
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Run your Python script on the <strong>compute node</strong>, and enable <code class="docutils literal notranslate"><span class="pre">ConnectionBridge</span></code> at the start of the program.</p></li>
+</ol>
+</section>
+<section id="Scenario-3-—-Jupyter-kernel-runs-on-a-compute-node-(browser-on-your-local-machine)">
+<h3>Scenario 3 — Jupyter kernel runs on a compute node (browser on your local machine)<a class="headerlink" href="#Scenario-3-—-Jupyter-kernel-runs-on-a-compute-node-(browser-on-your-local-machine)" title="Link to this heading"></a></h3>
+<p>You usually need BOTH:</p>
+<ul class="simple">
+<li><p>an <strong>inbound</strong> Jupyter tunnel (<code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-L</span> <span class="pre">...</span></code>) so your browser can reach Jupyter, and</p></li>
+<li><p>an <strong>outbound</strong> SOCKS tunnel (<code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-R</span> <span class="pre">...</span></code>) so the kernel can reach Ensembl.</p></li>
+</ul>
+<p>Option A (common): keep your existing Jupyter tunnel workflow, and open a second SSH tab for the <code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-R</span> <span class="pre">...</span></code> tunnel.</p>
+<p>Option B (single SSH session): only if you can SSH to the compute node (often via <code class="docutils literal notranslate"><span class="pre">-J</span></code>). Example (adjust ports/users):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ssh<span class="w"> </span>-N<span class="w"> </span>-J<span class="w"> </span>user@login<span class="w"> </span>-L<span class="w"> </span><span class="m">8888</span>:127.0.0.1:8888<span class="w"> </span>-R<span class="w"> </span><span class="m">127</span>.0.0.1:1080<span class="w"> </span>user@compute123
+</pre></div>
+</div>
+</section>
+<section id="What-ConnectionBridge-changes-(briefly)">
+<h3>What <code class="docutils literal notranslate"><span class="pre">ConnectionBridge</span></code> changes (briefly)<a class="headerlink" href="#What-ConnectionBridge-changes-(briefly)" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>It patches <code class="docutils literal notranslate"><span class="pre">socket.socket</span></code> to PySocks’ <code class="docutils literal notranslate"><span class="pre">socks.socksocket</span></code> so most Python networking stacks transparently use the proxy (requests/urllib3, urllib, PyMySQL, etc.).</p></li>
+<li><p>It optionally sets <code class="docutils literal notranslate"><span class="pre">ALL_PROXY</span></code>/<code class="docutils literal notranslate"><span class="pre">all_proxy</span></code> so child processes inherit the proxy.</p></li>
+<li><p>It restores the original state on <code class="docutils literal notranslate"><span class="pre">stop()</span></code> (also best-effort on interpreter exit).</p></li>
+</ul>
+<blockquote>
+<div><p><strong>Tip:</strong> Prefer the context-manager form (<code class="docutils literal notranslate"><span class="pre">with</span> <span class="pre">ConnectionBridge(...)</span></code>) in scripts so cleanup is guaranteed.</p>
+</div></blockquote>
+</section>
+<section id="Copy/paste-helper:-ConnectionBridge-SSH-command">
+<h3>Copy/paste helper: ConnectionBridge SSH command<a class="headerlink" href="#Copy/paste-helper:-ConnectionBridge-SSH-command" title="Link to this heading"></a></h3>
+<p>There is a ready-to-use helper script in this repo:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">idtrack/reproducibility/scripts/connection_bridge_tunnel.sh</span></code></p></li>
+</ul>
+<p>It is meant to run on your <strong>local machine</strong>. It prints only the SSH command (one line). Paste that line into a terminal tab and keep it open.</p>
+<p>Examples:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Show full beginner-oriented help:</span>
+bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tunnel.sh<span class="w"> </span>--help
+
+<span class="c1"># Server/login node (Python runs on the login node):</span>
+bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tunnel.sh<span class="w"> </span>user@server
+
+<span class="c1"># Compute node (Python runs on compute node; go via login as jump host):</span>
+bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tunnel.sh<span class="w"> </span>--jump<span class="w"> </span>user@login<span class="w"> </span>compute123
+
+<span class="c1"># Compute node host auto-detected from Jupyter URL (kernel on compute node):</span>
+bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tunnel.sh<span class="w"> </span>--jump<span class="w"> </span>user@login<span class="w"> </span><span class="s2">&quot;http://compute123:8888/lab?token=...&quot;</span>
+
+<span class="c1"># Optional: one combined SSH command with both Jupyter (-L) and SOCKS (-R):</span>
+bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tunnel.sh<span class="w"> </span>--jump<span class="w"> </span>user@login<span class="w"> </span>--with-jupyter<span class="w"> </span><span class="s2">&quot;http://compute123:8888/lab?token=...&quot;</span>
+</pre></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+
+<span class="c1"># Enable the bridge inside the current Python process (e.g. a Jupyter kernel running on the server).</span>
+<span class="c1"># If `test=True` (default), the bridge pings Ensembl REST and rolls back automatically on failure.</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">ConnectionBridge</span><span class="p">(</span><span class="n">proxy_port</span><span class="o">=</span><span class="mi">1080</span><span class="p">)</span>
+<span class="n">ok</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">test</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Bridge enabled:&#39;</span><span class="p">,</span> <span class="n">ok</span><span class="p">)</span>
+
+<span class="c1"># ... run IDTrack code here ...</span>
+<span class="c1"># api = idtrack.API(local_repository=&#39;./idtrack_cache&#39;)</span>
+<span class="c1"># org, latest = api.resolve_organism(&#39;human&#39;)</span>
+<span class="c1"># api.build_graph(organism_name=org, snapshot_release=latest, calculate_caches=True)</span>
+
+<span class="c1"># Recommended pattern in scripts:</span>
+<span class="c1"># with idtrack.ConnectionBridge(proxy_port=1080) as _b:</span>
+<span class="c1">#     ... do work ...</span>
+
+<span class="n">b</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Bridge disabled&#39;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+</section>
 </section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="tutorial_humanization_mouse_pig_to_human.html" class="btn btn-neutral float-left" title="Part 6 — Cross-Species Workflows: Humanization" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="initialization_test.html" class="btn btn-neutral float-right" title="Appendix — Self-tests &amp; Sanity Checks (Human, Mouse, Pig)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="06_tutorial_humanization_mouse_pig_to_human.html" class="btn btn-neutral float-left" title="Part 6 — Cross-Species Workflows: Humanization" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="99_initialization_test.html" class="btn btn-neutral float-right" title="Appendix — Self-tests &amp; Sanity Checks (Human, Mouse, Pig)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

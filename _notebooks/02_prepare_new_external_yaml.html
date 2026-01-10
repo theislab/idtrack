@@ -1,0 +1,1328 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Part 2 — External Database Configuration &mdash; idtrack 0.0.5 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=0e72a3a5" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=282f96c0"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Part 3 — Graph Initialization &amp; Management" href="03_initialization_graph.html" />
+    <link rel="prev" title="Part 1 — Environment Setup &amp; Installation" href="01_installation_guide.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            idtrack
+              <img src="../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../tutorials.html">Tutorials</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="00_idtrack_overview.html">Part 0 — Conceptual Foundation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="01_installation_guide.html">Part 1 — Environment Setup &amp; Installation</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Part 2 — External Database Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#2.0-—-Pre-requisites-(what-you-need-before-you-start)">2.0 — Pre-requisites (what you need before you start)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#What-is-this-local-repository?">What is this local repository?</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#2.-External-YAML-in-plain-language">2. External YAML in plain language</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#YAML-structure-(what-you-will-see)">YAML structure (what you will see)</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#3.-Choose-your-snapshot-release-(reproducibility-knob)">3. Choose your snapshot release (reproducibility knob)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.1-—-Human-(Homo-sapiens)">2.1 — Human (Homo sapiens)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#2.1.1-Create-a-DatabaseManager-snapshot">2.1.1 Create a DatabaseManager snapshot</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#2.1.2-Generate-a-template-YAML-(optional-for-human,-required-for-mouse/pig)">2.1.2 Generate a template YAML (optional for human, required for mouse/pig)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#2.1.3-Edit-the-YAML-(two-options)">2.1.3 Edit the YAML (two options)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#2.1.4-Validate-+-preview-your-selections">2.1.4 Validate + preview your selections</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#2.2-—-Mouse-(Mus-musculus)">2.2 — Mouse (Mus musculus)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#2.2.1-Programmatic-allowlist-(mouse)">2.2.1 Programmatic allowlist (mouse)</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#2.3-—-Pig-(Sus-scrofa)">2.3 — Pig (Sus scrofa)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#2.3.1-Programmatic-allowlist-(pig)">2.3.1 Programmatic allowlist (pig)</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#2.4-—-Adding-a-New-Organism-(Advanced)">2.4 — Adding a New Organism (Advanced)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.5-—-Final-checklist-(before-you-build-graphs)">2.5 — Final checklist (before you build graphs)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.6-—-Best-practices-(once-you-get-comfortable)">2.6 — Best practices (once you get comfortable)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="03_initialization_graph.html">Part 3 — Graph Initialization &amp; Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_api_deep_dive_human.html">Part 4 — Core API Deep-Dive (Human Example)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_tutorial_harmonization.html">Part 5 — Real-World Experiments: Harmonization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_tutorial_humanization_mouse_pig_to_human.html">Part 6 — Cross-Species Workflows: Humanization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_advanced_topics.html">Part 7 — Advanced Topics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="99_initialization_test.html">Appendix</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../tutorials.html">Tutorials</a></li>
+      <li class="breadcrumb-item active">Part 2 — External Database Configuration</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/_notebooks/02_prepare_new_external_yaml.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="idtrack-notebook-meta">
+  <a class="idtrack-notebook-download" href="../_sources/_notebooks/02_prepare_new_external_yaml.ipynb">Download notebook</a>
+</div><section id="Part-2-—-External-Database-Configuration">
+<h1>Part 2 — External Database Configuration<a class="headerlink" href="#Part-2-—-External-Database-Configuration" title="Link to this heading"></a></h1>
+<p><em>Last updated:</em> 2026-01-08</p>
+<p>This notebook is the step-by-step guide for creating and validating the <strong>external YAML</strong> files that control which <strong>external databases</strong> (HGNC, MGI, UniProt, RefSeq, …) are included when IDTrack builds the identifier graph.</p>
+<p>By the end, you will:</p>
+<ul class="simple">
+<li><p>have <code class="docutils literal notranslate"><span class="pre">&lt;organism&gt;_externals_modified.yml</span></code> files in your local repository</p></li>
+<li><p>understand why keeping your external database selection <strong>small and curated</strong> improves mapping quality</p></li>
+<li><p>know how to validate that your YAML is compatible with your chosen snapshot boundary</p></li>
+</ul>
+<p>This notebook covers:</p>
+<ul class="simple">
+<li><p><strong>2.1 Human</strong> (<em>Homo sapiens</em>) — multi-assembly (GRCh38 + GRCh37, and older archives when available)</p></li>
+<li><p><strong>2.2 Mouse</strong> (<em>Mus musculus</em>) — clean handoff (one maintained assembly per release: GRCm37 → GRCm38 → GRCm39)</p></li>
+<li><p><strong>2.3 Pig</strong> (<em>Sus scrofa</em>) — clean handoff (one maintained assembly per release: Sscrofa9.2 → Sscrofa10.2 → Sscrofa11.1)</p></li>
+<li><p><strong>2.4 Adding a new organism</strong> (advanced; may require a small code configuration step)</p></li>
+</ul>
+<p>In IDTrack, assemblies are a first-class dimension (not just “primary vs legacy”): the templates keep all assembly entries that Ensembl exposes for the species. Keeping them is usually the right choice, especially when you integrate datasets annotated with different GTFs or reference packages.</p>
+<blockquote>
+<div><p><strong>Tip:</strong> If you’re new, start with <code class="docutils literal notranslate"><span class="pre">00_idtrack_overview.ipynb</span></code> (concepts) and <code class="docutils literal notranslate"><span class="pre">01_installation_guide.ipynb</span></code> (setup).</p>
+</div></blockquote>
+<section id="2.0-—-Pre-requisites-(what-you-need-before-you-start)">
+<h2>2.0 — Pre-requisites (what you need before you start)<a class="headerlink" href="#2.0-—-Pre-requisites-(what-you-need-before-you-start)" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>A working Python environment with IDTrack installed (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">idtrack</span></code>)</p></li>
+<li><p>Network access (first-time runs download Ensembl metadata)</p></li>
+<li><p>A writable <strong>local repository</strong> folder (IDTrack cache)</p></li>
+</ul>
+<p><strong>What you get at the end:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">homo_sapiens_externals_modified.yml</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mus_musculus_externals_modified.yml</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sus_scrofa_externals_modified.yml</span></code></p></li>
+</ul>
+<p>Each file lives in your local repository and is safe to share with collaborators.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>1
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load notebook utilities (collapsible output magic for tutorials)</span>
+<span class="o">%</span><span class="k">load_ext</span> _notebook_utils
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>2
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1) Setup (run this once)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+
+<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;IDTRACK_LOCAL_REPO&#39;</span><span class="p">,</span> <span class="s1">&#39;./idtrack_cache&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
+<span class="n">api</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Local repository:&#39;</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache
+</pre></div></div>
+</div>
+<section id="What-is-this-local-repository?">
+<h3>What is this local repository?<a class="headerlink" href="#What-is-this-local-repository?" title="Link to this heading"></a></h3>
+<p>Think of it as your <strong>IDTrack workspace</strong>. It will contain:</p>
+<ul class="simple">
+<li><p>cached Ensembl tables (downloaded once, reused many times)</p></li>
+<li><p>graph snapshot files (<code class="docutils literal notranslate"><span class="pre">graph_&lt;organism&gt;_...</span> <span class="pre">.pickle</span></code>)</p></li>
+<li><p>your external YAML files (<code class="docutils literal notranslate"><span class="pre">*_externals_modified.yml</span></code>)</p></li>
+</ul>
+<p>If you work on multiple projects, you can use one shared local repository (big but convenient), or separate local repositories (clean separation, easier to archive/share).</p>
+</section>
+</section>
+<section id="2.-External-YAML-in-plain-language">
+<h2>2. External YAML in plain language<a class="headerlink" href="#2.-External-YAML-in-plain-language" title="Link to this heading"></a></h2>
+<p>The YAML answers the question:</p>
+<blockquote>
+<div><p><strong>Which external databases should IDTrack trust and include as edges in the graph?</strong></p>
+</div></blockquote>
+<p>Ensembl knows about <em>many</em> external resources. Some are high quality and useful, some are redundant, and some create a lot of branching (ambiguity).</p>
+<p>A good rule of thumb:</p>
+<ul class="simple">
+<li><p>enable a <strong>small, curated</strong> set of strong databases</p></li>
+<li><p>avoid enabling lots of near-duplicates</p></li>
+</ul>
+<section id="YAML-structure-(what-you-will-see)">
+<h3>YAML structure (what you will see)<a class="headerlink" href="#YAML-structure-(what-you-will-see)" title="Link to this heading"></a></h3>
+<p>The generated template is nested like this:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">&lt;organism&gt;</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">gene</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">&lt;Database Name&gt;</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">Assembly</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">&lt;assembly_code&gt;</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">Ensembl release</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;90,91,92,...&quot;</span>
+<span class="w">          </span><span class="nt">Include</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">      </span><span class="nt">Database Index</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">123</span>
+<span class="w">      </span><span class="nt">Potential Synonymous</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+</pre></div>
+</div>
+<p><strong>You mainly edit one thing:</strong> <code class="docutils literal notranslate"><span class="pre">Include:</span> <span class="pre">false</span></code> → <code class="docutils literal notranslate"><span class="pre">Include:</span> <span class="pre">true</span></code>.</p>
+<p>Why is there an <code class="docutils literal notranslate"><span class="pre">Assembly:</span></code> level?</p>
+<ul class="simple">
+<li><p>Some external databases are only available (or only well-populated) on specific assembly/release combinations.</p></li>
+<li><p>IDTrack can map across assemblies, so it needs to know which edges exist in which build context.</p></li>
+</ul>
+<p>For most curated databases, enabling them for <strong>all assemblies listed in the template</strong> is the right default.</p>
+</section>
+</section>
+<section id="3.-Choose-your-snapshot-release-(reproducibility-knob)">
+<h2>3. Choose your snapshot release (reproducibility knob)<a class="headerlink" href="#3.-Choose-your-snapshot-release-(reproducibility-knob)" title="Link to this heading"></a></h2>
+<p>When you build graphs later, you will pick a <strong>snapshot release</strong> (maximum Ensembl release).</p>
+<p>For beginners, the best choice is usually:</p>
+<ul class="simple">
+<li><p><strong>the latest release</strong> for the organism</p></li>
+</ul>
+<p>For reproducible research projects, consider pinning:</p>
+<ul class="simple">
+<li><p>the Ensembl release used by your reference annotation (e.g. the one your pipeline used)</p></li>
+<li><p>or the release used by a published dataset you integrate</p></li>
+</ul>
+</section>
+<section id="2.1-—-Human-(Homo-sapiens)">
+<h2>2.1 — Human (Homo sapiens)<a class="headerlink" href="#2.1-—-Human-(Homo-sapiens)" title="Link to this heading"></a></h2>
+<p>Human is special in one convenient way: IDTrack ships a <strong>default external YAML</strong> for human.</p>
+<p>An important conceptual point before you start editing:</p>
+<ul class="simple">
+<li><p>Assemblies are not just “primary vs legacy” in IDTrack.</p></li>
+<li><p>Assemblies are part of the mapping problem.</p></li>
+</ul>
+<p>This matters in real projects (especially atlas building), where you often combine datasets annotated with different genome builds:</p>
+<ul class="simple">
+<li><p>GRCh37-era references / GTFs</p></li>
+<li><p>GRCh38-era references / GTFs</p></li>
+</ul>
+<p>IDTrack’s snapshot graphs are <strong>multi-assembly</strong>. Keeping multiple assembly blocks enabled in the external YAML helps the path-finder:</p>
+<ul class="simple">
+<li><p>interpret input identifiers in the correct assembly context</p></li>
+<li><p>map across assemblies when needed (in addition to mapping across releases)</p></li>
+<li><p>use external databases that exist only on specific assemblies as additional “bridges”</p></li>
+</ul>
+<p>For human, the shipped default YAML already includes the common human assembly codes exposed by Ensembl (typically <code class="docutils literal notranslate"><span class="pre">38</span></code> = GRCh38 and <code class="docutils literal notranslate"><span class="pre">37</span></code> = GRCh37). Depending on release coverage, you may also see older archive assemblies in templates.</p>
+<p>You have two good options:</p>
+<ol class="arabic simple">
+<li><p><strong>Use the shipped default as a starting point</strong> (fast, recommended for most users)</p></li>
+<li><p><strong>Regenerate a fresh template from live Ensembl metadata</strong> (slower, but useful if you want to refresh external database lists)</p></li>
+</ol>
+<p>Recommended external databases for human (high signal, widely used):</p>
+<ul class="simple">
+<li><p><strong>HGNC Symbol</strong> (human-readable gene symbols)</p></li>
+<li><p><strong>EntrezGene</strong></p></li>
+<li><p><strong>UniProtKB</strong></p></li>
+<li><p><strong>RefSeq_mRNA</strong> (optionally also RefSeq proteins if your workflow needs them)</p></li>
+</ul>
+<blockquote>
+<div><p><strong>Warning:</strong> Assembly codes are species-specific. <code class="docutils literal notranslate"><span class="pre">38</span></code> means GRCh38 for human, but <code class="docutils literal notranslate"><span class="pre">38</span></code> means GRCm38 for mouse.</p>
+<p><strong>Tip:</strong> Keep your allowlist small at first. You can expand later once you understand how ambiguity shows up in your results.</p>
+</div></blockquote>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>3
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 4.1 Resolve organism name + latest release</span>
+<span class="n">organism_hs</span><span class="p">,</span> <span class="n">latest_release_hs</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;human&#39;</span><span class="p">)</span>
+<span class="n">SNAPSHOT_RELEASE_HS</span> <span class="o">=</span> <span class="n">latest_release_hs</span>  <span class="c1"># change if you want to pin</span>
+<span class="n">organism_hs</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE_HS</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-01-11 00:11:47 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>3
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(&#39;homo_sapiens&#39;, 115)
+</pre></div></div>
+</div>
+<section id="2.1.1-Create-a-DatabaseManager-snapshot">
+<h3>2.1.1 Create a DatabaseManager snapshot<a class="headerlink" href="#2.1.1-Create-a-DatabaseManager-snapshot" title="Link to this heading"></a></h3>
+<p>This object is responsible for talking to Ensembl (downloads + caching) <strong>bounded by your snapshot release</strong>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dm_hs</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">get_database_manager</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism_hs</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE_HS</span><span class="p">)</span>
+<span class="n">dm_hs</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-01-11 00:12:05 INFO:database_manager: Using assembly-specific release range for homo_sapiens assembly 38: releases 76-115 (from config [76, None])
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;idtrack._database_manager.DatabaseManager at 0x17ccdce10&gt;
+</pre></div></div>
+</div>
+</section>
+<section id="2.1.2-Generate-a-template-YAML-(optional-for-human,-required-for-mouse/pig)">
+<h3>2.1.2 Generate a template YAML (optional for human, required for mouse/pig)<a class="headerlink" href="#2.1.2-Generate-a-template-YAML-(optional-for-human,-required-for-mouse/pig)" title="Link to this heading"></a></h3>
+<p>This step can take time, because IDTrack enumerates database metadata across releases. You typically do it once per organism (and then keep the YAML).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%</span><span class="k">collapse</span> Click to show download logs
+# Included for tutorial purposes only.
+
+# NOTE: This can take a while on first run (network + caching).
+df_hs = dm_hs.create_database_content(just_download=False)
+dm_hs.external_inst.create_template_yaml(df_hs)
+
+template_hs = Path(dm_hs.external_inst.file_name_template_yaml())
+modified_hs = Path(dm_hs.external_inst.file_name_modified_yaml(mode=&#39;configured&#39;))
+{
+    &#39;template_yaml&#39;: str(template_hs),
+    &#39;modified_yaml&#39;: str(modified_hs),
+}
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<!-- empty output --></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;template_yaml&#39;: &#39;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache/homo_sapiens_externals_template.yml&#39;,
+ &#39;modified_yaml&#39;: &#39;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache/homo_sapiens_externals_modified.yml&#39;}
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<details class="idtrack-collapse">
+<summary>Click to show download logs</summary>
+<pre class="idtrack-collapse-content">2026-01-11 00:12:13 INFO:database_manager: Processing assembly 38 for homo_sapiens...
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `76`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `77`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `78`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `79`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `80`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `81`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `82`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `83`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `84`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `85`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `86`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `87`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `88`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `89`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `90`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `91`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `92`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `93`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `94`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `95`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `96`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `97`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `98`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `99`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `100`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `101`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `102`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `103`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `104`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `105`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `106`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `107`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `108`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `109`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `110`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `111`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `112`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `113`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `114`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `gene`, ensembl release `115`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `76`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `77`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `78`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `79`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `80`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `81`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `82`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `83`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `84`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `85`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `86`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `87`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `88`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `89`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `90`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `91`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `92`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `93`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `94`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `95`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `96`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `97`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `98`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `99`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `100`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `101`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `102`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `103`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `104`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `105`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `106`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `107`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `108`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `109`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `110`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `111`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `112`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `113`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `114`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `transcript`, ensembl release `115`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `76`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `77`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `78`
+2026-01-11 00:12:13 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `79`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `80`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `81`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `82`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `83`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `84`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `85`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `86`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `87`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `88`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `89`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `90`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `91`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `92`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `93`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `94`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `95`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `96`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `97`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `98`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `99`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `100`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `101`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `102`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `103`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `104`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `105`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `106`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `107`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `108`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `109`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `110`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `111`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `112`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `113`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `114`
+2026-01-11 00:12:14 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `38`, form `translation`, ensembl release `115`
+2026-01-11 00:12:14 INFO:database_manager: Processing assembly 37 for homo_sapiens...
+2026-01-11 00:12:15 INFO:database_manager: Using assembly-specific release range for homo_sapiens assembly 37: releases 55-115 (from config [55, None])
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `55`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `56`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `57`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `58`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `59`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `60`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `61`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `62`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `63`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `64`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `65`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `66`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `67`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `68`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `69`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `70`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `71`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `72`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `73`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `74`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `75`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `76`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `77`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `78`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `79`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `80`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `81`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `82`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `83`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `84`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `85`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `86`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `87`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `88`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `89`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `90`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `91`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `92`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `93`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `94`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `95`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `96`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `97`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `98`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `99`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `100`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `101`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `102`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `103`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `104`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `105`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `106`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `107`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `108`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `109`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `110`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `111`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `112`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `113`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `114`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `gene`, ensembl release `115`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `55`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `56`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `57`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `58`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `59`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `60`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `61`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `62`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `63`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `64`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `65`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `66`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `67`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `68`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `69`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `70`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `71`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `72`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `73`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `74`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `75`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `76`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `77`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `78`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `79`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `80`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `81`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `82`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `83`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `84`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `85`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `86`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `87`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `88`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `89`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `90`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `91`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `92`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `93`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `94`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `95`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `96`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `97`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `98`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `99`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `100`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `101`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `102`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `103`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `104`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `105`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `106`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `107`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `108`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `109`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `110`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `111`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `112`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `113`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `114`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `transcript`, ensembl release `115`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `55`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `56`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `57`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `58`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `59`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `60`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `61`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `62`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `63`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `64`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `65`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `66`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `67`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `68`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `69`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `70`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `71`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `72`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `73`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `74`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `75`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `76`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `77`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `78`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `79`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `80`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `81`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `82`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `83`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `84`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `85`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `86`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `87`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `88`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `89`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `90`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `91`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `92`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `93`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `94`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `95`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `96`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `97`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `98`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `99`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `100`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `101`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `102`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `103`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `104`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `105`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `106`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `107`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `108`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `109`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `110`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `111`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `112`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `113`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `114`
+2026-01-11 00:12:31 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `37`, form `translation`, ensembl release `115`
+2026-01-11 00:12:31 INFO:database_manager: Processing assembly 36 for homo_sapiens...
+2026-01-11 00:12:32 INFO:database_manager: Using assembly-specific release range for homo_sapiens assembly 36: releases 48-54 (from config [48, 54])
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `gene`, ensembl release `48`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `gene`, ensembl release `49`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `gene`, ensembl release `50`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `gene`, ensembl release `51`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `gene`, ensembl release `52`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `gene`, ensembl release `53`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `gene`, ensembl release `54`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `transcript`, ensembl release `48`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `transcript`, ensembl release `49`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `transcript`, ensembl release `50`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `transcript`, ensembl release `51`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `transcript`, ensembl release `52`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `transcript`, ensembl release `53`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `transcript`, ensembl release `54`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `translation`, ensembl release `48`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `translation`, ensembl release `49`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `translation`, ensembl release `50`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `translation`, ensembl release `51`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `translation`, ensembl release `52`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `translation`, ensembl release `53`
+2026-01-11 00:12:38 INFO:database_manager: Database content is being created for `homo_sapiens`, assembly `36`, form `translation`, ensembl release `54`
+2026-01-11 00:12:38 INFO:database_manager: Assembly processing complete for homo_sapiens: Successfully processed 3/3 assemblies. Processed: [36, 37, 38], Failed: none
+2026-01-11 00:12:38 WARNING:external_databases: File created on /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache/homo_sapiens_externals_template.yml
+Please edit the file based on requested external databases and add &#x27;_modified&#x27; to the file name. See package documentation for further detail.</pre>
+</details></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;template_yaml&#39;: &#39;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache/homo_sapiens_externals_template.yml&#39;,
+ &#39;modified_yaml&#39;: &#39;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache/homo_sapiens_externals_modified.yml&#39;}
+</pre></div></div>
+</div>
+</section>
+<section id="2.1.3-Edit-the-YAML-(two-options)">
+<h3>2.1.3 Edit the YAML (two options)<a class="headerlink" href="#2.1.3-Edit-the-YAML-(two-options)" title="Link to this heading"></a></h3>
+<section id="Option-A-—-edit-by-hand-(recommended-at-least-once)">
+<h4>Option A — edit by hand (recommended at least once)<a class="headerlink" href="#Option-A-—-edit-by-hand-(recommended-at-least-once)" title="Link to this heading"></a></h4>
+<ol class="arabic simple">
+<li><p>Open the template file shown above (ends with <code class="docutils literal notranslate"><span class="pre">_externals_template.yml</span></code>).</p></li>
+<li><p>Search for a database you care about (e.g. <code class="docutils literal notranslate"><span class="pre">HGNC</span> <span class="pre">Symbol</span></code>).</p></li>
+<li><p>Change <code class="docutils literal notranslate"><span class="pre">Include:</span> <span class="pre">false</span></code> to <code class="docutils literal notranslate"><span class="pre">Include:</span> <span class="pre">true</span></code> for <strong>every assembly block listed</strong> (recommended).</p>
+<ul class="simple">
+<li><p>This keeps the database available as a bridge regardless of which genome build your inputs were annotated against.</p></li>
+<li><p>Only restrict to a subset of assemblies if you intentionally want a build-specific configuration.</p></li>
+</ul>
+</li>
+<li><p>Save as <code class="docutils literal notranslate"><span class="pre">_externals_modified.yml</span></code> in the same folder (IDTrack will look for this first).</p></li>
+</ol>
+</section>
+<section id="Option-B-—-programmatic-toggles-(great-for-reproducibility)">
+<h4>Option B — programmatic toggles (great for reproducibility)<a class="headerlink" href="#Option-B-—-programmatic-toggles-(great-for-reproducibility)" title="Link to this heading"></a></h4>
+<p>The next cell applies the <strong>shipped default configuration</strong> used by IDTrack (<code class="docutils literal notranslate"><span class="pre">homo_sapiens_externals_modified.yml</span></code>).</p>
+<p>This default enables <strong>49 form/database/assembly combinations</strong> across three forms:</p>
+<ul class="simple">
+<li><p><strong>gene</strong> (28 combinations): HGNC Symbol, EntrezGene, NCBI gene, UniProtKB Gene Name, Havana gene, Vega gene, RFAM, Clone-based identifiers, and their synonym variants</p></li>
+<li><p><strong>transcript</strong> (12 combinations): CCDS, Havana transcript, RefSeq mRNA/ncRNA (curated + predicted)</p></li>
+<li><p><strong>translation</strong> (9 combinations): Havana translation, RefSeq peptide (curated + predicted), UniProt (Swiss-Prot + TrEMBL)</p></li>
+</ul>
+<p>You can modify <code class="docutils literal notranslate"><span class="pre">DEFAULT_HS_EXTERNALS</span></code> in the cell below to customize your allowlist.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Default external databases for HUMAN (matches the shipped default config)</span>
+<span class="c1"># This dict is structured as: form -&gt; database -&gt; list of assemblies where Include=True</span>
+<span class="c1"># These 49 combinations are the default used by IDTrack for homo_sapiens.</span>
+
+<span class="n">DEFAULT_HS_EXTERNALS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;gene&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;Clone_based_ensembl_gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;Clone_based_vega_gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;EntrezGene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;Havana gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;NCBI gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;NCBI gene (formerly Entrezgene)&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;RFAM&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;UniProtKB Gene Name&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;Vega gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;Vega_gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;synonym_id::EntrezGene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;synonym_id::HGNC Symbol&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;synonym_id::NCBI gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;synonym_id::NCBI gene (formerly Entrezgene)&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;synonym_id::UniProtKB Gene Name&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+    <span class="p">},</span>
+    <span class="s1">&#39;transcript&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;CCDS&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;Havana transcript&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;RefSeq_mRNA&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;RefSeq_mRNA_predicted&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;RefSeq_ncRNA&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;RefSeq_ncRNA_predicted&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+    <span class="p">},</span>
+    <span class="s1">&#39;translation&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;Havana translation&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;RefSeq_peptide&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;RefSeq_peptide_predicted&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;Uniprot/SPTREMBL&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">&#39;Uniprot/SWISSPROT&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+
+<span class="c1"># Load the template YAML</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">template_hs</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+
+<span class="c1"># Apply the default configuration: set Include=True for matching form/database/assembly</span>
+<span class="n">enabled_count</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">for</span> <span class="n">form</span><span class="p">,</span> <span class="n">databases</span> <span class="ow">in</span> <span class="n">DEFAULT_HS_EXTERNALS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">form</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">y</span><span class="p">[</span><span class="n">organism_hs</span><span class="p">]:</span>
+        <span class="k">continue</span>
+    <span class="k">for</span> <span class="n">db_name</span><span class="p">,</span> <span class="n">assemblies</span> <span class="ow">in</span> <span class="n">databases</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">db_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">y</span><span class="p">[</span><span class="n">organism_hs</span><span class="p">][</span><span class="n">form</span><span class="p">]:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;  [SKIP] </span><span class="si">{</span><span class="n">form</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">db_name</span><span class="si">}</span><span class="s1"> not found in template&#39;</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="k">for</span> <span class="n">asm_code</span> <span class="ow">in</span> <span class="n">assemblies</span><span class="p">:</span>
+            <span class="n">asm_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">asm_code</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">asm_str</span> <span class="ow">in</span> <span class="n">y</span><span class="p">[</span><span class="n">organism_hs</span><span class="p">][</span><span class="n">form</span><span class="p">][</span><span class="n">db_name</span><span class="p">][</span><span class="s1">&#39;Assembly&#39;</span><span class="p">]:</span>
+                <span class="n">y</span><span class="p">[</span><span class="n">organism_hs</span><span class="p">][</span><span class="n">form</span><span class="p">][</span><span class="n">db_name</span><span class="p">][</span><span class="s1">&#39;Assembly&#39;</span><span class="p">][</span><span class="n">asm_str</span><span class="p">][</span><span class="s1">&#39;Include&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">enabled_count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+<span class="n">modified_hs</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Enabled </span><span class="si">{</span><span class="n">enabled_count</span><span class="si">}</span><span class="s1"> form/database/assembly combinations (the shipped default).&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Wrote:&#39;</span><span class="p">,</span> <span class="n">modified_hs</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Enabled 63 form/database/assembly combinations (the shipped default).
+Wrote: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache/homo_sapiens_externals_modified.yml
+</pre></div></div>
+</div>
+</section>
+</section>
+<section id="2.1.4-Validate-+-preview-your-selections">
+<h3>2.1.4 Validate + preview your selections<a class="headerlink" href="#2.1.4-Validate-+-preview-your-selections" title="Link to this heading"></a></h3>
+<p>This load step is important: it confirms your YAML contains your snapshot release and that IDTrack can parse it.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>7
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_</span> <span class="o">=</span> <span class="n">dm_hs</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">load_modified_yaml</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Enabled DBs:&#39;</span><span class="p">,</span> <span class="n">dm_hs</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">&#39;db&#39;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assemblies in play:&#39;</span><span class="p">,</span> <span class="n">dm_hs</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">&#39;assembly&#39;</span><span class="p">))</span>
+
+<span class="c1"># Your dm_hs was created with snapshot_release=115, but GRCh36 data in Ensembl only goes up to</span>
+<span class="c1"># around release 54-55 (when it was superseded by GRCh37).</span>
+<span class="n">_dm_hs</span> <span class="o">=</span> <span class="n">dm_hs</span><span class="o">.</span><span class="n">change_release_auto_assembly</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
+<span class="n">_</span> <span class="o">=</span> <span class="n">_dm_hs</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">load_modified_yaml</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Enabled DBs:&#39;</span><span class="p">,</span> <span class="n">_dm_hs</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">&#39;db&#39;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assemblies in play:&#39;</span><span class="p">,</span> <span class="n">_dm_hs</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">&#39;assembly&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Enabled DBs: [&#39;EntrezGene&#39;, &#39;HGNC Symbol&#39;, &#39;UniProtKB Gene Name&#39;, &#39;synonym_id::NCBI gene (formerly Entrezgene)&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;, &#39;synonym_id::HGNC Symbol&#39;, &#39;RFAM&#39;]
+Assemblies in play: [37, 38]
+Enabled DBs: [&#39;Clone_based_vega_gene&#39;, &#39;HGNC Symbol&#39;, &#39;Havana gene&#39;, &#39;synonym_id::HGNC Symbol&#39;, &#39;Clone_based_ensembl_gene&#39;]
+Assemblies in play: [36]
+</pre></div></div>
+</div>
+</section>
+</section>
+<section id="2.2-—-Mouse-(Mus-musculus)">
+<h2>2.2 — Mouse (Mus musculus)<a class="headerlink" href="#2.2-—-Mouse-(Mus-musculus)" title="Link to this heading"></a></h2>
+<p>Mouse does not ship with a default external YAML in the package, so the usual workflow is:</p>
+<ol class="arabic simple">
+<li><p>generate a template YAML (from Ensembl metadata)</p></li>
+<li><p>enable a curated allowlist of databases</p></li>
+<li><p>validate the YAML</p></li>
+</ol>
+<p>Mouse templates list multiple assemblies across history, but Ensembl is a clean-handoff species (one maintained assembly per release). You will usually see assembly codes like:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">39</span></code> = GRCm39</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">38</span></code> = GRCm38</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">37</span></code> = GRCm37</p></li>
+</ul>
+<blockquote>
+<div><p><strong>Tip:</strong> For clean-handoff species, enabling the same database across the listed assemblies is usually fine; the per-assembly release ranges are disjoint, so you typically do not get overlapping assemblies within a single release.</p>
+</div></blockquote>
+<p>Mouse-specific, commonly useful databases:</p>
+<ul class="simple">
+<li><p><strong>MGI Symbol</strong> (mouse gene symbols)</p></li>
+<li><p><strong>EntrezGene</strong></p></li>
+<li><p><strong>UniProtKB</strong></p></li>
+<li><p><strong>RefSeq_mRNA</strong></p></li>
+</ul>
+<blockquote>
+<div><p><strong>Expected output:</strong> You will create <code class="docutils literal notranslate"><span class="pre">mus_musculus_externals_modified.yml</span></code> in your local repository.</p>
+</div></blockquote>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>8
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 5.1 Resolve organism name + latest release</span>
+<span class="n">organism_mm</span><span class="p">,</span> <span class="n">latest_release_mm</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;mus musculus&#39;</span><span class="p">)</span>
+<span class="n">SNAPSHOT_RELEASE_MM</span> <span class="o">=</span> <span class="n">latest_release_mm</span>
+<span class="n">organism_mm</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE_MM</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-01-11 00:12:39 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>8
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(&#39;mus_musculus&#39;, 115)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>9
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 5.2 Create DatabaseManager snapshot</span>
+<span class="n">dm_mm</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">get_database_manager</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism_mm</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE_MM</span><span class="p">)</span>
+<span class="n">dm_mm</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-01-11 00:12:40 INFO:database_manager: Using assembly-specific release range for mus_musculus assembly 39: releases 103-115 (from config [103, None])
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>9
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;idtrack._database_manager.DatabaseManager at 0x17d5a2c10&gt;
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%</span><span class="k">collapse</span> Click to show download logs
+# Included for tutorial purposes only.
+
+# 5.3 Generate template YAML
+df_mm = dm_mm.create_database_content(just_download=False)
+dm_mm.external_inst.create_template_yaml(df_mm)
+
+template_mm = Path(dm_mm.external_inst.file_name_template_yaml())
+modified_mm = Path(dm_mm.external_inst.file_name_modified_yaml(mode=&#39;configured&#39;))
+{
+    &#39;template_yaml&#39;: str(template_mm),
+    &#39;modified_yaml&#39;: str(modified_mm),
+}
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<details class="idtrack-collapse" open>
+<summary>Click to show download logs</summary>
+<pre class="idtrack-collapse-content">2026-01-11 00:12:43 INFO:database_manager: Processing assembly 39 for mus_musculus...
+2026-01-11 00:12:43 INFO:database_manager: Database content is being created for `mus_musculus`, assembly `39`, form `gene`, ensembl release `103`
+2026-01-11 00:12:44 INFO:database_manager: Raw table for `gene` on ensembl release `103` was downloaded for following columns: gene_id, stable_id, version.
+2026-01-11 00:12:44 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens103_mysql_gene_COL_gene_id_COL_stable_id_COL_version`
+2026-01-11 00:12:45 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens103_processed_idsraw_gene_gene`
+2026-01-11 00:13:01 INFO:database_manager: Raw table for `object_xref` on ensembl release `103` was downloaded for following columns: ensembl_id, ensembl_object_type, xref_id, object_xref_id.
+2026-01-11 00:13:01 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens103_mysql_object_xref_COL_ensembl_id_COL_ensembl_object_type_COL_object_xref_id_COL_xref_id`
+2026-01-11 00:13:51 INFO:database_manager: Raw table for `xref` on ensembl release `103` was downloaded for following columns: xref_id, external_db_id, dbprimary_acc, display_label.
+2026-01-11 00:13:51 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens103_mysql_xref_COL_dbprimary_acc_COL_display_label_COL_external_db_id_COL_xref_id`
+2026-01-11 00:14:10 INFO:database_manager: Raw table for `external_db` on ensembl release `103` was downloaded for following columns: external_db_id, db_name, db_display_name.
+2026-01-11 00:14:10 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens103_mysql_external_db_COL_db_display_name_COL_db_name_COL_external_db_id`
+2026-01-11 00:14:12 INFO:database_manager: Raw table for `identity_xref` on ensembl release `103` was downloaded for following columns: ensembl_identity, xref_identity, object_xref_id.
+2026-01-11 00:14:12 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens103_mysql_identity_xref_COL_ensembl_identity_COL_object_xref_id_COL_xref_identity`
+2026-01-11 00:14:14 INFO:database_manager: Raw table for `external_synonym` on ensembl release `103` was downloaded for following columns: xref_id, synonym.
+2026-01-11 00:14:14 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens103_mysql_external_synonym_COL_synonym_COL_xref_id`
+2026-01-11 00:14:17 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens103_processed_external_database_gene`
+2026-01-11 00:14:17 INFO:database_manager: Database content is being created for `mus_musculus`, assembly `39`, form `gene`, ensembl release `104`
+2026-01-11 00:14:18 INFO:database_manager: Raw table for `gene` on ensembl release `104` was downloaded for following columns: gene_id, stable_id, version.
+2026-01-11 00:14:18 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens104_mysql_gene_COL_gene_id_COL_stable_id_COL_version`
+2026-01-11 00:14:19 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens104_processed_idsraw_gene_gene`
+2026-01-11 00:14:48 INFO:database_manager: Raw table for `object_xref` on ensembl release `104` was downloaded for following columns: ensembl_id, ensembl_object_type, xref_id, object_xref_id.
+2026-01-11 00:14:48 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens104_mysql_object_xref_COL_ensembl_id_COL_ensembl_object_type_COL_object_xref_id_COL_xref_id`
+2026-01-11 00:16:10 INFO:database_manager: Raw table for `xref` on ensembl release `104` was downloaded for following columns: xref_id, external_db_id, dbprimary_acc, display_label.
+2026-01-11 00:16:10 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens104_mysql_xref_COL_dbprimary_acc_COL_display_label_COL_external_db_id_COL_xref_id`
+2026-01-11 00:16:34 INFO:database_manager: Raw table for `external_db` on ensembl release `104` was downloaded for following columns: external_db_id, db_name, db_display_name.
+2026-01-11 00:16:35 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens104_mysql_external_db_COL_db_display_name_COL_db_name_COL_external_db_id`
+2026-01-11 00:16:36 INFO:database_manager: Raw table for `identity_xref` on ensembl release `104` was downloaded for following columns: ensembl_identity, xref_identity, object_xref_id.
+2026-01-11 00:16:36 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens104_mysql_identity_xref_COL_ensembl_identity_COL_object_xref_id_COL_xref_identity`
+2026-01-11 00:16:38 INFO:database_manager: Raw table for `external_synonym` on ensembl release `104` was downloaded for following columns: xref_id, synonym.
+2026-01-11 00:16:38 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens104_mysql_external_synonym_COL_synonym_COL_xref_id`
+2026-01-11 00:16:42 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens104_processed_external_database_gene`
+2026-01-11 00:16:42 INFO:database_manager: Database content is being created for `mus_musculus`, assembly `39`, form `gene`, ensembl release `105`
+2026-01-11 00:16:43 INFO:database_manager: Raw table for `gene` on ensembl release `105` was downloaded for following columns: gene_id, stable_id, version.
+2026-01-11 00:16:43 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens105_mysql_gene_COL_gene_id_COL_stable_id_COL_version`
+2026-01-11 00:16:44 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens105_processed_idsraw_gene_gene`
+2026-01-11 00:17:08 INFO:database_manager: Raw table for `object_xref` on ensembl release `105` was downloaded for following columns: ensembl_id, ensembl_object_type, xref_id, object_xref_id.
+2026-01-11 00:17:08 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens105_mysql_object_xref_COL_ensembl_id_COL_ensembl_object_type_COL_object_xref_id_COL_xref_id`
+2026-01-11 00:18:16 INFO:database_manager: Raw table for `xref` on ensembl release `105` was downloaded for following columns: xref_id, external_db_id, dbprimary_acc, display_label.
+2026-01-11 00:18:16 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens105_mysql_xref_COL_dbprimary_acc_COL_display_label_COL_external_db_id_COL_xref_id`
+2026-01-11 00:18:43 INFO:database_manager: Raw table for `external_db` on ensembl release `105` was downloaded for following columns: external_db_id, db_name, db_display_name.
+2026-01-11 00:18:43 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens105_mysql_external_db_COL_db_display_name_COL_db_name_COL_external_db_id`
+2026-01-11 00:18:46 INFO:database_manager: Raw table for `identity_xref` on ensembl release `105` was downloaded for following columns: ensembl_identity, xref_identity, object_xref_id.
+2026-01-11 00:18:46 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens105_mysql_identity_xref_COL_ensembl_identity_COL_object_xref_id_COL_xref_identity`
+2026-01-11 00:18:49 INFO:database_manager: Raw table for `external_synonym` on ensembl release `105` was downloaded for following columns: xref_id, synonym.
+2026-01-11 00:18:49 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens105_mysql_external_synonym_COL_synonym_COL_xref_id`
+2026-01-11 00:18:53 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens105_processed_external_database_gene`
+2026-01-11 00:18:53 INFO:database_manager: Database content is being created for `mus_musculus`, assembly `39`, form `gene`, ensembl release `106`
+2026-01-11 00:18:56 INFO:database_manager: Raw table for `gene` on ensembl release `106` was downloaded for following columns: gene_id, stable_id, version.
+2026-01-11 00:18:56 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens106_mysql_gene_COL_gene_id_COL_stable_id_COL_version`
+2026-01-11 00:18:57 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens106_processed_idsraw_gene_gene`
+2026-01-11 00:19:23 INFO:database_manager: Raw table for `object_xref` on ensembl release `106` was downloaded for following columns: ensembl_id, ensembl_object_type, xref_id, object_xref_id.
+2026-01-11 00:19:23 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens106_mysql_object_xref_COL_ensembl_id_COL_ensembl_object_type_COL_object_xref_id_COL_xref_id`
+2026-01-11 00:20:28 INFO:database_manager: Raw table for `xref` on ensembl release `106` was downloaded for following columns: xref_id, external_db_id, dbprimary_acc, display_label.
+2026-01-11 00:20:28 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens106_mysql_xref_COL_dbprimary_acc_COL_display_label_COL_external_db_id_COL_xref_id`
+2026-01-11 00:20:54 INFO:database_manager: Raw table for `external_db` on ensembl release `106` was downloaded for following columns: external_db_id, db_name, db_display_name.
+2026-01-11 00:20:54 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens106_mysql_external_db_COL_db_display_name_COL_db_name_COL_external_db_id`
+2026-01-11 00:20:59 INFO:database_manager: Raw table for `identity_xref` on ensembl release `106` was downloaded for following columns: ensembl_identity, xref_identity, object_xref_id.</pre>
+</details></div>
+</div>
+<section id="2.2.1-Programmatic-allowlist-(mouse)">
+<h3>2.2.1 Programmatic allowlist (mouse)<a class="headerlink" href="#2.2.1-Programmatic-allowlist-(mouse)" title="Link to this heading"></a></h3>
+<p>Mouse gene symbols come from <strong>MGI</strong> (Mouse Genome Informatics), so a typical set includes <code class="docutils literal notranslate"><span class="pre">MGI</span> <span class="pre">Symbol</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">allowlist_mm</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;MGI Symbol&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;EntrezGene&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;UniProtKB&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;RefSeq_mRNA&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">y</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">template_mm</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+<span class="n">the_form</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">organism_mm</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="n">enabled</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">db_name</span> <span class="ow">in</span> <span class="n">allowlist_mm</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">db_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">y</span><span class="p">[</span><span class="n">organism_mm</span><span class="p">][</span><span class="n">the_form</span><span class="p">]:</span>
+        <span class="k">continue</span>
+    <span class="k">for</span> <span class="n">_asm</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">y</span><span class="p">[</span><span class="n">organism_mm</span><span class="p">][</span><span class="n">the_form</span><span class="p">][</span><span class="n">db_name</span><span class="p">][</span><span class="s1">&#39;Assembly&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;Include&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">enabled</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">db_name</span><span class="p">)</span>
+
+<span class="n">modified_mm</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Enabled (found in template):&#39;</span><span class="p">,</span> <span class="n">enabled</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Wrote:&#39;</span><span class="p">,</span> <span class="n">modified_mm</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_</span> <span class="o">=</span> <span class="n">dm_mm</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">load_modified_yaml</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Enabled DBs:&#39;</span><span class="p">,</span> <span class="n">dm_mm</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">&#39;db&#39;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assemblies in play:&#39;</span><span class="p">,</span> <span class="n">dm_mm</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">&#39;assembly&#39;</span><span class="p">))</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="2.3-—-Pig-(Sus-scrofa)">
+<h2>2.3 — Pig (Sus scrofa)<a class="headerlink" href="#2.3-—-Pig-(Sus-scrofa)" title="Link to this heading"></a></h2>
+<p>Pig templates list multiple assemblies across history, but Ensembl is a clean-handoff species (one maintained assembly per release). Common Ensembl assembly codes you will see include:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">111</span></code> = Sscrofa11.1</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">102</span></code> = Sscrofa10.2</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">9</span></code> = Sscrofa9.2</p></li>
+</ul>
+<blockquote>
+<div><p><strong>Tip:</strong> For clean-handoff species, enabling the same database across the listed assemblies is usually fine; older assemblies mainly matter for legacy datasets and archive releases.</p>
+</div></blockquote>
+<p>Pig also requires generating a template YAML and then enabling a curated allowlist.</p>
+<p>Pig datasets often mix different naming conventions, so enabling a small set of high-signal externals is especially important.</p>
+<p>Commonly useful databases for pig:</p>
+<ul class="simple">
+<li><p><strong>EntrezGene</strong></p></li>
+<li><p><strong>UniProtKB</strong></p></li>
+<li><p><strong>RefSeq_mRNA</strong></p></li>
+</ul>
+<blockquote>
+<div><p><strong>Expected output:</strong> You will create <code class="docutils literal notranslate"><span class="pre">sus_scrofa_externals_modified.yml</span></code> in your local repository.</p>
+</div></blockquote>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 6.1 Resolve organism name + latest release</span>
+<span class="n">organism_ss</span><span class="p">,</span> <span class="n">latest_release_ss</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;sus scrofa&#39;</span><span class="p">)</span>
+<span class="n">SNAPSHOT_RELEASE_SS</span> <span class="o">=</span> <span class="n">latest_release_ss</span>
+<span class="n">organism_ss</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE_SS</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 6.2 Create DatabaseManager snapshot</span>
+<span class="n">dm_ss</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">get_database_manager</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism_ss</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE_SS</span><span class="p">)</span>
+<span class="n">dm_ss</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%</span><span class="k">collapse</span> Click to show download logs
+# 6.3 Generate template YAML
+df_ss = dm_ss.create_database_content(just_download=False)
+dm_ss.external_inst.create_template_yaml(df_ss)
+
+template_ss = Path(dm_ss.external_inst.file_name_template_yaml())
+modified_ss = Path(dm_ss.external_inst.file_name_modified_yaml(mode=&#39;configured&#39;))
+{
+    &#39;template_yaml&#39;: str(template_ss),
+    &#39;modified_yaml&#39;: str(modified_ss),
+}
+</pre></div>
+</div>
+</div>
+<section id="2.3.1-Programmatic-allowlist-(pig)">
+<h3>2.3.1 Programmatic allowlist (pig)<a class="headerlink" href="#2.3.1-Programmatic-allowlist-(pig)" title="Link to this heading"></a></h3>
+<p>Pig symbol databases can vary across releases. A safe starter set often includes <code class="docutils literal notranslate"><span class="pre">EntrezGene</span></code> and <code class="docutils literal notranslate"><span class="pre">UniProtKB</span></code>. Use the template to inspect what is available for your snapshot release.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">allowlist_ss</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;EntrezGene&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;UniProtKB&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;RefSeq_mRNA&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">y</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">template_ss</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+<span class="n">the_form</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">organism_ss</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="n">enabled</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">db_name</span> <span class="ow">in</span> <span class="n">allowlist_ss</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">db_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">y</span><span class="p">[</span><span class="n">organism_ss</span><span class="p">][</span><span class="n">the_form</span><span class="p">]:</span>
+        <span class="k">continue</span>
+    <span class="k">for</span> <span class="n">_asm</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">y</span><span class="p">[</span><span class="n">organism_ss</span><span class="p">][</span><span class="n">the_form</span><span class="p">][</span><span class="n">db_name</span><span class="p">][</span><span class="s1">&#39;Assembly&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;Include&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">enabled</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">db_name</span><span class="p">)</span>
+
+<span class="n">modified_ss</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Enabled (found in template):&#39;</span><span class="p">,</span> <span class="n">enabled</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Wrote:&#39;</span><span class="p">,</span> <span class="n">modified_ss</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_</span> <span class="o">=</span> <span class="n">dm_ss</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">load_modified_yaml</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Enabled DBs:&#39;</span><span class="p">,</span> <span class="n">dm_ss</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">&#39;db&#39;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assemblies in play:&#39;</span><span class="p">,</span> <span class="n">dm_ss</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">&#39;assembly&#39;</span><span class="p">))</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="2.4-—-Adding-a-New-Organism-(Advanced)">
+<h2>2.4 — Adding a New Organism (Advanced)<a class="headerlink" href="#2.4-—-Adding-a-New-Organism-(Advanced)" title="Link to this heading"></a></h2>
+<p>IDTrack currently ships with built-in support for a small set of organisms (human/mouse/pig). If you want to use a different Ensembl-supported species, there are <strong>two layers</strong> to set up:</p>
+<ol class="arabic simple">
+<li><p><strong>Core configuration (required):</strong> IDTrack must know the canonical Ensembl species name and which numeric <strong>assembly codes</strong> appear in schema names like <code class="docutils literal notranslate"><span class="pre">&lt;organism&gt;_core_&lt;release&gt;_&lt;assembly&gt;</span></code> (configure <code class="docutils literal notranslate"><span class="pre">idtrack/_db.py</span></code>).</p>
+<ul class="simple">
+<li><p>Direct MySQL connectivity is optional: when ports are blocked, IDTrack downloads the same tables from the HTTPS/FTP MySQL dumps.</p></li>
+</ul>
+</li>
+<li><p><strong>External YAML (required for externals):</strong> once the organism/assemblies are configured, you generate a template YAML and curate an allowlist exactly like mouse/pig above.</p></li>
+</ol>
+<p>Practical recipe:</p>
+<ul class="simple">
+<li><p>Step A: Resolve the canonical Ensembl species name (snake_case) with <code class="docutils literal notranslate"><span class="pre">api.resolve_organism(...)</span></code>.</p></li>
+<li><p>Step B: Configure the organism and its relevant assemblies in <code class="docutils literal notranslate"><span class="pre">idtrack/_db.py</span></code> by extending <code class="docutils literal notranslate"><span class="pre">DB.assembly_mysqlport_priority</span></code>.</p>
+<ul>
+<li><p>Listing multiple assemblies is what enables cross-assembly mapping and assembly-scoped external databases.</p></li>
+</ul>
+</li>
+<li><p>Step C: Re-run the YAML-template generation workflow (<code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_database_content(...)</span></code> → <code class="docutils literal notranslate"><span class="pre">create_template_yaml(...)</span></code>).</p></li>
+<li><p>Step D: Build a graph snapshot (Part 3) and run the sanity checks.</p></li>
+</ul>
+<blockquote>
+<div><p><strong>Warning:</strong> Until Step B is done, <code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code> will raise <code class="docutils literal notranslate"><span class="pre">NotImplementedError</span></code> for that organism.</p>
+</div></blockquote>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Minimal helper cell: check if an organism is supported by *this* IDTrack version.</span>
+<span class="c1"># (Safe to run; it will not modify your installation.)</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Supported organisms in this IDTrack version:&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  &#39;</span> <span class="o">+</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">supported_organisms</span><span class="p">))</span>
+
+<span class="c1"># Example: resolve an organism name via Ensembl REST (works even if the organism isn&#39;t configured locally)</span>
+<span class="n">organism_query</span> <span class="o">=</span> <span class="s1">&#39;danio rerio&#39;</span>  <span class="c1"># zebrafish (example)</span>
+<span class="n">formal_name</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="n">organism_query</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Resolved via Ensembl REST -&gt;&#39;</span><span class="p">,</span> <span class="n">organism_query</span><span class="p">,</span> <span class="s1">&#39;→&#39;</span><span class="p">,</span> <span class="n">formal_name</span><span class="p">,</span> <span class="s1">&#39;(latest release:&#39;</span><span class="p">,</span> <span class="n">latest_release</span><span class="p">,</span> <span class="s1">&#39;)&#39;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">formal_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">supported_organisms</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;This organism is not yet configured in this IDTrack version.&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;To add it: extend DB.assembly_mysqlport_priority in idtrack/_db.py with its assembly code + port list,&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;then regenerate the external YAML using the same workflow as mouse/pig above.&#39;</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;This organism is already configured. You can now generate a template YAML and continue.&#39;</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="2.5-—-Final-checklist-(before-you-build-graphs)">
+<h2>2.5 — Final checklist (before you build graphs)<a class="headerlink" href="#2.5-—-Final-checklist-(before-you-build-graphs)" title="Link to this heading"></a></h2>
+<p>You should now have these three files in your local repository:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">homo_sapiens_externals_modified.yml</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mus_musculus_externals_modified.yml</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sus_scrofa_externals_modified.yml</span></code></p></li>
+</ul>
+<p>The next notebook (<code class="docutils literal notranslate"><span class="pre">03_initialization_graph.ipynb</span></code>) will build graphs using these configs.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Quick existence check</span>
+<span class="n">expected</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;homo_sapiens_externals_modified.yml&#39;</span><span class="p">,</span>
+    <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;mus_musculus_externals_modified.yml&#39;</span><span class="p">,</span>
+    <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;sus_scrofa_externals_modified.yml&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">expected</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;OK&#39;</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;MISSING&#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+</section>
+<section id="2.6-—-Best-practices-(once-you-get-comfortable)">
+<h2>2.6 — Best practices (once you get comfortable)<a class="headerlink" href="#2.6-—-Best-practices-(once-you-get-comfortable)" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Keep allowlists small</strong>: enabling many overlapping databases often increases ambiguity.</p></li>
+<li><p><strong>Multiple profiles</strong>: you can maintain different YAMLs per project (e.g. ‘strict’ vs ‘broad’).</p></li>
+<li><p><strong>Assembly awareness</strong>:</p>
+<ul class="simple">
+<li><p>In Ensembl schema names, the last number encodes the genome assembly (e.g. human 38 = GRCh38; mouse 39 = GRCm39; pig 111 = Sscrofa11.1).</p></li>
+<li><p>Assembly codes are species-specific, and external databases can be assembly-scoped.</p></li>
+<li><p>Keeping all assembly blocks in your YAML is usually beneficial when you integrate mixed-build datasets.</p></li>
+</ul>
+</li>
+<li><p><strong>Re-running</strong>: you can regenerate templates after a new Ensembl release and re-apply your allowlist.</p></li>
+</ol>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="01_installation_guide.html" class="btn btn-neutral float-left" title="Part 1 — Environment Setup &amp; Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="03_initialization_graph.html" class="btn btn-neutral float-right" title="Part 3 — Graph Initialization &amp; Management" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

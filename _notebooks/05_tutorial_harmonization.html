@@ -6,18 +6,18 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Part 5 — Real-World Experiments: Harmonization &mdash; idtrack 0.0.4 documentation</title>
+  <title>Part 5 — Real-World Experiments: Harmonization &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
       <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
-      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=f6ff1e94" />
+      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=0e72a3a5" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../_static/doctools.js?v=9bcbadda"></script>
       <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
       <script src="../_static/design-tabs.js?v=f930bc37"></script>
@@ -27,8 +27,8 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Part 6 — Cross-Species Workflows: Humanization" href="tutorial_humanization_mouse_pig_to_human.html" />
-    <link rel="prev" title="Part 4 — Core API Deep-Dive (Human Example)" href="api_deep_dive_human.html" /> 
+    <link rel="next" title="Part 6 — Cross-Species Workflows: Humanization" href="06_tutorial_humanization_mouse_pig_to_human.html" />
+    <link rel="prev" title="Part 4 — Core API Deep-Dive (Human Example)" href="04_api_deep_dive_human.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -56,9 +56,9 @@
 <li class="toctree-l1 current"><a class="reference internal" href="../tutorials.html">Tutorials</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="00_idtrack_overview.html">Part 0 — Conceptual Foundation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="01_installation_guide.html">Part 1 — Environment Setup &amp; Installation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="prepare_new_external_yaml.html">Part 2 — External Database Configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="initialization_graph.html">Part 3 — Graph Initialization &amp; Management</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api_deep_dive_human.html">Part 4 — Core API Deep-Dive (Human Example)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_prepare_new_external_yaml.html">Part 2 — External Database Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_initialization_graph.html">Part 3 — Graph Initialization &amp; Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_api_deep_dive_human.html">Part 4 — Core API Deep-Dive (Human Example)</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Part 5 — Real-World Experiments: Harmonization</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#5.0-—-Why-harmonization-matters-(plain-language)">5.0 — Why harmonization matters (plain language)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#5.0.1-Pre-requisites">5.0.1 Pre-requisites</a></li>
@@ -80,9 +80,9 @@
 <li class="toctree-l3"><a class="reference internal" href="#5.4-Summary">5.4 Summary</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_humanization_mouse_pig_to_human.html">Part 6 — Cross-Species Workflows: Humanization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="08_advanced_topics.html">Part 7 — Advanced Topics</a></li>
-<li class="toctree-l2"><a class="reference internal" href="initialization_test.html">Appendix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_tutorial_humanization_mouse_pig_to_human.html">Part 6 — Cross-Species Workflows: Humanization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_advanced_topics.html">Part 7 — Advanced Topics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="99_initialization_test.html">Appendix</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
@@ -110,7 +110,7 @@
           <li class="breadcrumb-item"><a href="../tutorials.html">Tutorials</a></li>
       <li class="breadcrumb-item active">Part 5 — Real-World Experiments: Harmonization</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../_sources/_notebooks/tutorial_harmonization.ipynb.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/_notebooks/05_tutorial_harmonization.ipynb.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -119,7 +119,7 @@
            <div itemprop="articleBody">
              
   <div class="idtrack-notebook-meta">
-  <a class="idtrack-notebook-download" href="../_sources/_notebooks/tutorial_harmonization.ipynb">Download notebook</a>
+  <a class="idtrack-notebook-download" href="../_sources/_notebooks/05_tutorial_harmonization.ipynb">Download notebook</a>
 </div><section id="Part-5-—-Real-World-Experiments:-Harmonization">
 <h1>Part 5 — Real-World Experiments: Harmonization<a class="headerlink" href="#Part-5-—-Real-World-Experiments:-Harmonization" title="Link to this heading"></a></h1>
 <p><em>Last updated:</em> 2026-01-08</p>
@@ -148,7 +148,7 @@
 <section id="5.0.1-Pre-requisites">
 <h2>5.0.1 Pre-requisites<a class="headerlink" href="#5.0.1-Pre-requisites" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p>You can run <code class="docutils literal notranslate"><span class="pre">initialization_graph.ipynb</span></code> for human (graph snapshot exists in your local repository).</p></li>
+<li><p>You can run <code class="docutils literal notranslate"><span class="pre">03_initialization_graph.ipynb</span></code> for human (graph snapshot exists in your local repository).</p></li>
 <li><p>You have <code class="docutils literal notranslate"><span class="pre">anndata</span></code> installed (it is an IDTrack dependency).</p></li>
 <li><p>For the HLCA section, you need access to the HLCA <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> files (not bundled here).</p></li>
 </ul>
@@ -723,8 +723,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="api_deep_dive_human.html" class="btn btn-neutral float-left" title="Part 4 — Core API Deep-Dive (Human Example)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="tutorial_humanization_mouse_pig_to_human.html" class="btn btn-neutral float-right" title="Part 6 — Cross-Species Workflows: Humanization" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="04_api_deep_dive_human.html" class="btn btn-neutral float-left" title="Part 4 — Core API Deep-Dive (Human Example)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="06_tutorial_humanization_mouse_pig_to_human.html" class="btn btn-neutral float-right" title="Part 6 — Cross-Species Workflows: Humanization" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

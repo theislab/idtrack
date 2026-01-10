@@ -5,17 +5,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>idtrack._db &mdash; idtrack 0.0.4 documentation</title>
+  <title>idtrack._db &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
-      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=f6ff1e94" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
       <script src="../../_static/design-tabs.js?v=f930bc37"></script>
@@ -194,7 +194,7 @@
     <span class="n">mysql_port_min_release</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
         <span class="c1"># https://www.ensembl.org/info/data/mysql.html</span>
         <span class="mi">3306</span><span class="p">:</span> <span class="mi">48</span><span class="p">,</span>
-        <span class="mi">5306</span><span class="p">:</span> <span class="mi">48</span><span class="p">,</span>  <span class="c1"># mirror of 3306 for many datasets</span>
+        <span class="mi">5306</span><span class="p">:</span> <span class="mi">48</span><span class="p">,</span>  <span class="c1"># mirror of 3306 (redundancy / load balancing; should serve equivalent core schemas)</span>
         <span class="mi">3337</span><span class="p">:</span> <span class="mi">79</span><span class="p">,</span>
     <span class="p">}</span>
 
@@ -206,32 +206,44 @@
         <span class="c1">#   GRCm38 for mouse).</span>
         <span class="c1"># - Some (organism, assembly) pairs are hosted on multiple ports depending on release; we list ports in</span>
         <span class="c1">#   preference order and let DatabaseManager pick the first port that contains the requested release.</span>
+        <span class="c1"># - &quot;ReleaseRange&quot; specifies the expected range of releases for this assembly [min, max].</span>
+        <span class="c1">#   Use None for max to indicate &quot;current latest and beyond&quot;.</span>
         <span class="s2">&quot;homo_sapiens&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="c1"># GRCh38</span>
-            <span class="mi">38</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
-            <span class="c1"># GRCh37 exists on 3337 for later releases, and on 3306/5306 for older releases.</span>
-            <span class="mi">37</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3337</span><span class="p">,</span> <span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span>
-            <span class="c1"># NCBI36 (very old human assembly; Ensembl releases 48–54)</span>
-            <span class="mi">36</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">},</span>
+            <span class="c1"># GRCh38 (Ensembl release 76+; primary assembly since release 76)</span>
+            <span class="mi">38</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;ReleaseRange&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">76</span><span class="p">,</span> <span class="kc">None</span><span class="p">]},</span>
+            <span class="c1"># GRCh37 (Ensembl release 55+; archive since release 76)</span>
+            <span class="c1"># - MySQL port 3337 hosts GRCh37 **release 79 onwards** (archive service).</span>
+            <span class="c1"># - Some GRCh37 schemas can also appear on the main ports (3306/5306) for select releases; keep them</span>
+            <span class="c1">#   as fallbacks for environments where 3337 is unreachable.</span>
+            <span class="c1"># - Releases 55–78 are accessed via the HTTPS/FTP MySQL dumps (DatabaseManager FTP fallback).</span>
+            <span class="mi">37</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3337</span><span class="p">,</span> <span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;ReleaseRange&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">55</span><span class="p">,</span> <span class="kc">None</span><span class="p">]},</span>
+            <span class="c1"># NCBI36 (historic; clean handoff to GRCh37 at Ensembl release 55)</span>
+            <span class="c1"># - Ensembl FTP contains releases 48–54 under directory names like</span>
+            <span class="c1">#   `homo_sapiens_core_&lt;release&gt;_36&lt;patch&gt;` (e.g. `homo_sapiens_core_54_36p`).</span>
+            <span class="c1"># - Not expected to be available on the live public MySQL service anymore; accessed via HTTPS/FTP dumps.</span>
+            <span class="mi">36</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s2">&quot;ReleaseRange&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">48</span><span class="p">,</span> <span class="mi">54</span><span class="p">]},</span>
         <span class="p">},</span>
         <span class="s2">&quot;mus_musculus&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="c1"># GRCm39</span>
-            <span class="mi">39</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
-            <span class="c1"># GRCm38</span>
-            <span class="mi">38</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">,</span> <span class="mi">3337</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span>
-            <span class="c1"># GRCm37</span>
-            <span class="mi">37</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">},</span>
+            <span class="c1"># GRCm39 (Ensembl release 103+; clean handoff from GRCm38 at release 103)</span>
+            <span class="mi">39</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;ReleaseRange&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">103</span><span class="p">,</span> <span class="kc">None</span><span class="p">]},</span>
+            <span class="c1"># GRCm38 (Ensembl release 68–102)</span>
+            <span class="c1"># - Port 3337 also hosts a subset of GRCm38 releases (archive mirror); keep it as a fallback.</span>
+            <span class="mi">38</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">,</span> <span class="mi">3337</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;ReleaseRange&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">68</span><span class="p">,</span> <span class="mi">102</span><span class="p">]},</span>
+            <span class="c1"># GRCm37 / NCBIm37 (Ensembl release 48–67; clean handoff to GRCm38 at release 68)</span>
+            <span class="c1"># - Early releases can carry a patch-letter suffix (e.g. `..._37a`) and are handled by DatabaseManager.</span>
+            <span class="mi">37</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s2">&quot;ReleaseRange&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">48</span><span class="p">,</span> <span class="mi">67</span><span class="p">]},</span>
         <span class="p">},</span>
         <span class="s2">&quot;sus_scrofa&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="c1"># Sscrofa11.1</span>
-            <span class="mi">111</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
-            <span class="c1"># Sscrofa10.2 is hosted on both ports:</span>
-            <span class="c1"># - 3306/5306: releases 67–89</span>
-            <span class="c1"># - 3337:      releases 79–99</span>
-            <span class="c1"># Prefer the main port (3306/5306) when overlap exists, and fall back to 3337 for newer releases.</span>
-            <span class="mi">102</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">,</span> <span class="mi">3337</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span>
-            <span class="c1"># Sscrofa9.2</span>
-            <span class="mi">9</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">},</span>
+            <span class="c1"># Sscrofa11.1 (Ensembl release 90+; clean handoff from Sscrofa10.2 at release 90)</span>
+            <span class="mi">111</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;ReleaseRange&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">90</span><span class="p">,</span> <span class="kc">None</span><span class="p">]},</span>
+            <span class="c1"># Sscrofa10.2 (archive) — Ensembl release 67–89</span>
+            <span class="c1"># - Port 3337 hosts later archive releases (79–99); keep it as a fallback when present.</span>
+            <span class="mi">102</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">,</span> <span class="mi">3337</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;ReleaseRange&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">67</span><span class="p">,</span> <span class="mi">89</span><span class="p">]},</span>
+            <span class="c1"># Sscrofa9.2 (historic; clean handoff to Sscrofa10.2 at release 67)</span>
+            <span class="c1"># - Ensembl FTP contains releases 56–66 under directory names like</span>
+            <span class="c1">#   `sus_scrofa_core_&lt;release&gt;_9&lt;patch&gt;` (e.g. `sus_scrofa_core_60_9d`).</span>
+            <span class="c1"># - Not expected to be available on the live public MySQL service anymore; accessed via HTTPS/FTP dumps.</span>
+            <span class="mi">9</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Ports&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">&quot;Priority&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s2">&quot;ReleaseRange&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">56</span><span class="p">,</span> <span class="mi">66</span><span class="p">]},</span>
         <span class="p">},</span>
     <span class="p">}</span>
 

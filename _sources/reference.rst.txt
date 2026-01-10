@@ -13,6 +13,13 @@ Reference
     :show-inheritance: True
 
 
+.. automodule:: idtrack._connection_bridge
+    :members:
+    :private-members:
+    :exclude-members: _BridgeState
+    :show-inheritance: True
+
+
 .. automodule:: idtrack._harmonize_features
     :members:
     :private-members:

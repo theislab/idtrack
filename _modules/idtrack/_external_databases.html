@@ -5,17 +5,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>idtrack._external_databases &mdash; idtrack 0.0.4 documentation</title>
+  <title>idtrack._external_databases &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
-      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=f6ff1e94" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
       <script src="../../_static/design-tabs.js?v=f930bc37"></script>
@@ -144,8 +144,8 @@
 <span class="sd">        Args:</span>
 <span class="sd">            organism (str): Canonical Ensembl species identifier in *snake_case*</span>
 <span class="sd">                (e.g. ``&quot;homo_sapiens&quot;``).  Case-insensitive but must match Ensembl conventions.</span>
-<span class="sd">            ensembl_release (int): Target Ensembl release number (e.g. ``110``).  Must be ≥ 79 and</span>
-<span class="sd">                correspond to a release that actually exists for *organism* and *assembly*.</span>
+<span class="sd">            ensembl_release (int): Target Ensembl release number (e.g. ``110``). Must correspond to a</span>
+<span class="sd">                release that actually exists for *organism* and *genome_assembly*.</span>
 <span class="sd">            form (str): Entity level—``&quot;gene&quot;``, ``&quot;transcript&quot;``, or ``&quot;translation&quot;``.  Any other</span>
 <span class="sd">                value raises :py:class:`ValueError` in higher-level validation.</span>
 <span class="sd">            local_repository (str): Writable directory where YAML files and downloads are cached.</span>
@@ -271,7 +271,10 @@
                                 <span class="s2">&quot;Include&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
                             <span class="p">}</span>
                         <span class="k">else</span><span class="p">:</span>
-                            <span class="k">raise</span> <span class="ne">ValueError</span>
+                            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">&quot;Unexpected assembly format: expected int, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">a4</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> for assembly </span><span class="si">{</span><span class="n">a4</span><span class="si">!r}</span><span class="s2"> &quot;</span>
+                                <span class="sa">f</span><span class="s2">&quot;in database </span><span class="si">{</span><span class="n">a1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">a2</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">a3</span><span class="si">}</span><span class="s2">.&quot;</span>
+                            <span class="p">)</span>
 
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_name_template_yaml</span><span class="p">(),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">yaml_file</span><span class="p">:</span>
             <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">yaml_file</span><span class="p">)</span>
@@ -370,9 +373,10 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The package uses the default config file for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;No default config file for `</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">` distributed with the package: `</span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">`. &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;Please see `create_template_yaml&#39; method description &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;to learn how to create an external &#39;yaml&#39; file.&quot;</span>
+                    <span class="s2">&quot;No external database YAML found for organism &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">!r}</span><span class="s2"> (searched configured and default paths). &quot;</span>
+                    <span class="s2">&quot;Create a `&lt;organism&gt;_externals_modified.yml` in your local repository or &quot;</span>
+                    <span class="s2">&quot;use an organism that ships with a default config.&quot;</span>
                 <span class="p">)</span>
 
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span> <span class="k">as</span> <span class="n">yaml_file</span><span class="p">:</span>
@@ -400,6 +404,13 @@
 <span class="sd">        Raises:</span>
 <span class="sd">            ValueError: If the current Ensembl release is absent from the YAML configuration.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Allow &quot;no external databases&quot; runs (e.g. organisms without a shipped default YAML).</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">read_yaml_file</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">read_yaml_file</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">form</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">read_yaml_file</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">]:</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">read_yaml_file</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">form</span><span class="p">]:</span>
+            <span class="k">return</span>
+
         <span class="n">ensembl_releases</span> <span class="o">=</span> <span class="p">{</span>
             <span class="nb">int</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">j1</span> <span class="ow">in</span> <span class="n">read_yaml_file</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
@@ -440,10 +451,9 @@
 <span class="sd">                  assembly and Ensembl release.</span>
 
 <span class="sd">                - ``&quot;assembly&quot;``</span>
-<span class="sd">                  genome-assembly **codes** (``int``) that</span>
-<span class="sd">                  contain *any* external database entry for the current organism</span>
-<span class="sd">                  and form.  Assemblies are returned even if their ``Include``</span>
-<span class="sd">                  flags are still ``false``.</span>
+<span class="sd">                  genome-assembly **codes** (``int``) for which the YAML enables</span>
+<span class="sd">                  *at least one* external database (``Include: true``) at the</span>
+<span class="sd">                  current Ensembl release.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            list[str] | list[int]:</span>
@@ -472,7 +482,7 @@
                     <span class="k">elif</span> <span class="n">give_type</span> <span class="o">==</span> <span class="s2">&quot;assembly&quot;</span><span class="p">:</span>
                         <span class="n">result</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">asm</span><span class="p">))</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="ne">ValueError</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;give_type must be &#39;db&#39; or &#39;assembly&#39;, got </span><span class="si">{</span><span class="n">give_type</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
 </div>

@@ -6,18 +6,18 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Appendix — Self-tests &amp; Sanity Checks (Human, Mouse, Pig) &mdash; idtrack 0.0.4 documentation</title>
+  <title>Appendix — Self-tests &amp; Sanity Checks (Human, Mouse, Pig) &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
       <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
-      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=f6ff1e94" />
+      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=0e72a3a5" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../_static/doctools.js?v=9bcbadda"></script>
       <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
       <script src="../_static/design-tabs.js?v=f930bc37"></script>
@@ -28,7 +28,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Installation" href="../installation.html" />
-    <link rel="prev" title="Part 7 — Advanced Topics" href="08_advanced_topics.html" /> 
+    <link rel="prev" title="Part 7 — Advanced Topics" href="07_advanced_topics.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -56,12 +56,12 @@
 <li class="toctree-l1 current"><a class="reference internal" href="../tutorials.html">Tutorials</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="00_idtrack_overview.html">Part 0 — Conceptual Foundation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="01_installation_guide.html">Part 1 — Environment Setup &amp; Installation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="prepare_new_external_yaml.html">Part 2 — External Database Configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="initialization_graph.html">Part 3 — Graph Initialization &amp; Management</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api_deep_dive_human.html">Part 4 — Core API Deep-Dive (Human Example)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_harmonization.html">Part 5 — Real-World Experiments: Harmonization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_humanization_mouse_pig_to_human.html">Part 6 — Cross-Species Workflows: Humanization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="08_advanced_topics.html">Part 7 — Advanced Topics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_prepare_new_external_yaml.html">Part 2 — External Database Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_initialization_graph.html">Part 3 — Graph Initialization &amp; Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_api_deep_dive_human.html">Part 4 — Core API Deep-Dive (Human Example)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_tutorial_harmonization.html">Part 5 — Real-World Experiments: Harmonization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_tutorial_humanization_mouse_pig_to_human.html">Part 6 — Cross-Species Workflows: Humanization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_advanced_topics.html">Part 7 — Advanced Topics</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Appendix</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#1.-Setup">1. Setup</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#2.-Helper:-pick-a-representative-gene-ID-from-a-built-graph">2. Helper: pick a representative gene ID from a built graph</a></li>
@@ -102,7 +102,7 @@
           <li class="breadcrumb-item"><a href="../tutorials.html">Tutorials</a></li>
       <li class="breadcrumb-item active">Appendix — Self-tests &amp; Sanity Checks (Human, Mouse, Pig)</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../_sources/_notebooks/initialization_test.ipynb.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/_notebooks/99_initialization_test.ipynb.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -111,7 +111,7 @@
            <div itemprop="articleBody">
              
   <div class="idtrack-notebook-meta">
-  <a class="idtrack-notebook-download" href="../_sources/_notebooks/initialization_test.ipynb">Download notebook</a>
+  <a class="idtrack-notebook-download" href="../_sources/_notebooks/99_initialization_test.ipynb">Download notebook</a>
 </div><section id="Appendix-—-Self-tests-&amp;-Sanity-Checks-(Human,-Mouse,-Pig)">
 <h1>Appendix — Self-tests &amp; Sanity Checks (Human, Mouse, Pig)<a class="headerlink" href="#Appendix-—-Self-tests-&-Sanity-Checks-(Human,-Mouse,-Pig)" title="Link to this heading"></a></h1>
 <p><em>Last updated:</em> 2026-01-08</p>
@@ -124,7 +124,7 @@
 <li><p>(optional) deeper integrity checks via <code class="docutils literal notranslate"><span class="pre">TrackTests</span></code></p></li>
 </ul>
 <blockquote>
-<div><p><strong>Tip:</strong> If you hit an error, cross-reference Part 7.3 (<code class="docutils literal notranslate"><span class="pre">08_advanced_topics.ipynb</span></code>) for a diagnostic checklist.</p>
+<div><p><strong>Tip:</strong> If you hit an error, cross-reference Part 7.3 (<code class="docutils literal notranslate"><span class="pre">07_advanced_topics.ipynb</span></code>) for a diagnostic checklist.</p>
 </div></blockquote>
 <section id="1.-Setup">
 <h2>1. Setup<a class="headerlink" href="#1.-Setup" title="Link to this heading"></a></h2>
@@ -335,9 +335,9 @@
 <h2>5. If something fails<a class="headerlink" href="#5.-If-something-fails" title="Link to this heading"></a></h2>
 <p>Common failure modes and fixes:</p>
 <ol class="arabic simple">
-<li><p><strong>Missing YAML</strong> (mouse/pig): run <code class="docutils literal notranslate"><span class="pre">prepare_new_external_yaml.ipynb</span></code> and create the <code class="docutils literal notranslate"><span class="pre">_modified.yml</span></code>.</p></li>
+<li><p><strong>Missing YAML</strong> (mouse/pig): run <code class="docutils literal notranslate"><span class="pre">02_prepare_new_external_yaml.ipynb</span></code> and create the <code class="docutils literal notranslate"><span class="pre">_modified.yml</span></code>.</p></li>
 <li><p><strong>Permission errors</strong>: change <code class="docutils literal notranslate"><span class="pre">IDTRACK_LOCAL_REPO</span></code> to a writable path.</p></li>
-<li><p><strong>Network / MySQL issues</strong>: try again later, or run on a network that allows outbound connections.</p></li>
+<li><p><strong>Network / MySQL issues</strong>: REST/FTP access is required; direct MySQL access is optional (IDTrack falls back to HTTPS/FTP dumps).</p></li>
 <li><p><strong>Disk full</strong>: graphs can be large; move your local repository to a larger disk.</p></li>
 </ol>
 </section>
@@ -347,7 +347,7 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="08_advanced_topics.html" class="btn btn-neutral float-left" title="Part 7 — Advanced Topics" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="07_advanced_topics.html" class="btn btn-neutral float-left" title="Part 7 — Advanced Topics" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="../installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

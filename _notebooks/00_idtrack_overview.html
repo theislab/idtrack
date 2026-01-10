@@ -6,18 +6,18 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Part 0 — Conceptual Foundation &mdash; idtrack 0.0.4 documentation</title>
+  <title>Part 0 — Conceptual Foundation &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
       <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
-      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=f6ff1e94" />
+      <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=0e72a3a5" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../_static/doctools.js?v=9bcbadda"></script>
       <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
       <script src="../_static/design-tabs.js?v=f930bc37"></script>
@@ -73,13 +73,13 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="01_installation_guide.html">Part 1 — Environment Setup &amp; Installation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="prepare_new_external_yaml.html">Part 2 — External Database Configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="initialization_graph.html">Part 3 — Graph Initialization &amp; Management</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api_deep_dive_human.html">Part 4 — Core API Deep-Dive (Human Example)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_harmonization.html">Part 5 — Real-World Experiments: Harmonization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial_humanization_mouse_pig_to_human.html">Part 6 — Cross-Species Workflows: Humanization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="08_advanced_topics.html">Part 7 — Advanced Topics</a></li>
-<li class="toctree-l2"><a class="reference internal" href="initialization_test.html">Appendix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_prepare_new_external_yaml.html">Part 2 — External Database Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_initialization_graph.html">Part 3 — Graph Initialization &amp; Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_api_deep_dive_human.html">Part 4 — Core API Deep-Dive (Human Example)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_tutorial_harmonization.html">Part 5 — Real-World Experiments: Harmonization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_tutorial_humanization_mouse_pig_to_human.html">Part 6 — Cross-Species Workflows: Humanization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_advanced_topics.html">Part 7 — Advanced Topics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="99_initialization_test.html">Appendix</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
@@ -257,6 +257,7 @@
 <li><p>some external databases are only present (or only reliable) on specific assembly/release combinations, so having multiple assemblies available can increase connectivity</p></li>
 </ul>
 <p>In most projects you choose a single <strong>target</strong> (a snapshot boundary + a primary assembly for output), and use IDTrack to bring mixed inputs into that target in a reproducible way.</p>
+<p>Human is the main case where two assemblies are actively supported in parallel (GRCh38 + GRCh37). Mouse and pig are generally <em>clean-handoff</em> species (one maintained assembly per release), but older assemblies still matter for legacy datasets.</p>
 </section>
 <section id="0.2.5-—-Key-Abstractions-You-Will-Use">
 <h3>0.2.5 — Key Abstractions You Will Use<a class="headerlink" href="#0.2.5-—-Key-Abstractions-You-Will-Use" title="Link to this heading"></a></h3>
@@ -271,7 +272,7 @@
 </li>
 <li><p><strong>``idtrack.DatabaseManager``</strong> — data access + caching</p>
 <ul class="simple">
-<li><p>downloads tables from Ensembl MySQL</p></li>
+<li><p>downloads tables from Ensembl (live MySQL when reachable; otherwise HTTPS/FTP MySQL dumps)</p></li>
 <li><p>manages your external YAML (<code class="docutils literal notranslate"><span class="pre">*_externals_modified.yml</span></code>)</p></li>
 </ul>
 </li>
@@ -301,7 +302,7 @@
 <p>IDTrack assumes you have:</p>
 <ul class="simple">
 <li><p>a writable <strong>local repository folder</strong> (cache + graphs + YAML configs)</p></li>
-<li><p>network access the first time you build a graph (REST + MySQL; later runs reuse the cache)</p></li>
+<li><p>network access the first time you build a graph (REST + HTTPS/FTP dumps; later runs reuse the cache)</p></li>
 <li><p>enough disk space (graphs and cached tables can be large)</p></li>
 </ul>
 <p>IDTrack can:</p>
@@ -319,8 +320,8 @@
 <blockquote>
 <div><p><strong>Why this matters:</strong> IDTrack prefers to be “honestly ambiguous” rather than silently wrong. If you need a single answer from a 1→n case, you should make that choice explicitly (and record how you did it).</p>
 </div></blockquote>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>3
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1) Minimal setup cell (safe to run in any notebook)</span>
@@ -342,14 +343,23 @@
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+IDTrack version: 0.0.5
+Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache
+</pre></div></div>
+</div>
 <p>The cell above does three things:</p>
 <ol class="arabic simple">
 <li><p>chooses a cache directory (your <em>local repository</em>)</p></li>
 <li><p>creates the high-level <code class="docutils literal notranslate"><span class="pre">idtrack.API</span></code> object</p></li>
 <li><p>enables logging so you can see progress (downloads, caching, graph build)</p></li>
 </ol>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 2) Resolve organism names the way IDTrack expects</span>
@@ -360,6 +370,40 @@
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">query</span><span class="si">!r}</span><span class="s1"> -&gt; </span><span class="si">{</span><span class="n">formal_name</span><span class="si">!r}</span><span class="s1"> (latest Ensembl release: </span><span class="si">{</span><span class="n">latest_release</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">)</span>
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-01-09 21:31:06 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
+2026-01-09 21:31:07 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;human&#39; -&gt; &#39;homo_sapiens&#39; (latest Ensembl release: 115)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-01-09 21:31:07 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;mus musculus&#39; -&gt; &#39;mus_musculus&#39; (latest Ensembl release: 115)
+&#39;sus scrofa&#39; -&gt; &#39;sus_scrofa&#39; (latest Ensembl release: 115)
+</pre></div></div>
 </div>
 <p>You will see outputs like:</p>
 <ul class="simple">
@@ -388,13 +432,13 @@
 <p>If something fails, check these first:</p>
 <ol class="arabic simple">
 <li><p><strong>Permissions</strong>: is your local repository writable?</p></li>
-<li><p><strong>Network</strong>: first-time runs need to reach Ensembl services (REST + MySQL).</p></li>
+<li><p><strong>Network</strong>: first-time runs need to reach Ensembl services (REST + HTTPS/FTP dumps; MySQL is optional).</p></li>
 <li><p><strong>Disk space</strong>: building graphs can use multiple GB.</p></li>
 <li><p><strong>Snapshot boundary + assemblies</strong>: the snapshot release must exist for the organism and the chosen primary assembly. Older assemblies have different release coverage; a multi-assembly snapshot can still include them when they exist within the release window.</p></li>
 <li><p><strong>External YAML</strong>: for mouse/pig you must create a <code class="docutils literal notranslate"><span class="pre">*_externals_modified.yml</span></code> in your local repository.</p></li>
 </ol>
 <blockquote>
-<div><p><strong>Tip:</strong> For a deeper checklist (including diagnostics helpers), see Part 7.3 in <code class="docutils literal notranslate"><span class="pre">08_advanced_topics.ipynb</span></code>.</p>
+<div><p><strong>Tip:</strong> For a deeper checklist (including diagnostics helpers), see Part 7.3 in <code class="docutils literal notranslate"><span class="pre">07_advanced_topics.ipynb</span></code>.</p>
 </div></blockquote>
 </section>
 </section>

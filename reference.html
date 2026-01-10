@@ -6,17 +6,17 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reference &mdash; idtrack 0.0.4 documentation</title>
+  <title>Reference &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="_static/custom_settings.css?v=04d1a194" />
-      <link rel="stylesheet" type="text/css" href="_static/tutorials.css?v=f6ff1e94" />
+      <link rel="stylesheet" type="text/css" href="_static/tutorials.css?v=0e72a3a5" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=8c5712d9"></script>
+      <script src="_static/documentation_options.js?v=282f96c0"></script>
       <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
       <script src="_static/design-tabs.js?v=f930bc37"></script>
@@ -77,6 +77,24 @@
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._api.API.resolve_organism"><code class="docutils literal notranslate"><span class="pre">API.resolve_organism()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge"><code class="docutils literal notranslate"><span class="pre">ConnectionBridge</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge.log"><code class="docutils literal notranslate"><span class="pre">ConnectionBridge.log</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge.proxy_host"><code class="docutils literal notranslate"><span class="pre">ConnectionBridge.proxy_host</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge.proxy_port"><code class="docutils literal notranslate"><span class="pre">ConnectionBridge.proxy_port</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge.set_env_proxy"><code class="docutils literal notranslate"><span class="pre">ConnectionBridge.set_env_proxy</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge._atexit_cleanup"><code class="docutils literal notranslate"><span class="pre">ConnectionBridge._atexit_cleanup()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge._emit"><code class="docutils literal notranslate"><span class="pre">ConnectionBridge._emit()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge._emit_global"><code class="docutils literal notranslate"><span class="pre">ConnectionBridge._emit_global()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge._force_disable_bridge"><code class="docutils literal notranslate"><span class="pre">ConnectionBridge._force_disable_bridge()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge._format_proxy_url"><code class="docutils literal notranslate"><span class="pre">ConnectionBridge._format_proxy_url()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge._require_pysocks"><code class="docutils literal notranslate"><span class="pre">ConnectionBridge._require_pysocks()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge._restore_socks_default_proxy"><code class="docutils literal notranslate"><span class="pre">ConnectionBridge._restore_socks_default_proxy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge.is_active"><code class="docutils literal notranslate"><span class="pre">ConnectionBridge.is_active</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge.start"><code class="docutils literal notranslate"><span class="pre">ConnectionBridge.start()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge.stop"><code class="docutils literal notranslate"><span class="pre">ConnectionBridge.stop()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge.test_connection"><code class="docutils literal notranslate"><span class="pre">ConnectionBridge.test_connection()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.idt"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.idt</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.multiple_ensembl_dict"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.multiple_ensembl_dict</span></code></a></li>
@@ -106,14 +124,30 @@
 <li class="toctree-l2"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager"><code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._create_relation_helper"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._create_relation_helper()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._determine_usecols_ids"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._determine_usecols_ids()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._download_table_from_ftp"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._download_table_from_ftp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._ftp_db_dir_url"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._ftp_db_dir_url()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._ftp_find_core_db_dir"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._ftp_find_core_db_dir()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._ftp_mysql_root_candidates"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._ftp_mysql_root_candidates()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._ftp_schema_for_sql_url"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._ftp_schema_for_sql_url()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._ftp_schema_url"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._ftp_schema_url()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._get_core_db_index"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._get_core_db_index()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._get_core_db_index_from_ftp"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._get_core_db_index_from_ftp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._is_retryable_http_read_error"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._is_retryable_http_read_error()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._iter_exception_chain"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._iter_exception_chain()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._open_decompressed_http_text"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._open_decompressed_http_text()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._parse_apache_dir_listing_dirs"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._parse_apache_dir_listing_dirs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._parse_apache_dir_listing_files"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._parse_apache_dir_listing_files()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._probe_mysql_core_schemas_by_port"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._probe_mysql_core_schemas_by_port()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._refresh_core_db_index_mysql"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._refresh_core_db_index_mysql()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.available_releases"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.available_releases</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.available_releases_all_assemblies"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.available_releases_all_assemblies</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.available_releases_no_save"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.available_releases_no_save</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.available_releases_versions"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.available_releases_versions()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.available_tables_mysql"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.available_tables_mysql()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.change_assembly"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.change_assembly()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.change_form"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.change_form()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.change_release"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.change_release()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.change_release_auto_assembly"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.change_release_auto_assembly()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.check_if_change_assembly_works"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.check_if_change_assembly_works()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.check_version_info"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.check_version_info()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.create_available_databases"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_available_databases()</span></code></a></li>
@@ -691,7 +725,7 @@ query do not prevent processing of the others.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="idtrack._api.API.get_database_manager">
-<span class="sig-name descname"><span class="pre">get_database_manager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">organism_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">snapshot_release</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_assembly</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_api.html#API.get_database_manager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._api.API.get_database_manager" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">get_database_manager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">organism_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">snapshot_release</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_assembly</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignore_before</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_api.html#API.get_database_manager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._api.API.get_database_manager" title="Link to this definition"></a></dt>
 <dd><p>Create a database manager configured for an organism and a release-bounded snapshot.</p>
 <p>Construct and return <a class="reference internal" href="#idtrack._database_manager.DatabaseManager" title="idtrack._database_manager.DatabaseManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack._database_manager.DatabaseManager</span></code></a> bound to <code class="docutils literal notranslate"><span class="pre">organism_name</span></code> and
 configured to ignore data newer than <code class="docutils literal notranslate"><span class="pre">snapshot_release</span></code>. The manager centralizes all download, caching, and
@@ -710,6 +744,11 @@ reproducibility.</p></li>
 If <code class="docutils literal notranslate"><span class="pre">None</span></code> (default), the highest-priority assembly configured for the organism is used. Note that
 the resulting snapshot graph can still include additional assemblies within the snapshot window;
 use <code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.list_genome_assemblies()</span></code> to inspect what is present.</p></li>
+<li><p><strong>ignore_before</strong> (<em>int</em><em> | </em><em>None</em>) – Earliest Ensembl release to include in the snapshot window. When <code class="docutils literal notranslate"><span class="pre">None</span></code>
+(default), use the earliest release supported by the public Ensembl MySQL/FTP dumps (see
+<a class="reference internal" href="#idtrack._db.DB.mysql_port_min_release" title="idtrack._db.DB.mysql_port_min_release"><code class="xref py py-data docutils literal notranslate"><span class="pre">idtrack._db.DB.mysql_port_min_release</span></code></a>). This default ensures multi-assembly history is
+retained for clean-handoff species (e.g. mouse) where older assemblies live entirely in earlier
+releases.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -890,6 +929,303 @@ a consistent, up-to-date pair.</p>
 </dl>
 </dd></dl>
 
+</dd></dl>
+
+<p id="module-idtrack._connection_bridge">Process-scoped SOCKS bridging for restricted servers.</p>
+<p>The primary entry point is <code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.ConnectionBridge</span></code>. It enables IDTrack to run on servers without direct
+internet access (e.g. HPC clusters) by routing the <strong>current Python process</strong> through a SOCKS5 proxy provided by an
+SSH reverse tunnel such as <code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-R</span> <span class="pre">1080</span> <span class="pre">user&#64;server</span></code>.</p>
+<p>The bridge is intentionally lightweight and process-scoped:</p>
+<ul class="simple">
+<li><p>It does <strong>not</strong> modify system-wide proxy configuration.</p></li>
+<li><p>It only affects the current interpreter (one Python process / one Jupyter kernel).</p></li>
+<li><p>It is reversible via <code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.ConnectionBridge.stop()</span></code> and also cleaned up best-effort at interpreter exit.</p></li>
+</ul>
+<dl class="py class">
+<dt class="sig sig-object py" id="idtrack._connection_bridge.ConnectionBridge">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ConnectionBridge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">proxy_host</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'127.0.0.1'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proxy_port</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1080</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">set_env_proxy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_connection_bridge.html#ConnectionBridge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._connection_bridge.ConnectionBridge" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Route this Python process’ outgoing TCP connections through an SSH-provided SOCKS proxy.</p>
+<p>Many restricted environments block outbound internet access from compute nodes. IDTrack needs outbound access to
+Ensembl services (REST/HTTPS, FTP over HTTPS, and sometimes public MySQL). If you can SSH into the server from a
+machine with internet access, you can expose a SOCKS5 proxy on the server via OpenSSH <strong>remote dynamic
+forwarding</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ssh<span class="w"> </span>-R<span class="w"> </span><span class="m">1080</span><span class="w"> </span>user@server
+</pre></div>
+</div>
+<p>Then, inside Python on the server (or inside a Jupyter notebook kernel running on the server), enable the bridge:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+
+<span class="n">b</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">ConnectionBridge</span><span class="p">(</span><span class="n">proxy_port</span><span class="o">=</span><span class="mi">1080</span><span class="p">)</span>
+<span class="n">b</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>  <span class="c1"># applies process-scoped networking changes</span>
+
+<span class="c1"># ... run IDTrack ...</span>
+
+<span class="n">b</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>   <span class="c1"># restores the previous networking configuration</span>
+</pre></div>
+</div>
+<section id="internals-for-maintainers-power-users">
+<h2>Internals (for maintainers / power users)<a class="headerlink" href="#internals-for-maintainers-power-users" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">start()</span></code> monkeypatches <code class="xref py py-data docutils literal notranslate"><span class="pre">socket.socket</span></code> to <code class="xref py py-class docutils literal notranslate"><span class="pre">socks.socksocket</span></code> (PySocks) and optionally sets the
+environment variables <code class="docutils literal notranslate"><span class="pre">ALL_PROXY</span></code> and <code class="docutils literal notranslate"><span class="pre">all_proxy</span></code> so subprocesses spawned from this process inherit the proxy.</p>
+<p>A private, process-wide <code class="xref py py-class docutils literal notranslate"><span class="pre">_BridgeState</span></code> singleton stores the
+original socket class, environment variables, and PySocks default proxy to ensure <a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge.stop" title="idtrack._connection_bridge.ConnectionBridge.stop"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stop()</span></code></a> can restore the
+prior state precisely. The singleton also implements a simple reference counter so multiple
+<code class="xref py py-class docutils literal notranslate"><span class="pre">ConnectionBridge</span></code> instances can share the same active bridge.</p>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>The bridge affects only the current Python process (one Jupyter kernel). Closing the Python process/kernel
+automatically removes the monkeypatch.</p></li>
+<li><p>To avoid surprises, call <a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge.start" title="idtrack._connection_bridge.ConnectionBridge.start"><code class="xref py py-meth docutils literal notranslate"><span class="pre">start()</span></code></a> <strong>before</strong> the first network access in your program.</p></li>
+<li><p>Status messages are emitted via the logger named <code class="docutils literal notranslate"><span class="pre">&quot;connection_bridge&quot;</span></code> and, when <code class="docutils literal notranslate"><span class="pre">verbose=True</span></code>, printed
+to stdout for immediate visibility in notebooks.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">param proxy_host<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SOCKS proxy host on the server. With <code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-R</span> <span class="pre">1080</span> <span class="pre">...</span></code> this is typically <code class="docutils literal notranslate"><span class="pre">&quot;127.0.0.1&quot;</span></code>.</p>
+</dd>
+<dt class="field-even">param proxy_port<span class="colon">:</span></dt>
+<dd class="field-even"><p>SOCKS proxy port on the server. Must match the port used in the SSH command.</p>
+</dd>
+<dt class="field-odd">param set_env_proxy<span class="colon">:</span></dt>
+<dd class="field-odd"><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code> (default), set <code class="docutils literal notranslate"><span class="pre">ALL_PROXY</span></code>/<code class="docutils literal notranslate"><span class="pre">all_proxy</span></code> while active so subprocesses inherit the
+proxy configuration.</p>
+</dd>
+</dl>
+<p>Create a new bridge controller without applying any network changes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">param proxy_host<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SOCKS proxy host on the server (default <code class="docutils literal notranslate"><span class="pre">127.0.0.1</span></code>).</p>
+</dd>
+<dt class="field-even">param proxy_port<span class="colon">:</span></dt>
+<dd class="field-even"><p>SOCKS proxy port on the server (default <code class="docutils literal notranslate"><span class="pre">1080</span></code>).</p>
+</dd>
+<dt class="field-odd">param set_env_proxy<span class="colon">:</span></dt>
+<dd class="field-odd"><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, set <code class="docutils literal notranslate"><span class="pre">ALL_PROXY</span></code>/<code class="docutils literal notranslate"><span class="pre">all_proxy</span></code> while active so subprocesses inherit the proxy.</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="idtrack._connection_bridge.ConnectionBridge.log">
+<span class="sig-name descname"><span class="pre">log</span></span><a class="headerlink" href="#idtrack._connection_bridge.ConnectionBridge.log" title="Link to this definition"></a></dt>
+<dd><p>Logger named <code class="docutils literal notranslate"><span class="pre">&quot;connection_bridge&quot;</span></code> for structured diagnostics.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="idtrack._connection_bridge.ConnectionBridge.proxy_host">
+<span class="sig-name descname"><span class="pre">proxy_host</span></span><a class="headerlink" href="#idtrack._connection_bridge.ConnectionBridge.proxy_host" title="Link to this definition"></a></dt>
+<dd><p>Effective proxy host for this instance.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="idtrack._connection_bridge.ConnectionBridge.proxy_port">
+<span class="sig-name descname"><span class="pre">proxy_port</span></span><a class="headerlink" href="#idtrack._connection_bridge.ConnectionBridge.proxy_port" title="Link to this definition"></a></dt>
+<dd><p>Effective proxy port for this instance.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="idtrack._connection_bridge.ConnectionBridge.set_env_proxy">
+<span class="sig-name descname"><span class="pre">set_env_proxy</span></span><a class="headerlink" href="#idtrack._connection_bridge.ConnectionBridge.set_env_proxy" title="Link to this definition"></a></dt>
+<dd><p>Whether this instance sets proxy environment variables when activating the bridge.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._connection_bridge.ConnectionBridge._atexit_cleanup">
+<em class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_atexit_cleanup</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_connection_bridge.html#ConnectionBridge._atexit_cleanup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._connection_bridge.ConnectionBridge._atexit_cleanup" title="Link to this definition"></a></dt>
+<dd><p>Best-effort cleanup hook registered via <code class="xref py py-mod docutils literal notranslate"><span class="pre">atexit</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._connection_bridge.ConnectionBridge._emit">
+<span class="sig-name descname"><span class="pre">_emit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_connection_bridge.html#ConnectionBridge._emit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._connection_bridge.ConnectionBridge._emit" title="Link to this definition"></a></dt>
+<dd><p>Emit a status message via the instance logger and (optionally) stdout.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>message</strong> (<em>str</em>)</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>)</p></li>
+<li><p><strong>level</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._connection_bridge.ConnectionBridge._emit_global">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_emit_global</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_connection_bridge.html#ConnectionBridge._emit_global"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._connection_bridge.ConnectionBridge._emit_global" title="Link to this definition"></a></dt>
+<dd><p>Emit a message without requiring an instance (used by <code class="docutils literal notranslate"><span class="pre">atexit</span></code> cleanup).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>message</strong> (<em>str</em>)</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>)</p></li>
+<li><p><strong>level</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._connection_bridge.ConnectionBridge._force_disable_bridge">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_force_disable_bridge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_connection_bridge.html#ConnectionBridge._force_disable_bridge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._connection_bridge.ConnectionBridge._force_disable_bridge" title="Link to this definition"></a></dt>
+<dd><p>Disable the bridge regardless of which instance started it (best-effort).</p>
+<p>This method is used by the <code class="docutils literal notranslate"><span class="pre">atexit</span></code> hook and by unit tests to ensure a clean process state. It intentionally
+bypasses instance-level bookkeeping (e.g. <code class="docutils literal notranslate"><span class="pre">self._started</span></code> flags).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>verbose</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, print a status message to stdout.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._connection_bridge.ConnectionBridge._format_proxy_url">
+<em class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_format_proxy_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">host</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_connection_bridge.html#ConnectionBridge._format_proxy_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._connection_bridge.ConnectionBridge._format_proxy_url" title="Link to this definition"></a></dt>
+<dd><p>Return a SOCKS proxy URL suitable for environment variables.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>host</strong> (<em>str</em>)</p></li>
+<li><p><strong>port</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._connection_bridge.ConnectionBridge._require_pysocks">
+<em class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_require_pysocks</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_connection_bridge.html#ConnectionBridge._require_pysocks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._connection_bridge.ConnectionBridge._require_pysocks" title="Link to this definition"></a></dt>
+<dd><p>Import and return the PySocks module (import name: <code class="docutils literal notranslate"><span class="pre">socks</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Imported <code class="docutils literal notranslate"><span class="pre">socks</span></code> module.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>Any</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ImportError</strong> – If PySocks is not installed.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._connection_bridge.ConnectionBridge._restore_socks_default_proxy">
+<em class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_restore_socks_default_proxy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">socks_module</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">original_proxy</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_connection_bridge.html#ConnectionBridge._restore_socks_default_proxy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._connection_bridge.ConnectionBridge._restore_socks_default_proxy" title="Link to this definition"></a></dt>
+<dd><p>Restore the PySocks default proxy configuration (best effort).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>socks_module</strong> (<em>Any</em>)</p></li>
+<li><p><strong>original_proxy</strong> (<em>Any</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="idtrack._connection_bridge.ConnectionBridge.is_active">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">is_active</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#idtrack._connection_bridge.ConnectionBridge.is_active" title="Link to this definition"></a></dt>
+<dd><p>Return <code class="docutils literal notranslate"><span class="pre">True</span></code> if this instance currently holds an active bridge reference.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._connection_bridge.ConnectionBridge.start">
+<span class="sig-name descname"><span class="pre">start</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_connection_bridge.html#ConnectionBridge.start"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._connection_bridge.ConnectionBridge.start" title="Link to this definition"></a></dt>
+<dd><p>Enable the bridge for the current Python process.</p>
+<p>The bridge is reference-counted across instances in the current interpreter. If another
+<code class="xref py py-class docutils literal notranslate"><span class="pre">ConnectionBridge</span></code> already enabled the bridge with the <em>same</em> proxy host/port, calling
+<a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge.start" title="idtrack._connection_bridge.ConnectionBridge.start"><code class="xref py py-meth docutils literal notranslate"><span class="pre">start()</span></code></a> will simply increment the internal counter and return.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>test</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code> (default), run <a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge.test_connection" title="idtrack._connection_bridge.ConnectionBridge.test_connection"><code class="xref py py-meth docutils literal notranslate"><span class="pre">test_connection()</span></code></a> after enabling the bridge. If the test fails,
+the bridge is automatically disabled again and the method returns <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code> (default), print status messages to stdout.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">True</span></code> if the bridge is enabled (and the optional test succeeds), otherwise <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>RuntimeError</strong> – If a bridge is already active in this process but configured with a different proxy host/port.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._connection_bridge.ConnectionBridge.stop">
+<span class="sig-name descname"><span class="pre">stop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_connection_bridge.html#ConnectionBridge.stop"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._connection_bridge.ConnectionBridge.stop" title="Link to this definition"></a></dt>
+<dd><p>Disable the bridge and restore normal networking for this process.</p>
+<p>If multiple <code class="xref py py-class docutils literal notranslate"><span class="pre">ConnectionBridge</span></code> instances are active, the bridge is only fully disabled once
+the last instance calls <a class="reference internal" href="#idtrack._connection_bridge.ConnectionBridge.stop" title="idtrack._connection_bridge.ConnectionBridge.stop"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stop()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>verbose</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code> (default), print status messages to stdout.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._connection_bridge.ConnectionBridge.test_connection">
+<span class="sig-name descname"><span class="pre">test_connection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout_s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">15.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_connection_bridge.html#ConnectionBridge.test_connection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._connection_bridge.ConnectionBridge.test_connection" title="Link to this definition"></a></dt>
+<dd><p>Verify connectivity to Ensembl services through the active bridge.</p>
+<p>The Ensembl REST ping is treated as the authoritative signal for success. MySQL connectivity checks are
+reported as warnings because IDTrack can fall back to HTTPS/FTP in some workflows.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>verbose</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code> (default), print status messages to stdout.</p></li>
+<li><p><strong>timeout_s</strong> (<em>float</em>) – Timeout (seconds) for the REST request.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">True</span></code> if Ensembl REST is reachable, otherwise <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>RuntimeError</strong> – If the bridge is not active in this process.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>proxy_host</strong> (<em>str</em>)</p></li>
+<li><p><strong>proxy_port</strong> (<em>int</em>)</p></li>
+<li><p><strong>set_env_proxy</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py class" id="module-idtrack._harmonize_features">
@@ -1779,11 +2115,100 @@ later joins (e.g., <code class="docutils literal notranslate"><span class="pre">
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._download_table_from_ftp">
+<span class="sig-name descname"><span class="pre">_download_table_from_ftp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table_key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">usecols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._download_table_from_ftp"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._download_table_from_ftp" title="Link to this definition"></a></dt>
+<dd><p>Download a table from Ensembl’s HTTPS MySQL dumps (no direct MySQL connection).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>table_key</strong> (<em>str</em>)</p></li>
+<li><p><strong>usecols</strong> (<em>list</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>DataFrame</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._ftp_db_dir_url">
+<span class="sig-name descname"><span class="pre">_ftp_db_dir_url</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._ftp_db_dir_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._ftp_db_dir_url" title="Link to this definition"></a></dt>
+<dd><p>Return the HTTPS directory URL for the current core database dump.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._ftp_find_core_db_dir">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_ftp_find_core_db_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">organism</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_assembly</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">release</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._ftp_find_core_db_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._ftp_find_core_db_dir" title="Link to this definition"></a></dt>
+<dd><p>Locate the core DB directory name (may include patch letters) and its HTTPS directory URL.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>organism</strong> (<em>str</em>)</p></li>
+<li><p><strong>genome_assembly</strong> (<em>int</em>)</p></li>
+<li><p><strong>release</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple[str | None, str | None]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._ftp_mysql_root_candidates">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_ftp_mysql_root_candidates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">organism</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_assembly</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">release</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._ftp_mysql_root_candidates"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._ftp_mysql_root_candidates" title="Link to this definition"></a></dt>
+<dd><p>Return candidate HTTPS roots to search for an Ensembl core DB directory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>organism</strong> (<em>str</em>)</p></li>
+<li><p><strong>genome_assembly</strong> (<em>int</em>)</p></li>
+<li><p><strong>release</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple[str, …]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._ftp_schema_for_sql_url">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_ftp_schema_for_sql_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sql_url</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._ftp_schema_for_sql_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._ftp_schema_for_sql_url" title="Link to this definition"></a></dt>
+<dd><p>Return a table-&gt;columns mapping parsed from an Ensembl <cite>&lt;db&gt;.sql.gz</cite> schema dump.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>sql_url</strong> (<em>str</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict[str, list[str]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._ftp_schema_url">
+<span class="sig-name descname"><span class="pre">_ftp_schema_url</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._ftp_schema_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._ftp_schema_url" title="Link to this definition"></a></dt>
+<dd><p>Return a working schema-dump URL (<cite>*.sql.gz</cite> or <cite>*.sql.gz.bz2</cite>) for the current DB dump directory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._get_core_db_index">
 <em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_get_core_db_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">organism</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_assembly</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._get_core_db_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._get_core_db_index" title="Link to this definition"></a></dt>
 <dd><p>Return cached core-DB availability for an (organism, assembly) pair across all configured ports.</p>
 <p>The Ensembl public MySQL service can host the same assembly on multiple ports depending on release
-(e.g. <em>sus_scrofa</em> assembly 102). To support full-history workflows we build a small in-memory index:</p>
+(e.g. <em>homo_sapiens</em> assembly 37). To support full-history workflows we build a small in-memory index:</p>
 <ul class="simple">
 <li><p><cite>ports</cite>: ports probed for this (organism, assembly) in preference order</p></li>
 <li><p><cite>releases_by_port</cite>: releases available for this assembly on each reachable port</p></li>
@@ -1811,6 +2236,127 @@ later joins (e.g., <code class="docutils literal notranslate"><span class="pre">
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._get_core_db_index_from_ftp">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_get_core_db_index_from_ftp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">organism</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_assembly</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ports</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._get_core_db_index_from_ftp"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._get_core_db_index_from_ftp" title="Link to this definition"></a></dt>
+<dd><p>Build a core-DB availability index by probing the Ensembl HTTPS/FTP MySQL dumps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>organism</strong> (<em>str</em>)</p></li>
+<li><p><strong>genome_assembly</strong> (<em>int</em>)</p></li>
+<li><p><strong>ports</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict[str, <em>Any</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._is_retryable_http_read_error">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_is_retryable_http_read_error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">exc</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._is_retryable_http_read_error"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._is_retryable_http_read_error" title="Link to this definition"></a></dt>
+<dd><p>Heuristically decide whether an HTTP read/decompress error is transient and safe to retry.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>exc</strong> (<em>BaseException</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._iter_exception_chain">
+<em class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_iter_exception_chain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">exc</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._iter_exception_chain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._iter_exception_chain" title="Link to this definition"></a></dt>
+<dd><p>Return the exception chain (<cite>__cause__</cite>/<cite>__context__</cite>) as a list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>exc</strong> (<em>BaseException</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list[BaseException]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._open_decompressed_http_text">
+<em class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_open_decompressed_http_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._open_decompressed_http_text"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._open_decompressed_http_text" title="Link to this definition"></a></dt>
+<dd><p>Yield a text stream for an Ensembl dump file, handling <cite>.gz</cite>, <cite>.bz2</cite>, and nested <cite>.gz.bz2</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>url</strong> (<em>str</em>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._parse_apache_dir_listing_dirs">
+<em class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_parse_apache_dir_listing_dirs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">html</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._parse_apache_dir_listing_dirs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._parse_apache_dir_listing_dirs" title="Link to this definition"></a></dt>
+<dd><p>Extract directory names from an Apache-style directory listing HTML page.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>html</strong> (<em>str</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._parse_apache_dir_listing_files">
+<em class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_parse_apache_dir_listing_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">html</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._parse_apache_dir_listing_files"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._parse_apache_dir_listing_files" title="Link to this definition"></a></dt>
+<dd><p>Extract file names from an Apache-style directory listing HTML page.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>html</strong> (<em>str</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._probe_mysql_core_schemas_by_port">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_probe_mysql_core_schemas_by_port</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">organism</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_assembly</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ports</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._probe_mysql_core_schemas_by_port"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._probe_mysql_core_schemas_by_port" title="Link to this definition"></a></dt>
+<dd><p>Return per-port core DB releases and schema names from the live Ensembl MySQL service.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>organism</strong> (<em>str</em>)</p></li>
+<li><p><strong>genome_assembly</strong> (<em>int</em>)</p></li>
+<li><p><strong>ports</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple[dict[int, set[int]], dict[int, dict[int, str]], dict[int, Exception]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._refresh_core_db_index_mysql">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_refresh_core_db_index_mysql</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">organism</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_assembly</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._refresh_core_db_index_mysql"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._refresh_core_db_index_mysql" title="Link to this definition"></a></dt>
+<dd><p>Refresh the MySQL-derived portion of a cached core-index in place.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>index</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>)</p></li>
+<li><p><strong>organism</strong> (<em>str</em>)</p></li>
+<li><p><strong>genome_assembly</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>dict[str, <em>Any</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager.available_releases">
 <em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">available_releases</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#idtrack._database_manager.DatabaseManager.available_releases" title="Link to this definition"></a></dt>
@@ -1822,6 +2368,26 @@ safely be queried <strong>and</strong> cached locally, guaranteeing reproducible
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Sorted release numbers satisfying reachability and ignore-window constraints.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list[int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager.available_releases_all_assemblies">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">available_releases_all_assemblies</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#idtrack._database_manager.DatabaseManager.available_releases_all_assemblies" title="Link to this definition"></a></dt>
+<dd><p>Return all Ensembl releases reachable across every configured assembly.</p>
+<p>For clean-handoff species (e.g. mouse: 37 → 38 → 39), no single assembly spans the full release
+history. Graph construction and YAML template generation therefore need a release catalogue that is the
+union over <em>all</em> assemblies configured for <code class="xref py py-attr docutils literal notranslate"><span class="pre">organism</span></code> in
+<a class="reference internal" href="#idtrack._db.DB.assembly_mysqlport_priority" title="idtrack._db.DB.assembly_mysqlport_priority"><code class="xref py py-data docutils literal notranslate"><span class="pre">idtrack._db.DB.assembly_mysqlport_priority</span></code></a>.</p>
+<p>The list is filtered by the manager’s <code class="docutils literal notranslate"><span class="pre">ignore_before</span></code> / <code class="docutils literal notranslate"><span class="pre">ignore_after</span></code> window and cached for the
+lifetime of this <a class="reference internal" href="#idtrack._database_manager.DatabaseManager" title="idtrack._database_manager.DatabaseManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">DatabaseManager</span></code></a> instance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Sorted release numbers available for at least one configured assembly.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>list[int]</p>
@@ -1946,6 +2512,27 @@ stack when data retrieval is attempted.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Fresh manager initialised for <em>ensembl_release</em>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#idtrack._database_manager.DatabaseManager" title="idtrack._database_manager.DatabaseManager">DatabaseManager</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager.change_release_auto_assembly">
+<span class="sig-name descname"><span class="pre">change_release_auto_assembly</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ensembl_release</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager.change_release_auto_assembly"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager.change_release_auto_assembly" title="Link to this definition"></a></dt>
+<dd><p>Clone the manager for <em>ensembl_release</em> while inferring a compatible genome assembly.</p>
+<p>Unlike <a class="reference internal" href="#idtrack._database_manager.DatabaseManager.change_release" title="idtrack._database_manager.DatabaseManager.change_release"><code class="xref py py-meth docutils literal notranslate"><span class="pre">change_release()</span></code></a>, this helper allows <code class="xref py py-attr docutils literal notranslate"><span class="pre">genome_assembly</span></code> to change when the
+requested release is not present in the current assembly (common for clean-handoff species).
+Assembly inference follows the same priority rules as <code class="xref py py-meth docutils literal notranslate"><span class="pre">__init__()</span></code> with <code class="docutils literal notranslate"><span class="pre">genome_assembly=None</span></code>:
+pick the highest-priority configured assembly that contains the requested release.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ensembl_release</strong> (<em>int</em>) – Desired Ensembl release number.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Fresh manager initialised for <em>ensembl_release</em> with an inferred assembly.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="#idtrack._database_manager.DatabaseManager" title="idtrack._database_manager.DatabaseManager">DatabaseManager</a></p>
@@ -2991,8 +3578,8 @@ the corresponding methods are called.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>organism</strong> (<em>str</em>) – Canonical Ensembl species identifier in <em>snake_case</em>
 (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;homo_sapiens&quot;</span></code>).  Case-insensitive but must match Ensembl conventions.</p></li>
-<li><p><strong>ensembl_release</strong> (<em>int</em>) – Target Ensembl release number (e.g. <code class="docutils literal notranslate"><span class="pre">110</span></code>).  Must be ≥ 79 and
-correspond to a release that actually exists for <em>organism</em> and <em>assembly</em>.</p></li>
+<li><p><strong>ensembl_release</strong> (<em>int</em>) – Target Ensembl release number (e.g. <code class="docutils literal notranslate"><span class="pre">110</span></code>). Must correspond to a
+release that actually exists for <em>organism</em> and <em>genome_assembly</em>.</p></li>
 <li><p><strong>form</strong> (<em>str</em>) – Entity level—<code class="docutils literal notranslate"><span class="pre">&quot;gene&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;transcript&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&quot;translation&quot;</span></code>.  Any other
 value raises <code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code> in higher-level validation.</p></li>
 <li><p><strong>local_repository</strong> (<em>str</em>) – Writable directory where YAML files and downloads are cached.
@@ -3152,10 +3739,9 @@ external-database <strong>names</strong> (<code class="docutils literal notransl
 <code class="docutils literal notranslate"><span class="pre">Include</span></code> flag is <code class="docutils literal notranslate"><span class="pre">true</span></code> for the current organism, form,
 assembly and Ensembl release.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">&quot;assembly&quot;</span></code>
-genome-assembly <strong>codes</strong> (<code class="docutils literal notranslate"><span class="pre">int</span></code>) that
-contain <em>any</em> external database entry for the current organism
-and form.  Assemblies are returned even if their <code class="docutils literal notranslate"><span class="pre">Include</span></code>
-flags are still <code class="docutils literal notranslate"><span class="pre">false</span></code>.</p></li>
+genome-assembly <strong>codes</strong> (<code class="docutils literal notranslate"><span class="pre">int</span></code>) for which the YAML enables
+<em>at least one</em> external database (<code class="docutils literal notranslate"><span class="pre">Include:</span> <span class="pre">true</span></code>) at the
+current Ensembl release.</p></li>
 </ul>
 </p>
 </dd>
