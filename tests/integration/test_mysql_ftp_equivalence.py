@@ -55,6 +55,7 @@ def _can_connect_mysql_port(port: int) -> bool:
 
 @pytest.fixture(scope="session")
 def human38_mysql_release() -> int:
+    """Return a human GRCh38 Ensembl release reachable via both FTP and MySQL."""
     if not _can_reach_ensembl_ftp():
         pytest.skip(f"Unable to reach https://{DB.ensembl_ftp_base}/pub/ from the test environment.")
 
@@ -74,6 +75,7 @@ def human38_mysql_release() -> int:
 @pytest.mark.network
 @pytest.mark.database
 def test_download_table_mysql_matches_ftp_for_coord_system(human38_mysql_release: int, monkeypatch) -> None:
+    """Assert that MySQL and FTP results match for `coord_system`."""
     usecols = ["coord_system_id", "name", "version"]
 
     with tempfile.TemporaryDirectory(prefix="idtrack_mysql_ftp_eq_") as tmpdir:
@@ -103,7 +105,9 @@ def test_download_table_mysql_matches_ftp_for_coord_system(human38_mysql_release
                     cur.execute("SELECT coord_system_id, name, version FROM coord_system LIMIT 1")
                     cur.fetchone()
         except Exception as exc:
-            pytest.skip(f"MySQL sanity query failed for {dm.mysql_database!r} on port {dm.mysql_settings['port']}: {exc!r}")
+            pytest.skip(
+                f"MySQL sanity query failed for {dm.mysql_database!r} on port {dm.mysql_settings['port']}: {exc!r}"
+            )
 
         def _forbid_ftp(*_args, **_kwargs):
             raise AssertionError("Unexpected FTP fallback while comparing MySQL vs FTP results.")
@@ -168,4 +172,3 @@ def test_get_table_cache_overwrite_is_source_independent(human38_mysql_release: 
         df_mysql_cached = df_mysql_cached.sort_values(by="coord_system_id").reset_index(drop=True)
         df_ftp_cached = df_ftp_cached.sort_values(by="coord_system_id").reset_index(drop=True)
         pd.testing.assert_frame_equal(df_mysql_cached, df_ftp_cached, check_dtype=True)
-

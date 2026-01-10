@@ -383,7 +383,9 @@ class DatabaseManager:
         return releases_by_port, db_by_port_release, connection_errors
 
     @classmethod
-    def _refresh_core_db_index_mysql(cls, index: dict[str, Any], *, organism: str, genome_assembly: int) -> dict[str, Any]:
+    def _refresh_core_db_index_mysql(
+        cls, index: dict[str, Any], *, organism: str, genome_assembly: int
+    ) -> dict[str, Any]:
         """Refresh the MySQL-derived portion of a cached core-index in place."""
         ports = list(index.get("ports") or DB.assembly_mysqlport_priority[organism][int(genome_assembly)]["Ports"])
         ports = [int(p) for p in ports]
@@ -471,9 +473,7 @@ class DatabaseManager:
                 # If a previously failing port now responds, refresh the MySQL-derived portion so
                 # downstream callers don't get stuck with stale partial results.
                 if any(
-                    cls._tcp_can_connect(
-                        DB.mysql_host, int(port), timeout_s=min(3.0, float(DB.connection_timeout))
-                    )
+                    cls._tcp_can_connect(DB.mysql_host, int(port), timeout_s=min(3.0, float(DB.connection_timeout)))
                     for port in errors
                 ):
                     refreshed = cls._refresh_core_db_index_mysql(
@@ -1998,6 +1998,33 @@ class DatabaseManager:
         es.rename(columns={"synonym": "display_label"}, inplace=True)
         es["display_label"] = DB.synonym_id_nodes_prefix + es["display_label"]
         x = pd.concat([x, es], ignore_index=True)
+
+        # Tables loaded via HTTPS/FTP dumps (or legacy on-disk caches) can contain join-key columns as strings.
+        # Some older releases also include malformed/continuation lines that shift text into numeric ID columns.
+        # Pandas refuses merges when dtypes disagree (e.g. int64 vs object), so normalise here.
+        def _coerce_numeric_key(df: pd.DataFrame, col: str, table_name: str) -> pd.DataFrame:
+            if col not in df.columns or pd.api.types.is_numeric_dtype(df[col]):
+                return df
+
+            numeric = pd.to_numeric(df[col], errors="coerce")
+            bad = numeric.isna() & df[col].notna()
+            if bad.any():
+                example = df.loc[bad, col].iloc[0]
+                self.log.warning(
+                    "Dropping %d malformed rows from `%s` where `%s` is not numeric (e.g. %r).",
+                    int(bad.sum()),
+                    table_name,
+                    col,
+                    example,
+                )
+                df = df.loc[~bad].copy()
+                numeric = numeric.loc[~bad]
+
+            df[col] = numeric
+            return df
+
+        x = _coerce_numeric_key(x, "external_db_id", "xref")
+        ed = _coerce_numeric_key(ed, "external_db_id", "external_db")
 
         # Merge the tables as requested
         comb = pd.merge(

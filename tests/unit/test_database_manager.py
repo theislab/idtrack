@@ -361,6 +361,38 @@ def test_external_db_all_and_filter_modes(synthetic_dm):
         synthetic_dm.create_external_db(filter_mode="not-a-mode")
 
 
+def test_external_db_merge_coerces_string_external_db_id(synthetic_dm, monkeypatch):
+    """create_external_db should tolerate object-typed external_db_id merge keys."""
+    original_download_table = synthetic_dm.download_table
+
+    def _download_table(table_key: str, usecols: list[str] | None = None) -> pd.DataFrame:
+        df = original_download_table(table_key, usecols=usecols)
+        if table_key == "external_db":
+            df["external_db_id"] = df["external_db_id"].astype(str)
+            df = pd.concat(
+                [
+                    df,
+                    pd.DataFrame(
+                        [
+                            {
+                                "external_db_id": "\\",
+                                "db_name": "BAD_ROW",
+                                "db_display_name": "BAD_ROW",
+                            }
+                        ]
+                    ),
+                ],
+                ignore_index=True,
+            )
+        return df
+
+    monkeypatch.setattr(synthetic_dm, "download_table", _download_table)
+
+    all_rows = synthetic_dm.create_external_db(filter_mode="all")
+    assert len(all_rows) > 0
+    assert {"UniProt", "UniProtKB/Swiss-Prot"}.issubset(set(all_rows["name_db"]))
+
+
 def test_release_discovery_and_mysql_database_from_server_catalog(tmp_path, monkeypatch):
     """available_releases/mysql_database should be discovered from server catalog."""
     import pymysql

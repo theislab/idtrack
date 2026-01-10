@@ -40,6 +40,7 @@ def _can_reach_ensembl_ftp() -> bool:
 
 @pytest.fixture(scope="session")
 def ensembl_latest_release() -> int:
+    """Return the latest Ensembl release number."""
     if not _can_reach_ensembl_ftp():
         pytest.skip(f"Unable to reach https://{DB.ensembl_ftp_base}/pub/ from the test environment.")
     return int(DatabaseManager._ensembl_latest_release())
@@ -91,6 +92,7 @@ def _iter_supported_pairs() -> Iterable[tuple[str, int]]:
 @pytest.mark.slow
 @pytest.mark.parametrize(("organism", "assembly"), sorted(EXPECTED_RANGES))
 def test_ftp_core_index_release_ranges(ensembl_latest_release: int, organism: str, assembly: int) -> None:
+    """Validate that expected release ranges are discoverable via FTP dumps."""
     expected = EXPECTED_RANGES[(organism, int(assembly))]
     core_index = DatabaseManager._get_core_db_index(organism=organism, genome_assembly=int(assembly))
 
@@ -116,6 +118,7 @@ def test_ftp_core_index_release_ranges(ensembl_latest_release: int, organism: st
 @pytest.mark.network
 @pytest.mark.slow
 def test_grch37_ftp_archive_path_for_release_78(ensembl_latest_release: int) -> None:  # noqa: ARG001
+    """Ensure GRCh37 release 78 uses the dedicated FTP archive path."""
     core_index = DatabaseManager._get_core_db_index(organism="homo_sapiens", genome_assembly=37)
     url = core_index.get("db_dir_url_by_release", {}).get(78)
     assert isinstance(url, str) and url
@@ -130,6 +133,7 @@ def test_grch37_ftp_archive_path_for_release_78(ensembl_latest_release: int) -> 
 def test_download_table_via_ftp_fallback_for_each_pair(
     ensembl_latest_release: int, organism: str, assembly: int
 ) -> None:
+    """Validate that `download_table` can fetch small tables via FTP dumps."""
     expected = EXPECTED_RANGES.get((organism, int(assembly)))
     if expected is None:
         pytest.skip(f"Missing expected release range for {(organism, int(assembly))}.")
@@ -185,6 +189,7 @@ def test_download_table_supports_nested_bz2_gzip_dumps() -> None:
 @pytest.mark.slow
 @pytest.mark.parametrize(("organism", "assembly"), sorted(EXPECTED_RANGES))
 def test_ftp_schema_contains_required_tables(ensembl_latest_release: int, organism: str, assembly: int) -> None:
+    """Ensure FTP schemas contain the core tables needed by idtrack."""
     expected = EXPECTED_RANGES[(organism, int(assembly))]
     min_release = int(expected["min"])
     max_release = int(ensembl_latest_release if expected["max"] == "latest" else expected["max"])

@@ -24,7 +24,7 @@ import os
 import socket
 import threading
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 
 class ConnectionBridge:
@@ -85,8 +85,8 @@ class ConnectionBridge:
         active_count: int = 0
         proxy_host: str = "127.0.0.1"
         proxy_port: int = 1080
-        original_socket_cls: Optional[type[socket.socket]] = None
-        original_env: Optional[dict[str, Optional[str]]] = None
+        original_socket_cls: type[socket.socket] | None = None
+        original_env: dict[str, str | None] | None = None
         original_socks_proxy: Any = None
         atexit_registered: bool = False
 
@@ -303,7 +303,9 @@ class ConnectionBridge:
 
         ok = self.test_connection(verbose=verbose)
         if not ok:
-            self._emit("[idtrack] ConnectionBridge test failed; disabling bridge.", verbose=verbose, level=logging.WARNING)
+            self._emit(
+                "[idtrack] ConnectionBridge test failed; disabling bridge.", verbose=verbose, level=logging.WARNING
+            )
             self.stop(verbose=verbose)
         return ok
 
@@ -411,7 +413,7 @@ class ConnectionBridge:
 
         self._emit("[idtrack] ConnectionBridge disabled: normal networking restored.", verbose=verbose)
 
-    def __enter__(self) -> "ConnectionBridge":
+    def __enter__(self) -> ConnectionBridge:
         """Enter a context manager that keeps the bridge enabled for the enclosed block."""
         self.start()
         return self
