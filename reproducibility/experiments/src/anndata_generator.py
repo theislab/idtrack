@@ -18,22 +18,24 @@ import csv
 import json
 import re
 import sys
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+from collections.abc import Iterable, Mapping
 
+import anndata as ad
+import h5py
 import numpy as np
 import pandas as pd
-import anndata as ad
 from scipy import sparse
-import h5py
-import warnings
 
 # ---- Suppress/resolve warnings requested ----
 # We also remove dtype= usage in AnnData(...) to resolve that FutureWarning at the source.
 warnings.filterwarnings("ignore", message=".*dtype argument is deprecated.*", category=FutureWarning)
 try:
     from anndata._core.aligned_df import ImplicitModificationWarning
+
     warnings.filterwarnings("ignore", category=ImplicitModificationWarning)
 except Exception:
     warnings.filterwarnings("ignore", message="Transforming to str index.", category=UserWarning)
@@ -41,12 +43,13 @@ except Exception:
 
 # --------------------------- small utils ---------------------------
 
+
 def _log(silent: bool, msg: str) -> None:
     if not silent:
         print(msg)
 
 
-def _is_finished_outs(outs: Path) -> Tuple[bool, float]:
+def _is_finished_outs(outs: Path) -> tuple[bool, float]:
     sentinels = [
         outs / "metrics_summary.csv",
         outs / "web_summary.html",
@@ -66,8 +69,8 @@ def _is_finished_outs(outs: Path) -> Tuple[bool, float]:
     return found_any, latest
 
 
-def _find_best_outs(tag_dir: Path) -> Optional[Tuple[Path, str]]:
-    candidates: List[Tuple[Path, str, float]] = []
+def _find_best_outs(tag_dir: Path) -> tuple[Path, str] | None:
+    candidates: list[tuple[Path, str, float]] = []
     for run in tag_dir.iterdir():
         if not run.is_dir():
             continue
@@ -83,18 +86,18 @@ def _find_best_outs(tag_dir: Path) -> Optional[Tuple[Path, str]]:
     return outs_dir, run_id
 
 
-def _decode_ascii(a: Iterable[bytes]) -> List[str]:
+def _decode_ascii(a: Iterable[bytes]) -> list[str]:
     return [x.decode("utf-8") if isinstance(x, (bytes, bytearray)) else str(x) for x in a]
 
 
 @dataclass
 class TenxMatrix:
     X: sparse.csr_matrix
-    barcodes: List[str]
-    gene_id: List[str]
-    gene_symbol: List[str]
-    feature_type: Optional[List[str]] = None
-    genome: Optional[List[str]] = None
+    barcodes: list[str]
+    gene_id: list[str]
+    gene_symbol: list[str]
+    feature_type: list[str] | None = None
+    genome: list[str] | None = None
 
 
 def _read_10x_h5_full(h5_path: Path) -> TenxMatrix:
@@ -134,12 +137,11 @@ def _read_10x_h5_full(h5_path: Path) -> TenxMatrix:
             M = M.astype(np.int64, copy=False)
 
     return TenxMatrix(
-        X=M, barcodes=barcodes, gene_id=gene_id, gene_symbol=gene_symbol,
-        feature_type=feature_type, genome=genome
+        X=M, barcodes=barcodes, gene_id=gene_id, gene_symbol=gene_symbol, feature_type=feature_type, genome=genome
     )
 
 
-def _read_10x_raw_or_filtered(outs_dir: Path, kind: str) -> Optional[TenxMatrix]:
+def _read_10x_raw_or_filtered(outs_dir: Path, kind: str) -> TenxMatrix | None:
     assert kind in {"raw", "filtered"}
     h5 = outs_dir / f"{kind}_feature_bc_matrix.h5"
     if h5.exists():
@@ -149,6 +151,7 @@ def _read_10x_raw_or_filtered(outs_dir: Path, kind: str) -> Optional[TenxMatrix]
     if (mtx_dir / "matrix.mtx.gz").exists() or (mtx_dir / "matrix.mtx").exists():
         try:
             import scanpy as sc
+
             adata = sc.read_10x_mtx(str(mtx_dir), var_names="gene_symbols", make_unique=False)
             features_tsv = (mtx_dir / "features.tsv.gz", mtx_dir / "features.tsv")
             fpath = None
@@ -242,7 +245,7 @@ def _align_layer_to_raw(raw: ad.AnnData, subset: ad.AnnData) -> sparse.csr_matri
     return layer
 
 
-def _read_metrics_csv(csv_path: Path) -> Dict[str, Any]:
+def _read_metrics_csv(csv_path: Path) -> dict[str, Any]:
     try:
         df = pd.read_csv(csv_path)
         if len(df) == 1:
@@ -271,9 +274,7 @@ def _gather_single_outs(
     if keep_only_filtered:
         filt = _read_10x_raw_or_filtered(outs_dir, "filtered")
         if filt is None:
-            raise FileNotFoundError(
-                f"Requested filtered-only but no filtered_feature_bc_matrix found under {outs_dir}"
-            )
+            raise FileNotFoundError(f"Requested filtered-only but no filtered_feature_bc_matrix found under {outs_dir}")
         adata = _tenx_to_adata(filt)
         adata.obs["is_filtered_by_cellranger"] = True
 
@@ -290,14 +291,18 @@ def _gather_single_outs(
             is_filtered.loc[filt_adata.obs_names] = True
             adata.obs["is_filtered_by_cellranger"] = is_filtered.values
 
-    cr_uns: Dict[str, Any] = {
+    cr_uns: dict[str, Any] = {
         "dataset": dataset,
         "assembly_label": assembly,
         "ensembl_release": int(release),
         "outs_dir": str(outs_dir.resolve()),
-        "web_summary_html": str((outs_dir / "web_summary.html").resolve()) if (outs_dir / "web_summary.html").exists() else None,
+        "web_summary_html": (
+            str((outs_dir / "web_summary.html").resolve()) if (outs_dir / "web_summary.html").exists() else None
+        ),
         "cloupe_file": str((outs_dir / "cloupe.cloupe").resolve()) if (outs_dir / "cloupe.cloupe").exists() else None,
-        "molecule_info_h5": str((outs_dir / "molecule_info.h5").resolve()) if (outs_dir / "molecule_info.h5").exists() else None,
+        "molecule_info_h5": (
+            str((outs_dir / "molecule_info.h5").resolve()) if (outs_dir / "molecule_info.h5").exists() else None
+        ),
     }
     m_csv = outs_dir / "metrics_summary.csv"
     if m_csv.exists():
@@ -325,7 +330,7 @@ def _gather_multi_outs(
         return _gather_single_outs(outs_dir, dataset, assembly, release, silent, keep_only_filtered)
 
     if keep_only_filtered:
-        filt_adatas: List[ad.AnnData] = []
+        filt_adatas: list[ad.AnnData] = []
         for sdir in sorted(per_sample):
             sid = sdir.name
             s_count = sdir / "count"
@@ -373,8 +378,8 @@ def _gather_multi_outs(
 
     else:
         # Original behavior (raw X + optional filtered layer)
-        raw_adatas: List[ad.AnnData] = []
-        filt_adatas_opt: List[Optional[ad.AnnData]] = []
+        raw_adatas: list[ad.AnnData] = []
+        filt_adatas_opt: list[ad.AnnData | None] = []
 
         for sdir in sorted(per_sample):
             sid = sdir.name
@@ -430,7 +435,7 @@ def _gather_multi_outs(
 
         has_any_filt = any(af is not None for af in filt_adatas_opt)
         if has_any_filt:
-            parts: List[sparse.csr_matrix] = []
+            parts: list[sparse.csr_matrix] = []
             mem_flags = []
             for ar, af in zip(raw_adatas, filt_adatas_opt):
                 if af is None:
@@ -445,15 +450,17 @@ def _gather_multi_outs(
             adata.obs["is_filtered_by_cellranger"] = pd.concat(mem_flags).reindex(adata.obs_names).values
 
     # Attach metadata
-    cr_uns: Dict[str, Any] = {
+    cr_uns: dict[str, Any] = {
         "dataset": dataset,
         "assembly_label": assembly,
         "ensembl_release": int(release),
         "outs_dir": str(outs_dir.resolve()),
-        "web_summary_html": str((outs_dir / "web_summary.html").resolve()) if (outs_dir / "web_summary.html").exists() else None,
+        "web_summary_html": (
+            str((outs_dir / "web_summary.html").resolve()) if (outs_dir / "web_summary.html").exists() else None
+        ),
         "cloupe_file": str((outs_dir / "cloupe.cloupe").resolve()) if (outs_dir / "cloupe.cloupe").exists() else None,
     }
-    metrics: Dict[str, Any] = {}
+    metrics: dict[str, Any] = {}
     for sdir in sorted(per_sample):
         m_csv = sdir / "count" / "metrics_summary.csv"
         if m_csv.exists():
@@ -477,13 +484,14 @@ def _write_h5ad(adata: ad.AnnData, out_path: Path, silent: bool) -> None:
 
 # --------------------------- public API ---------------------------
 
+
 def anndata_generator(
     alignments_root: Path | str,
     out_root: Path | str,
     *,
     keep_obs_if_it_is_filtered_by_cellranger: bool = True,
     silent: bool = False,
-) -> Dict[str, Dict[str, Dict[str, str]]]:
+) -> dict[str, dict[str, dict[str, str]]]:
     """
     Generate one .h5ad per dataset/assembly/release.
 
@@ -495,7 +503,7 @@ def anndata_generator(
     out_root = Path(out_root).expanduser().resolve()
     out_root.mkdir(parents=True, exist_ok=True)
 
-    result: Dict[str, Dict[str, Dict[str, str]]] = {}
+    result: dict[str, dict[str, dict[str, str]]] = {}
 
     if not align_root.is_dir():
         raise NotADirectoryError(f"alignments_root not found: {align_root}")
@@ -527,7 +535,7 @@ def anndata_generator(
                 _log(
                     silent,
                     f"[INFO] Building AnnData from {outs_dir} (run={run_id}) "
-                    f"[filtered_only={keep_obs_if_it_is_filtered_by_cellranger}]"
+                    f"[filtered_only={keep_obs_if_it_is_filtered_by_cellranger}]",
                 )
                 if _is_multi_outs(outs_dir):
                     adata = _gather_multi_outs(
@@ -554,15 +562,19 @@ def anndata_generator(
 
 # --------------------------- CLI ---------------------------
 
-def _main(argv: Optional[List[str]] = None) -> int:
+
+def _main(argv: list[str] | None = None) -> int:
     import argparse
 
     ap = argparse.ArgumentParser(description="Generate .h5ad files from Cell Ranger outputs.")
     ap.add_argument("--alignments-root", required=True, help="Root of alignments (dataset/assembly_release/run/outs)")
     ap.add_argument("--out-root", required=True, help="Destination folder for .h5ad files")
     # keep filtered defaults to True; expose only if you want to disable it via CLI
-    ap.add_argument("--use-raw", action="store_true",
-                    help="If set, keep raw cells (equivalent to keep_obs_if_it_is_filtered_by_cellranger=False)")
+    ap.add_argument(
+        "--use-raw",
+        action="store_true",
+        help="If set, keep raw cells (equivalent to keep_obs_if_it_is_filtered_by_cellranger=False)",
+    )
     ap.add_argument("--silent", action="store_true", help="Suppress progress messages")
     args = ap.parse_args(argv)
 

@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 
-import os
-import pickle
 import argparse
 import copy
+import os
+import pickle
 
 import anndata as ad
 
 # Rely on properly installed package (no sys.path hacks)
 import idtrack
-
 
 # Configure cache path via environment variable or use a sensible default
 IDTRACK_LOCAL_REPO = os.environ.get("IDTRACK_LOCAL_REPO", "./idtrack_cache")
@@ -55,24 +54,26 @@ def main():
 
     # Print all parameters
     log("\n===== Parsed Parameters =====")
-    log({
-        "anndata_path": anndata_path,
-        "dataset_key": dataset_key,
-        "assembly_label": assembly_label,
-        "from_release": from_release,
-        "to_release_str_list": to_release_str_list,
-        "from_database": from_database,
-        "to_database": to_database,
-        "slurm_job_name": slurm_job_name,
-        "job_name": job_name,
-        "job_dir": job_dir,
-    })
+    log(
+        {
+            "anndata_path": anndata_path,
+            "dataset_key": dataset_key,
+            "assembly_label": assembly_label,
+            "from_release": from_release,
+            "to_release_str_list": to_release_str_list,
+            "from_database": from_database,
+            "to_database": to_database,
+            "slurm_job_name": slurm_job_name,
+            "job_name": job_name,
+            "job_dir": job_dir,
+        }
+    )
     log("===== End Parameters =====\n")
 
     # ------------------------------------------------------------------
     # STEP 1: Prepare IDTrack API
     # ------------------------------------------------------------------
-    
+
     log("[STEP 1/5] Setting up IDTrack API...")
     log(f"[INFO] Using IDTrack local repository: {IDTRACK_LOCAL_REPO}")
     idt = idtrack.API(local_repository=IDTRACK_LOCAL_REPO)
@@ -90,7 +91,7 @@ def main():
     )
     log("[INFO] Calculating graph caches (this may take a while)...")
     idt.calculate_graph_caches()
-    
+
     log("[STEP 1/5] IDTrack API setup completed.\n")
 
     # ------------------------------------------------------------------
@@ -105,8 +106,7 @@ def main():
 
     if from_database not in adata.var.columns:
         raise KeyError(
-            f"Column '{from_database}' not found in adata.var. "
-            f"Available columns: {list(adata.var.columns)}"
+            f"Column '{from_database}' not found in adata.var. " f"Available columns: {list(adata.var.columns)}"
         )
 
     log(f"[INFO] Extracting query symbols from adata.var['{from_database}']...")

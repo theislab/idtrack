@@ -138,6 +138,21 @@ def synthetic_dm(tmp_path, monkeypatch) -> DatabaseManager:
     """Create a DatabaseManager backed by tiny synthetic MySQL tables."""
     synthetic = _synthetic_mysql_tables()
 
+    def _fake_core_index(*, organism: str, genome_assembly: int):  # noqa: ARG001
+        releases = list(synthetic.available_releases)
+        db_for_release = {r: f"{organism}_core_{r}_{genome_assembly}" for r in releases}
+        return {
+            "organism": organism,
+            "genome_assembly": genome_assembly,
+            "ports": (3306,),
+            "releases_by_port": {3306: set(releases)},
+            "db_by_port_release": {3306: db_for_release.copy()},
+            "releases": releases,
+            "port_for_release": {r: 3306 for r in releases},
+            "db_for_release": db_for_release,
+            "releases_on_mysql": releases,
+        }
+
     def _available_releases_versions(self: DatabaseManager, **kwargs) -> list[int]:
         return list(synthetic.available_releases)
 
@@ -152,6 +167,7 @@ def synthetic_dm(tmp_path, monkeypatch) -> DatabaseManager:
 
     monkeypatch.setattr(DatabaseManager, "available_releases_versions", _available_releases_versions)
     monkeypatch.setattr(DatabaseManager, "download_table", _download_table)
+    monkeypatch.setattr(DatabaseManager, "_get_core_db_index", classmethod(lambda cls, **kw: _fake_core_index(**kw)))
 
     return DatabaseManager(
         organism="homo_sapiens",
@@ -359,6 +375,38 @@ def test_external_db_all_and_filter_modes(synthetic_dm):
 
     with pytest.raises(ValueError):
         synthetic_dm.create_external_db(filter_mode="not-a-mode")
+
+
+def test_external_db_merge_coerces_string_external_db_id(synthetic_dm, monkeypatch):
+    """create_external_db should tolerate object-typed external_db_id merge keys."""
+    original_download_table = synthetic_dm.download_table
+
+    def _download_table(table_key: str, usecols: list[str] | None = None) -> pd.DataFrame:
+        df = original_download_table(table_key, usecols=usecols)
+        if table_key == "external_db":
+            df["external_db_id"] = df["external_db_id"].astype(str)
+            df = pd.concat(
+                [
+                    df,
+                    pd.DataFrame(
+                        [
+                            {
+                                "external_db_id": "\\",
+                                "db_name": "BAD_ROW",
+                                "db_display_name": "BAD_ROW",
+                            }
+                        ]
+                    ),
+                ],
+                ignore_index=True,
+            )
+        return df
+
+    monkeypatch.setattr(synthetic_dm, "download_table", _download_table)
+
+    all_rows = synthetic_dm.create_external_db(filter_mode="all")
+    assert len(all_rows) > 0
+    assert {"UniProt", "UniProtKB/Swiss-Prot"}.issubset(set(all_rows["name_db"]))
 
 
 def test_release_discovery_and_mysql_database_from_server_catalog(tmp_path, monkeypatch):

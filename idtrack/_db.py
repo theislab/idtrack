@@ -109,7 +109,7 @@ class DB:
     mysql_port_min_release: dict[int, int] = {
         # https://www.ensembl.org/info/data/mysql.html
         3306: 48,
-        5306: 48,  # mirror of 3306 for many datasets
+        5306: 48,  # mirror of 3306 (redundancy / load balancing; should serve equivalent core schemas)
         3337: 79,
     }
 
@@ -121,32 +121,44 @@ class DB:
         #   GRCm38 for mouse).
         # - Some (organism, assembly) pairs are hosted on multiple ports depending on release; we list ports in
         #   preference order and let DatabaseManager pick the first port that contains the requested release.
+        # - "ReleaseRange" specifies the expected range of releases for this assembly [min, max].
+        #   Use None for max to indicate "current latest and beyond".
         "homo_sapiens": {
-            # GRCh38
-            38: {"Ports": [3306, 5306], "Priority": 1},
-            # GRCh37 exists on 3337 for later releases, and on 3306/5306 for older releases.
-            37: {"Ports": [3337, 3306, 5306], "Priority": 2},
-            # NCBI36 (very old human assembly; Ensembl releases 48–54)
-            36: {"Ports": [3306, 5306], "Priority": 3},
+            # GRCh38 (Ensembl release 76+; primary assembly since release 76)
+            38: {"Ports": [3306, 5306], "Priority": 1, "ReleaseRange": [76, None]},
+            # GRCh37 (Ensembl release 55+; archive since release 76)
+            # - MySQL port 3337 hosts GRCh37 **release 79 onwards** (archive service).
+            # - Some GRCh37 schemas can also appear on the main ports (3306/5306) for select releases; keep them
+            #   as fallbacks for environments where 3337 is unreachable.
+            # - Releases 55–78 are accessed via the HTTPS/FTP MySQL dumps (DatabaseManager FTP fallback).
+            37: {"Ports": [3337, 3306, 5306], "Priority": 2, "ReleaseRange": [55, None]},
+            # NCBI36 (historic; clean handoff to GRCh37 at Ensembl release 55)
+            # - Ensembl FTP contains releases 48–54 under directory names like
+            #   `homo_sapiens_core_<release>_36<patch>` (e.g. `homo_sapiens_core_54_36p`).
+            # - Not expected to be available on the live public MySQL service anymore; accessed via HTTPS/FTP dumps.
+            36: {"Ports": [3306, 5306], "Priority": 3, "ReleaseRange": [48, 54]},
         },
         "mus_musculus": {
-            # GRCm39
-            39: {"Ports": [3306, 5306], "Priority": 1},
-            # GRCm38
-            38: {"Ports": [3306, 5306, 3337], "Priority": 2},
-            # GRCm37
-            37: {"Ports": [3306, 5306], "Priority": 3},
+            # GRCm39 (Ensembl release 103+; clean handoff from GRCm38 at release 103)
+            39: {"Ports": [3306, 5306], "Priority": 1, "ReleaseRange": [103, None]},
+            # GRCm38 (Ensembl release 68–102)
+            # - Port 3337 also hosts a subset of GRCm38 releases (archive mirror); keep it as a fallback.
+            38: {"Ports": [3306, 5306, 3337], "Priority": 2, "ReleaseRange": [68, 102]},
+            # GRCm37 / NCBIm37 (Ensembl release 48–67; clean handoff to GRCm38 at release 68)
+            # - Early releases can carry a patch-letter suffix (e.g. `..._37a`) and are handled by DatabaseManager.
+            37: {"Ports": [3306, 5306], "Priority": 3, "ReleaseRange": [48, 67]},
         },
         "sus_scrofa": {
-            # Sscrofa11.1
-            111: {"Ports": [3306, 5306], "Priority": 1},
-            # Sscrofa10.2 is hosted on both ports:
-            # - 3306/5306: releases 67–89
-            # - 3337:      releases 79–99
-            # Prefer the main port (3306/5306) when overlap exists, and fall back to 3337 for newer releases.
-            102: {"Ports": [3306, 5306, 3337], "Priority": 2},
-            # Sscrofa9.2
-            9: {"Ports": [3306, 5306], "Priority": 3},
+            # Sscrofa11.1 (Ensembl release 90+; clean handoff from Sscrofa10.2 at release 90)
+            111: {"Ports": [3306, 5306], "Priority": 1, "ReleaseRange": [90, None]},
+            # Sscrofa10.2 (archive) — Ensembl release 67–89
+            # - Port 3337 hosts later archive releases (79–99); keep it as a fallback when present.
+            102: {"Ports": [3306, 5306, 3337], "Priority": 2, "ReleaseRange": [67, 89]},
+            # Sscrofa9.2 (historic; clean handoff to Sscrofa10.2 at release 67)
+            # - Ensembl FTP contains releases 56–66 under directory names like
+            #   `sus_scrofa_core_<release>_9<patch>` (e.g. `sus_scrofa_core_60_9d`).
+            # - Not expected to be available on the live public MySQL service anymore; accessed via HTTPS/FTP dumps.
+            9: {"Ports": [3306, 5306], "Priority": 3, "ReleaseRange": [56, 66]},
         },
     }
 

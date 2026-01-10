@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Live integration tests against the Ensembl public MySQL service.
 
-These tests validate that:
+These tests validate that (when the live service is reachable):
 
 1) `DB.assembly_mysqlport_priority` matches the real organism/assembly coverage on
-   `ensembldb.ensembl.org` across the configured ports.
+   `ensembldb.ensembl.org` across the configured ports **for the assemblies the live service exposes**.
 2) `DatabaseManager._get_core_db_index` correctly discovers releases across multiple ports and
-   returns the *actual* schema name for each release (including patch-letter suffixes).
+   returns the *actual* schema name for each release (including patch-letter suffixes) **for MySQL-backed releases**.
 3) `DatabaseManager(...)` selects the correct port and schema for *every* discovered release for
-   every configured organism/assembly pair.
+   every configured organism/assembly pair **that is present on the live MySQL service**.
 
 The tests are marked as integration/network/database and will be skipped if the public service is
 unreachable from the test environment.
@@ -164,7 +164,9 @@ def test_live_mysql_config_covers_all_discovered_assemblies(live_mysql_core_cata
             discovered.update(port_info["releases_by_assembly"].keys())
 
         configured = set(DB.assembly_mysqlport_priority[organism].keys())
-        assert discovered == configured, (organism, sorted(discovered), sorted(configured))
+        # The live service often hosts only the current and previous release.
+        # Older/discontinued assemblies can still be supported via the HTTPS/FTP MySQL dumps.
+        assert discovered.issubset(configured), (organism, sorted(discovered), sorted(configured))
 
 
 @pytest.mark.integration
@@ -180,6 +182,10 @@ def test_live_mysql_config_ports_match_discovered_ports(live_mysql_core_catalog)
                 if int(assembly) in port_info["releases_by_assembly"]
                 and port_info["releases_by_assembly"][int(assembly)]
             }
+            if not discovered_ports:
+                # This (organism, assembly) is not present on the live MySQL service (e.g. historic assemblies).
+                # Access is expected to happen via the HTTPS/FTP dumps instead.
+                continue
             assert discovered_ports == set(map(int, cfg["Ports"])), (
                 organism,
                 int(assembly),
@@ -199,33 +205,33 @@ def test_core_index_matches_live_catalog(live_mysql_core_catalog):
 
             assert tuple(core_index["ports"]) == tuple(int(p) for p in cfg["Ports"])
 
-            # releases_by_port and db_by_port_release must match per-port live truth.
-            for port in cfg["Ports"]:
-                port = int(port)
-                live_rels = set(
-                    live_mysql_core_catalog[organism][port]["releases_by_assembly"].get(int(assembly), set())
-                )
-                assert set(core_index["releases_by_port"].get(port, set())) == live_rels
-
-                live_db_by_release = live_mysql_core_catalog[organism][port]["by_assembly"].get(int(assembly), {})
-                idx_db_by_release = core_index["db_by_port_release"].get(port, {})
-                assert set(idx_db_by_release) == set(live_db_by_release)
-                for rel in live_db_by_release:
-                    assert str(idx_db_by_release[rel]) == str(live_db_by_release[rel])
-
-            expected_union = sorted(
+            # Focus on the releases that the live MySQL service actually provides.
+            expected_mysql_union = sorted(
                 {
-                    rel
+                    int(rel)
                     for port in cfg["Ports"]
                     for rel in live_mysql_core_catalog[organism][int(port)]["releases_by_assembly"].get(
                         int(assembly), set()
                     )
                 }
             )
-            assert list(core_index["releases"]) == expected_union
+            mysql_releases = sorted(set(core_index.get("releases_on_mysql", []) or []))
+            assert mysql_releases == expected_mysql_union
+
+            if not mysql_releases:
+                # No MySQL-backed releases for this assembly on the live service; nothing further to compare.
+                continue
+
+            for port in cfg["Ports"]:
+                port = int(port)
+                live_db_by_release = live_mysql_core_catalog[organism][port]["by_assembly"].get(int(assembly), {})
+                idx_db_by_release = core_index["db_by_port_release"].get(port, {})
+                # Only compare the releases present on this port in the live catalog.
+                for rel, live_db in live_db_by_release.items():
+                    assert str(idx_db_by_release[int(rel)]) == str(live_db)
 
             # First-port-wins semantics for overlaps must match config order.
-            for rel in core_index["releases"]:
+            for rel in mysql_releases:
                 expected_port: int | None = None
                 expected_db: str | None = None
                 for port in cfg["Ports"]:
@@ -249,9 +255,12 @@ def test_database_manager_resolves_every_release_for_each_configured_assembly(li
     for organism in DB.supported_organisms:
         for assembly in DB.assembly_mysqlport_priority[organism]:
             core_index = DatabaseManager._get_core_db_index(organism=organism, genome_assembly=int(assembly))
+            mysql_releases = sorted(set(core_index.get("releases_on_mysql", []) or []))
+            if not mysql_releases:
+                continue
 
             with tempfile.TemporaryDirectory() as tmpdir:
-                for rel in core_index["releases"]:
+                for rel in mysql_releases:
                     dm = DatabaseManager(
                         organism=organism,
                         form="gene",

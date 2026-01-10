@@ -55,20 +55,17 @@ _DB_ALIASES: dict[str, str] = {
     "ensg": "ensembl_gene",
     "ensg_id": "ensembl_gene",
     "ensembl_gene_id": "ensembl_gene",
-
     "ensembl_transcript": "ensembl_transcript",
     "ensembl.transcript": "ensembl_transcript",
     "enst": "ensembl_transcript",
     "enst_id": "ensembl_transcript",
     "ensembl_transcript_id": "ensembl_transcript",
-
     "ensembl_protein": "ensembl_protein",
     "ensembl.peptide": "ensembl_protein",
     "ensp": "ensembl_protein",
     "ensp_id": "ensembl_protein",
     "ensembl_protein_id": "ensembl_protein",
     "ensembl_peptide_id": "ensembl_protein",
-
     # Symbols / HGNC (we treat this as "gene symbol" in general)
     "hgnc_symbol": "hgnc_symbol",
     "hgnc": "hgnc_symbol",
@@ -79,11 +76,9 @@ _DB_ALIASES: dict[str, str] = {
     "external_gene_name": "hgnc_symbol",
     "external_gene_id": "hgnc_symbol",
     "gene_name": "hgnc_symbol",
-
     # HGNC numeric ID (e.g., HGNC:5)
     "hgnc_id": "hgnc_id",
     "hgnc_numeric": "hgnc_id",
-
     # Entrez Gene
     "entrez_gene": "entrez_gene",
     "entrez": "entrez_gene",
@@ -91,23 +86,19 @@ _DB_ALIASES: dict[str, str] = {
     "ncbi_gene": "entrez_gene",
     "geneid": "entrez_gene",
     "entrez_id": "entrez_gene",
-
     # UniProt
     "uniprot": "uniprot",
     "uniprot_acc": "uniprot",
     "uniprotkb": "uniprot",
     "uniprotkb_acc": "uniprot",
     "swissprot": "uniprot",
-
     # RefSeq
     "refseq_mrna": "refseq_mrna",
     "refseq_rna": "refseq_mrna",
     "refseq_transcript": "refseq_mrna",
     "nm": "refseq_mrna",
-
     "refseq_protein": "refseq_protein",
     "np": "refseq_protein",
-
     # Misc popular namespaces
     "wormbase": "wormbase",
     "wb": "wormbase",
@@ -131,10 +122,8 @@ def canonical_db(db: str) -> str:
         return "ensembl_transcript"
     if db_norm.startswith("ensp"):
         return "ensembl_protein"
-    raise ValueError(
-        f"Unsupported or unknown db alias: {db!r}. "
-        f"Supported canonical DBs: {sorted(SUPPORTED_DBS)}"
-    )
+    raise ValueError(f"Unsupported or unknown db alias: {db!r}. " f"Supported canonical DBs: {sorted(SUPPORTED_DBS)}")
+
 
 # -------------------------- Species normalization --------------------------- #
 
@@ -144,13 +133,11 @@ _SPECIES_ALIASES = {
     "homo_sapiens": "hsapiens",
     "homo sapiens": "hsapiens",
     "hsapiens": "hsapiens",
-
     # Mouse
     "mouse": "mmusculus",
     "mus_musculus": "mmusculus",
     "mus musculus": "mmusculus",
     "mmusculus": "mmusculus",
-
     # Pig
     "pig": "sscrofa",
     "sus_scrofa": "sscrofa",
@@ -184,6 +171,7 @@ def _species_for_mygene(species: str | None) -> str:
     if cs == "sscrofa":
         return "pig"
     return cs
+
 
 # ----------------------------- Helper utils -------------------------------- #
 
@@ -244,6 +232,7 @@ def _json(obj) -> str:
 
 def _is_bare_numeric(s: str) -> bool:
     return bool(re.fullmatch(r"\d+", str(s).strip()))
+
 
 # --------------------------- Capability registry ---------------------------- #
 
@@ -326,6 +315,7 @@ def _ordered_methods_for_pair(inp: str, outp: str) -> list[str]:
 
 # ------------------------------- Public API -------------------------------- #
 
+
 @dataclass
 class ConvertOptions:
     species: str = "hsapiens"
@@ -335,10 +325,10 @@ class ConvertOptions:
     strip_versions: bool = True
     # pybiomart archive/time
     ensembl_host: str | None = None  # e.g. "https://nov2020.archive.ensembl.org"
-    dataset: str | None = None       # e.g. "hsapiens_gene_ensembl"
+    dataset: str | None = None  # e.g. "hsapiens_gene_ensembl"
     # backend-specific time/release
-    as_of_date: str | None = None    # g:Profiler version / date (if supported)
-    release: str | int | None = None # reserved for future backends
+    as_of_date: str | None = None  # g:Profiler version / date (if supported)
+    release: str | int | None = None  # reserved for future backends
     verbose: bool = False
 
 
@@ -425,6 +415,7 @@ def convert_ids(
 
     return last_df.reset_index(drop=True)
 
+
 # ---------------------------- Backend: MyGene ------------------------------- #
 
 _MG_SCOPES = {
@@ -475,12 +466,7 @@ def _mg_extract(rec: dict, target: str) -> list[str]:
         if hg2 is not None:
             vals.extend(_as_list(hg2))
         return _unique_not_null(
-            [
-                f"HGNC:{v}".replace("HGNC:HGNC:", "HGNC:")
-                if str(v).isdigit()
-                else str(v)
-                for v in vals
-            ]
+            [f"HGNC:{v}".replace("HGNC:HGNC:", "HGNC:") if str(v).isdigit() else str(v) for v in vals]
         )
 
     if target in ("ensembl_gene", "ensembl_transcript", "ensembl_protein"):
@@ -556,14 +542,10 @@ def map_with_mygene(
     inp = canonical_db(input_db)
     outp = canonical_db(output_db)
 
-    clean_ids = [
-        strip_version(i, inp) if options.strip_versions else str(i) for i in ids
-    ]
+    clean_ids = [strip_version(i, inp) if options.strip_versions else str(i) for i in ids]
     uniq_ids = _unique_not_null(clean_ids)
     if not uniq_ids:
-        return _ensure_all_inputs(
-            _empty_result(), clean_ids, inp, outp, "mygene", release_used=None
-        )
+        return _ensure_all_inputs(_empty_result(), clean_ids, inp, outp, "mygene", release_used=None)
 
     mg = mygene.MyGeneInfo()
 
@@ -594,11 +576,7 @@ def map_with_mygene(
                 for r in res:
                     q = r.get("query")
                     notfound = bool(r.get("notfound", False))
-                    meta = {
-                        k: r.get(k)
-                        for k in ("_score", "taxid", "notfound")
-                        if k in r
-                    }
+                    meta = {k: r.get(k) for k in ("_score", "taxid", "notfound") if k in r}
                     outs = [] if notfound else _mg_extract(r, outp)
                     if options.strip_versions:
                         outs = [strip_version(x, outp) for x in outs]
@@ -652,14 +630,10 @@ def map_with_mygene(
         time.sleep(options.pause)
 
     if not frames:
-        return _ensure_all_inputs(
-            _empty_result(), clean_ids, inp, outp, "mygene", release_used=None
-        )
+        return _ensure_all_inputs(_empty_result(), clean_ids, inp, outp, "mygene", release_used=None)
 
     out = pd.concat(frames, ignore_index=True)
-    out = _ensure_all_inputs(
-        out, clean_ids, inp, outp, "mygene", release_used=None
-    )
+    out = _ensure_all_inputs(out, clean_ids, inp, outp, "mygene", release_used=None)
     return out[
         [
             "input_id",
@@ -673,78 +647,74 @@ def map_with_mygene(
         ]
     ]
 
+
 # --------------------------- Backend: pybiomart ----------------------------- #
 
 # Per-canonical-DB candidate attribute names in Ensembl BioMart.
 # We will choose the first one that actually exists in the dataset.
 _BM_ATTR_CANDIDATES: dict[str, list[str]] = {
-    "ensembl_gene":       ["ensembl_gene_id"],
+    "ensembl_gene": ["ensembl_gene_id"],
     "ensembl_transcript": ["ensembl_transcript_id"],
-    "ensembl_protein":    ["ensembl_peptide_id", "ensembl_protein_id"],
-
+    "ensembl_protein": ["ensembl_peptide_id", "ensembl_protein_id"],
     # "Gene symbol" across species. For human, 'hgnc_symbol' exists and is
     # preferred; for other organisms we fall back to 'external_gene_name'.
-    "hgnc_symbol":        ["hgnc_symbol", "external_gene_name", "external_gene_id", "gene_name"],
-
-    "hgnc_id":            ["hgnc_id"],
-
+    "hgnc_symbol": ["hgnc_symbol", "external_gene_name", "external_gene_id", "gene_name"],
+    "hgnc_id": ["hgnc_id"],
     # Entrez
-    "entrez_gene":        ["entrezgene_id", "entrezgene", "entrez_gene_id"],
-
+    "entrez_gene": ["entrezgene_id", "entrezgene", "entrez_gene_id"],
     # UniProt accessions
-    "uniprot":            ["uniprotswissprot", "uniprot_swissprot"],
-
+    "uniprot": ["uniprotswissprot", "uniprot_swissprot"],
     # RefSeq
-    "refseq_mrna":        ["refseq_mrna"],
-    "refseq_protein":     ["refseq_peptide"],
+    "refseq_mrna": ["refseq_mrna"],
+    "refseq_protein": ["refseq_peptide"],
 }
 
 # Per-canonical-DB candidate filter names. Again, we choose the first one
 # that actually exists in the dataset.
 _BM_FILTER_CANDIDATES: dict[str, list[str]] = {
-    "ensembl_gene":       ["ensembl_gene_id"],
+    "ensembl_gene": ["ensembl_gene_id"],
     "ensembl_transcript": ["ensembl_transcript_id"],
-    "ensembl_protein":    ["ensembl_peptide_id"],
-    "hgnc_symbol":        ["hgnc_symbol", "external_gene_name"],
-    "hgnc_id":            ["hgnc_id"],
-    "entrez_gene":        ["entrezgene_id", "entrez_gene_id"],
-    "uniprot":            ["uniprotswissprot", "uniprot_swissprot"],
-    "refseq_mrna":        ["refseq_mrna"],
-    "refseq_protein":     ["refseq_peptide"],
+    "ensembl_protein": ["ensembl_peptide_id"],
+    "hgnc_symbol": ["hgnc_symbol", "external_gene_name"],
+    "hgnc_id": ["hgnc_id"],
+    "entrez_gene": ["entrezgene_id", "entrez_gene_id"],
+    "uniprot": ["uniprotswissprot", "uniprot_swissprot"],
+    "refseq_mrna": ["refseq_mrna"],
+    "refseq_protein": ["refseq_peptide"],
 }
 
 # Known Ensembl archive hosts keyed by release number.
 # Source: biomaRt `listEnsemblArchives()` output and Ensembl docs. :contentReference[oaicite:1]{index=1}
 _ENSEMBL_ARCHIVE_BY_RELEASE: dict[int, str] = {
     # Older but still commonly referenced
-    54:  "may2009.archive.ensembl.org",
-    67:  "may2012.archive.ensembl.org",
-    74:  "dec2013.archive.ensembl.org",
-    75:  "feb2014.archive.ensembl.org",
-    76:  "aug2014.archive.ensembl.org",
-    77:  "oct2014.archive.ensembl.org",
-    78:  "dec2014.archive.ensembl.org",
-    79:  "mar2015.archive.ensembl.org",
-    80:  "may2015.archive.ensembl.org",
-    81:  "jul2015.archive.ensembl.org",
-    82:  "sep2015.archive.ensembl.org",
-    83:  "dec2015.archive.ensembl.org",
-    84:  "mar2016.archive.ensembl.org",
-    85:  "jul2016.archive.ensembl.org",
-    86:  "oct2016.archive.ensembl.org",
-    87:  "dec2016.archive.ensembl.org",
-    88:  "mar2017.archive.ensembl.org",
-    89:  "may2017.archive.ensembl.org",
-    90:  "aug2017.archive.ensembl.org",
-    91:  "dec2017.archive.ensembl.org",
-    92:  "apr2018.archive.ensembl.org",
-    93:  "jul2018.archive.ensembl.org",
-    94:  "oct2018.archive.ensembl.org",
-    95:  "jan2019.archive.ensembl.org",
-    96:  "apr2019.archive.ensembl.org",
-    97:  "jul2019.archive.ensembl.org",
-    98:  "sep2019.archive.ensembl.org",
-    99:  "jan2020.archive.ensembl.org",
+    54: "may2009.archive.ensembl.org",
+    67: "may2012.archive.ensembl.org",
+    74: "dec2013.archive.ensembl.org",
+    75: "feb2014.archive.ensembl.org",
+    76: "aug2014.archive.ensembl.org",
+    77: "oct2014.archive.ensembl.org",
+    78: "dec2014.archive.ensembl.org",
+    79: "mar2015.archive.ensembl.org",
+    80: "may2015.archive.ensembl.org",
+    81: "jul2015.archive.ensembl.org",
+    82: "sep2015.archive.ensembl.org",
+    83: "dec2015.archive.ensembl.org",
+    84: "mar2016.archive.ensembl.org",
+    85: "jul2016.archive.ensembl.org",
+    86: "oct2016.archive.ensembl.org",
+    87: "dec2016.archive.ensembl.org",
+    88: "mar2017.archive.ensembl.org",
+    89: "may2017.archive.ensembl.org",
+    90: "aug2017.archive.ensembl.org",
+    91: "dec2017.archive.ensembl.org",
+    92: "apr2018.archive.ensembl.org",
+    93: "jul2018.archive.ensembl.org",
+    94: "oct2018.archive.ensembl.org",
+    95: "jan2019.archive.ensembl.org",
+    96: "apr2019.archive.ensembl.org",
+    97: "jul2019.archive.ensembl.org",
+    98: "sep2019.archive.ensembl.org",
+    99: "jan2020.archive.ensembl.org",
     100: "apr2020.archive.ensembl.org",
     101: "aug2020.archive.ensembl.org",
     102: "nov2020.archive.ensembl.org",
@@ -795,6 +765,7 @@ def _ensembl_archive_host_for_release(
 
         # Strip a leading "v" or "r" if present (e.g. "v104")
         import re as _re  # local import to avoid polluting global namespace
+
         m = _re.match(r"^[vr]?(\d+)$", key)
         if not m:
             return None
@@ -1038,9 +1009,7 @@ def map_with_pybiomart(
     try:
         from pybiomart import Dataset  # type: ignore
     except Exception as e:
-        raise RuntimeError(
-            "pybiomart is not installed. Try: pip install pybiomart"
-        ) from e
+        raise RuntimeError("pybiomart is not installed. Try: pip install pybiomart") from e
 
     if options is None:
         options = ConvertOptions()
@@ -1048,16 +1017,11 @@ def map_with_pybiomart(
     inp = canonical_db(input_db)
     outp = canonical_db(output_db)
 
-    clean_ids = [
-        strip_version(i, inp) if options.strip_versions else str(i)
-        for i in ids
-    ]
+    clean_ids = [strip_version(i, inp) if options.strip_versions else str(i) for i in ids]
     uniq_ids = _unique_not_null(clean_ids)
 
     if not uniq_ids:
-        return _ensure_all_inputs(
-            _empty_result(), clean_ids, inp, outp, "pybiomart", release_used=None
-        )
+        return _ensure_all_inputs(_empty_result(), clean_ids, inp, outp, "pybiomart", release_used=None)
 
     # Resolve Ensembl host:
     #   1. If options.ensembl_host is set, use that verbatim.
@@ -1079,8 +1043,7 @@ def map_with_pybiomart(
         else:
             # Unknown release; harmlessly fall back to main Ensembl.
             logger.debug(
-                "pybiomart: no known archive host for Ensembl release %r; "
-                "falling back to www.ensembl.org",
+                "pybiomart: no known archive host for Ensembl release %r; " "falling back to www.ensembl.org",
                 options.release,
             )
 
@@ -1089,16 +1052,13 @@ def map_with_pybiomart(
 
     host = _normalize_biomart_host(raw_host)
 
-
-    
     dataset_name = _biomart_dataset_for_species(options.species, options.dataset)
 
     try:
         ds = Dataset(name=dataset_name, host=host)
     except Exception as e:
         raise RuntimeError(
-            f"pybiomart: failed to connect to Ensembl BioMart "
-            f"(dataset={dataset_name!r}, host={host!r}): {e}"
+            f"pybiomart: failed to connect to Ensembl BioMart " f"(dataset={dataset_name!r}, host={host!r}): {e}"
         ) from e
 
     # Discover attributes and filters that actually exist for this dataset
@@ -1106,13 +1066,9 @@ def map_with_pybiomart(
     filter_names = _bm_list_filter_names(ds)
 
     if not attr_names:
-        raise RuntimeError(
-            f"pybiomart: could not retrieve attributes for dataset {dataset_name!r}"
-        )
+        raise RuntimeError(f"pybiomart: could not retrieve attributes for dataset {dataset_name!r}")
     if not filter_names:
-        raise RuntimeError(
-            f"pybiomart: could not retrieve filters for dataset {dataset_name!r}"
-        )
+        raise RuntimeError(f"pybiomart: could not retrieve filters for dataset {dataset_name!r}")
 
     # Choose valid attribute + filter names for the requested mapping
     in_attr = _bm_pick_attribute(inp, attr_names)
@@ -1186,9 +1142,7 @@ def map_with_pybiomart(
         time.sleep(options.pause)
 
     if not frames:
-        return _ensure_all_inputs(
-            _empty_result(), clean_ids, inp, outp, "pybiomart", release_used=host
-        )
+        return _ensure_all_inputs(_empty_result(), clean_ids, inp, outp, "pybiomart", release_used=host)
 
     out = pd.concat(frames, ignore_index=True)
 
@@ -1200,9 +1154,7 @@ def map_with_pybiomart(
         out["metadata_json"] = _json({})
 
     out = _ensure_all_inputs(out, clean_ids, inp, outp, "pybiomart", release_used=host)
-    out = out.drop_duplicates(
-        ["input_id", "output_id", "input_db", "output_db", "method", "release_used"]
-    )
+    out = out.drop_duplicates(["input_id", "output_id", "input_db", "output_db", "method", "release_used"])
 
     return out[
         [
@@ -1217,6 +1169,7 @@ def map_with_pybiomart(
         ]
     ]
 
+
 # --------------------------- Backend: g:Profiler ---------------------------- #
 
 # Mapping from our canonical DB names -> g:Profiler namespace codes
@@ -1226,26 +1179,21 @@ def map_with_pybiomart(
 # - ENTREZGENE_ACC : Entrez Gene numeric ID
 # - UNIPROTSWISSPROT_ACC : UniProtKB/Swiss-Prot accessions (e.g. P04637)
 _GP_NS = {
-    "ensembl_gene":       "ENSG",
+    "ensembl_gene": "ENSG",
     "ensembl_transcript": "ENST",
-    "ensembl_protein":    "ENSP",
-
+    "ensembl_protein": "ENSP",
     # HGNC symbol vs accession
-    "hgnc_symbol":        "HGNC",       # e.g. TP53
-    "hgnc_id":            "HGNC_ACC",   # e.g. HGNC:11998
-
+    "hgnc_symbol": "HGNC",  # e.g. TP53
+    "hgnc_id": "HGNC_ACC",  # e.g. HGNC:11998
     # Entrez numeric ID
-    "entrez_gene":        "ENTREZGENE_ACC",
-
+    "entrez_gene": "ENTREZGENE_ACC",
     # UniProtKB/Swiss-Prot accessions
-    "uniprot":            "UNIPROTSWISSPROT_ACC",
-
+    "uniprot": "UNIPROTSWISSPROT_ACC",
     # RefSeq
-    "refseq_mrna":        "REFSEQ_MRNA",
-    "refseq_protein":     "REFSEQ_PEPTIDE",
-
-    "wormbase":           "WORMBASE",
-    "flybase":            "FLYBASE",
+    "refseq_mrna": "REFSEQ_MRNA",
+    "refseq_protein": "REFSEQ_PEPTIDE",
+    "wormbase": "WORMBASE",
+    "flybase": "FLYBASE",
 }
 
 
@@ -1266,9 +1214,9 @@ def _gp_target_candidates(outp: str) -> list[str]:
         #            -> entry-name namespaces as a last resort.
         candidates = [
             "UNIPROTSPTREMBL_ACC",  # UniProtKB (Swiss-Prot + TrEMBL) accessions
-            "UNIPROTSWISSPROT_ACC", # Swiss-Prot accessions
-            "UNIPROTSPTREMBL",      # UniProt entry names
-            "UNIPROTSWISSPROT",     # Swiss-Prot entry names
+            "UNIPROTSWISSPROT_ACC",  # Swiss-Prot accessions
+            "UNIPROTSPTREMBL",  # UniProt entry names
+            "UNIPROTSWISSPROT",  # Swiss-Prot entry names
         ]
         seen: set[str] = set()
         ordered: list[str] = []
@@ -1292,9 +1240,7 @@ def map_with_gprofiler(
     try:
         from gprofiler import GProfiler  # type: ignore
     except Exception as e:
-        raise RuntimeError(
-            "gprofiler-official is not installed. Try: pip install gprofiler-official"
-        ) from e
+        raise RuntimeError("gprofiler-official is not installed. Try: pip install gprofiler-official") from e
 
     if options is None:
         options = ConvertOptions()
@@ -1307,14 +1253,10 @@ def map_with_gprofiler(
     if not target_candidates:
         raise ValueError(f"g:Profiler: unsupported target namespace for {outp!r}")
 
-    clean_ids = [
-        strip_version(i, inp) if options.strip_versions else str(i) for i in ids
-    ]
+    clean_ids = [strip_version(i, inp) if options.strip_versions else str(i) for i in ids]
     uniq_ids = _unique_not_null(clean_ids)
     if not uniq_ids:
-        return _ensure_all_inputs(
-            _empty_result(), clean_ids, inp, outp, "gprofiler", release_used=None
-        )
+        return _ensure_all_inputs(_empty_result(), clean_ids, inp, outp, "gprofiler", release_used=None)
 
     gp = GProfiler(return_dataframe=True)
 
@@ -1353,11 +1295,7 @@ def map_with_gprofiler(
 
     # Help g:Profiler interpret fully numeric Entrez IDs correctly
     # by explicitly telling it they are ENTREZGENE_ACC.
-    if (
-        numeric_param is not None
-        and inp == "entrez_gene"
-        and all(_is_bare_numeric(x) for x in uniq_ids)
-    ):
+    if numeric_param is not None and inp == "entrez_gene" and all(_is_bare_numeric(x) for x in uniq_ids):
         base_kwargs[numeric_param] = "ENTREZGENE_ACC"
 
     last_error: Exception | None = None
@@ -1388,17 +1326,11 @@ def map_with_gprofiler(
 
                     if df is None or df.empty:
                         # No rows for this chunk and target_ns
-                        frames.append(
-                            pd.DataFrame(
-                                columns=["input_id", "output_id", "metadata_json"]
-                            )
-                        )
+                        frames.append(pd.DataFrame(columns=["input_id", "output_id", "metadata_json"]))
                     else:
                         keep_cols = ["incoming", "converted"]
                         extra_cols = [c for c in df.columns if c not in keep_cols]
-                        keep = df[keep_cols].rename(
-                            columns={"incoming": "input_id", "converted": "output_id"}
-                        )
+                        keep = df[keep_cols].rename(columns={"incoming": "input_id", "converted": "output_id"})
                         keep = keep.drop_duplicates()
 
                         if extra_cols:
@@ -1499,12 +1431,8 @@ def map_with_gprofiler(
     out["method"] = "gprofiler"
     out["release_used"] = options.as_of_date
 
-    out = _ensure_all_inputs(
-        out, clean_ids, inp, outp, "gprofiler", release_used=options.as_of_date
-    )
-    out = out.drop_duplicates(
-        ["input_id", "output_id", "input_db", "output_db", "method", "release_used"]
-    )
+    out = _ensure_all_inputs(out, clean_ids, inp, outp, "gprofiler", release_used=options.as_of_date)
+    out = out.drop_duplicates(["input_id", "output_id", "input_db", "output_db", "method", "release_used"])
 
     return out[
         [
@@ -1519,7 +1447,9 @@ def map_with_gprofiler(
         ]
     ]
 
+
 # ------------------------------ Backend: gget ------------------------------- #
+
 
 def _gget_extract(df: pd.DataFrame, outp: str) -> pd.DataFrame:
     """
@@ -1535,25 +1465,21 @@ def _gget_extract(df: pd.DataFrame, outp: str) -> pd.DataFrame:
         "id": "gene_id",
         "gene": "gene_id",
         "ensembl_id": "gene_id",
-
         # Gene symbols / names
         "name": "gene_name",
         "display_name": "gene_name",
         "symbol": "gene_name",
         "gene_symbol": "gene_name",
         "primary_gene_name": "gene_name",
-
         # Entrez / NCBI
         "entrez": "entrez_id",
         "entrezgene": "entrez_id",
         "entrez_gene": "entrez_id",
         "ncbi_gene_id": "entrez_id",
-
         # UniProt
         "uniprot": "uniprot_id",
         "uniprot_acc": "uniprot_id",
         "uniprot_id": "uniprot_id",
-
         # Misc
         "protein_id": "protein_id",
         "transcript_id": "transcript_id",
@@ -1626,19 +1552,12 @@ def map_with_gget(
     outp = canonical_db(output_db)
 
     if inp != "ensembl_gene":
-        raise ValueError(
-            f"gget backend currently supports only Ensembl gene IDs as input, "
-            f"got {inp!r}"
-        )
+        raise ValueError(f"gget backend currently supports only Ensembl gene IDs as input, " f"got {inp!r}")
 
-    clean_ids = [
-        strip_version(i, inp) if options.strip_versions else str(i) for i in ids
-    ]
+    clean_ids = [strip_version(i, inp) if options.strip_versions else str(i) for i in ids]
     uniq_ids = _unique_not_null(clean_ids)
     if not uniq_ids:
-        return _ensure_all_inputs(
-            _empty_result(), clean_ids, inp, outp, "gget", release_used=None
-        )
+        return _ensure_all_inputs(_empty_result(), clean_ids, inp, outp, "gget", release_used=None)
 
     # gget.info derives species from the Ensembl IDs; most versions do NOT
     # accept a `species` or `translate` keyword. We only pass well-supported
@@ -1710,9 +1629,7 @@ def map_with_gget(
         time.sleep(options.pause)
 
     if not frames:
-        return _ensure_all_inputs(
-            _empty_result(), clean_ids, inp, outp, "gget", release_used=None
-        )
+        return _ensure_all_inputs(_empty_result(), clean_ids, inp, outp, "gget", release_used=None)
 
     out = pd.concat(frames, ignore_index=True)
 
@@ -1724,23 +1641,17 @@ def map_with_gget(
         # For Ensembl / RefSeq inputs this removes the version suffix so that
         # gget’s versioned IDs (e.g. ENSG00000141510.20) align with the
         # versionless IDs we used as queries (e.g. ENSG00000141510).
-        out["input_id"] = [
-            strip_version(x, inp) for x in out["input_id"].tolist()
-        ]
+        out["input_id"] = [strip_version(x, inp) for x in out["input_id"].tolist()]
     else:
         out["input_id"] = [x.strip() for x in out["input_id"].tolist()]
-    
+
     out["input_db"] = inp
     out["output_db"] = outp
     out["method"] = "gget"
     out["release_used"] = None
     out["metadata_json"] = _json({})
-    out = _ensure_all_inputs(
-        out, clean_ids, inp, outp, "gget", release_used=None
-    )
-    out = out.drop_duplicates(
-        ["input_id", "output_id", "input_db", "output_db", "method", "release_used"]
-    )
+    out = _ensure_all_inputs(out, clean_ids, inp, outp, "gget", release_used=None)
+    out = out.drop_duplicates(["input_id", "output_id", "input_db", "output_db", "method", "release_used"])
     return out[
         [
             "input_id",
@@ -1754,7 +1665,9 @@ def map_with_gget(
         ]
     ]
 
+
 # ---------------------------- Utilities/Finalizers -------------------------- #
+
 
 def _empty_result() -> pd.DataFrame:
     return pd.DataFrame(
@@ -1799,18 +1712,10 @@ def _add_mapping_column(df: pd.DataFrame) -> pd.DataFrame:
     outputs = df["output_id"]
 
     out_str = outputs.astype(str)
-    valid_mask = (
-        ~outputs.isna()
-        & out_str.str.strip().ne("")
-        & ~out_str.str.lower().isin({"nan", "none", "null"})
-    )
+    valid_mask = ~outputs.isna() & out_str.str.strip().ne("") & ~out_str.str.lower().isin({"nan", "none", "null"})
 
     # Number of unique valid outputs per input
-    counts_by_input = (
-        df[valid_mask]
-        .groupby(inputs[valid_mask])["output_id"]
-        .nunique(dropna=True)
-    )
+    counts_by_input = df[valid_mask].groupby(inputs[valid_mask])["output_id"].nunique(dropna=True)
 
     mapping_by_input: dict[str, str] = {}
     for inp_val in inputs.unique():
@@ -1900,9 +1805,7 @@ def _ensure_all_inputs(
     order_map = {str(x): i for i, x in enumerate(original_inputs)}
     df = df.copy()
     df["__ord"] = df["input_id"].astype(str).map(order_map)
-    df = df.sort_values(["__ord", "output_id"], na_position="last").drop(
-        columns="__ord"
-    )
+    df = df.sort_values(["__ord", "output_id"], na_position="last").drop(columns="__ord")
     df = df.reset_index(drop=True)
 
     df = _add_mapping_column(df)

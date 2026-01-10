@@ -151,6 +151,34 @@ class TestAPIWithMockedDependencies:
             assert latest_release == 110
             mock_verify.assert_called_once_with("human")
 
+    def test_get_database_manager_defaults_ignore_before(self, temp_dir):
+        """get_database_manager should default ignore_before to the earliest supported release."""
+        from idtrack._api import API
+        from idtrack._db import DB
+
+        api = API(local_repository=temp_dir)
+
+        with patch("idtrack._api.DatabaseManager") as mock_dm:
+            mock_dm.return_value = MagicMock()
+            api.get_database_manager(organism_name="homo_sapiens", snapshot_release=110)
+
+            _args, kwargs = mock_dm.call_args
+            assert kwargs["ignore_before"] == int(min(DB.mysql_port_min_release.values()))
+            assert kwargs["ignore_after"] == 110
+
+    def test_get_database_manager_respects_ignore_before_override(self, temp_dir):
+        """get_database_manager should pass through an explicit ignore_before."""
+        from idtrack._api import API
+
+        api = API(local_repository=temp_dir)
+
+        with patch("idtrack._api.DatabaseManager") as mock_dm:
+            mock_dm.return_value = MagicMock()
+            api.get_database_manager(organism_name="homo_sapiens", snapshot_release=110, ignore_before=90)
+
+            _args, kwargs = mock_dm.call_args
+            assert kwargs["ignore_before"] == 90
+
 
 class TestAPIPublicInterface:
     """Test API public interface matches documentation."""

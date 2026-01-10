@@ -59,8 +59,8 @@ class ExternalDatabases:
         Args:
             organism (str): Canonical Ensembl species identifier in *snake_case*
                 (e.g. ``"homo_sapiens"``).  Case-insensitive but must match Ensembl conventions.
-            ensembl_release (int): Target Ensembl release number (e.g. ``110``).  Must be ≥ 79 and
-                correspond to a release that actually exists for *organism* and *assembly*.
+            ensembl_release (int): Target Ensembl release number (e.g. ``110``). Must correspond to a
+                release that actually exists for *organism* and *genome_assembly*.
             form (str): Entity level—``"gene"``, ``"transcript"``, or ``"translation"``.  Any other
                 value raises :py:class:`ValueError` in higher-level validation.
             local_repository (str): Writable directory where YAML files and downloads are cached.
@@ -184,7 +184,10 @@ class ExternalDatabases:
                                 "Include": False,
                             }
                         else:
-                            raise ValueError
+                            raise ValueError(
+                                f"Unexpected assembly format: expected int, got {type(a4).__name__} for assembly {a4!r} "
+                                f"in database {a1}/{a2}/{a3}."
+                            )
 
         with open(self.file_name_template_yaml(), "w") as yaml_file:
             yaml.dump(r, yaml_file)
@@ -274,9 +277,10 @@ class ExternalDatabases:
                 self.log.warning(f"The package uses the default config file for {self.organism}.")
             else:
                 raise FileNotFoundError(
-                    f"No default config file for `{self.organism}` distributed with the package: `{file_name}`. "
-                    f"Please see `create_template_yaml' method description "
-                    f"to learn how to create an external 'yaml' file."
+                    "No external database YAML found for organism "
+                    f"{self.organism!r} (searched configured and default paths). "
+                    "Create a `<organism>_externals_modified.yml` in your local repository or "
+                    "use an organism that ships with a default config."
                 )
 
         with open(file_name) as yaml_file:
@@ -301,6 +305,13 @@ class ExternalDatabases:
         Raises:
             ValueError: If the current Ensembl release is absent from the YAML configuration.
         """
+        # Allow "no external databases" runs (e.g. organisms without a shipped default YAML).
+        if not read_yaml_file or self.organism not in read_yaml_file or self.form not in read_yaml_file[self.organism]:
+            return
+
+        if not read_yaml_file[self.organism][self.form]:
+            return
+
         ensembl_releases = {
             int(e)
             for _, j1 in read_yaml_file.items()
@@ -338,10 +349,9 @@ class ExternalDatabases:
                   assembly and Ensembl release.
 
                 - ``"assembly"``
-                  genome-assembly **codes** (``int``) that
-                  contain *any* external database entry for the current organism
-                  and form.  Assemblies are returned even if their ``Include``
-                  flags are still ``false``.
+                  genome-assembly **codes** (``int``) for which the YAML enables
+                  *at least one* external database (``Include: true``) at the
+                  current Ensembl release.
 
         Returns:
             list[str] | list[int]:
@@ -370,6 +380,6 @@ class ExternalDatabases:
                     elif give_type == "assembly":
                         result.add(int(asm))
                     else:
-                        raise ValueError
+                        raise ValueError(f"give_type must be 'db' or 'assembly', got {give_type!r}.")
 
         return list(result)

@@ -3,11 +3,18 @@
 # Kemal Inecik
 # k.inecik@gmail.com
 
+import bz2
 import copy
+import gzip
+import io
 import logging
 import os
 import re
+import socket
+import time
+import warnings
 from collections import Counter
+from contextlib import contextmanager
 from functools import cached_property
 from itertools import repeat
 from typing import Any, Optional, Union
@@ -15,6 +22,7 @@ from typing import Any, Optional, Union
 import numpy as np
 import pandas as pd
 import pymysql
+import requests
 
 import idtrack._utils_hdf5 as hs
 from idtrack._db import DB
@@ -56,47 +64,277 @@ class DatabaseManager:
     """
 
     _core_db_index_cache: dict[tuple[str, int], dict[str, Any]] = {}
+    _ftp_schema_cache: dict[str, dict[str, list[str]]] = {}
+    _ensembl_latest_release_cache: Optional[int] = None
+
+    @staticmethod
+    def _tcp_can_connect(host: str, port: int, timeout_s: float = 2.0) -> bool:
+        try:
+            with socket.create_connection((host, int(port)), timeout=float(timeout_s)):
+                return True
+        except OSError:
+            return False
 
     @classmethod
-    def _get_core_db_index(cls, *, organism: str, genome_assembly: int) -> dict[str, Any]:
-        """Return cached core-DB availability for an (organism, assembly) pair across all configured ports.
-
-        The Ensembl public MySQL service can host the same assembly on multiple ports depending on release
-        (e.g. *sus_scrofa* assembly 102). To support full-history workflows we build a small in-memory index:
-
-        - `ports`: ports probed for this (organism, assembly) in preference order
-        - `releases_by_port`: releases available for this assembly on each reachable port
-        - `db_by_port_release`: schema name for each available release on each reachable port
-        - `releases`: sorted union of all releases across ports
-        - `port_for_release`: deterministic choice of port for each release (first configured port that has it)
-        - `db_for_release`: chosen schema name for each release (matching `port_for_release`, includes patch-letter suffixes)
-
-        Args:
-            organism: Canonical Ensembl organism name (e.g. ``"homo_sapiens"``).
-            genome_assembly: Genome assembly version (e.g. ``38`` for GRCh38).
-
-        Returns:
-            dict[str, Any]: Mapping describing reachable releases/ports for this organism/assembly.
-
-        Raises:
-            ValueError: If *organism* or *genome_assembly* is not configured.
-        """
-        key = (organism, int(genome_assembly))
-        cached = cls._core_db_index_cache.get(key)
+    def _ensembl_latest_release(cls) -> int:
+        cached = cls._ensembl_latest_release_cache
         if cached is not None:
-            return cached
+            return int(cached)
 
-        if organism not in DB.assembly_mysqlport_priority:
-            raise ValueError(
-                f"Organism {organism!r} is not configured. Supported organisms: {sorted(DB.assembly_mysqlport_priority)}"
+        url = f"{DB.rest_server_api}/info/data"
+        try:
+            r = requests.get(
+                url, headers={"Content-Type": "application/json"}, timeout=(DB.connection_timeout, DB.reading_timeout)
             )
-        if int(genome_assembly) not in DB.assembly_mysqlport_priority[organism]:
-            raise ValueError(
-                f"Genome assembly {int(genome_assembly)} is not configured for organism {organism!r}. "
-                f"Supported assemblies: {sorted(DB.assembly_mysqlport_priority[organism])}"
+            r.raise_for_status()
+            payload = r.json()
+        except Exception as exc:  # pragma: no cover - network dependent
+            raise RuntimeError(f"Unable to query Ensembl REST for latest release via {url!r}.") from exc
+
+        releases = payload.get("releases")
+        if not isinstance(releases, list) or not releases:
+            raise ValueError(f"Unexpected Ensembl REST payload at {url!r}: expected non-empty 'releases' list.")
+
+        latest = max(int(r) for r in releases)
+        cls._ensembl_latest_release_cache = int(latest)
+        return int(latest)
+
+    @staticmethod
+    def _parse_apache_dir_listing_dirs(html: str) -> list[str]:
+        """Extract directory names from an Apache-style directory listing HTML page."""
+        # Keep this dependency-free (no BeautifulSoup). Directory links end with '/'.
+        dirs = []
+        for href in re.findall(r"href=\"([^\"]+/)\"", html, flags=re.IGNORECASE):
+            if href.startswith("?") or href.startswith("/"):
+                continue
+            name = href.rstrip("/")
+            if name and name not in (".", ".."):
+                dirs.append(name)
+        return dirs
+
+    @staticmethod
+    def _parse_apache_dir_listing_files(html: str) -> list[str]:
+        """Extract file names from an Apache-style directory listing HTML page."""
+        files: list[str] = []
+        for href in re.findall(r"href=\"([^\"]+)\"", html, flags=re.IGNORECASE):
+            if href.startswith("?") or href.startswith("/") or href.endswith("/"):
+                continue
+            if href and href not in (".", ".."):
+                files.append(href)
+        return files
+
+    @staticmethod
+    def _iter_exception_chain(exc: BaseException) -> list[BaseException]:
+        """Return the exception chain (`__cause__`/`__context__`) as a list."""
+        chain: list[BaseException] = []
+        seen: set[int] = set()
+        current: Optional[BaseException] = exc
+        while current is not None and id(current) not in seen:
+            chain.append(current)
+            seen.add(id(current))
+            current = current.__cause__ or current.__context__
+        return chain
+
+    @classmethod
+    def _is_retryable_http_read_error(cls, exc: BaseException) -> bool:
+        """Heuristically decide whether an HTTP read/decompress error is transient and safe to retry."""
+        retryable_names = {
+            # urllib3 / http.client
+            "ProtocolError",
+            "IncompleteRead",
+            "ReadTimeoutError",
+            "RemoteDisconnected",
+            # requests
+            "ChunkedEncodingError",
+            "ConnectionError",
+            "ReadTimeout",
+            "ConnectTimeout",
+            "SSLError",
+            # compression / streaming
+            "BadGzipFile",
+            "EOFError",
+            "OSError",
+            "error",  # e.g. zlib.error
+        }
+
+        for err in cls._iter_exception_chain(exc):
+            if err.__class__.__name__ in retryable_names:
+                return True
+        return False
+
+    @classmethod
+    def _ftp_mysql_root_candidates(cls, *, organism: str, genome_assembly: int, release: int) -> tuple[str, ...]:
+        """Return candidate HTTPS roots to search for an Ensembl core DB directory."""
+        base = f"https://{DB.ensembl_ftp_base}/pub/release-{int(release)}/mysql/"
+        # GRCh37 became a separate archive once GRCh38 became the primary assembly (Ensembl release 76).
+        if organism == "homo_sapiens" and int(genome_assembly) == 37 and int(release) >= 76:
+            grch37 = f"https://{DB.ensembl_ftp_base}/pub/grch37/release-{int(release)}/mysql/"
+            return (grch37, base)
+        return (base,)
+
+    @classmethod
+    def _ftp_find_core_db_dir(
+        cls, *, organism: str, genome_assembly: int, release: int
+    ) -> tuple[Optional[str], Optional[str]]:
+        """Locate the core DB directory name (may include patch letters) and its HTTPS directory URL."""
+        release = int(release)
+        genome_assembly = int(genome_assembly)
+        expected = f"{organism}_core_{release}_{genome_assembly}"
+        pattern = re.compile(rf"^{re.escape(expected)}[a-z]*$")
+        log = logging.getLogger("database_manager")
+
+        for root in cls._ftp_mysql_root_candidates(organism=organism, genome_assembly=genome_assembly, release=release):
+            # Fast path: exact directory (no patch letter)
+            if cls._tcp_can_connect(DB.ensembl_ftp_base, 443, timeout_s=2.0):
+                try:
+                    with requests.get(
+                        f"{root}{expected}/",
+                        timeout=(DB.connection_timeout, DB.reading_timeout),
+                        stream=True,
+                    ) as resp:
+                        if resp.status_code == 200:
+                            return expected, f"{root}{expected}/"
+                        if resp.status_code not in (403, 404):
+                            # Unexpected status; fall back to listing below.
+                            pass
+                except requests.RequestException as exc:
+                    # Fall back to listing below; keep this quiet unless debugging connectivity.
+                    log.debug("Failed to probe Ensembl dump directory %r: %s", f"{root}{expected}/", exc)
+
+            # Slow path: list and look for patch-letter variants (e.g. `_36p`).
+            listing: Optional[str] = None
+            try:
+                listing = requests.get(root, timeout=(DB.connection_timeout, DB.reading_timeout)).text
+            except requests.RequestException as exc:
+                log.debug("Failed to list Ensembl dump root %r: %s", root, exc)
+            if listing is None:
+                continue
+
+            matches = [d for d in cls._parse_apache_dir_listing_dirs(listing) if pattern.match(d)]
+            if matches:
+                db_name = min(matches, key=len)
+                return db_name, f"{root}{db_name}/"
+
+        return None, None
+
+    @classmethod
+    def _get_core_db_index_from_ftp(cls, *, organism: str, genome_assembly: int, ports: list[int]) -> dict[str, Any]:
+        """Build a core-DB availability index by probing the Ensembl HTTPS/FTP MySQL dumps."""
+        log = logging.getLogger("database_manager")
+        latest_release = cls._ensembl_latest_release()
+        min_release = int(min(DB.mysql_port_min_release.values()))
+
+        # Use assembly-specific release range if available to reduce FTP probe time
+        assembly_config = DB.assembly_mysqlport_priority.get(organism, {}).get(int(genome_assembly), {})
+        release_range_config = assembly_config.get("ReleaseRange")
+        if release_range_config:
+            range_min, range_max = release_range_config
+            # Constrain to the assembly's expected release window
+            min_release = max(int(min_release), int(range_min))
+            max_release = int(range_max) if range_max is not None else int(latest_release)
+            max_release = min(max_release, int(latest_release))
+            log.info(
+                f"Using assembly-specific release range for {organism} assembly {genome_assembly}: "
+                f"releases {min_release}-{max_release} (from config {release_range_config})"
+            )
+        else:
+            max_release = int(latest_release)
+            log.warning(
+                f"No ReleaseRange configured for {organism} assembly {genome_assembly}; "
+                f"searching all releases {min_release}-{max_release} (this may be slow)"
             )
 
-        ports = list(DB.assembly_mysqlport_priority[organism][int(genome_assembly)]["Ports"])
+        releases_range = range(min_release, max_release + 1)
+
+        releases: set[int] = set()
+        db_for_release: dict[int, str] = {}
+        db_dir_url_by_release: dict[int, str] = {}
+
+        # First pass: exact directory names only (cheap). Track min/max to constrain patch-letter scans.
+        exact_hits: list[int] = []
+        for rel in releases_range:
+            expected = f"{organism}_core_{int(rel)}_{int(genome_assembly)}"
+            found = None
+            found_url = None
+            for root in cls._ftp_mysql_root_candidates(
+                organism=organism, genome_assembly=genome_assembly, release=int(rel)
+            ):
+                try:
+                    with requests.get(
+                        f"{root}{expected}/",
+                        timeout=(DB.connection_timeout, DB.reading_timeout),
+                        stream=True,
+                    ) as resp:
+                        if resp.status_code == 200:
+                            found = expected
+                            found_url = f"{root}{expected}/"
+                            break
+                except requests.RequestException as exc:
+                    log.debug("Failed to probe Ensembl dump directory %r: %s", f"{root}{expected}/", exc)
+            if found:
+                releases.add(int(rel))
+                db_for_release[int(rel)] = found
+                db_dir_url_by_release[int(rel)] = str(found_url)
+                exact_hits.append(int(rel))
+
+        # Second pass: scan *all* releases for patch-letter variants.
+        # Older releases often use patch-letter suffixes (e.g. `_37a`) and may live outside the contiguous
+        # window where exact (no-suffix) directory names exist.
+        scan_range = releases_range
+
+        for rel in scan_range:
+            if int(rel) in releases:
+                continue
+            db_name, db_dir_url = cls._ftp_find_core_db_dir(
+                organism=organism, genome_assembly=genome_assembly, release=int(rel)
+            )
+            if db_name and db_dir_url:
+                releases.add(int(rel))
+                db_for_release[int(rel)] = str(db_name)
+                db_dir_url_by_release[int(rel)] = str(db_dir_url)
+
+        releases_union = sorted(releases)
+        if not releases_union:
+            raise ValueError(
+                f"No Ensembl core MySQL dump directories found on https://{DB.ensembl_ftp_base}/pub "
+                f"for {organism!r} assembly {int(genome_assembly)} in releases {min_release}..{latest_release}."
+            )
+
+        # Assign each release to the first configured port that could plausibly host it (based on min-release rules).
+        releases_by_port: dict[int, set[int]] = {int(p): set() for p in ports}
+        db_by_port_release: dict[int, dict[int, str]] = {int(p): {} for p in ports}
+        port_for_release: dict[int, int] = {}
+        for rel in releases_union:
+            chosen: Optional[int] = None
+            for p in ports:
+                min_rel = DB.mysql_port_min_release.get(int(p))
+                if min_rel is None or int(rel) >= int(min_rel):
+                    chosen = int(p)
+                    break
+            if chosen is None:
+                chosen = int(ports[-1])
+            port_for_release[int(rel)] = int(chosen)
+            releases_by_port[int(chosen)].add(int(rel))
+            db_by_port_release[int(chosen)][int(rel)] = db_for_release[int(rel)]
+
+        return {
+            "organism": organism,
+            "genome_assembly": int(genome_assembly),
+            "ports": tuple(int(p) for p in ports),
+            "releases_by_port": releases_by_port,
+            "db_by_port_release": db_by_port_release,
+            "releases": releases_union,
+            "port_for_release": port_for_release,
+            "db_for_release": db_for_release,
+            "db_dir_url_by_release": db_dir_url_by_release,
+            "source": "ftp",
+        }
+
+    @classmethod
+    def _probe_mysql_core_schemas_by_port(
+        cls, *, organism: str, genome_assembly: int, ports: list[int]
+    ) -> tuple[dict[int, set[int]], dict[int, dict[int, str]], dict[int, Exception]]:
+        """Return per-port core DB releases and schema names from the live Ensembl MySQL service."""
         # Some Ensembl releases encode patch builds as a trailing letter, e.g. `homo_sapiens_core_56_37a`.
         # Treat these as part of the same "base assembly" (37) for configuration and graph-level purposes.
         pattern = re.compile(rf"^{re.escape(organism)}_core_([0-9]+)_{int(genome_assembly)}[a-z]*$")
@@ -104,10 +342,17 @@ class DatabaseManager:
         escaped_organism = organism.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         like_pattern = f"{escaped_organism}\\_core\\_%\\_{int(genome_assembly)}%"
 
-        releases_by_port: dict[int, set[int]] = {}
-        db_by_port_release: dict[int, dict[int, str]] = {}
+        # Keep keys for all configured ports, even if some are unreachable.
+        releases_by_port: dict[int, set[int]] = {int(p): set() for p in ports}
+        db_by_port_release: dict[int, dict[int, str]] = {int(p): {} for p in ports}
         connection_errors: dict[int, Exception] = {}
+
         for port in ports:
+            # Avoid long hangs when outbound MySQL ports are blocked (common on managed networks).
+            if not cls._tcp_can_connect(DB.mysql_host, int(port), timeout_s=float(DB.connection_timeout)):
+                connection_errors[int(port)] = TimeoutError(f"TCP connect to {DB.mysql_host}:{int(port)} timed out")
+                continue
+
             results_query = None
             last_exc: Optional[Exception] = None
             for attempt in range(2):
@@ -133,6 +378,7 @@ class DatabaseManager:
                     results_query = None
                     if attempt == 0:
                         continue
+
             if results_query is None:
                 connection_errors[int(port)] = last_exc or RuntimeError("Unknown MySQL connection error")
                 continue
@@ -144,35 +390,204 @@ class DatabaseManager:
                     db_name = db_name.decode("utf-8")
                 db_name = str(db_name)
                 m = pattern.match(db_name)
-                if m:
-                    rel = int(m.group(1))
-                    rels.add(rel)
-                    if rel not in db_for_release_on_port:
-                        db_for_release_on_port[rel] = db_name
-                    else:
-                        # Extremely rare: multiple schema suffixes for the same (release, base-assembly).
-                        # Prefer the shortest name (e.g. `_37` over `_37a`) for determinism.
-                        if len(db_name) < len(db_for_release_on_port[rel]):
-                            db_for_release_on_port[rel] = db_name
+                if not m:
+                    continue
+                rel = int(m.group(1))
+                rels.add(rel)
+                existing = db_for_release_on_port.get(rel)
+                if existing is None or len(db_name) < len(existing):
+                    db_for_release_on_port[rel] = db_name
 
             releases_by_port[int(port)] = rels
             db_by_port_release[int(port)] = db_for_release_on_port
 
-        releases_union = sorted({r for rs in releases_by_port.values() for r in rs})
-        port_for_release: dict[int, int] = {}
-        db_for_release: dict[int, str] = {}
-        for rel in releases_union:
+        return releases_by_port, db_by_port_release, connection_errors
+
+    @classmethod
+    def _refresh_core_db_index_mysql(
+        cls, index: dict[str, Any], *, organism: str, genome_assembly: int
+    ) -> dict[str, Any]:
+        """Refresh the MySQL-derived portion of a cached core-index in place."""
+        ports = list(index.get("ports") or DB.assembly_mysqlport_priority[organism][int(genome_assembly)]["Ports"])
+        ports = [int(p) for p in ports]
+        releases_by_port, db_by_port_release, connection_errors = cls._probe_mysql_core_schemas_by_port(
+            organism=organism,
+            genome_assembly=int(genome_assembly),
+            ports=ports,
+        )
+
+        mysql_releases = sorted({r for rs in releases_by_port.values() for r in rs})
+        mysql_port_for_release: dict[int, int] = {}
+        mysql_db_for_release: dict[int, str] = {}
+        for rel in mysql_releases:
             for port in ports:
                 if rel in releases_by_port.get(int(port), set()):
-                    port_for_release[int(rel)] = int(port)
-                    db_for_release[int(rel)] = db_by_port_release[int(port)][int(rel)]
+                    mysql_port_for_release[int(rel)] = int(port)
+                    mysql_db_for_release[int(rel)] = db_by_port_release[int(port)][int(rel)]
                     break
 
-        if not releases_union:
+        updated = dict(index)
+        updated["ports"] = tuple(int(p) for p in ports)
+        updated["releases_by_port"] = releases_by_port
+        updated["db_by_port_release"] = db_by_port_release
+        updated["releases_on_mysql"] = mysql_releases
+        updated["mysql_connection_errors"] = {
+            int(port): f"{exc.__class__.__name__}: {exc}" for port, exc in sorted(connection_errors.items())
+        }
+
+        releases = sorted(set(updated.get("releases", []) or []) | set(mysql_releases))
+        updated["releases"] = releases
+
+        db_for_release = dict(updated.get("db_for_release", {}) or {})
+        for rel, db_name in mysql_db_for_release.items():
+            db_for_release[int(rel)] = str(db_name)
+        updated["db_for_release"] = db_for_release
+
+        port_for_release = dict(updated.get("port_for_release", {}) or {})
+        for rel, port in mysql_port_for_release.items():
+            port_for_release[int(rel)] = int(port)
+        for rel in releases:
+            if int(rel) not in port_for_release:
+                port_for_release[int(rel)] = int(ports[0])
+        updated["port_for_release"] = port_for_release
+
+        if mysql_releases:
+            if updated.get("db_dir_url_by_release"):
+                updated["source"] = "merged"
+            else:
+                updated["source"] = "mysql"
+        else:
+            if updated.get("db_dir_url_by_release"):
+                updated["source"] = "ftp"
+
+        return updated
+
+    @classmethod
+    def _get_core_db_index(cls, *, organism: str, genome_assembly: int) -> dict[str, Any]:
+        """Return cached core-DB availability for an (organism, assembly) pair across all configured ports.
+
+        The Ensembl public MySQL service can host the same assembly on multiple ports depending on release
+        (e.g. *homo_sapiens* assembly 37). To support full-history workflows we build a small in-memory index:
+
+        - `ports`: ports probed for this (organism, assembly) in preference order
+        - `releases_by_port`: releases available for this assembly on each reachable port
+        - `db_by_port_release`: schema name for each available release on each reachable port
+        - `releases`: sorted union of all releases across ports
+        - `port_for_release`: deterministic choice of port for each release (first configured port that has it)
+        - `db_for_release`: chosen schema name for each release (matching `port_for_release`, includes patch-letter suffixes)
+
+        Args:
+            organism: Canonical Ensembl organism name (e.g. ``"homo_sapiens"``).
+            genome_assembly: Genome assembly version (e.g. ``38`` for GRCh38).
+
+        Returns:
+            dict[str, Any]: Mapping describing reachable releases/ports for this organism/assembly.
+
+        Raises:
+            ValueError: If *organism* or *genome_assembly* is not configured.
+        """
+        key = (organism, int(genome_assembly))
+        cached = cls._core_db_index_cache.get(key)
+        if cached is not None:
+            errors = cached.get("mysql_connection_errors") or {}
+            if errors:
+                # If a previously failing port now responds, refresh the MySQL-derived portion so
+                # downstream callers don't get stuck with stale partial results.
+                if any(
+                    cls._tcp_can_connect(DB.mysql_host, int(port), timeout_s=float(DB.connection_timeout))
+                    for port in errors
+                ):
+                    refreshed = cls._refresh_core_db_index_mysql(
+                        cached, organism=organism, genome_assembly=int(genome_assembly)
+                    )
+                    cls._core_db_index_cache[key] = refreshed
+                    return refreshed
+            return cached
+
+        if organism not in DB.assembly_mysqlport_priority:
             raise ValueError(
-                f"No Ensembl core databases found for {organism!r} on assembly {int(genome_assembly)} "
-                f"across ports {ports}. Connection errors: {connection_errors}"
+                f"Organism {organism!r} is not configured. Supported organisms: {sorted(DB.assembly_mysqlport_priority)}"
             )
+        if int(genome_assembly) not in DB.assembly_mysqlport_priority[organism]:
+            raise ValueError(
+                f"Genome assembly {int(genome_assembly)} is not configured for organism {organism!r}. "
+                f"Supported assemblies: {sorted(DB.assembly_mysqlport_priority[organism])}"
+            )
+
+        ports = list(DB.assembly_mysqlport_priority[organism][int(genome_assembly)]["Ports"])
+        releases_by_port, db_by_port_release, connection_errors = cls._probe_mysql_core_schemas_by_port(
+            organism=organism,
+            genome_assembly=int(genome_assembly),
+            ports=[int(p) for p in ports],
+        )
+
+        mysql_releases = sorted({r for rs in releases_by_port.values() for r in rs})
+        mysql_port_for_release: dict[int, int] = {}
+        mysql_db_for_release: dict[int, str] = {}
+        for rel in mysql_releases:
+            for port in ports:
+                if rel in releases_by_port.get(int(port), set()):
+                    mysql_port_for_release[int(rel)] = int(port)
+                    mysql_db_for_release[int(rel)] = db_by_port_release[int(port)][int(rel)]
+                    break
+
+        ftp_index: Optional[dict[str, Any]] = None
+        ftp_exc: Optional[Exception] = None
+        try:
+            ftp_index = cls._get_core_db_index_from_ftp(
+                organism=organism, genome_assembly=int(genome_assembly), ports=ports
+            )
+        except Exception as exc:
+            ftp_index = None
+            ftp_exc = exc
+
+        if ftp_index is None:
+            if not mysql_releases:
+                raise ValueError(
+                    f"No Ensembl core databases found for {organism!r} on assembly {int(genome_assembly)} "
+                    f"across ports {ports}. Connection errors: {connection_errors}. FTP error: {ftp_exc}"
+                )
+
+            index = {
+                "organism": organism,
+                "genome_assembly": int(genome_assembly),
+                "ports": tuple(int(p) for p in ports),
+                "releases_by_port": releases_by_port,
+                "db_by_port_release": db_by_port_release,
+                "releases": mysql_releases,
+                "port_for_release": mysql_port_for_release,
+                "db_for_release": mysql_db_for_release,
+                "releases_on_mysql": mysql_releases,
+                "mysql_connection_errors": {
+                    int(port): f"{exc.__class__.__name__}: {exc}" for port, exc in sorted(connection_errors.items())
+                },
+                "source": "mysql",
+            }
+            cls._core_db_index_cache[key] = index
+            return index
+
+        # Merge: use FTP for the full release catalogue (historic snapshots), but keep MySQL-derived
+        # per-port availability for releases that are on the live service.
+        ftp_releases = list(ftp_index["releases"])
+        releases = sorted(set(ftp_releases) | set(mysql_releases))
+
+        db_for_release = dict(ftp_index.get("db_for_release", {}))
+        # For MySQL-backed releases, prefer the *live* schema name (may include patch-letter suffixes).
+        for rel, db_name in mysql_db_for_release.items():
+            db_for_release[int(rel)] = str(db_name)
+
+        db_dir_url_by_release = dict(ftp_index.get("db_dir_url_by_release", {}))
+
+        port_for_release = dict(ftp_index.get("port_for_release", {}))
+        for rel, port in mysql_port_for_release.items():
+            port_for_release[int(rel)] = int(port)
+
+        # Ensure every release in the union has a deterministic port assignment.
+        missing_ports = [rel for rel in releases if int(rel) not in port_for_release]
+        if missing_ports:
+            # Assign unknown ones to the first configured port as a safe default; these should be rare.
+            for rel in missing_ports:
+                port_for_release[int(rel)] = int(ports[0])
 
         index = {
             "organism": organism,
@@ -180,9 +595,15 @@ class DatabaseManager:
             "ports": tuple(int(p) for p in ports),
             "releases_by_port": releases_by_port,
             "db_by_port_release": db_by_port_release,
-            "releases": releases_union,
+            "releases": releases,
             "port_for_release": port_for_release,
             "db_for_release": db_for_release,
+            "db_dir_url_by_release": db_dir_url_by_release,
+            "releases_on_mysql": mysql_releases,
+            "mysql_connection_errors": {
+                int(port): f"{exc.__class__.__name__}: {exc}" for port, exc in sorted(connection_errors.items())
+            },
+            "source": "merged" if mysql_releases else "ftp",
         }
         cls._core_db_index_cache[key] = index
         return index
@@ -361,6 +782,8 @@ class DatabaseManager:
             "user": DB.myqsl_user,
             "password": DB.mysql_togo,
             "port": selected_port,
+            "connect_timeout": max(DB.connection_timeout, 30),
+            "read_timeout": max(DB.reading_timeout, 60),
         }
 
         # The logger for informing the user about the progress.
@@ -407,12 +830,17 @@ class DatabaseManager:
                 f"Releases within window: {releases_in_window}"
             )
 
-        min_port_release = DB.mysql_port_min_release.get(int(self.mysql_settings["port"]))
-        if min_port_release is not None and self.ensembl_release < int(min_port_release):
-            raise RuntimeError(
-                f"Internal configuration error: selected port {int(self.mysql_settings['port'])} has min release "
-                f"{int(min_port_release)} but release {int(self.ensembl_release)} was selected."
-            )
+        # Only enforce port-level minimum-release rules when we expect to query the live MySQL service.
+        # When a release is accessed via the HTTPS/FTP dumps, the configured MySQL port is only a
+        # bookkeeping detail and may not support the historical release directly.
+        mysql_releases = set(core_index.get("releases_on_mysql", []) or [])
+        if mysql_releases and int(self.ensembl_release) in mysql_releases:
+            min_port_release = DB.mysql_port_min_release.get(int(self.mysql_settings["port"]))
+            if min_port_release is not None and self.ensembl_release < int(min_port_release):
+                raise RuntimeError(
+                    f"Internal configuration error: selected port {int(self.mysql_settings['port'])} has min release "
+                    f"{int(min_port_release)} but release {int(self.ensembl_release)} was selected."
+                )
 
     def __str__(self) -> str:
         """Return a multi-line snapshot of the manager's current configuration.
@@ -469,6 +897,48 @@ class DatabaseManager:
             list[int]: Sorted release numbers satisfying reachability and ignore-window constraints.
         """
         return self.available_releases_versions()
+
+    @cached_property
+    def available_releases_all_assemblies(self) -> list[int]:
+        """Return all Ensembl releases reachable across every configured assembly.
+
+        For clean-handoff species (e.g. mouse: 37 → 38 → 39), no single assembly spans the full release
+        history. Graph construction and YAML template generation therefore need a release catalogue that is the
+        union over *all* assemblies configured for :py:attr:`organism` in
+        :py:data:`idtrack._db.DB.assembly_mysqlport_priority`.
+
+        The list is filtered by the manager's ``ignore_before`` / ``ignore_after`` window and cached for the
+        lifetime of this :py:class:`DatabaseManager` instance.
+
+        Returns:
+            list[int]: Sorted release numbers available for at least one configured assembly.
+        """
+        log = logging.getLogger("database_manager")
+        releases: set[int] = set()
+        cfg = DB.assembly_mysqlport_priority[self.organism]
+        assemblies_failed: list[int] = []
+        for asm in cfg:
+            try:
+                core_index = self._get_core_db_index(organism=self.organism, genome_assembly=int(asm))
+                releases.update(r for r in core_index["releases"] if self.ignore_after >= r >= self.ignore_before)
+            except Exception as exc:
+                assemblies_failed.append(int(asm))
+                log.warning(
+                    "Failed to get core DB index for %s assembly %s: %s. "
+                    "Releases for this assembly will not be included.",
+                    self.organism,
+                    asm,
+                    exc,
+                )
+        if assemblies_failed:
+            log.warning(
+                "available_releases_all_assemblies: %d/%d assemblies failed for %s: %s",
+                len(assemblies_failed),
+                len(cfg),
+                self.organism,
+                sorted(assemblies_failed),
+            )
+        return sorted(releases)
 
     @cached_property
     def available_releases_no_save(self) -> list[int]:
@@ -580,6 +1050,31 @@ class DatabaseManager:
             genome_assembly=self.genome_assembly,
         )
 
+    def change_release_auto_assembly(self, ensembl_release: int) -> "DatabaseManager":
+        """Clone the manager for *ensembl_release* while inferring a compatible genome assembly.
+
+        Unlike :py:meth:`change_release`, this helper allows :py:attr:`genome_assembly` to change when the
+        requested release is not present in the current assembly (common for clean-handoff species).
+        Assembly inference follows the same priority rules as :py:meth:`__init__` with ``genome_assembly=None``:
+        pick the highest-priority configured assembly that contains the requested release.
+
+        Args:
+            ensembl_release (int): Desired Ensembl release number.
+
+        Returns:
+            DatabaseManager: Fresh manager initialised for *ensembl_release* with an inferred assembly.
+        """
+        return DatabaseManager(
+            organism=self.organism,
+            ensembl_release=int(ensembl_release),
+            form=self.form,
+            local_repository=self.local_repository,
+            ignore_before=self.ignore_before,
+            ignore_after=self.ignore_after,
+            store_raw_always=self.store_raw_always,
+            genome_assembly=None,
+        )
+
     def change_assembly(self, genome_assembly: int, last_possible_ensembl_release: bool = False) -> "DatabaseManager":
         """Clone the manager while targeting a new genome assembly (e.g. GRCh38 → GRCh37).
 
@@ -629,10 +1124,16 @@ class DatabaseManager:
             f"assembly and {self.ensembl_release} release is being fetched."
         )
 
-        with pymysql.connect(**self.mysql_settings) as connection:
-            with connection.cursor() as cur:
-                cur.execute("SHOW databases")
-                results_query = cur.fetchall()
+        try:
+            with pymysql.connect(**self.mysql_settings) as connection:
+                with connection.cursor() as cur:
+                    cur.execute("SHOW databases")
+                    results_query = cur.fetchall()
+        except Exception:
+            # Fall back to the HTTPS/FTP MySQL dumps when direct MySQL connectivity is unavailable.
+            core_index = self._get_core_db_index(organism=self.organism, genome_assembly=self.genome_assembly)
+            accepted_databases = sorted({str(v) for v in core_index.get("db_for_release", {}).values() if v})
+            return pd.DataFrame(accepted_databases, columns=["available_databases"])
 
         if not all([len(i) == 1 and isinstance(i[0], str) for i in results_query]):
             raise ValueError("The result is in unexpected format.")
@@ -714,6 +1215,259 @@ class DatabaseManager:
             with hs.HDFStore(file_name, mode="r") as f:
                 return list(f.keys())
 
+    def _ftp_db_dir_url(self) -> str:
+        """Return the HTTPS directory URL for the current core database dump."""
+        core_index = self._get_core_db_index(organism=self.organism, genome_assembly=self.genome_assembly)
+        db_dir = core_index.get("db_dir_url_by_release", {}).get(int(self.ensembl_release))
+        if isinstance(db_dir, str) and db_dir:
+            return db_dir
+
+        db_name = self.mysql_database
+        release = int(self.ensembl_release)
+        for root in self._ftp_mysql_root_candidates(
+            organism=self.organism, genome_assembly=self.genome_assembly, release=release
+        ):
+            candidate = f"{root}{db_name}/"
+            try:
+                with requests.get(candidate, timeout=(DB.connection_timeout, DB.reading_timeout), stream=True) as resp:
+                    if resp.status_code == 200:
+                        return candidate
+            except requests.RequestException as exc:
+                self.log.debug("Failed to probe Ensembl dump directory %r: %s", candidate, exc)
+
+        raise FileNotFoundError(
+            f"Unable to locate Ensembl MySQL dump directory for {self.organism!r} release {release} "
+            f"assembly {int(self.genome_assembly)} (expected db {db_name!r})."
+        )
+
+    def _ftp_schema_url(self) -> str:
+        """Return a working schema-dump URL (`*.sql.gz` or `*.sql.gz.bz2`) for the current DB dump directory."""
+        db_dir_url = self._ftp_db_dir_url()
+        db_name = self.mysql_database
+
+        # Fast path: the conventional naming.
+        candidates = (
+            f"{db_dir_url}{db_name}.sql.gz",
+            f"{db_dir_url}{db_name}.sql.gz.bz2",
+        )
+        for url in candidates:
+            try:
+                with requests.get(url, timeout=(DB.connection_timeout, DB.reading_timeout), stream=True) as resp:
+                    if resp.status_code == 200:
+                        return url
+            except requests.RequestException as exc:
+                self.log.debug("Failed to probe Ensembl schema dump %r: %s", url, exc)
+
+        # Slow path: directory listing (needed for some releases where Ensembl ships `.sql.gz.bz2` or mismatched names).
+        try:
+            listing = requests.get(db_dir_url, timeout=(DB.connection_timeout, DB.reading_timeout)).text
+        except Exception as exc:
+            raise FileNotFoundError(f"Unable to list Ensembl dump directory: {db_dir_url!r}") from exc
+
+        sql_files = [
+            f
+            for f in self._parse_apache_dir_listing_files(listing)
+            if f.endswith(".sql.gz") or f.endswith(".sql.gz.bz2")
+        ]
+        if not sql_files:
+            raise FileNotFoundError(f"No `.sql.gz` schema dump found in Ensembl directory: {db_dir_url!r}")
+
+        # Prefer an exact match; otherwise fall back deterministically.
+        exact = [f for f in sql_files if f == f"{db_name}.sql.gz" or f == f"{db_name}.sql.gz.bz2"]
+        if exact:
+            return f"{db_dir_url}{sorted(exact, key=len)[0]}"
+
+        # Heuristic: prefer the schema file whose name matches organism + assembly, closest release number.
+        m_db = re.match(r"^(?P<org>.+)_core_(?P<rel>[0-9]+)_(?P<asm>[0-9]+)(?P<patch>[a-z]*)$", str(db_name))
+        if m_db:
+            org = m_db.group("org")
+            asm = int(m_db.group("asm"))
+            rel_target = int(self.ensembl_release)
+
+            scored: list[tuple[int, int, str]] = []
+            for fname in sql_files:
+                base = fname
+                for suffix in (".sql.gz.bz2", ".sql.gz"):
+                    if base.endswith(suffix):
+                        base = base[: -len(suffix)]
+                        break
+                m = re.match(r"^(?P<org>.+)_core_(?P<rel>[0-9]+)_(?P<asm>[0-9]+)(?P<patch>[a-z]*)$", base)
+                if not m:
+                    continue
+                if m.group("org") != org or int(m.group("asm")) != asm:
+                    continue
+                rel = int(m.group("rel"))
+                scored.append((abs(rel - rel_target), -rel, fname))
+            if scored:
+                scored.sort()
+                return f"{db_dir_url}{scored[0][2]}"
+
+        # Final fallback: pick the first (stable) in sorted order.
+        return f"{db_dir_url}{sorted(sql_files)[0]}"
+
+    @classmethod
+    def _ftp_schema_for_sql_url(cls, sql_url: str) -> dict[str, list[str]]:
+        """Return a table->columns mapping parsed from an Ensembl `<db>.sql.gz` schema dump."""
+        cached = cls._ftp_schema_cache.get(sql_url)
+        if cached is not None:
+            return cached
+
+        try:
+            resp = requests.get(sql_url, timeout=(DB.connection_timeout, DB.reading_timeout))
+            resp.raise_for_status()
+            payload = resp.content
+
+            data = payload
+            # Some releases ship nested compression: `.sql.gz.bz2` → bz2(gzip(sql)).
+            if sql_url.endswith(".bz2") or data.startswith(b"BZh"):
+                data = bz2.decompress(data)
+            if sql_url.endswith(".gz") or data.startswith(b"\x1f\x8b"):
+                data = gzip.decompress(data)
+            sql_text = data.decode("utf-8", errors="replace")
+        except Exception as exc:  # pragma: no cover - network dependent
+            raise RuntimeError(f"Unable to download or decompress Ensembl schema dump: {sql_url!r}") from exc
+
+        schema: dict[str, list[str]] = {}
+        create_re = re.compile(
+            r"CREATE TABLE(?: IF NOT EXISTS)? `([^`]+)` \((.*?)\)\s*ENGINE",
+            flags=re.DOTALL,
+        )
+        for match in create_re.finditer(sql_text):
+            table = match.group(1)
+            block = match.group(2)
+            columns = re.findall(r"^\s*`([^`]+)`\s+", block, flags=re.MULTILINE)
+            if columns:
+                schema[str(table)] = [str(c) for c in columns]
+
+        if not schema:
+            raise ValueError(f"No CREATE TABLE blocks found in Ensembl schema dump: {sql_url!r}")
+
+        cls._ftp_schema_cache[sql_url] = schema
+        return schema
+
+    @staticmethod
+    @contextmanager
+    def _open_decompressed_http_text(url: str):
+        """Yield a text stream for an Ensembl dump file, handling `.gz`, `.bz2`, and nested `.gz.bz2`."""
+        # Some environments/proxies apply HTTP-level content encoding to already-compressed dump files.
+        # If urllib3 decodes that content, its Content-Length accounting can break and surface as
+        # `IncompleteRead(..., negative_remaining)` during streaming reads. Force identity transfer and
+        # disable urllib3 decoding so we always operate on the raw bytes indicated by the URL suffix.
+        resp = requests.get(
+            url,
+            timeout=(DB.connection_timeout, DB.reading_timeout),
+            stream=True,
+            headers={"Accept-Encoding": "identity", "Connection": "close"},
+        )
+        try:
+            resp.raise_for_status()
+            if hasattr(resp.raw, "decode_content"):
+                resp.raw.decode_content = False
+            if hasattr(resp.raw, "enforce_content_length"):
+                # Some mirrors/proxies report an incorrect Content-Length for streamed downloads
+                # (notably when applying HTTP-level compression). We rely on the decompressor to
+                # validate integrity instead of urllib3's length accounting.
+                resp.raw.enforce_content_length = False
+
+            stream: Any = resp.raw
+            # Outer layer: bzip2 (used for many `*.txt.gz.bz2` and some `*.sql.gz.bz2`).
+            if url.endswith(".bz2"):
+                stream = bz2.BZ2File(stream)
+            # Inner layer: gzip (used by Ensembl for `.gz` and nested `.gz.bz2`).
+            if ".gz" in url:
+                stream = gzip.GzipFile(fileobj=stream)
+
+            text = io.TextIOWrapper(stream, encoding="utf-8", errors="replace", newline="")
+            try:
+                yield text
+            finally:
+                text.close()
+        finally:
+            resp.close()
+
+    def _download_table_from_ftp(self, table_key: str, usecols: Optional[list[str]] = None) -> pd.DataFrame:
+        """Download a table from Ensembl's HTTPS MySQL dumps (no direct MySQL connection)."""
+        db_dir_url = self._ftp_db_dir_url()
+        sql_url = self._ftp_schema_url()
+
+        schema = self._ftp_schema_for_sql_url(sql_url)
+        if table_key not in schema:
+            raise pymysql.err.OperationalError(f"Table {table_key!r} not found in Ensembl schema dump {sql_url!r}.")
+        columns = schema[table_key]
+
+        if usecols is not None:
+            missing = [c for c in usecols if not isinstance(c, str) or c not in columns]
+            if missing:
+                raise ValueError(f"Missing columns in {table_key!r}: {missing}")
+
+        table_url_candidates = (
+            f"{db_dir_url}{table_key}.txt.gz",
+            f"{db_dir_url}{table_key}.txt.gz.bz2",
+        )
+        table_url: Optional[str] = None
+        for candidate in table_url_candidates:
+            try:
+                with requests.get(candidate, timeout=(DB.connection_timeout, DB.reading_timeout), stream=True) as resp:
+                    if resp.status_code == 200:
+                        table_url = candidate
+                        break
+            except requests.RequestException as exc:
+                self.log.debug("Failed to probe Ensembl table dump %r: %s", candidate, exc)
+        if table_url is None:
+            raise pymysql.err.OperationalError(
+                f"Unable to locate table dump for {table_key!r} under {db_dir_url!r} "
+                f"(tried {table_url_candidates})."
+            )
+
+        max_attempts = 3
+        last_exc: Optional[Exception] = None
+        for attempt in range(max_attempts):
+            try:
+                with self._open_decompressed_http_text(table_url) as fh:
+                    df = pd.read_csv(
+                        fh,
+                        sep="\t",
+                        header=None,
+                        names=columns,
+                        na_values=["\\N"],
+                        keep_default_na=False,
+                        low_memory=False,
+                        usecols=usecols,
+                    )
+                last_exc = None
+                break
+            except Exception as exc:  # noqa: BLE001 - retry only on known transient classes
+                last_exc = exc
+                if attempt < max_attempts - 1 and self._is_retryable_http_read_error(exc):
+                    sleep_s = 0.5 * (2**attempt)
+                    self.log.warning(
+                        "Transient error while downloading %r from %s (attempt %d/%d): %s. Retrying in %.1fs.",
+                        table_key,
+                        table_url,
+                        attempt + 1,
+                        max_attempts,
+                        exc.__class__.__name__,
+                        sleep_s,
+                    )
+                    time.sleep(sleep_s)
+                    continue
+                break
+
+        if last_exc is not None:
+            raise pymysql.err.OperationalError(
+                f"Unable to fetch table {table_key!r} from Ensembl HTTPS dumps: {table_url!r}"
+            ) from last_exc
+
+        if usecols is not None:
+            df = df[usecols]
+
+        info_usecols = " for following columns: " + ", ".join(usecols) + "." if usecols else "."
+        self.log.info(
+            f"Raw table for `{table_key}` on ensembl release `{self.ensembl_release}` "
+            f"was downloaded via HTTPS/FTP dumps{info_usecols}"
+        )
+        return df
+
     def download_table(self, table_key: str, usecols: Optional[list] = None) -> pd.DataFrame:
         """Download a raw Ensembl MySQL table and return it as a DataFrame.
 
@@ -751,58 +1505,82 @@ class DatabaseManager:
                 raise ValueError(f"Unsafe SQL identifier: {identifier!r}")
             return f"`{identifier}`"
 
-        # Base settings for MYSQL server.
+        core_index = self._get_core_db_index(organism=self.organism, genome_assembly=self.genome_assembly)
+        mysql_releases = set(core_index.get("releases_on_mysql", []) or [])
+        # If the requested release is not present on the live MySQL service, go straight to HTTPS dumps.
+        if int(self.ensembl_release) not in mysql_releases:
+            return self._download_table_from_ftp(table_key, usecols=usecols)
+
+        # If MySQL is unreachable (common when outbound 3306/5306 is blocked), fall back to HTTPS dumps.
+        if not self._tcp_can_connect(
+            str(self.mysql_settings["host"]),
+            int(self.mysql_settings["port"]),
+            timeout_s=float(DB.connection_timeout),
+        ):
+            return self._download_table_from_ftp(table_key, usecols=usecols)
+
         which_mysql_server = dict(**self.mysql_settings, **{"database": self.mysql_database})
 
-        # Connect to the MYSQL server, close the connection after the code block
-        with pymysql.connect(**which_mysql_server) as connection:
-            table_sql = _quote_identifier(table_key)
+        try:
+            # Connect to the MYSQL server, close the connection after the code block
+            with pymysql.connect(**which_mysql_server) as connection:
+                table_sql = _quote_identifier(table_key)
 
-            # Create a cursor to be able to make some queries: First get the associated column names.
-            with connection.cursor() as cur1:
-                cur1.execute(f"SHOW columns FROM {table_sql}")  # noqa: S608
-                column_names = pd.DataFrame(cur1.fetchall())[0]
+                # Create a cursor to be able to make some queries: First get the associated column names.
+                with connection.cursor() as cur1:
+                    cur1.execute(f"SHOW columns FROM {table_sql}")  # noqa: S608
+                    column_names = pd.DataFrame(cur1.fetchall())[0]
 
-                if pd.isna(column_names).any():
-                    raise ValueError("There is no column in the table")
+                    if pd.isna(column_names).any():
+                        raise ValueError("There is no column in the table")
 
-                # The MYSQL sever before 'DB.mysql_port_min_version' gives the result as bytes, but
-                # the one after gives as string.
-                if not isinstance(column_names.iloc[0], str):
-                    # Convert everything to string to be consistent.
-                    column_names = column_names.str.decode("utf-8")
-                # Just to make sure conversion is successful, no problem is expected to arise afterwards.
-                if not all([isinstance(k, str) and self._column_sep not in k for k in column_names]):
-                    raise ValueError
+                    # The MYSQL sever before 'DB.mysql_port_min_version' gives the result as bytes, but
+                    # the one after gives as string.
+                    if not isinstance(column_names.iloc[0], str):
+                        # Convert everything to string to be consistent.
+                        column_names = column_names.str.decode("utf-8")
+                    # Just to make sure conversion is successful, no problem is expected to arise afterwards.
+                    if not all([isinstance(k, str) and self._column_sep not in k for k in column_names]):
+                        raise ValueError(
+                            f"Column names must be strings without separator {self._column_sep!r}. "
+                            f"Invalid columns found in table {table_key!r}."
+                        )
 
-            # Create a cursor to be able to make some queries: Second get the associated table content.
-            with connection.cursor() as cur2:
-                if usecols is None:
-                    select_sql = "*"
-                else:
-                    col_set = {str(c) for c in column_names.tolist()}
-                    missing = [c for c in usecols if not isinstance(c, str) or c not in col_set]
-                    if missing:
-                        raise ValueError(f"Missing columns in {table_key!r}: {missing}")
-                    select_sql = ", ".join(_quote_identifier(col) for col in usecols)
+                # Create a cursor to be able to make some queries: Second get the associated table content.
+                with connection.cursor() as cur2:
+                    if usecols is None:
+                        select_sql = "*"
+                    else:
+                        col_set = {str(c) for c in column_names.tolist()}
+                        missing = [c for c in usecols if not isinstance(c, str) or c not in col_set]
+                        if missing:
+                            raise ValueError(f"Missing columns in {table_key!r}: {missing}")
+                        select_sql = ", ".join(_quote_identifier(col) for col in usecols)
 
-                cur2.execute(f"SELECT {select_sql} FROM {table_sql}")  # noqa: S608
-                # Fetch all the content and save as a tuple file.
-                results_content = cur2.fetchall()
+                    cur2.execute(f"SELECT {select_sql} FROM {table_sql}")  # noqa: S608
+                    # Fetch all the content and save as a tuple file.
+                    results_content = cur2.fetchall()
 
-            # Create a dataframe using the columns fetched.
-            df = pd.DataFrame(results_content, columns=column_names if usecols is None else usecols)
-            # Make sure the content does not contain any bytes object.
-            if np.any(df.map(lambda x: isinstance(x, bytes))):
-                raise ValueError
+                # Create a dataframe using the columns fetched.
+                df = pd.DataFrame(results_content, columns=column_names if usecols is None else usecols)
+                # Align MySQL NULL semantics with the HTTPS/FTP dumps: in dumps missing values are encoded as `\N`
+                # which we map to pandas NA. MySQL returns NULL as `None`; normalise to `np.nan` for consistency.
+                df.replace({None: np.nan}, inplace=True)
+                # Make sure the content does not contain any bytes object.
+                if np.any(df.map(lambda x: isinstance(x, bytes))):
+                    raise ValueError(
+                        f"Table {table_key!r} contains bytes objects that could not be decoded to strings."
+                    )
 
-            info_usecols = " for following columns: " + ", ".join(usecols) + "." if usecols else "."
-            self.log.info(
-                f"Raw table for `{table_key}` on ensembl release `{self.ensembl_release}` "
-                f"was downloaded{info_usecols}"
-            )
+                info_usecols = " for following columns: " + ", ".join(usecols) + "." if usecols else "."
+                self.log.info(
+                    f"Raw table for `{table_key}` on ensembl release `{self.ensembl_release}` "
+                    f"was downloaded{info_usecols}"
+                )
 
-            return df
+                return df
+        except Exception:
+            return self._download_table_from_ftp(table_key, usecols=usecols)
 
     def available_tables_mysql(self):
         """Enumerate tables present in the selected Ensembl MySQL schema.
@@ -911,7 +1689,18 @@ class DatabaseManager:
             # Earlier versions has different table for stable_id.
             # When there is no associated column for a given table, the following error will be raised.
 
-        except pymysql.err.OperationalError:
+        except (pymysql.err.OperationalError, ValueError) as exc:
+            # OperationalError: MySQL table doesn't exist or connection error
+            # ValueError: FTP download found the table but columns stable_id/version don't exist
+            # In older Ensembl releases, these columns are in separate *_stable_id tables.
+            self.log.debug(
+                "Columns stable_id/version not found in %r table for release %s; "
+                "trying separate %s_stable_id table (older Ensembl schema). Original error: %s",
+                form,
+                self.ensembl_release,
+                form,
+                exc,
+            )
             df = self.get_table(f"{form}_stable_id", usecols=usecols_core, save_after_calculation=self.store_raw_always)
             df_2 = (
                 self.get_table(f"{form}", usecols=usecols_asso, save_after_calculation=self.store_raw_always)
@@ -1032,7 +1821,7 @@ class DatabaseManager:
             "translation_version",
         }
         if not (len(df.columns) == len(set(df.columns).intersection(cols)) == 6):
-            raise ValueError
+            raise ValueError(f"Expected 6 columns {sorted(cols)}, got {len(df.columns)} columns: {list(df.columns)}.")
 
         # Process the dataframe
         for col in ["gene", "transcript"]:
@@ -1125,9 +1914,9 @@ class DatabaseManager:
 
         # Check the delimiter is not in the ID.
         if not np.all(sm["new_stable_id"].str.find(DB.id_ver_delimiter) == -1):
-            raise ValueError
+            raise ValueError(f"new_stable_id column contains delimiter {DB.id_ver_delimiter!r} which is not allowed.")
         if not np.all(sm["old_stable_id"].str.find(DB.id_ver_delimiter) == -1):
-            raise ValueError
+            raise ValueError(f"old_stable_id column contains delimiter {DB.id_ver_delimiter!r} which is not allowed.")
         # No need to check for version as it can be already float or int by fix_stable_events
 
         sm = sm[(self.ignore_after >= sm["old_release"]) & (sm["old_release"] >= self.ignore_before)]
@@ -1159,6 +1948,12 @@ class DatabaseManager:
             This function is deprecated and will be removed in a future major release once the core extractor fully
             addresses the ordering anomaly.
         """
+        warnings.warn(
+            "create_id_history_fixed() is deprecated and will be removed in a future release. "
+            "Use create_id_history() instead, which now handles cyclic/duplicated transitions automatically.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         # Get the raw version of idhistory first, and sort.
         df = self.get_db("idhistory" if not narrow else "idhistory_narrow")
         df.sort_values(by=["new_release"], inplace=True)
@@ -1297,7 +2092,37 @@ class DatabaseManager:
         )
         x = self.get_table("xref", usecols=["xref_id", "external_db_id", "dbprimary_acc", "display_label"], **m)
         ed = self.get_table("external_db", usecols=["external_db_id", "db_name", "db_display_name"], **m)
-        ix = self.get_table("identity_xref", usecols=["ensembl_identity", "xref_identity", "object_xref_id"], **m)
+        # Handle column name changes in identity_xref table across Ensembl releases.
+        # Old releases (e.g., release 48) use: target_identity, query_identity
+        # New releases use: ensembl_identity, xref_identity
+        try:
+            ix = self.get_table("identity_xref", usecols=["ensembl_identity", "xref_identity", "object_xref_id"], **m)
+        except ValueError as e:
+            if "Missing columns" in str(e) and ("ensembl_identity" in str(e) or "xref_identity" in str(e)):
+                self.log.info(
+                    "Using legacy column names (target_identity, query_identity) for identity_xref table "
+                    f"in Ensembl release {self.ensembl_release}."
+                )
+                try:
+                    ix = self.get_table(
+                        "identity_xref", usecols=["target_identity", "query_identity", "object_xref_id"], **m
+                    )
+                    # Rename legacy columns to current naming convention
+                    ix.rename(
+                        columns={"target_identity": "ensembl_identity", "query_identity": "xref_identity"},
+                        inplace=True,
+                    )
+                except ValueError:
+                    # If neither column naming scheme works, create empty identity columns
+                    self.log.warning(
+                        f"identity_xref table missing identity columns for Ensembl release {self.ensembl_release}. "
+                        "Using NaN values for ensembl_identity and xref_identity."
+                    )
+                    ix = self.get_table("identity_xref", usecols=["object_xref_id"], **m)
+                    ix["ensembl_identity"] = np.nan
+                    ix["xref_identity"] = np.nan
+            else:
+                raise
         es = self.get_table("external_synonym", usecols=["xref_id", "synonym"], **m)
 
         # Make entities in synonyms table appended to the xref file as additional lines
@@ -1306,6 +2131,33 @@ class DatabaseManager:
         es.rename(columns={"synonym": "display_label"}, inplace=True)
         es["display_label"] = DB.synonym_id_nodes_prefix + es["display_label"]
         x = pd.concat([x, es], ignore_index=True)
+
+        # Tables loaded via HTTPS/FTP dumps (or legacy on-disk caches) can contain join-key columns as strings.
+        # Some older releases also include malformed/continuation lines that shift text into numeric ID columns.
+        # Pandas refuses merges when dtypes disagree (e.g. int64 vs object), so normalise here.
+        def _coerce_numeric_key(df: pd.DataFrame, col: str, table_name: str) -> pd.DataFrame:
+            if col not in df.columns or pd.api.types.is_numeric_dtype(df[col]):
+                return df
+
+            numeric = pd.to_numeric(df[col], errors="coerce")
+            bad = numeric.isna() & df[col].notna()
+            if bad.any():
+                example = df.loc[bad, col].iloc[0]
+                self.log.warning(
+                    "Dropping %d malformed rows from `%s` where `%s` is not numeric (e.g. %r).",
+                    int(bad.sum()),
+                    table_name,
+                    col,
+                    example,
+                )
+                df = df.loc[~bad].copy()
+                numeric = numeric.loc[~bad]
+
+            df[col] = numeric
+            return df
+
+        x = _coerce_numeric_key(x, "external_db_id", "xref")
+        ed = _coerce_numeric_key(ed, "external_db_id", "external_db")
 
         # Merge the tables as requested
         comb = pd.merge(
@@ -1396,7 +2248,7 @@ class DatabaseManager:
             databases = pd.DataFrame(Counter(res[db_name]).most_common(), columns=[db_name, count_col])
             return databases
         else:
-            raise ValueError
+            raise ValueError(f"filter_mode must be 'all', 'database', or 'relevant-database', got {filter_mode!r}.")
 
     def create_database_content(self, just_download: bool = False) -> pd.DataFrame:
         """Retrieve and optionally cache external-database metadata for every assembly, release, and form.
@@ -1419,10 +2271,27 @@ class DatabaseManager:
                 columns.  Empty when ``just_download`` is ``True``.
         """
         df = pd.DataFrame()
+        assemblies_processed = []
+        assemblies_failed = []
+
         for k in DB.assembly_mysqlport_priority[self.organism].keys():
             try:
+                self.log.info(f"Processing assembly {k} for {self.organism}...")
                 dm_assembly = self.change_assembly(k, last_possible_ensembl_release=True)
-            except ValueError:
+                assemblies_processed.append(k)
+            except ValueError as e:
+                assemblies_failed.append(k)
+                self.log.warning(
+                    f"Skipping assembly {k} for {self.organism}: {str(e)[:200]}... "
+                    f"This assembly will NOT be included in the external database template YAML."
+                )
+                continue
+            except Exception as e:
+                assemblies_failed.append(k)
+                self.log.error(
+                    f"Unexpected error while processing assembly {k} for {self.organism}: "
+                    f"{type(e).__name__}: {str(e)[:200]}. Skipping this assembly."
+                )
                 continue
             for j in dm_assembly.available_form_of_interests:  # For all assemblies possible.
                 for i in dm_assembly.available_releases:
@@ -1436,6 +2305,24 @@ class DatabaseManager:
                     df_temp["form"] = j
                     if not just_download:
                         df = pd.concat([df, df_temp], axis=0)
+
+        # Log summary of assembly processing
+        all_configured = sorted(DB.assembly_mysqlport_priority[self.organism].keys())
+        self.log.info(
+            f"Assembly processing complete for {self.organism}: "
+            f"Successfully processed {len(assemblies_processed)}/{len(all_configured)} assemblies. "
+            f"Processed: {sorted(assemblies_processed)}, Failed: {sorted(assemblies_failed) if assemblies_failed else 'none'}"
+        )
+
+        if assemblies_failed:
+            self.log.warning(
+                f"IMPORTANT: {len(assemblies_failed)} assembly(ies) were skipped for {self.organism}. "
+                "The external database YAML template will only include data "
+                f"for assemblies: {sorted(assemblies_processed)}. "
+                "To include all assemblies, check the warnings above for details on why "
+                f"assemblies {sorted(assemblies_failed)} failed."
+            )
+
         if not just_download:
             df["organism"] = self.organism
             df.reset_index(inplace=True, drop=True)
@@ -1552,15 +2439,29 @@ class DatabaseManager:
         cfg = DB.assembly_mysqlport_priority[self.organism]
         ass_supported = [int(a) for a in ass if int(a) in cfg]
         ass_sorted = sorted(ass_supported, key=lambda a: cfg[a]["Priority"])
+        assemblies_skipped: list[int] = []
         for i in ass_sorted:  # sort according to per-organism priority (1 = newest)
             try:
                 dm = self.change_assembly(i)
-            except ValueError:
+            except ValueError as exc:
+                self.log.warning(
+                    "create_external_all: skipping assembly %s for %s due to ValueError: %s", i, self.organism, exc
+                )
+                assemblies_skipped.append(i)
                 continue
             df_temp = dm.get_db(df_indicator)
             df_temp["assembly"] = i
             df = pd.concat([df, df_temp])
         df.reset_index(drop=True, inplace=True)
+
+        if assemblies_skipped:
+            self.log.warning(
+                "create_external_all: %d/%d assemblies were skipped for %s: %s",
+                len(assemblies_skipped),
+                len(ass_sorted),
+                self.organism,
+                sorted(assemblies_skipped),
+            )
 
         compare_columns = [
             i for i in df.columns if i != "assembly" and not i.endswith("_identity")
@@ -1733,7 +2634,7 @@ class DatabaseManager:
         main_ind = split_ind[0]
         param1_ind = split_ind[1] if len(split_ind) > 1 else None
         if len(split_ind) > 2:
-            raise ValueError
+            raise ValueError(f"df_indicator {df_indicator!r} has too many underscore-separated parts (max 2).")
 
         # For 'availabledatabases', do *not* reuse another release's cached result.
         #

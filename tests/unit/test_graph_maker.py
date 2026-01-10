@@ -82,6 +82,21 @@ def synthetic_graph_dm(tmp_path, monkeypatch) -> DatabaseManager:
     """Latest-release DatabaseManager backed by synthetic MySQL tables."""
     synthetic = _synthetic_graph_mysql()
 
+    def _fake_core_index(*, organism: str, genome_assembly: int):  # noqa: ARG001
+        releases = list(synthetic.available_releases)
+        db_for_release = {r: f"{organism}_core_{r}_{genome_assembly}" for r in releases}
+        return {
+            "organism": organism,
+            "genome_assembly": genome_assembly,
+            "ports": (3306,),
+            "releases_by_port": {3306: set(releases)},
+            "db_by_port_release": {3306: db_for_release.copy()},
+            "releases": releases,
+            "port_for_release": {r: 3306 for r in releases},
+            "db_for_release": db_for_release,
+            "releases_on_mysql": releases,
+        }
+
     def _available_releases_versions(self: DatabaseManager, **kwargs) -> list[int]:
         return list(synthetic.available_releases)
 
@@ -124,6 +139,7 @@ def synthetic_graph_dm(tmp_path, monkeypatch) -> DatabaseManager:
     monkeypatch.setattr(DatabaseManager, "available_releases_versions", _available_releases_versions)
     monkeypatch.setattr(DatabaseManager, "download_table", _download_table)
     monkeypatch.setattr(DatabaseManager, "create_external_all", _create_external_all)
+    monkeypatch.setattr(DatabaseManager, "_get_core_db_index", classmethod(lambda cls, **kw: _fake_core_index(**kw)))
 
     return DatabaseManager(
         organism="homo_sapiens",
@@ -172,6 +188,133 @@ def test_construct_graph_form_builds_time_travel_edges(synthetic_graph_dm):
     # Latest-release nodes should be labelled.
     assert g.nodes["ENSG00000000001.2"]["is_latest"] is True
     assert g.nodes["ENSG00000000001.1"]["is_latest"] is False
+
+
+def test_construct_graph_form_handles_clean_handoff_assemblies(tmp_path, monkeypatch):
+    """The GraphMaker should traverse releases even when assemblies change across the snapshot window."""
+    tables_by_release = {
+        100: {
+            "gene": pd.DataFrame(
+                {
+                    "gene_id": [1],
+                    "stable_id": ["ENSG00000000001"],
+                    "version": [1],
+                }
+            ),
+            "stable_id_event": pd.DataFrame(
+                {
+                    "mapping_session_id": [1],
+                    "old_stable_id": ["ENSG00000000001"],
+                    "old_version": [1],
+                    "new_stable_id": ["ENSG00000000001"],
+                    "new_version": [2],
+                    "score": [0.8],
+                    "type": ["gene"],
+                }
+            ),
+            "mapping_session": pd.DataFrame(
+                {
+                    "mapping_session_id": [1],
+                    "old_db_name": ["mus_musculus_core_100_38"],
+                    "new_db_name": ["mus_musculus_core_101_39"],
+                    "old_release": [100],
+                    "new_release": [101],
+                    "old_assembly": ["38"],
+                    "new_assembly": ["39"],
+                    "created": ["2020-01-01"],
+                }
+            ),
+        },
+        101: {
+            "gene": pd.DataFrame(
+                {
+                    "gene_id": [1],
+                    "stable_id": ["ENSG00000000001"],
+                    "version": [2],
+                }
+            ),
+            "stable_id_event": pd.DataFrame(
+                {
+                    "mapping_session_id": [1],
+                    "old_stable_id": ["ENSG00000000001"],
+                    "old_version": [1],
+                    "new_stable_id": ["ENSG00000000001"],
+                    "new_version": [2],
+                    "score": [0.8],
+                    "type": ["gene"],
+                }
+            ),
+            "mapping_session": pd.DataFrame(
+                {
+                    "mapping_session_id": [1],
+                    "old_db_name": ["mus_musculus_core_100_38"],
+                    "new_db_name": ["mus_musculus_core_101_39"],
+                    "old_release": [100],
+                    "new_release": [101],
+                    "old_assembly": ["38"],
+                    "new_assembly": ["39"],
+                    "created": ["2020-01-01"],
+                }
+            ),
+        },
+    }
+
+    def _fake_core_index(*, organism: str, genome_assembly: int):
+        if organism != "mus_musculus":
+            raise ValueError("unexpected organism")
+        if int(genome_assembly) == 39:
+            releases = [101]
+        elif int(genome_assembly) == 38:
+            releases = [100]
+        elif int(genome_assembly) == 37:
+            releases = []
+        else:
+            releases = []
+        db_for_release = {r: f"{organism}_core_{r}_{genome_assembly}" for r in releases}
+        return {
+            "organism": organism,
+            "genome_assembly": int(genome_assembly),
+            "ports": (3306,),
+            "releases_by_port": {3306: set(releases)},
+            "db_by_port_release": {3306: db_for_release.copy()},
+            "releases": releases,
+            "port_for_release": {r: 3306 for r in releases},
+            "db_for_release": db_for_release,
+            "releases_on_mysql": releases,
+        }
+
+    def _available_releases_versions(self: DatabaseManager, **kwargs) -> list[int]:  # noqa: ARG002
+        core_index = _fake_core_index(organism=self.organism, genome_assembly=int(self.genome_assembly))
+        return sorted(r for r in core_index["releases"] if self.ignore_after >= r >= self.ignore_before)
+
+    def _download_table(self: DatabaseManager, table_key: str, usecols: list[str] | None = None) -> pd.DataFrame:
+        df = tables_by_release[int(self.ensembl_release)].get(table_key)
+        if df is None:
+            return pd.DataFrame()
+        if usecols is None:
+            return df.copy(deep=True)
+        return df.loc[:, usecols].copy(deep=True)
+
+    monkeypatch.setattr(DatabaseManager, "_get_core_db_index", classmethod(lambda cls, **kw: _fake_core_index(**kw)))
+    monkeypatch.setattr(DatabaseManager, "available_releases_versions", _available_releases_versions)
+    monkeypatch.setattr(DatabaseManager, "download_table", _download_table)
+
+    dm = DatabaseManager(
+        organism="mus_musculus",
+        form="gene",
+        local_repository=str(tmp_path),
+        ensembl_release=101,
+        ignore_before=100,
+        ignore_after=101,
+        genome_assembly=39,
+        store_raw_always=True,
+    )
+
+    g = GraphMaker(dm).construct_graph_form(narrow=False, db_manager=dm.change_form("gene"))
+
+    assert g.has_edge("ENSG00000000001.1", "ENSG00000000001.2")
+    assert 100 in set(g.graph.get("confident_for_release", []))
+    assert 101 in set(g.graph.get("confident_for_release", []))
 
 
 def test_construct_graph_adds_base_nodes_and_merges_case_insensitive_externals(synthetic_graph_dm):
