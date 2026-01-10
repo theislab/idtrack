@@ -128,7 +128,11 @@ class API:
         return formal_name, latest_release
 
     def get_database_manager(
-        self, organism_name: str, snapshot_release: int, genome_assembly: Optional[int] = None
+        self,
+        organism_name: str,
+        snapshot_release: int,
+        genome_assembly: Optional[int] = None,
+        ignore_before: Optional[int] = None,
     ) -> "DatabaseManager":
         """Create a database manager configured for an organism and a release-bounded snapshot.
 
@@ -148,6 +152,11 @@ class API:
                 If ``None`` (default), the highest-priority assembly configured for the organism is used. Note that
                 the resulting snapshot graph can still include additional assemblies within the snapshot window;
                 use :py:meth:`idtrack.API.list_genome_assemblies` to inspect what is present.
+            ignore_before (int | None): Earliest Ensembl release to include in the snapshot window. When ``None``
+                (default), use the earliest release supported by the public Ensembl MySQL/FTP dumps (see
+                :py:data:`idtrack._db.DB.mysql_port_min_release`). This default ensures multi-assembly history is
+                retained for clean-handoff species (e.g. mouse) where older assemblies live entirely in earlier
+                releases.
 
         Returns:
             idtrack._database_manager.DatabaseManager: A manager ready for use by graph-building and
@@ -156,9 +165,12 @@ class API:
         Notes:
             Any exceptions raised by :py:class:`idtrack._database_manager.DatabaseManager` propagate unchanged.
         """
+        if ignore_before is None:
+            ignore_before = int(min(DB.mysql_port_min_release.values()))
         return DatabaseManager(
             organism=organism_name,
             ensembl_release=None,
+            ignore_before=ignore_before,
             ignore_after=snapshot_release,
             form=copy.deepcopy(DB.backbone_form),
             local_repository=self.local_repository,

@@ -223,7 +223,28 @@ class DatabaseManager:
         log = logging.getLogger("database_manager")
         latest_release = cls._ensembl_latest_release()
         min_release = int(min(DB.mysql_port_min_release.values()))
-        releases_range = range(min_release, int(latest_release) + 1)
+
+        # Use assembly-specific release range if available to reduce FTP probe time
+        assembly_config = DB.assembly_mysqlport_priority.get(organism, {}).get(int(genome_assembly), {})
+        release_range_config = assembly_config.get("ReleaseRange")
+        if release_range_config:
+            range_min, range_max = release_range_config
+            # Constrain to the assembly's expected release window
+            min_release = max(int(min_release), int(range_min))
+            max_release = int(range_max) if range_max is not None else int(latest_release)
+            max_release = min(max_release, int(latest_release))
+            log.info(
+                f"Using assembly-specific release range for {organism} assembly {genome_assembly}: "
+                f"releases {min_release}-{max_release} (from config {release_range_config})"
+            )
+        else:
+            max_release = int(latest_release)
+            log.warning(
+                f"No ReleaseRange configured for {organism} assembly {genome_assembly}; "
+                f"searching all releases {min_release}-{max_release} (this may be slow)"
+            )
+
+        releases_range = range(min_release, max_release + 1)
 
         releases: set[int] = set()
         db_for_release: dict[int, str] = {}
@@ -328,7 +349,7 @@ class DatabaseManager:
 
         for port in ports:
             # Avoid long hangs when outbound MySQL ports are blocked (common on managed networks).
-            if not cls._tcp_can_connect(DB.mysql_host, int(port), timeout_s=min(3.0, float(DB.connection_timeout))):
+            if not cls._tcp_can_connect(DB.mysql_host, int(port), timeout_s=float(DB.connection_timeout)):
                 connection_errors[int(port)] = TimeoutError(f"TCP connect to {DB.mysql_host}:{int(port)} timed out")
                 continue
 
@@ -473,7 +494,7 @@ class DatabaseManager:
                 # If a previously failing port now responds, refresh the MySQL-derived portion so
                 # downstream callers don't get stuck with stale partial results.
                 if any(
-                    cls._tcp_can_connect(DB.mysql_host, int(port), timeout_s=min(3.0, float(DB.connection_timeout)))
+                    cls._tcp_can_connect(DB.mysql_host, int(port), timeout_s=float(DB.connection_timeout))
                     for port in errors
                 ):
                     refreshed = cls._refresh_core_db_index_mysql(
@@ -878,6 +899,48 @@ class DatabaseManager:
         return self.available_releases_versions()
 
     @cached_property
+    def available_releases_all_assemblies(self) -> list[int]:
+        """Return all Ensembl releases reachable across every configured assembly.
+
+        For clean-handoff species (e.g. mouse: 37 → 38 → 39), no single assembly spans the full release
+        history. Graph construction and YAML template generation therefore need a release catalogue that is the
+        union over *all* assemblies configured for :py:attr:`organism` in
+        :py:data:`idtrack._db.DB.assembly_mysqlport_priority`.
+
+        The list is filtered by the manager's ``ignore_before`` / ``ignore_after`` window and cached for the
+        lifetime of this :py:class:`DatabaseManager` instance.
+
+        Returns:
+            list[int]: Sorted release numbers available for at least one configured assembly.
+        """
+        log = logging.getLogger("database_manager")
+        releases: set[int] = set()
+        cfg = DB.assembly_mysqlport_priority[self.organism]
+        assemblies_failed: list[int] = []
+        for asm in cfg:
+            try:
+                core_index = self._get_core_db_index(organism=self.organism, genome_assembly=int(asm))
+                releases.update(r for r in core_index["releases"] if self.ignore_after >= r >= self.ignore_before)
+            except Exception as exc:
+                assemblies_failed.append(int(asm))
+                log.warning(
+                    "Failed to get core DB index for %s assembly %s: %s. "
+                    "Releases for this assembly will not be included.",
+                    self.organism,
+                    asm,
+                    exc,
+                )
+        if assemblies_failed:
+            log.warning(
+                "available_releases_all_assemblies: %d/%d assemblies failed for %s: %s",
+                len(assemblies_failed),
+                len(cfg),
+                self.organism,
+                sorted(assemblies_failed),
+            )
+        return sorted(releases)
+
+    @cached_property
     def available_releases_no_save(self) -> list[int]:
         """Return reachable Ensembl releases without persisting the discovery to disk.
 
@@ -985,6 +1048,31 @@ class DatabaseManager:
             ignore_after=self.ignore_after,
             store_raw_always=self.store_raw_always,
             genome_assembly=self.genome_assembly,
+        )
+
+    def change_release_auto_assembly(self, ensembl_release: int) -> "DatabaseManager":
+        """Clone the manager for *ensembl_release* while inferring a compatible genome assembly.
+
+        Unlike :py:meth:`change_release`, this helper allows :py:attr:`genome_assembly` to change when the
+        requested release is not present in the current assembly (common for clean-handoff species).
+        Assembly inference follows the same priority rules as :py:meth:`__init__` with ``genome_assembly=None``:
+        pick the highest-priority configured assembly that contains the requested release.
+
+        Args:
+            ensembl_release (int): Desired Ensembl release number.
+
+        Returns:
+            DatabaseManager: Fresh manager initialised for *ensembl_release* with an inferred assembly.
+        """
+        return DatabaseManager(
+            organism=self.organism,
+            ensembl_release=int(ensembl_release),
+            form=self.form,
+            local_repository=self.local_repository,
+            ignore_before=self.ignore_before,
+            ignore_after=self.ignore_after,
+            store_raw_always=self.store_raw_always,
+            genome_assembly=None,
         )
 
     def change_assembly(self, genome_assembly: int, last_possible_ensembl_release: bool = False) -> "DatabaseManager":
@@ -1417,8 +1505,6 @@ class DatabaseManager:
                 raise ValueError(f"Unsafe SQL identifier: {identifier!r}")
             return f"`{identifier}`"
 
-        which_mysql_server = dict(**self.mysql_settings, **{"database": self.mysql_database})
-
         core_index = self._get_core_db_index(organism=self.organism, genome_assembly=self.genome_assembly)
         mysql_releases = set(core_index.get("releases_on_mysql", []) or [])
         # If the requested release is not present on the live MySQL service, go straight to HTTPS dumps.
@@ -1426,8 +1512,14 @@ class DatabaseManager:
             return self._download_table_from_ftp(table_key, usecols=usecols)
 
         # If MySQL is unreachable (common when outbound 3306/5306 is blocked), fall back to HTTPS dumps.
-        if not self._tcp_can_connect(str(self.mysql_settings["host"]), int(self.mysql_settings["port"]), timeout_s=2.0):
+        if not self._tcp_can_connect(
+            str(self.mysql_settings["host"]),
+            int(self.mysql_settings["port"]),
+            timeout_s=float(DB.connection_timeout),
+        ):
             return self._download_table_from_ftp(table_key, usecols=usecols)
+
+        which_mysql_server = dict(**self.mysql_settings, **{"database": self.mysql_database})
 
         try:
             # Connect to the MYSQL server, close the connection after the code block
@@ -1597,7 +1689,18 @@ class DatabaseManager:
             # Earlier versions has different table for stable_id.
             # When there is no associated column for a given table, the following error will be raised.
 
-        except pymysql.err.OperationalError:
+        except (pymysql.err.OperationalError, ValueError) as exc:
+            # OperationalError: MySQL table doesn't exist or connection error
+            # ValueError: FTP download found the table but columns stable_id/version don't exist
+            # In older Ensembl releases, these columns are in separate *_stable_id tables.
+            self.log.debug(
+                "Columns stable_id/version not found in %r table for release %s; "
+                "trying separate %s_stable_id table (older Ensembl schema). Original error: %s",
+                form,
+                self.ensembl_release,
+                form,
+                exc,
+            )
             df = self.get_table(f"{form}_stable_id", usecols=usecols_core, save_after_calculation=self.store_raw_always)
             df_2 = (
                 self.get_table(f"{form}", usecols=usecols_asso, save_after_calculation=self.store_raw_always)
@@ -1989,7 +2092,37 @@ class DatabaseManager:
         )
         x = self.get_table("xref", usecols=["xref_id", "external_db_id", "dbprimary_acc", "display_label"], **m)
         ed = self.get_table("external_db", usecols=["external_db_id", "db_name", "db_display_name"], **m)
-        ix = self.get_table("identity_xref", usecols=["ensembl_identity", "xref_identity", "object_xref_id"], **m)
+        # Handle column name changes in identity_xref table across Ensembl releases.
+        # Old releases (e.g., release 48) use: target_identity, query_identity
+        # New releases use: ensembl_identity, xref_identity
+        try:
+            ix = self.get_table("identity_xref", usecols=["ensembl_identity", "xref_identity", "object_xref_id"], **m)
+        except ValueError as e:
+            if "Missing columns" in str(e) and ("ensembl_identity" in str(e) or "xref_identity" in str(e)):
+                self.log.info(
+                    "Using legacy column names (target_identity, query_identity) for identity_xref table "
+                    f"in Ensembl release {self.ensembl_release}."
+                )
+                try:
+                    ix = self.get_table(
+                        "identity_xref", usecols=["target_identity", "query_identity", "object_xref_id"], **m
+                    )
+                    # Rename legacy columns to current naming convention
+                    ix.rename(
+                        columns={"target_identity": "ensembl_identity", "query_identity": "xref_identity"},
+                        inplace=True,
+                    )
+                except ValueError:
+                    # If neither column naming scheme works, create empty identity columns
+                    self.log.warning(
+                        f"identity_xref table missing identity columns for Ensembl release {self.ensembl_release}. "
+                        "Using NaN values for ensembl_identity and xref_identity."
+                    )
+                    ix = self.get_table("identity_xref", usecols=["object_xref_id"], **m)
+                    ix["ensembl_identity"] = np.nan
+                    ix["xref_identity"] = np.nan
+            else:
+                raise
         es = self.get_table("external_synonym", usecols=["xref_id", "synonym"], **m)
 
         # Make entities in synonyms table appended to the xref file as additional lines
@@ -2138,10 +2271,27 @@ class DatabaseManager:
                 columns.  Empty when ``just_download`` is ``True``.
         """
         df = pd.DataFrame()
+        assemblies_processed = []
+        assemblies_failed = []
+
         for k in DB.assembly_mysqlport_priority[self.organism].keys():
             try:
+                self.log.info(f"Processing assembly {k} for {self.organism}...")
                 dm_assembly = self.change_assembly(k, last_possible_ensembl_release=True)
-            except ValueError:
+                assemblies_processed.append(k)
+            except ValueError as e:
+                assemblies_failed.append(k)
+                self.log.warning(
+                    f"Skipping assembly {k} for {self.organism}: {str(e)[:200]}... "
+                    f"This assembly will NOT be included in the external database template YAML."
+                )
+                continue
+            except Exception as e:
+                assemblies_failed.append(k)
+                self.log.error(
+                    f"Unexpected error while processing assembly {k} for {self.organism}: "
+                    f"{type(e).__name__}: {str(e)[:200]}. Skipping this assembly."
+                )
                 continue
             for j in dm_assembly.available_form_of_interests:  # For all assemblies possible.
                 for i in dm_assembly.available_releases:
@@ -2155,6 +2305,24 @@ class DatabaseManager:
                     df_temp["form"] = j
                     if not just_download:
                         df = pd.concat([df, df_temp], axis=0)
+
+        # Log summary of assembly processing
+        all_configured = sorted(DB.assembly_mysqlport_priority[self.organism].keys())
+        self.log.info(
+            f"Assembly processing complete for {self.organism}: "
+            f"Successfully processed {len(assemblies_processed)}/{len(all_configured)} assemblies. "
+            f"Processed: {sorted(assemblies_processed)}, Failed: {sorted(assemblies_failed) if assemblies_failed else 'none'}"
+        )
+
+        if assemblies_failed:
+            self.log.warning(
+                f"IMPORTANT: {len(assemblies_failed)} assembly(ies) were skipped for {self.organism}. "
+                "The external database YAML template will only include data "
+                f"for assemblies: {sorted(assemblies_processed)}. "
+                "To include all assemblies, check the warnings above for details on why "
+                f"assemblies {sorted(assemblies_failed)} failed."
+            )
+
         if not just_download:
             df["organism"] = self.organism
             df.reset_index(inplace=True, drop=True)
@@ -2271,15 +2439,29 @@ class DatabaseManager:
         cfg = DB.assembly_mysqlport_priority[self.organism]
         ass_supported = [int(a) for a in ass if int(a) in cfg]
         ass_sorted = sorted(ass_supported, key=lambda a: cfg[a]["Priority"])
+        assemblies_skipped: list[int] = []
         for i in ass_sorted:  # sort according to per-organism priority (1 = newest)
             try:
                 dm = self.change_assembly(i)
-            except ValueError:
+            except ValueError as exc:
+                self.log.warning(
+                    "create_external_all: skipping assembly %s for %s due to ValueError: %s", i, self.organism, exc
+                )
+                assemblies_skipped.append(i)
                 continue
             df_temp = dm.get_db(df_indicator)
             df_temp["assembly"] = i
             df = pd.concat([df, df_temp])
         df.reset_index(drop=True, inplace=True)
+
+        if assemblies_skipped:
+            self.log.warning(
+                "create_external_all: %d/%d assemblies were skipped for %s: %s",
+                len(assemblies_skipped),
+                len(ass_sorted),
+                self.organism,
+                sorted(assemblies_skipped),
+            )
 
         compare_columns = [
             i for i in df.columns if i != "assembly" and not i.endswith("_identity")

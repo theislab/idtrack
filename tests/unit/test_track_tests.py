@@ -78,6 +78,21 @@ def synthetic_track_tests(tmp_path, monkeypatch) -> TrackTests:
     """Create a TrackTests instance backed by a tiny synthetic 2-release graph."""
     synthetic = _synthetic_graph_mysql()
 
+    def _fake_core_index(*, organism: str, genome_assembly: int):  # noqa: ARG001
+        releases = list(synthetic.available_releases)
+        db_for_release = {r: f"{organism}_core_{r}_{genome_assembly}" for r in releases}
+        return {
+            "organism": organism,
+            "genome_assembly": genome_assembly,
+            "ports": (3306,),
+            "releases_by_port": {3306: set(releases)},
+            "db_by_port_release": {3306: db_for_release.copy()},
+            "releases": releases,
+            "port_for_release": {r: 3306 for r in releases},
+            "db_for_release": db_for_release,
+            "releases_on_mysql": releases,
+        }
+
     def _available_releases_versions(self: DatabaseManager, **kwargs) -> list[int]:
         return list(synthetic.available_releases)
 
@@ -111,6 +126,7 @@ def synthetic_track_tests(tmp_path, monkeypatch) -> TrackTests:
     monkeypatch.setattr(DatabaseManager, "available_releases_versions", _available_releases_versions)
     monkeypatch.setattr(DatabaseManager, "download_table", _download_table)
     monkeypatch.setattr(DatabaseManager, "create_external_all", _create_external_all)
+    monkeypatch.setattr(DatabaseManager, "_get_core_db_index", classmethod(lambda cls, **kw: _fake_core_index(**kw)))
 
     dm = DatabaseManager(
         organism="homo_sapiens",

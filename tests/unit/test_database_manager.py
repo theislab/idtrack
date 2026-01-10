@@ -138,6 +138,21 @@ def synthetic_dm(tmp_path, monkeypatch) -> DatabaseManager:
     """Create a DatabaseManager backed by tiny synthetic MySQL tables."""
     synthetic = _synthetic_mysql_tables()
 
+    def _fake_core_index(*, organism: str, genome_assembly: int):  # noqa: ARG001
+        releases = list(synthetic.available_releases)
+        db_for_release = {r: f"{organism}_core_{r}_{genome_assembly}" for r in releases}
+        return {
+            "organism": organism,
+            "genome_assembly": genome_assembly,
+            "ports": (3306,),
+            "releases_by_port": {3306: set(releases)},
+            "db_by_port_release": {3306: db_for_release.copy()},
+            "releases": releases,
+            "port_for_release": {r: 3306 for r in releases},
+            "db_for_release": db_for_release,
+            "releases_on_mysql": releases,
+        }
+
     def _available_releases_versions(self: DatabaseManager, **kwargs) -> list[int]:
         return list(synthetic.available_releases)
 
@@ -152,6 +167,7 @@ def synthetic_dm(tmp_path, monkeypatch) -> DatabaseManager:
 
     monkeypatch.setattr(DatabaseManager, "available_releases_versions", _available_releases_versions)
     monkeypatch.setattr(DatabaseManager, "download_table", _download_table)
+    monkeypatch.setattr(DatabaseManager, "_get_core_db_index", classmethod(lambda cls, **kw: _fake_core_index(**kw)))
 
     return DatabaseManager(
         organism="homo_sapiens",

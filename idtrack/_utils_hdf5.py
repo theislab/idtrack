@@ -34,7 +34,7 @@ def to_hdf(path: str, key: str, df: pd.DataFrame, mode: str = "a", compression: 
         key (str): Name of the group that will hold the DataFrame inside *path*.  Leading ``"/"`` is stripped
             for consistency with :py:class:`pandas.HDFStore` behaviour.
         df (pandas.DataFrame): Table to serialise.  Columns may be numeric, boolean, string/object, datetime,
-            timedelta, or :py:data:`~pandas.api.types.is_categorical_dtype`.  Unsupported dtypes raise
+            timedelta, or :py:class:`~pandas.CategoricalDtype`.  Unsupported dtypes raise
             :py:class:`ValueError <builtins.ValueError>`.
         mode (str): File access flag forwarded to :py:class:`pandas.HDFStore`.  Must be one of
             ``"a"``, ``"w"``, or ``"r+"``; defaults to ``"a"`` (create if missing, otherwise append/replace).
@@ -172,12 +172,12 @@ def validate_dataframe(df: pd.DataFrame):
     for col, dtype in df.dtypes.items():
         dtype_str = str(dtype)
         # Strict match for numeric, datetime, string, or category (non-categorical handled below)
-        if dtype_str in supported_dtypes and not pd.api.types.is_categorical_dtype(dtype):
+        if dtype_str in supported_dtypes and not isinstance(dtype, pd.CategoricalDtype):
             # Non-categorical allowed types pass
             pass
 
         # For categorical dtype, ensure all categories are strings
-        elif pd.api.types.is_categorical_dtype(dtype):
+        elif isinstance(dtype, pd.CategoricalDtype):
             categories = df[col].cat.categories
             bad = [cat for cat in categories if not (pd.isna(cat) or isinstance(cat, str))]
             if bad:
@@ -237,7 +237,7 @@ def _save_column_metadata(grp: h5py.Group, df: pd.DataFrame):
     dtypes_info = []
     for col in df.columns:
         dtype = df[col].dtype
-        if pd.api.types.is_categorical_dtype(dtype):
+        if isinstance(dtype, pd.CategoricalDtype):
             # Store category information
             categories = dtype.categories.tolist()
             ordered = dtype.ordered
@@ -282,7 +282,7 @@ def _save_index_data(grp: h5py.Group, df: pd.DataFrame, compression):
         idx_data = df.index.astype(str).values
         grp.create_dataset("index_data", data=np.array(idx_data, dtype=DB.UTF8_STR), compression=compression)
         grp.attrs["index_dtype"] = "datetime64[ns]"
-    elif pd.api.types.is_categorical_dtype(df.index):
+    elif isinstance(df.index.dtype, pd.CategoricalDtype):
         # Store categorical index
         codes = df.index.codes
         cats = [str(x) for x in df.index.categories.tolist()]
@@ -327,7 +327,7 @@ def _save_column_data(grp: h5py.Group, df: pd.DataFrame, compression: Optional[U
         col_data = df[col]
         col_key = f"col_{col}"
 
-        if pd.api.types.is_categorical_dtype(col_data):
+        if isinstance(col_data.dtype, pd.CategoricalDtype):
             # Store categorical data as codes + categories
             codes = col_data.cat.codes.values
             categories = col_data.cat.categories.tolist()

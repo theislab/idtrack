@@ -187,8 +187,8 @@ class GraphMaker:
             self.log.info("Establishing connection between different forms.")
             # `relationcurrent` is not form-specific; pick any configured manager.
             dm_rel_base = next(iter(dbman_s.values()))
-            for ensembl_release in self.db_manager.available_releases:
-                dm_rel = dm_rel_base.change_release(ensembl_release)
+            for ensembl_release in self.db_manager.available_releases_all_assemblies:
+                dm_rel = dm_rel_base.change_release_auto_assembly(ensembl_release)
                 rc = dm_rel.get_db("relationcurrent", save_after_calculation=dm_rel.store_raw_always)
 
                 for _ind, entry in rc.iterrows():
@@ -203,7 +203,7 @@ class GraphMaker:
                                     f"Missing graph node(s) while adding edge: " f"{e1_str}={e1!r} → {e2_str}={e2!r}"
                                 )
 
-                            sly = self.db_manager.genome_assembly
+                            sly = dm_rel.genome_assembly
                             add_edge(e1, e2, DB.nts_ensembl[e1_str], sly, ensembl_release)
 
         # Establish connection between different databases
@@ -216,12 +216,21 @@ class GraphMaker:
         for f in form_list:
             self.log.info(f"Edges between external IDs to Ensembl IDs is being added for '{f}'.")
             nodes_from_previous_release = 0
-            for ens_rel in sorted(self.db_manager.available_releases):
+            for ens_rel in sorted(self.db_manager.available_releases_all_assemblies):
                 # the order is important in adding new nodes into the core graph.
                 # it is important to capture correct ens_release in min_ens_release dictionary
 
-                db_manager = dbman_s[f].change_release(ens_rel)
-                rc = db_manager.create_external_all(return_mode="all", narrow_external=narrow_external)
+                db_manager = dbman_s[f].change_release_auto_assembly(ens_rel)
+                try:
+                    rc = db_manager.create_external_all(return_mode="all", narrow_external=narrow_external)
+                except ValueError as exc:
+                    # Older releases may be outside the configured external YAML; skip externals for that release
+                    # while still allowing the Ensembl-only history graph to be constructed.
+                    msg = str(exc)
+                    if "is not included in any entry of the YAML config file" not in msg:
+                        raise
+                    self.log.warning("Skipping external mappings for release %s: %s", int(ens_rel), msg)
+                    continue
 
                 for _ind, entry in rc.iterrows():
                     # Note that the `rc` dataframe have higher priority assembly entries at the top.
@@ -260,7 +269,7 @@ class GraphMaker:
                                     min_ens_release[sly] = ens_rel
                                 elif ens_rel != min_ens_release[sly]:
                                     # The duplicate entries were already removed by `create_external_all` method.
-                                    # IDs retired before `min(db_manager.available_releases)` will be missing only.
+                                    # IDs retired before `min(available_releases_all_assemblies)` will be missing only.
                                     # In the first possible release, all should have been already added.
 
                                     # Multiple assemblies are supported; new nodes must be introduced at the first
@@ -637,7 +646,8 @@ class GraphMaker:
         # Initialize important variables
         ms = ms_creator() if not narrow else None
         version_info = db_manager.check_version_info()
-        _available_set = set(db_manager.available_releases)
+        available_releases = db_manager.available_releases_all_assemblies
+        _available_set = set(available_releases)
         # Create the ID history information from ensembl sources
         df = db_manager.get_db(df_indicator="idhistory_narrow" if narrow else "idhistory")
         df["old_stable_id"] = df["old_stable_id"].replace("", np.nan)  # Convert back to np.nan
@@ -646,7 +656,7 @@ class GraphMaker:
         # data already controls that.
 
         # Split the created edge connection data info two: df, df_w
-        min_available = min(db_manager.available_releases)
+        min_available = min(available_releases)
         if version_info == "without_version":
             graph_down_bool = (
                 (
@@ -705,7 +715,7 @@ class GraphMaker:
             ensembl_release=db_manager.ensembl_release,
             genome_assembly=db_manager.genome_assembly,
             organism=db_manager.organism,
-            confident_for_release=self.db_manager.available_releases,
+            confident_for_release=available_releases,
             version_info=version_info,
             narrow=narrow,
         )
@@ -771,9 +781,9 @@ class GraphMaker:
         # Also, finds the first appearance of an ID, and adds DB.no_old_node_id to ID.
         # When an ID disappears and then reappears the graph structure should be consistent. In these cases, we
         # add an edge between Retired-to-ID. This loop also aims to find this re-appearance issues.
-        for ind_re, rel_re in enumerate(reversed(db_manager.available_releases)):
+        for ind_re, rel_re in enumerate(reversed(available_releases)):
             # Create a DatabaseManager object with the release of interest.
-            rel_db_re = db_manager.change_release(rel_re)
+            rel_db_re = db_manager.change_release_auto_assembly(rel_re)
 
             # Get the IDs and create a dictionary from ID to Version.
             ids_re = rel_db_re.get_db("ids", save_after_calculation=False)
@@ -826,7 +836,7 @@ class GraphMaker:
 
             # In the last iteration of this loop, dump every ID in current rel, including the ones possibly
             # postponed adding for a long time as a member of 'extend_backwards_candidates'.
-            if ind_re == len(db_manager.available_releases) - 1:
+            if ind_re == len(available_releases) - 1:
                 ll_re = zip(re_d.keys(), itertools.repeat(True))  # dump everything
 
             for nvic, is_ll_re in itertools.chain(zip(new_void_id_candidates, itertools.repeat(False)), ll_re):
@@ -898,9 +908,9 @@ class GraphMaker:
         self.log.info("Edges showing the retirement of IDs are being added.")
         fo_d_prev: dict = dict()  # Initialize some variables
         fo_prev_rel: Optional[int] = None
-        for _, rel_fo in enumerate(db_manager.available_releases):
+        for _, rel_fo in enumerate(available_releases):
             # Create a DatabaseManager object with the release of interest.
-            rel_db_fo = db_manager.change_release(rel_fo)
+            rel_db_fo = db_manager.change_release_auto_assembly(rel_fo)
 
             # Get the IDs and create a dictionary from ID to Version.
             ids_fo = rel_db_fo.get_db("ids", save_after_calculation=False)
@@ -937,9 +947,9 @@ class GraphMaker:
         self.log.info("Problematic nodes in Ensembl ID history are being removed.")
         ids_amc = set()
         problematic_nodes = list()
-        for amc_rel in db_manager.available_releases:
+        for amc_rel in available_releases:
             # Create a DatabaseManager object with the release of interest.
-            amc_dm = db_manager.change_release(amc_rel)
+            amc_dm = db_manager.change_release_auto_assembly(amc_rel)
 
             # Get the IDs and create a dictionary from ID to Version.
             ids_amc_df = amc_dm.get_db("ids", save_after_calculation=False)

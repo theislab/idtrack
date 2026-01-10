@@ -1,5 +1,4 @@
-"""
-Jupyter magics for IDTrack documentation notebooks.
+"""Jupyter magics for IDTrack documentation notebooks.
 
 Usage in notebooks:
     # In the first cell, load the magics:
@@ -10,7 +9,7 @@ Usage in notebooks:
     df = dm.create_database_content(just_download=False)
 
     # Optional flags:
-    #   --no-live or --static : don't update the block while running (live is default)
+    #   --no-live or --static: don't update the block while running (live is default)
 """
 
 from __future__ import annotations
@@ -24,11 +23,10 @@ import traceback
 import uuid
 import warnings
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
-from typing import Callable, Optional
+from typing import Callable
 
-from IPython.core.magic import Magics, magics_class, cell_magic
-from IPython.display import display, HTML
-
+from IPython.core.magic import Magics, cell_magic, magics_class
+from IPython.display import HTML, display
 
 # ---------------------------------------------------------------------------
 # Warnings capture
@@ -37,11 +35,16 @@ from IPython.display import display, HTML
 
 @contextmanager
 def _capture_warnings(buffer: io.StringIO):
-    """
-    Temporarily redirect warnings.showwarning to write to a buffer.
+    """Temporarily redirect `warnings.showwarning` to write to `buffer`.
 
-    This ensures warnings are captured even if the warnings module cached
-    a reference to sys.stderr before redirect_stderr was applied.
+    This ensures warnings are captured even if the `warnings` module cached a reference to `sys.stderr` before
+    `redirect_stderr` was applied.
+
+    Args:
+        buffer: Buffer that receives formatted warning messages.
+
+    Yields:
+        None: Control is yielded to the caller while redirection is active.
     """
     original_showwarning = warnings.showwarning
 
@@ -64,16 +67,20 @@ def _capture_warnings(buffer: io.StringIO):
 
 @contextmanager
 def _capture_logging(buffer: io.StringIO):
-    """
-    Temporarily redirect all StreamHandler outputs to a buffer.
+    """Temporarily redirect `logging.StreamHandler` outputs to `buffer`.
 
-    This patches existing handlers in-place because many loggers cache their
-    handler stream references at creation time. Simply redirecting sys.stderr
-    won't affect them.
+    This patches existing handlers in-place because many loggers cache their handler stream references at creation
+    time. Simply redirecting `sys.stderr` won't affect them.
 
-    Note: Handlers created DURING cell execution won't be captured. However,
-    new loggers without explicit handlers will propagate to the root logger
-    (which is patched), so most logging output is still captured.
+    Note:
+        Handlers created during cell execution are not captured. New loggers without explicit handlers will
+        propagate to the root logger (which is patched), so most logging output is still captured.
+
+    Args:
+        buffer: Buffer that receives log output.
+
+    Yields:
+        None: Control is yielded to the caller while redirection is active.
     """
     patched: list[tuple[logging.StreamHandler, object]] = []
     seen: set[int] = set()
@@ -93,7 +100,7 @@ def _capture_logging(buffer: io.StringIO):
         try:
             handler.setStream(buffer)
             patched.append((handler, original))
-        except Exception:
+        except Exception:  # noqa: S110
             pass  # Some handlers don't support setStream
 
     def _patch_logger(logger: logging.Logger) -> None:
@@ -122,7 +129,7 @@ def _capture_logging(buffer: io.StringIO):
         for handler, original_stream in patched:
             try:
                 handler.setStream(original_stream)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
 
@@ -147,7 +154,7 @@ class _ThrottledBuffer(io.StringIO):
             self._last_call = now
             try:
                 self._callback()
-            except Exception:
+            except Exception:  # noqa: S110
                 pass  # Never let UI updates break execution
 
     def write(self, s: str) -> int:
@@ -172,17 +179,25 @@ def _escape(text: str) -> str:
 
 
 def _render_collapsed_block(summary: str, content: str, *, is_open: bool = False) -> str:
-    """
-    Render a <details> block. When is_open=False, the block is collapsed by default.
+    """Render a `<details>` HTML block.
 
-    The HTML5 <details> element is collapsed unless the 'open' attribute is present.
+    When `is_open` is False, the block is collapsed by default. The HTML5 `<details>` element is collapsed unless
+    the `open` attribute is present.
+
+    Args:
+        summary: Text shown in the `<summary>` element.
+        content: HTML content to place inside the `<pre>` block.
+        is_open: If True, include the `open` attribute.
+
+    Returns:
+        The rendered HTML string.
     """
     open_attr = " open" if is_open else ""
     safe_summary = _escape(summary)
-    return f'''<details class="idtrack-collapse"{open_attr}>
+    return f"""<details class="idtrack-collapse"{open_attr}>
 <summary>{safe_summary}</summary>
 <pre class="idtrack-collapse-content">{content}</pre>
-</details>'''
+</details>"""
 
 
 def _tail(text: str, max_lines: int, max_line_length: int = 500) -> str:
@@ -219,18 +234,24 @@ class CollapseMagics(Magics):
 
     @cell_magic
     def collapse(self, line: str, cell: str):
-        """
-        Execute cell code and wrap all output in a collapsible <details> block.
+        """Execute cell code and wrap all output in a collapsible `<details>` block.
 
         Usage:
             %%collapse [--no-live] Summary text here
             <your code>
 
         Options:
-            --no-live, --static : Disable live preview updates during execution
+            --no-live, --static: Disable live preview updates during execution.
 
-        The block is COLLAPSED by default when execution finishes - ideal for
-        hiding verbose logs in documentation while keeping them accessible.
+        The block is collapsed by default when execution finishes, which is useful for hiding verbose logs in
+        documentation while keeping them accessible.
+
+        Args:
+            line: The line after `%%collapse` (flags and summary text).
+            cell: The cell body to execute.
+
+        Raises:
+            err: Re-raises exceptions raised during cell execution.
         """
         # Parse arguments
         try:
@@ -256,7 +277,7 @@ class CollapseMagics(Magics):
         error_tb: str = ""
 
         # Display handle for in-place updates
-        display_id: Optional[str] = str(uuid.uuid4()) if live_mode else None
+        display_id: str | None = str(uuid.uuid4()) if live_mode else None
 
         def _build_content(*, preview: bool) -> str:
             """Build the HTML content for inside the <pre> block."""
@@ -296,7 +317,7 @@ class CollapseMagics(Magics):
             html_str = _render_collapsed_block(summary, content, is_open=True)
             try:
                 display(HTML(html_str), display_id=display_id, update=True)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass  # Ignore display errors
 
         # Create throttled buffers for live mode
@@ -325,12 +346,9 @@ class CollapseMagics(Magics):
 
         # Check for execution errors
         if exec_result is not None:
-            err = getattr(exec_result, "error_before_exec", None) or \
-                  getattr(exec_result, "error_in_exec", None)
+            err = getattr(exec_result, "error_before_exec", None) or getattr(exec_result, "error_in_exec", None)
             if err is not None:
-                error_tb = "".join(traceback.format_exception(
-                    type(err), err, err.__traceback__
-                )).rstrip()
+                error_tb = "".join(traceback.format_exception(type(err), err, err.__traceback__)).rstrip()
 
         # Render final output (COLLAPSED by default - no 'open' attribute)
         final_content = _build_content(preview=False)
@@ -342,7 +360,7 @@ class CollapseMagics(Magics):
             # Instead, clear it and display fresh output.
             try:
                 display(HTML(""), display_id=display_id, update=True)
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
         # Always display fresh final output (collapsed by default)
         display(HTML(final_html))
@@ -353,8 +371,7 @@ class CollapseMagics(Magics):
 
         # Re-raise exceptions so the notebook shows the error state
         if exec_result is not None:
-            err = getattr(exec_result, "error_before_exec", None) or \
-                  getattr(exec_result, "error_in_exec", None)
+            err = getattr(exec_result, "error_before_exec", None) or getattr(exec_result, "error_in_exec", None)
             if err is not None:
                 raise err
 
