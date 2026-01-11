@@ -233,7 +233,8 @@ def tests_external_mappers(session: Session) -> None:
 
     This session installs the optional external-mappers extras (gget, mygene,
     pybiomart, gprofiler-official) and runs the external_mappers tests including
-    any tests marked as slow/integration that require these dependencies.
+    any tests marked as slow/integration that require these dependencies (pass
+    `--runslow` to enable slow-marked tests).
 
     Args:
         session: The nox session.
@@ -242,7 +243,7 @@ def tests_external_mappers(session: Session) -> None:
     session.install(".[external-mappers]")
     session.install("coverage[toml]", "pytest", "pygments")
 
-    # Run external_mappers tests (includes slow-marked tests by default)
+    # Run external_mappers tests (slow-marked tests are skipped unless --runslow)
     try:
         session.run("coverage", "run", "--parallel", "-m", "pytest", "tests/test_external_mappers.py", *session.posargs)
     finally:

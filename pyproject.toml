@@ -170,7 +170,7 @@ addopts = [
     "--tb=short",
 ]
 markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "slow: marks tests as slow (skipped by default; pass --runslow to run)",
     "integration: marks tests as integration tests requiring external resources",
     "network: marks tests requiring network access",
     "database: marks tests requiring database connection",

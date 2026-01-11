@@ -2601,15 +2601,30 @@ class DatabaseManager:
             _, _file_path = self.file_name(_df_type, _df_indicator)
 
             # The below pattern is based on file_name function with some modifications.
-            # Organism name and form is excluded as it does not change the resulting file.
-            _pattern = re.compile(f"ens([0-9]+)_{_df_type}_{_df_indicator}")
+            # Organism name is excluded as it does not change the resulting file.
+            #
+            # IMPORTANT: For `processed` artefacts we *must* include `self.form` because the HDF5 hierarchy
+            # keys are form-specific (see `file_name_processed`). Otherwise we may “detect” a release based
+            # on another form's cached table and later try to delete or load a non-existent key.
+            _suffix = f"_{self.form}" if _df_type == "processed" else ""
+            _pattern = re.compile(
+                rf"^ens([0-9]+)_{re.escape(_df_type)}_{re.escape(_df_indicator)}{re.escape(_suffix)}$"
+            )
 
             if not os.access(_file_path, os.R_OK):
                 return None, list()
 
             with hs.HDFStore(_file_path, mode="r") as f:
-                _keys = f.keys()
-            _downloaded_rels = list({int(_pattern.search(i).groups()[0]) for i in _keys if _pattern.search(i)})
+                _keys = [k.lstrip("/") for k in f.keys()]
+
+            _downloaded_rel_set = set()
+            for _k in _keys:
+                _m = _pattern.match(_k)
+                if _m:
+                    _downloaded_rel_set.add(int(_m.group(1)))
+
+            # Descending order so we prefer the most recent cached release (widest coverage).
+            _downloaded_rels = sorted(_downloaded_rel_set, reverse=True)
 
             for _dr in _downloaded_rels:
                 if _dr >= self.ensembl_release:
@@ -2617,15 +2632,25 @@ class DatabaseManager:
             return None, _downloaded_rels
 
         def remove_redundant_exist(_df_type, _df_indicator, _keep_rel, _all_rel_lst):
+            if _keep_rel is None:
+                # No cached table is suitable for reuse; avoid deleting older artefacts before a fresh
+                # table is successfully created and persisted.
+                return
             for _arl in _all_rel_lst:
                 if _arl != _keep_rel:
                     _hi, _fi = self.file_name(_df_type, _df_indicator, ensembl_release=_arl)
                     with hs.HDFStore(_fi, mode="a") as f:
+                        if _hi not in f:
+                            self.log.warning(
+                                f"Redundant-cache cleanup skipped because the expected HDF5 key is missing: "
+                                f"`{os.path.basename(_fi)}` with key `{_hi}`."
+                            )
+                            continue
                         f.remove(_hi)
-                        self.log.info(
-                            f"Following file is being removed: `{os.path.basename(_fi)}` with key `{_hi}`. "
-                            f"This could cause hdf5 file to not reclaim the emptied disk space."
-                        )
+                    self.log.info(
+                        f"Redundant cached table removed from `{os.path.basename(_fi)}` with key `{_hi}`. "
+                        f"This could cause hdf5 file to not reclaim the emptied disk space."
+                    )
 
         # Split the df_indicator with "_", to get the extra parameters.
         # Main point of naming and df_indicator is to include the paramters in the file_names

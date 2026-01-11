@@ -30,22 +30,33 @@ from idtrack._db import DB
 # =============================================================================
 
 
+def pytest_addoption(parser):
+    """Register custom CLI options."""
+    parser.addoption(
+        "--runslow",
+        action="store_true",
+        default=False,
+        help="Run tests marked as slow.",
+    )
+
+
 def pytest_configure(config):
     """Register custom markers."""
-    config.addinivalue_line("markers", "slow: marks tests as slow (network/integration)")
+    config.addinivalue_line("markers", "slow: marks tests as slow (skipped unless --runslow)")
     config.addinivalue_line("markers", "network: marks tests requiring network access")
     config.addinivalue_line("markers", "integration: marks integration tests")
 
 
 def pytest_collection_modifyitems(config, items):
-    """Optionally skip slow tests via `IDTRACK_SKIP_SLOW=1`."""
-    if config.getoption("-m"):
+    """Skip slow tests by default (opt-in via `--runslow`)."""
+    if config.getoption("runslow"):
         return
 
-    if os.getenv("IDTRACK_SKIP_SLOW", "").strip().lower() not in {"1", "true", "yes"}:
+    env_override = os.getenv("IDTRACK_SKIP_SLOW")
+    if env_override is not None and env_override.strip().lower() in {"0", "false", "no"}:
         return
 
-    skip_slow = pytest.mark.skip(reason="unset IDTRACK_SKIP_SLOW (or set it to 0) to run slow tests")
+    skip_slow = pytest.mark.skip(reason="pass --runslow (or set IDTRACK_SKIP_SLOW=0) to run slow tests")
     for item in items:
         if "slow" in item.keywords:
             item.add_marker(skip_slow)

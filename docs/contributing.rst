@@ -270,8 +270,11 @@ For faster iteration during development:
 
 .. code-block:: console
 
-    # Run all tests
+    # Run all tests (slow-marked tests are skipped by default)
     $ poetry run pytest
+
+    # Include slow tests
+    $ poetry run pytest --runslow
 
     # Run a specific test file
     $ poetry run pytest tests/test_api.py
@@ -283,7 +286,10 @@ For faster iteration during development:
     $ poetry run pytest -v
 
     # Run with coverage report
-    $ poetry run pytest --cov=idtrack --cov-report=html
+    $ poetry run pytest --cov=idtrack --cov-report=xml --cov-report=term
+
+    # Run with coverage report (including slow tests)
+    $ poetry run pytest --runslow --cov=idtrack --cov-report=xml --cov-report=term
 
 Test Organization
 ~~~~~~~~~~~~~~~~~
