@@ -22,7 +22,18 @@
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
-    <link rel="search" title="Search" href="../../search.html" /> 
+    <link rel="search" title="Search" href="../../search.html" />
+ 
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-FYKLWNJBVK');
+</script>
+
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -2805,15 +2816,30 @@
             <span class="n">_</span><span class="p">,</span> <span class="n">_file_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="p">(</span><span class="n">_df_type</span><span class="p">,</span> <span class="n">_df_indicator</span><span class="p">)</span>
 
             <span class="c1"># The below pattern is based on file_name function with some modifications.</span>
-            <span class="c1"># Organism name and form is excluded as it does not change the resulting file.</span>
-            <span class="n">_pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ens([0-9]+)_</span><span class="si">{</span><span class="n">_df_type</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">_df_indicator</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="c1"># Organism name is excluded as it does not change the resulting file.</span>
+            <span class="c1">#</span>
+            <span class="c1"># IMPORTANT: For `processed` artefacts we *must* include `self.form` because the HDF5 hierarchy</span>
+            <span class="c1"># keys are form-specific (see `file_name_processed`). Otherwise we may “detect” a release based</span>
+            <span class="c1"># on another form&#39;s cached table and later try to delete or load a non-existent key.</span>
+            <span class="n">_suffix</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">form</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">_df_type</span> <span class="o">==</span> <span class="s2">&quot;processed&quot;</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+            <span class="n">_pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+                <span class="sa">rf</span><span class="s2">&quot;^ens([0-9]+)_</span><span class="si">{</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">_df_type</span><span class="p">)</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">_df_indicator</span><span class="p">)</span><span class="si">}{</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">_suffix</span><span class="p">)</span><span class="si">}</span><span class="s2">$&quot;</span>
+            <span class="p">)</span>
 
             <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">_file_path</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">):</span>
                 <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">()</span>
 
             <span class="k">with</span> <span class="n">hs</span><span class="o">.</span><span class="n">HDFStore</span><span class="p">(</span><span class="n">_file_path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-                <span class="n">_keys</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
-            <span class="n">_downloaded_rels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">({</span><span class="nb">int</span><span class="p">(</span><span class="n">_pattern</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">groups</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">_keys</span> <span class="k">if</span> <span class="n">_pattern</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">i</span><span class="p">)})</span>
+                <span class="n">_keys</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">f</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+
+            <span class="n">_downloaded_rel_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">_k</span> <span class="ow">in</span> <span class="n">_keys</span><span class="p">:</span>
+                <span class="n">_m</span> <span class="o">=</span> <span class="n">_pattern</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">_k</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">_m</span><span class="p">:</span>
+                    <span class="n">_downloaded_rel_set</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">_m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)))</span>
+
+            <span class="c1"># Descending order so we prefer the most recent cached release (widest coverage).</span>
+            <span class="n">_downloaded_rels</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">_downloaded_rel_set</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
             <span class="k">for</span> <span class="n">_dr</span> <span class="ow">in</span> <span class="n">_downloaded_rels</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">_dr</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release</span><span class="p">:</span>
@@ -2821,15 +2847,25 @@
             <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">_downloaded_rels</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">remove_redundant_exist</span><span class="p">(</span><span class="n">_df_type</span><span class="p">,</span> <span class="n">_df_indicator</span><span class="p">,</span> <span class="n">_keep_rel</span><span class="p">,</span> <span class="n">_all_rel_lst</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">_keep_rel</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># No cached table is suitable for reuse; avoid deleting older artefacts before a fresh</span>
+                <span class="c1"># table is successfully created and persisted.</span>
+                <span class="k">return</span>
             <span class="k">for</span> <span class="n">_arl</span> <span class="ow">in</span> <span class="n">_all_rel_lst</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">_arl</span> <span class="o">!=</span> <span class="n">_keep_rel</span><span class="p">:</span>
                     <span class="n">_hi</span><span class="p">,</span> <span class="n">_fi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name</span><span class="p">(</span><span class="n">_df_type</span><span class="p">,</span> <span class="n">_df_indicator</span><span class="p">,</span> <span class="n">ensembl_release</span><span class="o">=</span><span class="n">_arl</span><span class="p">)</span>
                     <span class="k">with</span> <span class="n">hs</span><span class="o">.</span><span class="n">HDFStore</span><span class="p">(</span><span class="n">_fi</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;a&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">_hi</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">&quot;Redundant-cache cleanup skipped because the expected HDF5 key is missing: &quot;</span>
+                                <span class="sa">f</span><span class="s2">&quot;`</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">_fi</span><span class="p">)</span><span class="si">}</span><span class="s2">` with key `</span><span class="si">{</span><span class="n">_hi</span><span class="si">}</span><span class="s2">`.&quot;</span>
+                            <span class="p">)</span>
+                            <span class="k">continue</span>
                         <span class="n">f</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">_hi</span><span class="p">)</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                            <span class="sa">f</span><span class="s2">&quot;Following file is being removed: `</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">_fi</span><span class="p">)</span><span class="si">}</span><span class="s2">` with key `</span><span class="si">{</span><span class="n">_hi</span><span class="si">}</span><span class="s2">`. &quot;</span>
-                            <span class="sa">f</span><span class="s2">&quot;This could cause hdf5 file to not reclaim the emptied disk space.&quot;</span>
-                        <span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Redundant cached table removed from `</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">_fi</span><span class="p">)</span><span class="si">}</span><span class="s2">` with key `</span><span class="si">{</span><span class="n">_hi</span><span class="si">}</span><span class="s2">`. &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;This could cause hdf5 file to not reclaim the emptied disk space.&quot;</span>
+                    <span class="p">)</span>
 
         <span class="c1"># Split the df_indicator with &quot;_&quot;, to get the extra parameters.</span>
         <span class="c1"># Main point of naming and df_indicator is to include the paramters in the file_names</span>
