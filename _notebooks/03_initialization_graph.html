@@ -28,16 +28,20 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Part 4 — Core API Deep-Dive (Human Example)" href="04_api_deep_dive_human.html" />
-    <link rel="prev" title="Part 2 — External Database Configuration" href="02_prepare_new_external_yaml.html" />
- 
+    <link rel="prev" title="Part 2 — External Database Configuration" href="02_prepare_new_external_yaml.html" />  
 <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"></script>
+<script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"
+></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
 
-  gtag('config', 'G-FYKLWNJBVK');
+    gtag("config", "G-FYKLWNJBVK");
 </script>
 
 </head>
@@ -572,7 +576,7 @@ External DBs (first 20): [&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%</span><span class="k">collapse</span> Click to show build logs
@@ -586,13 +590,243 @@ else:
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<!-- empty output --></div>
+</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area rendered_html docutils container">
-<details class="idtrack-collapse" open>
+<details class="idtrack-collapse">
 <summary>Click to show build logs</summary>
-<pre class="idtrack-collapse-content">2026-01-11 23:03:54 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens83_processed_external_relevant_gene`
+<pre class="idtrack-collapse-content">2026-01-11 22:44:34 INFO:database_manager: Using assembly-specific release range for mus_musculus assembly 39: releases 103-115 (from config [103, None])
+2026-01-11 22:44:36 INFO:graph_maker: The graph is being constructed: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache/graph_mus_musculus_min48_max115_narrow.pickle
+2026-01-11 22:44:36 INFO:graph_maker: Graph is being created: gene
+2026-01-11 22:44:38 INFO:database_manager: Using assembly-specific release range for mus_musculus assembly 38: releases 68-102 (from config [68, 102])
+2026-01-11 22:44:46 INFO:database_manager: Using assembly-specific release range for mus_musculus assembly 37: releases 48-67 (from config [48, 67])
+2026-01-11 22:44:58 INFO:graph_maker: Edges between across different IDs and self loops are being added.
+2026-01-11 22:45:01 INFO:graph_maker: Edges between the same IDs are being added.
+2026-01-11 22:45:21 WARNING:graph_maker: Retired ID come alive again: 2.
+2026-01-11 22:45:21 INFO:graph_maker: Edges showing the retirement of IDs are being added.
+2026-01-11 22:45:27 INFO:graph_maker: Problematic nodes in Ensembl ID history are being removed.
+2026-01-11 22:45:33 INFO:graph_maker: Self-loops for latest release entries are being added.
+2026-01-11 22:45:35 INFO:graph_maker: Node attributes are being added.
+2026-01-11 22:45:36 INFO:graph_maker: Graph is being created: transcript
+2026-01-11 22:45:37 INFO:graph_maker: Edges between across different IDs and self loops are being added.
+2026-01-11 22:45:41 INFO:graph_maker: Edges between the same IDs are being added.
+2026-01-11 22:46:38 WARNING:graph_maker: Retired ID come alive again: 3.
+2026-01-11 22:46:38 INFO:graph_maker: Edges showing the retirement of IDs are being added.
+2026-01-11 22:46:56 INFO:graph_maker: Problematic nodes in Ensembl ID history are being removed.
+2026-01-11 22:47:13 INFO:graph_maker: Self-loops for latest release entries are being added.
+2026-01-11 22:47:19 INFO:graph_maker: Node attributes are being added.
+2026-01-11 22:47:25 INFO:graph_maker: Graph is being created: translation
+2026-01-11 22:47:25 INFO:graph_maker: Edges between across different IDs and self loops are being added.
+2026-01-11 22:47:26 INFO:graph_maker: Edges between the same IDs are being added.
+2026-01-11 22:47:46 WARNING:graph_maker: Retired ID come alive again: 2.
+2026-01-11 22:47:46 INFO:graph_maker: Edges showing the retirement of IDs are being added.
+2026-01-11 22:47:56 INFO:graph_maker: Problematic nodes in Ensembl ID history are being removed.
+2026-01-11 22:48:05 INFO:graph_maker: Self-loops for latest release entries are being added.
+2026-01-11 22:48:06 INFO:graph_maker: Node attributes are being added.
+2026-01-11 22:48:12 INFO:graph_maker: Establishing connection between different forms.
+2026-01-11 22:48:48 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens62_processed_idsraw_transcript_gene`
+2026-01-11 22:48:50 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens62_processed_idsraw_translation_gene`
+2026-01-11 22:48:51 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens62_common_relationcurrent`
+2026-01-11 22:48:55 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens63_processed_idsraw_transcript_gene`
+2026-01-11 22:48:57 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens63_processed_idsraw_translation_gene`
+2026-01-11 22:48:59 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens63_common_relationcurrent`
+2026-01-11 22:49:12 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens64_processed_idsraw_transcript_gene`
+2026-01-11 22:49:14 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens64_processed_idsraw_translation_gene`
+2026-01-11 22:49:15 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens64_common_relationcurrent`
+2026-01-11 22:49:19 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens65_processed_idsraw_transcript_gene`
+2026-01-11 22:49:20 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens65_processed_idsraw_translation_gene`
+2026-01-11 22:49:21 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens65_common_relationcurrent`
+2026-01-11 22:49:25 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens66_processed_idsraw_transcript_gene`
+2026-01-11 22:49:26 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens66_processed_idsraw_translation_gene`
+2026-01-11 22:49:27 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens66_common_relationcurrent`
+2026-01-11 22:49:31 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens67_processed_idsraw_transcript_gene`
+2026-01-11 22:49:32 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens67_processed_idsraw_translation_gene`
+2026-01-11 22:49:33 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens67_common_relationcurrent`
+2026-01-11 22:49:37 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens68_processed_idsraw_transcript_gene`
+2026-01-11 22:49:39 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens68_processed_idsraw_translation_gene`
+2026-01-11 22:49:40 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens68_common_relationcurrent`
+2026-01-11 22:49:45 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens69_processed_idsraw_transcript_gene`
+2026-01-11 22:49:46 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens69_processed_idsraw_translation_gene`
+2026-01-11 22:49:47 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens69_common_relationcurrent`
+2026-01-11 22:49:51 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens70_processed_idsraw_transcript_gene`
+2026-01-11 22:49:52 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens70_processed_idsraw_translation_gene`
+2026-01-11 22:49:53 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens70_common_relationcurrent`
+2026-01-11 22:49:56 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens71_processed_idsraw_transcript_gene`
+2026-01-11 22:49:57 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens71_processed_idsraw_translation_gene`
+2026-01-11 22:49:59 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens71_common_relationcurrent`
+2026-01-11 22:50:02 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens72_processed_idsraw_transcript_gene`
+2026-01-11 22:50:03 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens72_processed_idsraw_translation_gene`
+2026-01-11 22:50:05 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens72_common_relationcurrent`
+2026-01-11 22:50:08 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens73_processed_idsraw_transcript_gene`
+2026-01-11 22:50:09 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens73_processed_idsraw_translation_gene`
+2026-01-11 22:50:10 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens73_common_relationcurrent`
+2026-01-11 22:50:14 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens74_processed_idsraw_transcript_gene`
+2026-01-11 22:50:15 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens74_processed_idsraw_translation_gene`
+2026-01-11 22:50:16 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens74_common_relationcurrent`
+2026-01-11 22:50:20 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens75_processed_idsraw_transcript_gene`
+2026-01-11 22:50:21 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens75_processed_idsraw_translation_gene`
+2026-01-11 22:50:22 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens75_common_relationcurrent`
+2026-01-11 22:50:26 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens76_processed_idsraw_transcript_gene`
+2026-01-11 22:50:27 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens76_processed_idsraw_translation_gene`
+2026-01-11 22:50:28 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens76_common_relationcurrent`
+2026-01-11 22:50:32 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens77_processed_idsraw_transcript_gene`
+2026-01-11 22:50:33 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens77_processed_idsraw_translation_gene`
+2026-01-11 22:50:34 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens77_common_relationcurrent`
+2026-01-11 22:50:38 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens78_processed_idsraw_transcript_gene`
+2026-01-11 22:50:39 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens78_processed_idsraw_translation_gene`
+2026-01-11 22:50:40 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens78_common_relationcurrent`
+2026-01-11 22:50:46 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens79_processed_idsraw_transcript_gene`
+2026-01-11 22:50:47 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens79_processed_idsraw_translation_gene`
+2026-01-11 22:50:48 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens79_common_relationcurrent`
+2026-01-11 22:50:52 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens80_processed_idsraw_transcript_gene`
+2026-01-11 22:50:54 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens80_processed_idsraw_translation_gene`
+2026-01-11 22:50:55 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens80_common_relationcurrent`
+2026-01-11 22:50:59 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens81_processed_idsraw_transcript_gene`
+2026-01-11 22:51:01 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens81_processed_idsraw_translation_gene`
+2026-01-11 22:51:02 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens81_common_relationcurrent`
+2026-01-11 22:51:08 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens82_processed_idsraw_transcript_gene`
+2026-01-11 22:51:10 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens82_processed_idsraw_translation_gene`
+2026-01-11 22:51:11 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens82_common_relationcurrent`
+2026-01-11 22:51:16 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens83_processed_idsraw_transcript_gene`
+2026-01-11 22:51:17 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens83_processed_idsraw_translation_gene`
+2026-01-11 22:51:19 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens83_common_relationcurrent`
+2026-01-11 22:51:23 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens84_processed_idsraw_transcript_gene`
+2026-01-11 22:51:25 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens84_processed_idsraw_translation_gene`
+2026-01-11 22:51:26 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens84_common_relationcurrent`
+2026-01-11 22:51:31 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens85_processed_idsraw_transcript_gene`
+2026-01-11 22:51:32 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens85_processed_idsraw_translation_gene`
+2026-01-11 22:51:34 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens85_common_relationcurrent`
+2026-01-11 22:51:38 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens86_processed_idsraw_transcript_gene`
+2026-01-11 22:51:40 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens86_processed_idsraw_translation_gene`
+2026-01-11 22:51:41 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens86_common_relationcurrent`
+2026-01-11 22:51:46 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens87_processed_idsraw_transcript_gene`
+2026-01-11 22:51:47 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens87_processed_idsraw_translation_gene`
+2026-01-11 22:51:49 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens87_common_relationcurrent`
+2026-01-11 22:51:54 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens88_processed_idsraw_transcript_gene`
+2026-01-11 22:51:56 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens88_processed_idsraw_translation_gene`
+2026-01-11 22:51:57 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens88_common_relationcurrent`
+2026-01-11 22:52:02 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens89_processed_idsraw_transcript_gene`
+2026-01-11 22:52:04 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens89_processed_idsraw_translation_gene`
+2026-01-11 22:52:05 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens89_common_relationcurrent`
+2026-01-11 22:52:10 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens90_processed_idsraw_transcript_gene`
+2026-01-11 22:52:12 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens90_processed_idsraw_translation_gene`
+2026-01-11 22:52:14 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens90_common_relationcurrent`
+2026-01-11 22:52:19 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens91_processed_idsraw_transcript_gene`
+2026-01-11 22:52:21 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens91_processed_idsraw_translation_gene`
+2026-01-11 22:52:23 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens91_common_relationcurrent`
+2026-01-11 22:52:28 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens92_processed_idsraw_transcript_gene`
+2026-01-11 22:52:30 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens92_processed_idsraw_translation_gene`
+2026-01-11 22:52:32 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens92_common_relationcurrent`
+2026-01-11 22:52:37 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens93_processed_idsraw_transcript_gene`
+2026-01-11 22:52:39 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens93_processed_idsraw_translation_gene`
+2026-01-11 22:52:41 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens93_common_relationcurrent`
+2026-01-11 22:52:46 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens94_processed_idsraw_transcript_gene`
+2026-01-11 22:52:48 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens94_processed_idsraw_translation_gene`
+2026-01-11 22:52:50 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens94_common_relationcurrent`
+2026-01-11 22:52:55 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens95_processed_idsraw_transcript_gene`
+2026-01-11 22:52:57 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens95_processed_idsraw_translation_gene`
+2026-01-11 22:52:59 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens95_common_relationcurrent`
+2026-01-11 22:53:05 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens96_processed_idsraw_transcript_gene`
+2026-01-11 22:53:07 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens96_processed_idsraw_translation_gene`
+2026-01-11 22:53:08 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens96_common_relationcurrent`
+2026-01-11 22:53:14 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens97_processed_idsraw_transcript_gene`
+2026-01-11 22:53:16 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens97_processed_idsraw_translation_gene`
+2026-01-11 22:53:18 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens97_common_relationcurrent`
+2026-01-11 22:53:26 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens98_processed_idsraw_transcript_gene`
+2026-01-11 22:53:28 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens98_processed_idsraw_translation_gene`
+2026-01-11 22:53:29 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens98_common_relationcurrent`
+2026-01-11 22:53:35 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens99_processed_idsraw_transcript_gene`
+2026-01-11 22:53:37 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens99_processed_idsraw_translation_gene`
+2026-01-11 22:53:39 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens99_common_relationcurrent`
+2026-01-11 22:53:45 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens100_processed_idsraw_transcript_gene`
+2026-01-11 22:53:47 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens100_processed_idsraw_translation_gene`
+2026-01-11 22:53:48 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens100_common_relationcurrent`
+2026-01-11 22:53:54 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens101_processed_idsraw_transcript_gene`
+2026-01-11 22:53:56 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens101_processed_idsraw_translation_gene`
+2026-01-11 22:53:58 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens101_common_relationcurrent`
+2026-01-11 22:54:04 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens102_processed_idsraw_transcript_gene`
+2026-01-11 22:54:06 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens102_processed_idsraw_translation_gene`
+2026-01-11 22:54:07 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens102_common_relationcurrent`
+2026-01-11 22:54:13 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens103_processed_idsraw_transcript_gene`
+2026-01-11 22:54:16 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens103_processed_idsraw_translation_gene`
+2026-01-11 22:54:18 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens103_common_relationcurrent`
+2026-01-11 22:54:23 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens104_processed_idsraw_transcript_gene`
+2026-01-11 22:54:26 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens104_processed_idsraw_translation_gene`
+2026-01-11 22:54:28 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens104_common_relationcurrent`
+2026-01-11 22:54:33 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens105_processed_idsraw_transcript_gene`
+2026-01-11 22:54:36 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens105_processed_idsraw_translation_gene`
+2026-01-11 22:54:38 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens105_common_relationcurrent`
+2026-01-11 22:54:44 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens106_processed_idsraw_transcript_gene`
+2026-01-11 22:54:46 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens106_processed_idsraw_translation_gene`
+2026-01-11 22:54:48 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens106_common_relationcurrent`
+2026-01-11 22:54:54 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens107_processed_idsraw_transcript_gene`
+2026-01-11 22:54:56 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens107_processed_idsraw_translation_gene`
+2026-01-11 22:54:58 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens107_common_relationcurrent`
+2026-01-11 22:55:05 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens108_processed_idsraw_transcript_gene`
+2026-01-11 22:55:07 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens108_processed_idsraw_translation_gene`
+2026-01-11 22:55:09 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens108_common_relationcurrent`
+2026-01-11 22:55:15 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens109_processed_idsraw_transcript_gene`
+2026-01-11 22:55:18 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens109_processed_idsraw_translation_gene`
+2026-01-11 22:55:20 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens109_common_relationcurrent`
+2026-01-11 22:55:26 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens110_processed_idsraw_transcript_gene`
+2026-01-11 22:55:29 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens110_processed_idsraw_translation_gene`
+2026-01-11 22:55:31 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens110_common_relationcurrent`
+2026-01-11 22:55:37 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens111_processed_idsraw_transcript_gene`
+2026-01-11 22:55:39 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens111_processed_idsraw_translation_gene`
+2026-01-11 22:55:41 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens111_common_relationcurrent`
+2026-01-11 22:55:47 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens112_processed_idsraw_transcript_gene`
+2026-01-11 22:55:50 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens112_processed_idsraw_translation_gene`
+2026-01-11 22:55:52 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens112_common_relationcurrent`
+2026-01-11 22:55:58 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens113_processed_idsraw_transcript_gene`
+2026-01-11 22:56:02 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens113_processed_idsraw_translation_gene`
+2026-01-11 22:56:05 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens113_common_relationcurrent`
+2026-01-11 22:56:18 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens114_processed_idsraw_transcript_gene`
+2026-01-11 22:56:22 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens114_processed_idsraw_translation_gene`
+2026-01-11 22:56:25 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens114_common_relationcurrent`
+2026-01-11 22:56:36 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens115_processed_idsraw_transcript_gene`
+2026-01-11 22:56:39 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens115_processed_idsraw_translation_gene`
+2026-01-11 22:56:42 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens115_common_relationcurrent`
+2026-01-11 22:56:52 INFO:graph_maker: Edges between external IDs to Ensembl IDs is being added for &#x27;gene&#x27;.
+2026-01-11 22:56:56 INFO:database_manager: Using legacy column names (target_identity, query_identity) for identity_xref table in Ensembl release 52.
+2026-01-11 22:56:58 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens52_processed_external_relevant_gene`
+2026-01-11 22:57:06 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens53_processed_external_relevant_gene`
+2026-01-11 22:57:15 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens54_processed_external_relevant_gene`
+2026-01-11 22:57:23 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens55_processed_external_relevant_gene`
+2026-01-11 22:57:27 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens56_processed_external_relevant_gene`
+2026-01-11 22:57:33 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens57_processed_external_relevant_gene`
+2026-01-11 22:57:39 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens58_processed_external_relevant_gene`
+2026-01-11 22:57:45 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens59_processed_external_relevant_gene`
+2026-01-11 22:57:52 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens60_processed_external_relevant_gene`
+2026-01-11 22:57:58 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens61_processed_external_relevant_gene`
+2026-01-11 22:58:05 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens62_processed_external_relevant_gene`
+2026-01-11 22:58:13 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens63_processed_external_relevant_gene`
+2026-01-11 22:58:27 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens64_processed_external_relevant_gene`
+2026-01-11 22:58:41 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens65_processed_external_relevant_gene`
+2026-01-11 22:59:00 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens66_processed_external_relevant_gene`
+2026-01-11 22:59:14 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens67_processed_external_relevant_gene`
+2026-01-11 22:59:27 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens68_processed_external_relevant_gene`
+2026-01-11 22:59:41 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens69_processed_external_relevant_gene`
+2026-01-11 22:59:55 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens70_processed_external_relevant_gene`
+2026-01-11 23:00:09 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens71_processed_external_relevant_gene`
+2026-01-11 23:00:23 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens72_processed_external_relevant_gene`
+2026-01-11 23:00:37 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens73_processed_external_relevant_gene`
+2026-01-11 23:00:52 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens74_processed_external_relevant_gene`
+2026-01-11 23:01:07 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens75_processed_external_relevant_gene`
+2026-01-11 23:01:23 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens76_processed_external_relevant_gene`
+2026-01-11 23:01:42 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens77_processed_external_relevant_gene`
+2026-01-11 23:02:02 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens78_processed_external_relevant_gene`
+2026-01-11 23:02:22 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens79_processed_external_relevant_gene`
+2026-01-11 23:02:42 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens80_processed_external_relevant_gene`
+2026-01-11 23:03:11 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens81_processed_external_relevant_gene`
+2026-01-11 23:03:32 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens82_processed_external_relevant_gene`
+2026-01-11 23:03:54 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens83_processed_external_relevant_gene`
 2026-01-11 23:04:15 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens84_processed_external_relevant_gene`
 2026-01-11 23:04:36 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens85_processed_external_relevant_gene`
 2026-01-11 23:04:55 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens86_processed_external_relevant_gene`
@@ -741,11 +975,117 @@ else:
 2026-01-11 23:44:19 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens85_processed_external_relevant_translation`
 2026-01-11 23:44:42 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens86_processed_external_relevant_translation`
 2026-01-11 23:45:06 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens87_processed_external_relevant_translation`
-2026-01-11 23:45:32 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens88_processed_external_relevant_translation`</pre>
+2026-01-11 23:45:32 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens88_processed_external_relevant_translation`
+2026-01-11 23:45:50 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens89_processed_external_relevant_translation`
+2026-01-11 23:46:05 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens90_processed_external_relevant_translation`
+2026-01-11 23:46:23 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens91_processed_external_relevant_translation`
+2026-01-11 23:46:42 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens92_processed_external_relevant_translation`
+2026-01-11 23:46:58 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens93_processed_external_relevant_translation`
+2026-01-11 23:47:13 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens94_processed_external_relevant_translation`
+2026-01-11 23:47:28 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens95_processed_external_relevant_translation`
+2026-01-11 23:47:43 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens96_processed_external_relevant_translation`
+2026-01-11 23:47:58 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens97_processed_external_relevant_translation`
+2026-01-11 23:48:16 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens98_processed_external_relevant_translation`
+2026-01-11 23:48:32 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens99_processed_external_relevant_translation`
+2026-01-11 23:48:52 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens100_processed_external_relevant_translation`
+2026-01-11 23:49:16 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens101_processed_external_relevant_translation`
+2026-01-11 23:49:38 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens102_processed_external_relevant_translation`
+2026-01-11 23:49:56 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens103_processed_external_relevant_translation`
+2026-01-11 23:50:17 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens104_processed_external_relevant_translation`
+2026-01-11 23:50:32 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens105_processed_external_relevant_translation`
+2026-01-11 23:50:45 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens106_processed_external_relevant_translation`
+2026-01-11 23:51:00 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens107_processed_external_relevant_translation`
+2026-01-11 23:51:14 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens108_processed_external_relevant_translation`
+2026-01-11 23:51:29 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens109_processed_external_relevant_translation`
+2026-01-11 23:51:45 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens110_processed_external_relevant_translation`
+2026-01-11 23:52:01 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens111_processed_external_relevant_translation`
+2026-01-11 23:52:16 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens112_processed_external_relevant_translation`
+2026-01-11 23:52:31 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens113_processed_external_relevant_translation`
+2026-01-11 23:52:47 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens114_processed_external_relevant_translation`
+2026-01-11 23:53:03 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens115_processed_external_relevant_translation`
+2026-01-11 23:53:10 INFO:graph_maker: Versionless Ensembl IDs are being connected.
+2026-01-11 23:53:10 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens48_processed_ids_gene`
+2026-01-11 23:53:11 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens49_processed_ids_gene`
+2026-01-11 23:53:11 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens50_processed_ids_gene`
+2026-01-11 23:53:12 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens51_processed_ids_gene`
+2026-01-11 23:53:12 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens52_processed_ids_gene`
+2026-01-11 23:53:13 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens53_processed_ids_gene`
+2026-01-11 23:53:14 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens54_processed_ids_gene`
+2026-01-11 23:53:14 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens55_processed_ids_gene`
+2026-01-11 23:53:15 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens56_processed_ids_gene`
+2026-01-11 23:53:15 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens57_processed_ids_gene`
+2026-01-11 23:53:16 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens58_processed_ids_gene`
+2026-01-11 23:53:16 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens59_processed_ids_gene`
+2026-01-11 23:53:17 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens60_processed_ids_gene`
+2026-01-11 23:53:18 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens61_processed_ids_gene`
+2026-01-11 23:53:18 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens62_processed_ids_gene`
+2026-01-11 23:53:19 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens63_processed_ids_gene`
+2026-01-11 23:53:20 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens64_processed_ids_gene`
+2026-01-11 23:53:20 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens65_processed_ids_gene`
+2026-01-11 23:53:21 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens66_processed_ids_gene`
+2026-01-11 23:53:21 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-37.h5` with key `ens67_processed_ids_gene`
+2026-01-11 23:53:22 INFO:graph_maker: Edges between versionless ID to version ID has been added for &#x27;gene&#x27;, assembly 37.
+2026-01-11 23:53:22 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens68_processed_ids_gene`
+2026-01-11 23:53:23 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens69_processed_ids_gene`
+2026-01-11 23:53:23 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens70_processed_ids_gene`
+2026-01-11 23:53:24 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens71_processed_ids_gene`
+2026-01-11 23:53:25 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens72_processed_ids_gene`
+2026-01-11 23:53:25 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens73_processed_ids_gene`
+2026-01-11 23:53:26 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens74_processed_ids_gene`
+2026-01-11 23:53:26 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens75_processed_ids_gene`
+2026-01-11 23:53:27 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens76_processed_ids_gene`
+2026-01-11 23:53:28 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens77_processed_ids_gene`
+2026-01-11 23:53:29 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens78_processed_ids_gene`
+2026-01-11 23:53:29 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens79_processed_ids_gene`
+2026-01-11 23:53:30 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens80_processed_ids_gene`
+2026-01-11 23:53:31 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens81_processed_ids_gene`
+2026-01-11 23:53:32 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens82_processed_ids_gene`
+2026-01-11 23:53:33 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens83_processed_ids_gene`
+2026-01-11 23:53:34 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens84_processed_ids_gene`
+2026-01-11 23:53:35 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens85_processed_ids_gene`
+2026-01-11 23:53:35 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens86_processed_ids_gene`
+2026-01-11 23:53:36 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens87_processed_ids_gene`
+2026-01-11 23:53:37 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens88_processed_ids_gene`
+2026-01-11 23:53:38 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens89_processed_ids_gene`
+2026-01-11 23:53:39 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens90_processed_ids_gene`
+2026-01-11 23:53:40 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens91_processed_ids_gene`
+2026-01-11 23:53:41 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens92_processed_ids_gene`
+2026-01-11 23:53:42 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens93_processed_ids_gene`
+2026-01-11 23:53:43 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens94_processed_ids_gene`
+2026-01-11 23:53:44 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens95_processed_ids_gene`
+2026-01-11 23:53:45 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens96_processed_ids_gene`
+2026-01-11 23:53:46 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens97_processed_ids_gene`
+2026-01-11 23:53:47 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens98_processed_ids_gene`
+2026-01-11 23:53:48 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens99_processed_ids_gene`
+2026-01-11 23:53:49 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens100_processed_ids_gene`
+2026-01-11 23:53:50 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens101_processed_ids_gene`
+2026-01-11 23:53:51 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-38.h5` with key `ens102_processed_ids_gene`
+2026-01-11 23:53:52 INFO:graph_maker: Edges between versionless ID to version ID has been added for &#x27;gene&#x27;, assembly 38.
+2026-01-11 23:53:52 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens103_processed_ids_gene`
+2026-01-11 23:53:54 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens104_processed_ids_gene`
+2026-01-11 23:53:55 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens105_processed_ids_gene`
+2026-01-11 23:53:56 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens106_processed_ids_gene`
+2026-01-11 23:53:57 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens107_processed_ids_gene`
+2026-01-11 23:53:58 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens108_processed_ids_gene`
+2026-01-11 23:53:59 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens109_processed_ids_gene`
+2026-01-11 23:54:00 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens110_processed_ids_gene`
+2026-01-11 23:54:02 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens111_processed_ids_gene`
+2026-01-11 23:54:03 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens112_processed_ids_gene`
+2026-01-11 23:54:04 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens113_processed_ids_gene`
+2026-01-11 23:54:06 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens114_processed_ids_gene`
+2026-01-11 23:54:07 INFO:database_manager: Exporting to the following file `mus_musculus_assembly-39.h5` with key `ens115_processed_ids_gene`
+2026-01-11 23:54:09 INFO:graph_maker: Edges between versionless ID to version ID has been added for &#x27;gene&#x27;, assembly 39.
+2026-01-11 23:54:09 INFO:graph_maker: Synonymous external nodes are being merged into one.
+2026-01-11 23:54:52 INFO:graph_maker: Number of removed nodes in the process of merging synonymous nodes: 38082
+2026-01-11 23:55:12 INFO:graph_maker: The graph is being exported as &#x27;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache/graph_mus_musculus_min48_max115_narrow.pickle&#x27;.
+2026-01-11 23:56:06 INFO:the_graph: Cached properties being calculated: available_genome_assemblies
+2026-01-11 23:56:06 INFO:the_graph: Cached properties being calculated: combined_edges
+2026-01-11 23:57:03 INFO:the_graph: Cached properties being calculated: combined_edges_genes
+2026-01-11 23:58:12 INFO:the_graph: Cached properties being calculated: combined_edges_assembly_specific_genes</pre>
 </details></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_MOUSE_YAML</span><span class="p">:</span>
@@ -765,16 +1105,38 @@ else:
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Organism: mus_musculus
+Snapshot release: 115
+Main assembly: 39
+Assemblies in this graph: [37, 38, 39]
+Nodes: 2476278
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-01-11 23:58:19 INFO:the_graph: Cached properties being calculated: available_external_databases
+</pre></div></div>
+</div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Mouse graph not built (missing YAML).
+Edges: 5367328
+External DBs enabled (count): 28
+External DBs (first 20): [&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_vega_gene&#39;, &#39;EntrezGene&#39;, &#39;Havana gene&#39;, &#39;Havana transcript&#39;, &#39;Havana translation&#39;, &#39;MGI Symbol&#39;, &#39;NCBI gene&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;, &#39;RFAM&#39;, &#39;RefSeq_mRNA&#39;, &#39;RefSeq_mRNA_predicted&#39;, &#39;RefSeq_ncRNA&#39;, &#39;RefSeq_ncRNA_predicted&#39;, &#39;RefSeq_peptide&#39;, &#39;RefSeq_peptide_predicted&#39;, &#39;UniProtKB Gene Name&#39;, &#39;Uniprot/SPTREMBL&#39;, &#39;Uniprot/SWISSPROT&#39;]
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>7
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">sorted</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;graph_mus_musculus*.pickle&#39;</span><span class="p">))[</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span>
@@ -782,19 +1144,20 @@ Mouse graph not built (missing YAML).
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>7
+</pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-[]
+[PosixPath(&#39;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache/graph_mus_musculus_min48_max115_narrow.pickle&#39;)]
 </pre></div></div>
 </div>
 </section>
 <section id="3.3-—-Pig-graph-initialization-(clean-handoff)">
 <h3>3.3 — Pig graph initialization (clean handoff)<a class="headerlink" href="#3.3-—-Pig-graph-initialization-(clean-handoff)" title="Link to this heading"></a></h3>
 <p>Pig is a clean-handoff species (one maintained assembly per release: Sscrofa9.2 → Sscrofa10.2 → Sscrofa11.1). Older assemblies mainly matter for legacy datasets and archive releases; you typically do not have overlapping assemblies within the same release.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>8
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;sus scrofa&#39;</span><span class="p">)</span>
@@ -803,8 +1166,25 @@ Mouse graph not built (missing YAML).
 <br/></pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-01-11 23:58:21 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>8
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(&#39;sus_scrofa&#39;, 115)
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>9
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%</span><span class="k">collapse</span> Click to show build logs
@@ -818,8 +1198,535 @@ else:
 <br/></pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<!-- empty output --></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<details class="idtrack-collapse">
+<summary>Click to show build logs</summary>
+<pre class="idtrack-collapse-content">2026-01-11 23:58:41 INFO:database_manager: Using assembly-specific release range for sus_scrofa assembly 111: releases 90-115 (from config [90, None])
+2026-01-11 23:58:46 INFO:graph_maker: The graph is being constructed: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache/graph_sus_scrofa_min48_max115_narrow.pickle
+2026-01-11 23:58:46 INFO:graph_maker: Graph is being created: gene
+2026-01-11 23:58:47 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens115_processed_versioninfo_gene`
+2026-01-11 23:58:49 INFO:database_manager: Using assembly-specific release range for sus_scrofa assembly 102: releases 67-89 (from config [67, 89])
+2026-01-11 23:58:54 INFO:database_manager: Using assembly-specific release range for sus_scrofa assembly 9: releases 56-66 (from config [56, 66])
+2026-01-11 23:59:07 INFO:database_manager: Raw table for `stable_id_event` on ensembl release `115` was downloaded.
+2026-01-11 23:59:07 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens115_mysql_stable_id_event`
+2026-01-11 23:59:20 INFO:database_manager: Raw table for `mapping_session` on ensembl release `115` was downloaded.
+2026-01-11 23:59:20 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens115_mysql_mapping_session`
+2026-01-11 23:59:21 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens115_processed_idhistory_narrow_gene`
+2026-01-11 23:59:24 INFO:graph_maker: Edges between across different IDs and self loops are being added.
+2026-01-11 23:59:25 INFO:graph_maker: Edges between the same IDs are being added.
+2026-01-11 23:59:31 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens89_processed_versioninfo_gene`
+2026-01-11 23:59:34 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens66_processed_versioninfo_gene`
+2026-01-11 23:59:35 INFO:graph_maker: Edges showing the retirement of IDs are being added.
+2026-01-11 23:59:39 INFO:graph_maker: Problematic nodes in Ensembl ID history are being removed.
+2026-01-11 23:59:43 INFO:graph_maker: Self-loops for latest release entries are being added.
+2026-01-11 23:59:44 INFO:graph_maker: Node attributes are being added.
+2026-01-11 23:59:45 INFO:graph_maker: Graph is being created: transcript
+2026-01-11 23:59:46 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens115_processed_versioninfo_transcript`
+2026-01-11 23:59:48 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens115_processed_idhistory_narrow_transcript`
+2026-01-11 23:59:52 INFO:graph_maker: Edges between across different IDs and self loops are being added.
+2026-01-11 23:59:53 INFO:graph_maker: Edges between the same IDs are being added.
+2026-01-12 00:00:04 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens89_processed_versioninfo_transcript`
+2026-01-12 00:00:08 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens66_processed_versioninfo_transcript`
+2026-01-12 00:00:10 INFO:graph_maker: Edges showing the retirement of IDs are being added.
+2026-01-12 00:00:16 INFO:graph_maker: Problematic nodes in Ensembl ID history are being removed.
+2026-01-12 00:00:22 INFO:graph_maker: Self-loops for latest release entries are being added.
+2026-01-12 00:00:23 INFO:graph_maker: Node attributes are being added.
+2026-01-12 00:00:25 INFO:graph_maker: Graph is being created: translation
+2026-01-12 00:00:26 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens115_processed_versioninfo_translation`
+2026-01-12 00:00:28 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens115_processed_idhistory_narrow_translation`
+2026-01-12 00:00:32 INFO:graph_maker: Edges between across different IDs and self loops are being added.
+2026-01-12 00:00:34 INFO:graph_maker: Edges between the same IDs are being added.
+2026-01-12 00:00:42 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens89_processed_versioninfo_translation`
+2026-01-12 00:00:45 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens66_processed_versioninfo_translation`
+2026-01-12 00:00:47 INFO:graph_maker: Edges showing the retirement of IDs are being added.
+2026-01-12 00:00:52 INFO:graph_maker: Problematic nodes in Ensembl ID history are being removed.
+2026-01-12 00:00:57 INFO:graph_maker: Self-loops for latest release entries are being added.
+2026-01-12 00:00:58 INFO:graph_maker: Node attributes are being added.
+2026-01-12 00:01:01 INFO:graph_maker: Establishing connection between different forms.
+2026-01-12 00:01:02 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens56_processed_idsraw_transcript_gene`
+2026-01-12 00:01:03 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens56_processed_idsraw_translation_gene`
+2026-01-12 00:01:03 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens56_common_relationcurrent`
+2026-01-12 00:01:05 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens57_processed_idsraw_transcript_gene`
+2026-01-12 00:01:06 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens57_processed_idsraw_translation_gene`
+2026-01-12 00:01:06 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens57_common_relationcurrent`
+2026-01-12 00:01:08 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens58_processed_idsraw_transcript_gene`
+2026-01-12 00:01:09 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens58_processed_idsraw_translation_gene`
+2026-01-12 00:01:09 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens58_common_relationcurrent`
+2026-01-12 00:01:11 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens59_processed_idsraw_transcript_gene`
+2026-01-12 00:01:12 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens59_processed_idsraw_translation_gene`
+2026-01-12 00:01:12 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens59_common_relationcurrent`
+2026-01-12 00:01:14 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens60_processed_idsraw_transcript_gene`
+2026-01-12 00:01:15 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens60_processed_idsraw_translation_gene`
+2026-01-12 00:01:15 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens60_common_relationcurrent`
+2026-01-12 00:01:17 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens61_processed_idsraw_transcript_gene`
+2026-01-12 00:01:18 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens61_processed_idsraw_translation_gene`
+2026-01-12 00:01:18 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens61_common_relationcurrent`
+2026-01-12 00:01:20 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens62_processed_idsraw_transcript_gene`
+2026-01-12 00:01:21 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens62_processed_idsraw_translation_gene`
+2026-01-12 00:01:21 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens62_common_relationcurrent`
+2026-01-12 00:01:23 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens63_processed_idsraw_transcript_gene`
+2026-01-12 00:01:24 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens63_processed_idsraw_translation_gene`
+2026-01-12 00:01:24 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens63_common_relationcurrent`
+2026-01-12 00:01:26 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens64_processed_idsraw_transcript_gene`
+2026-01-12 00:01:38 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens64_processed_idsraw_translation_gene`
+2026-01-12 00:01:39 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens64_common_relationcurrent`
+2026-01-12 00:01:40 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens65_processed_idsraw_transcript_gene`
+2026-01-12 00:01:40 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens65_processed_idsraw_translation_gene`
+2026-01-12 00:01:40 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens65_common_relationcurrent`
+2026-01-12 00:01:41 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens66_processed_idsraw_transcript_gene`
+2026-01-12 00:01:42 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens66_processed_idsraw_translation_gene`
+2026-01-12 00:01:42 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens66_common_relationcurrent`
+2026-01-12 00:01:43 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens67_processed_idsraw_transcript_gene`
+2026-01-12 00:01:44 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens67_processed_idsraw_translation_gene`
+2026-01-12 00:01:44 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens67_common_relationcurrent`
+2026-01-12 00:01:46 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens68_processed_idsraw_transcript_gene`
+2026-01-12 00:01:46 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens68_processed_idsraw_translation_gene`
+2026-01-12 00:01:47 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens68_common_relationcurrent`
+2026-01-12 00:01:48 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens69_processed_idsraw_transcript_gene`
+2026-01-12 00:01:49 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens69_processed_idsraw_translation_gene`
+2026-01-12 00:01:49 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens69_common_relationcurrent`
+2026-01-12 00:01:51 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens70_processed_idsraw_transcript_gene`
+2026-01-12 00:01:51 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens70_processed_idsraw_translation_gene`
+2026-01-12 00:01:52 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens70_common_relationcurrent`
+2026-01-12 00:01:53 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens71_processed_idsraw_transcript_gene`
+2026-01-12 00:01:54 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens71_processed_idsraw_translation_gene`
+2026-01-12 00:01:55 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens71_common_relationcurrent`
+2026-01-12 00:01:56 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens72_processed_idsraw_transcript_gene`
+2026-01-12 00:01:57 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens72_processed_idsraw_translation_gene`
+2026-01-12 00:01:58 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens72_common_relationcurrent`
+2026-01-12 00:01:59 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens73_processed_idsraw_transcript_gene`
+2026-01-12 00:02:00 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens73_processed_idsraw_translation_gene`
+2026-01-12 00:02:00 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens73_common_relationcurrent`
+2026-01-12 00:02:02 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens74_processed_idsraw_transcript_gene`
+2026-01-12 00:02:02 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens74_processed_idsraw_translation_gene`
+2026-01-12 00:02:03 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens74_common_relationcurrent`
+2026-01-12 00:02:05 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens75_processed_idsraw_transcript_gene`
+2026-01-12 00:02:05 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens75_processed_idsraw_translation_gene`
+2026-01-12 00:02:06 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens75_common_relationcurrent`
+2026-01-12 00:02:07 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens76_processed_idsraw_transcript_gene`
+2026-01-12 00:02:08 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens76_processed_idsraw_translation_gene`
+2026-01-12 00:02:09 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens76_common_relationcurrent`
+2026-01-12 00:02:10 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens77_processed_idsraw_transcript_gene`
+2026-01-12 00:02:11 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens77_processed_idsraw_translation_gene`
+2026-01-12 00:02:11 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens77_common_relationcurrent`
+2026-01-12 00:02:13 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens78_processed_idsraw_transcript_gene`
+2026-01-12 00:02:13 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens78_processed_idsraw_translation_gene`
+2026-01-12 00:02:14 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens78_common_relationcurrent`
+2026-01-12 00:02:15 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens79_processed_idsraw_transcript_gene`
+2026-01-12 00:02:16 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens79_processed_idsraw_translation_gene`
+2026-01-12 00:02:17 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens79_common_relationcurrent`
+2026-01-12 00:02:18 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens80_processed_idsraw_transcript_gene`
+2026-01-12 00:02:19 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens80_processed_idsraw_translation_gene`
+2026-01-12 00:02:20 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens80_common_relationcurrent`
+2026-01-12 00:02:21 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens81_processed_idsraw_transcript_gene`
+2026-01-12 00:02:22 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens81_processed_idsraw_translation_gene`
+2026-01-12 00:02:22 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens81_common_relationcurrent`
+2026-01-12 00:02:24 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens82_processed_idsraw_transcript_gene`
+2026-01-12 00:02:24 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens82_processed_idsraw_translation_gene`
+2026-01-12 00:02:25 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens82_common_relationcurrent`
+2026-01-12 00:02:26 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens83_processed_idsraw_transcript_gene`
+2026-01-12 00:02:27 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens83_processed_idsraw_translation_gene`
+2026-01-12 00:02:28 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens83_common_relationcurrent`
+2026-01-12 00:02:29 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens84_processed_idsraw_transcript_gene`
+2026-01-12 00:02:30 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens84_processed_idsraw_translation_gene`
+2026-01-12 00:02:30 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens84_common_relationcurrent`
+2026-01-12 00:02:32 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens85_processed_idsraw_transcript_gene`
+2026-01-12 00:02:32 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens85_processed_idsraw_translation_gene`
+2026-01-12 00:02:33 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens85_common_relationcurrent`
+2026-01-12 00:02:34 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens86_processed_idsraw_transcript_gene`
+2026-01-12 00:02:35 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens86_processed_idsraw_translation_gene`
+2026-01-12 00:02:36 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens86_common_relationcurrent`
+2026-01-12 00:02:37 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens87_processed_idsraw_transcript_gene`
+2026-01-12 00:02:38 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens87_processed_idsraw_translation_gene`
+2026-01-12 00:02:39 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens87_common_relationcurrent`
+2026-01-12 00:02:40 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens88_processed_idsraw_transcript_gene`
+2026-01-12 00:02:41 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens88_processed_idsraw_translation_gene`
+2026-01-12 00:02:41 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens88_common_relationcurrent`
+2026-01-12 00:02:43 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens89_processed_idsraw_transcript_gene`
+2026-01-12 00:02:43 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens89_processed_idsraw_translation_gene`
+2026-01-12 00:02:44 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens89_common_relationcurrent`
+2026-01-12 00:02:45 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens90_processed_idsraw_transcript_gene`
+2026-01-12 00:02:46 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens90_processed_idsraw_translation_gene`
+2026-01-12 00:02:47 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens90_common_relationcurrent`
+2026-01-12 00:02:49 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens91_processed_idsraw_transcript_gene`
+2026-01-12 00:02:50 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens91_processed_idsraw_translation_gene`
+2026-01-12 00:02:51 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens91_common_relationcurrent`
+2026-01-12 00:02:53 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens92_processed_idsraw_transcript_gene`
+2026-01-12 00:02:54 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens92_processed_idsraw_translation_gene`
+2026-01-12 00:02:55 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens92_common_relationcurrent`
+2026-01-12 00:02:57 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens93_processed_idsraw_transcript_gene`
+2026-01-12 00:02:58 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens93_processed_idsraw_translation_gene`
+2026-01-12 00:02:59 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens93_common_relationcurrent`
+2026-01-12 00:03:01 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens94_processed_idsraw_transcript_gene`
+2026-01-12 00:03:02 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens94_processed_idsraw_translation_gene`
+2026-01-12 00:03:03 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens94_common_relationcurrent`
+2026-01-12 00:03:05 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens95_processed_idsraw_transcript_gene`
+2026-01-12 00:03:06 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens95_processed_idsraw_translation_gene`
+2026-01-12 00:03:07 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens95_common_relationcurrent`
+2026-01-12 00:03:09 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens96_processed_idsraw_transcript_gene`
+2026-01-12 00:03:10 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens96_processed_idsraw_translation_gene`
+2026-01-12 00:03:11 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens96_common_relationcurrent`
+2026-01-12 00:03:13 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens97_processed_idsraw_transcript_gene`
+2026-01-12 00:03:14 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens97_processed_idsraw_translation_gene`
+2026-01-12 00:03:15 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens97_common_relationcurrent`
+2026-01-12 00:03:17 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens98_processed_idsraw_transcript_gene`
+2026-01-12 00:03:18 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens98_processed_idsraw_translation_gene`
+2026-01-12 00:03:19 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens98_common_relationcurrent`
+2026-01-12 00:03:22 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens99_processed_idsraw_transcript_gene`
+2026-01-12 00:03:23 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens99_processed_idsraw_translation_gene`
+2026-01-12 00:03:24 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens99_common_relationcurrent`
+2026-01-12 00:03:27 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens100_processed_idsraw_transcript_gene`
+2026-01-12 00:03:28 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens100_processed_idsraw_translation_gene`
+2026-01-12 00:03:30 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens100_common_relationcurrent`
+2026-01-12 00:03:32 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens101_processed_idsraw_transcript_gene`
+2026-01-12 00:03:34 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens101_processed_idsraw_translation_gene`
+2026-01-12 00:03:35 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens101_common_relationcurrent`
+2026-01-12 00:03:37 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens102_processed_idsraw_transcript_gene`
+2026-01-12 00:03:38 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens102_processed_idsraw_translation_gene`
+2026-01-12 00:03:39 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens102_common_relationcurrent`
+2026-01-12 00:03:42 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens103_processed_idsraw_transcript_gene`
+2026-01-12 00:03:43 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens103_processed_idsraw_translation_gene`
+2026-01-12 00:03:44 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens103_common_relationcurrent`
+2026-01-12 00:03:47 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens104_processed_idsraw_transcript_gene`
+2026-01-12 00:03:48 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens104_processed_idsraw_translation_gene`
+2026-01-12 00:03:49 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens104_common_relationcurrent`
+2026-01-12 00:03:52 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens105_processed_idsraw_transcript_gene`
+2026-01-12 00:03:53 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens105_processed_idsraw_translation_gene`
+2026-01-12 00:03:54 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens105_common_relationcurrent`
+2026-01-12 00:03:57 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens106_processed_idsraw_transcript_gene`
+2026-01-12 00:03:58 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens106_processed_idsraw_translation_gene`
+2026-01-12 00:03:59 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens106_common_relationcurrent`
+2026-01-12 00:04:02 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens107_processed_idsraw_transcript_gene`
+2026-01-12 00:04:03 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens107_processed_idsraw_translation_gene`
+2026-01-12 00:04:04 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens107_common_relationcurrent`
+2026-01-12 00:04:07 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens108_processed_idsraw_transcript_gene`
+2026-01-12 00:04:08 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens108_processed_idsraw_translation_gene`
+2026-01-12 00:04:09 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens108_common_relationcurrent`
+2026-01-12 00:04:12 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens109_processed_idsraw_transcript_gene`
+2026-01-12 00:04:13 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens109_processed_idsraw_translation_gene`
+2026-01-12 00:04:14 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens109_common_relationcurrent`
+2026-01-12 00:04:17 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens110_processed_idsraw_transcript_gene`
+2026-01-12 00:04:18 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens110_processed_idsraw_translation_gene`
+2026-01-12 00:04:20 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens110_common_relationcurrent`
+2026-01-12 00:04:22 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens111_processed_idsraw_transcript_gene`
+2026-01-12 00:04:23 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens111_processed_idsraw_translation_gene`
+2026-01-12 00:04:25 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens111_common_relationcurrent`
+2026-01-12 00:04:27 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens112_processed_idsraw_transcript_gene`
+2026-01-12 00:04:29 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens112_processed_idsraw_translation_gene`
+2026-01-12 00:04:30 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens112_common_relationcurrent`
+2026-01-12 00:04:32 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens113_processed_idsraw_transcript_gene`
+2026-01-12 00:04:34 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens113_processed_idsraw_translation_gene`
+2026-01-12 00:04:35 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens113_common_relationcurrent`
+2026-01-12 00:04:38 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens114_processed_idsraw_transcript_gene`
+2026-01-12 00:04:39 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens114_processed_idsraw_translation_gene`
+2026-01-12 00:04:40 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens114_common_relationcurrent`
+2026-01-12 00:04:43 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens115_processed_idsraw_transcript_gene`
+2026-01-12 00:04:44 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens115_processed_idsraw_translation_gene`
+2026-01-12 00:04:45 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens115_common_relationcurrent`
+2026-01-12 00:04:48 INFO:graph_maker: Edges between external IDs to Ensembl IDs is being added for &#x27;gene&#x27;.
+2026-01-12 00:04:49 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens61_processed_external_relevant_gene`
+2026-01-12 00:04:51 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens62_processed_external_relevant_gene`
+2026-01-12 00:04:52 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens63_processed_external_relevant_gene`
+2026-01-12 00:04:55 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens64_processed_external_relevant_gene`
+2026-01-12 00:04:58 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens65_processed_external_relevant_gene`
+2026-01-12 00:05:02 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens66_processed_external_relevant_gene`
+2026-01-12 00:05:07 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens67_processed_external_relevant_gene`
+2026-01-12 00:05:11 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens68_processed_external_relevant_gene`
+2026-01-12 00:05:16 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens69_processed_external_relevant_gene`
+2026-01-12 00:05:23 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens70_processed_external_relevant_gene`
+2026-01-12 00:05:28 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens71_processed_external_relevant_gene`
+2026-01-12 00:05:32 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens72_processed_external_relevant_gene`
+2026-01-12 00:05:37 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens73_processed_external_relevant_gene`
+2026-01-12 00:05:43 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens74_processed_external_relevant_gene`
+2026-01-12 00:05:48 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens75_processed_external_relevant_gene`
+2026-01-12 00:05:53 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens76_processed_external_relevant_gene`
+2026-01-12 00:05:58 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens77_processed_external_relevant_gene`
+2026-01-12 00:06:04 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens78_processed_external_relevant_gene`
+2026-01-12 00:06:09 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens79_processed_external_relevant_gene`
+2026-01-12 00:06:14 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens80_processed_external_relevant_gene`
+2026-01-12 00:06:19 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens81_processed_external_relevant_gene`
+2026-01-12 00:06:25 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens82_processed_external_relevant_gene`
+2026-01-12 00:06:30 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens83_processed_external_relevant_gene`
+2026-01-12 00:06:36 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens84_processed_external_relevant_gene`
+2026-01-12 00:06:41 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens85_processed_external_relevant_gene`
+2026-01-12 00:06:46 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens86_processed_external_relevant_gene`
+2026-01-12 00:06:52 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens87_processed_external_relevant_gene`
+2026-01-12 00:06:57 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens88_processed_external_relevant_gene`
+2026-01-12 00:07:02 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens89_processed_external_relevant_gene`
+2026-01-12 00:07:08 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens90_processed_external_relevant_gene`
+2026-01-12 00:07:11 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens90_processed_external_relevant_gene`
+2026-01-12 00:07:19 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens91_processed_external_relevant_gene`
+2026-01-12 00:07:22 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens91_processed_external_relevant_gene`
+2026-01-12 00:07:29 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens92_processed_external_relevant_gene`
+2026-01-12 00:07:33 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens92_processed_external_relevant_gene`
+2026-01-12 00:07:41 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens93_processed_external_relevant_gene`
+2026-01-12 00:07:44 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens93_processed_external_relevant_gene`
+2026-01-12 00:07:52 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens94_processed_external_relevant_gene`
+2026-01-12 00:07:57 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens94_processed_external_relevant_gene`
+2026-01-12 00:08:06 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens95_processed_external_relevant_gene`
+2026-01-12 00:08:10 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens95_processed_external_relevant_gene`
+2026-01-12 00:08:19 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens96_processed_external_relevant_gene`
+2026-01-12 00:08:22 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens96_processed_external_relevant_gene`
+2026-01-12 00:08:30 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens97_processed_external_relevant_gene`
+2026-01-12 00:08:34 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens97_processed_external_relevant_gene`
+2026-01-12 00:08:44 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens98_processed_external_relevant_gene`
+2026-01-12 00:08:47 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens98_processed_external_relevant_gene`
+2026-01-12 00:08:57 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens99_processed_external_relevant_gene`
+2026-01-12 00:09:01 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens99_processed_external_relevant_gene`
+2026-01-12 00:09:09 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens100_processed_external_relevant_gene`
+2026-01-12 00:09:16 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens101_processed_external_relevant_gene`
+2026-01-12 00:09:23 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens102_processed_external_relevant_gene`
+2026-01-12 00:09:29 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens103_processed_external_relevant_gene`
+2026-01-12 00:09:36 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens104_processed_external_relevant_gene`
+2026-01-12 00:09:43 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens105_processed_external_relevant_gene`
+2026-01-12 00:09:49 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens106_processed_external_relevant_gene`
+2026-01-12 00:09:56 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens107_processed_external_relevant_gene`
+2026-01-12 00:10:02 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens108_processed_external_relevant_gene`
+2026-01-12 00:10:08 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens109_processed_external_relevant_gene`
+2026-01-12 00:10:15 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens110_processed_external_relevant_gene`
+2026-01-12 00:10:23 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens111_processed_external_relevant_gene`
+2026-01-12 00:10:30 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens112_processed_external_relevant_gene`
+2026-01-12 00:10:38 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens113_processed_external_relevant_gene`
+2026-01-12 00:10:45 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens114_processed_external_relevant_gene`
+2026-01-12 00:10:52 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens115_processed_external_relevant_gene`
+2026-01-12 00:10:55 INFO:graph_maker: Edges between external IDs to Ensembl IDs is being added for &#x27;transcript&#x27;.
+2026-01-12 00:10:57 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens64_processed_external_relevant_transcript`
+2026-01-12 00:10:58 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens65_processed_external_relevant_transcript`
+2026-01-12 00:11:00 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens66_processed_external_relevant_transcript`
+2026-01-12 00:11:02 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens67_processed_external_relevant_transcript`
+2026-01-12 00:11:03 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens68_processed_external_relevant_transcript`
+2026-01-12 00:11:06 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens69_processed_external_relevant_transcript`
+2026-01-12 00:11:08 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens70_processed_external_relevant_transcript`
+2026-01-12 00:11:11 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens71_processed_external_relevant_transcript`
+2026-01-12 00:11:13 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens72_processed_external_relevant_transcript`
+2026-01-12 00:11:16 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens73_processed_external_relevant_transcript`
+2026-01-12 00:11:18 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens74_processed_external_relevant_transcript`
+2026-01-12 00:11:21 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens75_processed_external_relevant_transcript`
+2026-01-12 00:11:23 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens76_processed_external_relevant_transcript`
+2026-01-12 00:11:26 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens77_processed_external_relevant_transcript`
+2026-01-12 00:11:28 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens78_processed_external_relevant_transcript`
+2026-01-12 00:11:32 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens79_processed_external_relevant_transcript`
+2026-01-12 00:11:35 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens80_processed_external_relevant_transcript`
+2026-01-12 00:11:37 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens81_processed_external_relevant_transcript`
+2026-01-12 00:11:40 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens82_processed_external_relevant_transcript`
+2026-01-12 00:11:45 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens83_processed_external_relevant_transcript`
+2026-01-12 00:11:48 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens84_processed_external_relevant_transcript`
+2026-01-12 00:11:51 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens85_processed_external_relevant_transcript`
+2026-01-12 00:11:54 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens86_processed_external_relevant_transcript`
+2026-01-12 00:11:57 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens87_processed_external_relevant_transcript`
+2026-01-12 00:12:00 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens88_processed_external_relevant_transcript`
+2026-01-12 00:12:57 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens89_processed_external_relevant_transcript`
+2026-01-12 00:13:01 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens90_processed_external_relevant_transcript`
+2026-01-12 00:13:03 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens90_processed_external_relevant_transcript`
+2026-01-12 00:13:07 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens91_processed_external_relevant_transcript`
+2026-01-12 00:13:09 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens91_processed_external_relevant_transcript`
+2026-01-12 00:13:14 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens92_processed_external_relevant_transcript`
+2026-01-12 00:13:17 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens92_processed_external_relevant_transcript`
+2026-01-12 00:13:22 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens93_processed_external_relevant_transcript`
+2026-01-12 00:13:25 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens93_processed_external_relevant_transcript`
+2026-01-12 00:13:31 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens94_processed_external_relevant_transcript`
+2026-01-12 00:13:34 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens94_processed_external_relevant_transcript`
+2026-01-12 00:13:40 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens95_processed_external_relevant_transcript`
+2026-01-12 00:13:42 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens95_processed_external_relevant_transcript`
+2026-01-12 00:13:49 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens96_processed_external_relevant_transcript`
+2026-01-12 00:13:52 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens96_processed_external_relevant_transcript`
+2026-01-12 00:13:58 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens97_processed_external_relevant_transcript`
+2026-01-12 00:14:01 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens97_processed_external_relevant_transcript`
+2026-01-12 00:14:08 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens98_processed_external_relevant_transcript`
+2026-01-12 00:14:11 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens98_processed_external_relevant_transcript`
+2026-01-12 00:14:18 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens99_processed_external_relevant_transcript`
+2026-01-12 00:14:21 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens99_processed_external_relevant_transcript`
+2026-01-12 00:14:28 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens100_processed_external_relevant_transcript`
+2026-01-12 00:14:35 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens101_processed_external_relevant_transcript`
+2026-01-12 00:14:42 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens102_processed_external_relevant_transcript`
+2026-01-12 00:14:48 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens103_processed_external_relevant_transcript`
+2026-01-12 00:14:54 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens104_processed_external_relevant_transcript`
+2026-01-12 00:15:01 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens105_processed_external_relevant_transcript`
+2026-01-12 00:15:09 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens106_processed_external_relevant_transcript`
+2026-01-12 00:15:15 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens107_processed_external_relevant_transcript`
+2026-01-12 00:15:22 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens108_processed_external_relevant_transcript`
+2026-01-12 00:15:30 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens109_processed_external_relevant_transcript`
+2026-01-12 00:15:38 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens110_processed_external_relevant_transcript`
+2026-01-12 00:15:46 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens111_processed_external_relevant_transcript`
+2026-01-12 00:15:53 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens112_processed_external_relevant_transcript`
+2026-01-12 00:16:02 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens113_processed_external_relevant_transcript`
+2026-01-12 00:16:10 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens114_processed_external_relevant_transcript`
+2026-01-12 00:16:19 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens115_processed_external_relevant_transcript`
+2026-01-12 00:16:21 INFO:graph_maker: Edges between external IDs to Ensembl IDs is being added for &#x27;translation&#x27;.
+2026-01-12 00:16:22 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens56_processed_external_relevant_translation`
+2026-01-12 00:16:24 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens57_processed_external_relevant_translation`
+2026-01-12 00:16:25 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens58_processed_external_relevant_translation`
+2026-01-12 00:16:27 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens59_processed_external_relevant_translation`
+2026-01-12 00:16:28 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens60_processed_external_relevant_translation`
+2026-01-12 00:16:30 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens61_processed_external_relevant_translation`
+2026-01-12 00:16:31 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens62_processed_external_relevant_translation`
+2026-01-12 00:16:33 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens63_processed_external_relevant_translation`
+2026-01-12 00:16:36 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens64_processed_external_relevant_translation`
+2026-01-12 00:16:40 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens65_processed_external_relevant_translation`
+2026-01-12 00:16:44 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens66_processed_external_relevant_translation`
+2026-01-12 00:16:49 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens67_processed_external_relevant_translation`
+2026-01-12 00:16:53 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens68_processed_external_relevant_translation`
+2026-01-12 00:16:58 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens69_processed_external_relevant_translation`
+2026-01-12 00:17:04 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens70_processed_external_relevant_translation`
+2026-01-12 00:17:09 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens71_processed_external_relevant_translation`
+2026-01-12 00:17:15 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens72_processed_external_relevant_translation`
+2026-01-12 00:17:21 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens73_processed_external_relevant_translation`
+2026-01-12 00:17:26 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens74_processed_external_relevant_translation`
+2026-01-12 00:17:32 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens75_processed_external_relevant_translation`
+2026-01-12 00:17:38 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens76_processed_external_relevant_translation`
+2026-01-12 00:17:44 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens77_processed_external_relevant_translation`
+2026-01-12 00:17:50 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens78_processed_external_relevant_translation`
+2026-01-12 00:17:56 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens79_processed_external_relevant_translation`
+2026-01-12 00:18:02 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens80_processed_external_relevant_translation`
+2026-01-12 00:18:08 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens81_processed_external_relevant_translation`
+2026-01-12 00:18:14 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens82_processed_external_relevant_translation`
+2026-01-12 00:18:21 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens83_processed_external_relevant_translation`
+2026-01-12 00:18:26 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens84_processed_external_relevant_translation`
+2026-01-12 00:18:31 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens85_processed_external_relevant_translation`
+2026-01-12 00:18:37 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens86_processed_external_relevant_translation`
+2026-01-12 00:18:42 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens87_processed_external_relevant_translation`
+2026-01-12 00:18:47 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens88_processed_external_relevant_translation`
+2026-01-12 00:18:52 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens89_processed_external_relevant_translation`
+2026-01-12 00:18:56 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens90_processed_external_relevant_translation`
+2026-01-12 00:19:01 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens90_processed_external_relevant_translation`
+2026-01-12 00:19:08 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens91_processed_external_relevant_translation`
+2026-01-12 00:19:13 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens91_processed_external_relevant_translation`
+2026-01-12 00:19:20 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens92_processed_external_relevant_translation`
+2026-01-12 00:19:26 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens92_processed_external_relevant_translation`
+2026-01-12 00:19:33 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens93_processed_external_relevant_translation`
+2026-01-12 00:19:39 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens93_processed_external_relevant_translation`
+2026-01-12 00:19:46 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens94_processed_external_relevant_translation`
+2026-01-12 00:19:51 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens94_processed_external_relevant_translation`
+2026-01-12 00:20:01 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens95_processed_external_relevant_translation`
+2026-01-12 00:20:06 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens95_processed_external_relevant_translation`
+2026-01-12 00:20:14 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens96_processed_external_relevant_translation`
+2026-01-12 00:20:19 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens96_processed_external_relevant_translation`
+2026-01-12 00:20:26 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens97_processed_external_relevant_translation`
+2026-01-12 00:20:31 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens97_processed_external_relevant_translation`
+2026-01-12 00:20:40 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens98_processed_external_relevant_translation`
+2026-01-12 00:20:45 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens98_processed_external_relevant_translation`
+2026-01-12 00:20:54 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens99_processed_external_relevant_translation`
+2026-01-12 00:20:59 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens99_processed_external_relevant_translation`
+2026-01-12 00:21:07 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens100_processed_external_relevant_translation`
+2026-01-12 00:21:16 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens101_processed_external_relevant_translation`
+2026-01-12 00:21:25 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens102_processed_external_relevant_translation`
+2026-01-12 00:21:33 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens103_processed_external_relevant_translation`
+2026-01-12 00:21:46 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens104_processed_external_relevant_translation`
+2026-01-12 00:21:54 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens105_processed_external_relevant_translation`
+2026-01-12 00:22:03 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens106_processed_external_relevant_translation`
+2026-01-12 00:22:10 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens107_processed_external_relevant_translation`
+2026-01-12 00:22:19 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens108_processed_external_relevant_translation`
+2026-01-12 00:22:28 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens109_processed_external_relevant_translation`
+2026-01-12 00:22:36 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens110_processed_external_relevant_translation`
+2026-01-12 00:22:45 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens111_processed_external_relevant_translation`
+2026-01-12 00:22:54 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens112_processed_external_relevant_translation`
+2026-01-12 00:23:02 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens113_processed_external_relevant_translation`
+2026-01-12 00:23:11 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens114_processed_external_relevant_translation`
+2026-01-12 00:23:20 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens115_processed_external_relevant_translation`
+2026-01-12 00:23:25 INFO:graph_maker: Versionless Ensembl IDs are being connected.
+2026-01-12 00:23:25 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens56_processed_ids_gene`
+2026-01-12 00:23:25 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens57_processed_ids_gene`
+2026-01-12 00:23:26 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens58_processed_ids_gene`
+2026-01-12 00:23:26 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens59_processed_ids_gene`
+2026-01-12 00:23:26 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens60_processed_ids_gene`
+2026-01-12 00:23:27 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens61_processed_ids_gene`
+2026-01-12 00:23:27 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens62_processed_ids_gene`
+2026-01-12 00:23:27 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens63_processed_ids_gene`
+2026-01-12 00:23:27 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens64_processed_ids_gene`
+2026-01-12 00:23:28 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens65_processed_ids_gene`
+2026-01-12 00:23:28 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-9.h5` with key `ens66_processed_ids_gene`
+2026-01-12 00:23:28 INFO:graph_maker: Edges between versionless ID to version ID has been added for &#x27;gene&#x27;, assembly 9.
+2026-01-12 00:23:28 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens67_processed_ids_gene`
+2026-01-12 00:23:29 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens68_processed_ids_gene`
+2026-01-12 00:23:29 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens69_processed_ids_gene`
+2026-01-12 00:23:30 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens70_processed_ids_gene`
+2026-01-12 00:23:30 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens71_processed_ids_gene`
+2026-01-12 00:23:30 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens72_processed_ids_gene`
+2026-01-12 00:23:31 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens73_processed_ids_gene`
+2026-01-12 00:23:31 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens74_processed_ids_gene`
+2026-01-12 00:23:32 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens75_processed_ids_gene`
+2026-01-12 00:23:32 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens76_processed_ids_gene`
+2026-01-12 00:23:32 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens77_processed_ids_gene`
+2026-01-12 00:23:33 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens78_processed_ids_gene`
+2026-01-12 00:23:33 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens79_processed_ids_gene`
+2026-01-12 00:23:34 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens80_processed_ids_gene`
+2026-01-12 00:23:34 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens81_processed_ids_gene`
+2026-01-12 00:23:34 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens82_processed_ids_gene`
+2026-01-12 00:23:35 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens83_processed_ids_gene`
+2026-01-12 00:23:35 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens84_processed_ids_gene`
+2026-01-12 00:23:36 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens85_processed_ids_gene`
+2026-01-12 00:23:36 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens86_processed_ids_gene`
+2026-01-12 00:23:37 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens87_processed_ids_gene`
+2026-01-12 00:23:37 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens88_processed_ids_gene`
+2026-01-12 00:23:37 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens89_processed_ids_gene`
+2026-01-12 00:23:38 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens90_processed_versioninfo_gene`
+2026-01-12 00:23:38 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens90_processed_ids_gene`
+2026-01-12 00:23:39 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens91_processed_versioninfo_gene`
+2026-01-12 00:23:39 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens91_processed_ids_gene`
+2026-01-12 00:23:40 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens92_processed_versioninfo_gene`
+2026-01-12 00:23:40 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens92_processed_ids_gene`
+2026-01-12 00:23:41 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens93_processed_versioninfo_gene`
+2026-01-12 00:23:41 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens93_processed_ids_gene`
+2026-01-12 00:23:42 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens94_processed_versioninfo_gene`
+2026-01-12 00:23:42 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens94_processed_ids_gene`
+2026-01-12 00:23:43 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens95_processed_versioninfo_gene`
+2026-01-12 00:23:43 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens95_processed_ids_gene`
+2026-01-12 00:23:43 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens96_processed_versioninfo_gene`
+2026-01-12 00:23:43 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens96_processed_ids_gene`
+2026-01-12 00:23:44 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens97_processed_versioninfo_gene`
+2026-01-12 00:23:44 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens97_processed_ids_gene`
+2026-01-12 00:23:45 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens98_processed_versioninfo_gene`
+2026-01-12 00:23:45 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens98_processed_ids_gene`
+2026-01-12 00:23:46 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens99_processed_versioninfo_gene`
+2026-01-12 00:23:46 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-102.h5` with key `ens99_processed_ids_gene`
+2026-01-12 00:23:46 INFO:graph_maker: Edges between versionless ID to version ID has been added for &#x27;gene&#x27;, assembly 102.
+2026-01-12 00:23:46 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens90_processed_ids_gene`
+2026-01-12 00:23:47 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens91_processed_ids_gene`
+2026-01-12 00:23:47 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens92_processed_ids_gene`
+2026-01-12 00:23:48 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens93_processed_ids_gene`
+2026-01-12 00:23:48 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens94_processed_ids_gene`
+2026-01-12 00:23:49 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens95_processed_ids_gene`
+2026-01-12 00:23:49 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens96_processed_ids_gene`
+2026-01-12 00:23:49 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens97_processed_ids_gene`
+2026-01-12 00:23:50 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens98_processed_ids_gene`
+2026-01-12 00:23:51 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens99_processed_ids_gene`
+2026-01-12 00:23:51 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens100_processed_ids_gene`
+2026-01-12 00:23:52 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens101_processed_ids_gene`
+2026-01-12 00:23:52 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens102_processed_ids_gene`
+2026-01-12 00:23:53 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens103_processed_ids_gene`
+2026-01-12 00:23:53 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens104_processed_ids_gene`
+2026-01-12 00:23:54 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens105_processed_ids_gene`
+2026-01-12 00:23:54 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens106_processed_ids_gene`
+2026-01-12 00:23:55 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens107_processed_ids_gene`
+2026-01-12 00:23:56 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens108_processed_ids_gene`
+2026-01-12 00:23:56 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens109_processed_ids_gene`
+2026-01-12 00:23:57 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens110_processed_ids_gene`
+2026-01-12 00:23:57 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens111_processed_ids_gene`
+2026-01-12 00:23:58 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens112_processed_ids_gene`
+2026-01-12 00:23:58 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens113_processed_ids_gene`
+2026-01-12 00:23:59 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens114_processed_ids_gene`
+2026-01-12 00:23:59 INFO:database_manager: Exporting to the following file `sus_scrofa_assembly-111.h5` with key `ens115_processed_ids_gene`
+2026-01-12 00:24:00 INFO:graph_maker: Edges between versionless ID to version ID has been added for &#x27;gene&#x27;, assembly 111.
+2026-01-12 00:24:00 INFO:graph_maker: Synonymous external nodes are being merged into one.
+2026-01-12 00:24:00 INFO:graph_maker: Number of removed nodes in the process of merging synonymous nodes: 1290
+2026-01-12 00:24:07 INFO:graph_maker: The graph is being exported as &#x27;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache/graph_sus_scrofa_min48_max115_narrow.pickle&#x27;.
+2026-01-12 00:24:17 INFO:the_graph: Cached properties being calculated: available_genome_assemblies
+2026-01-12 00:24:17 INFO:the_graph: Cached properties being calculated: combined_edges
+2026-01-12 00:24:24 INFO:the_graph: Cached properties being calculated: combined_edges_genes
+2026-01-12 00:24:30 INFO:the_graph: Cached properties being calculated: combined_edges_assembly_specific_genes</pre>
+</details></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>10
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_PIG_YAML</span><span class="p">:</span>
@@ -839,13 +1746,52 @@ else:
 <br/></pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Organism: sus_scrofa
+Snapshot release: 115
+Main assembly: 111
+Assemblies in this graph: [9, 102, 111]
+Nodes: 1073214
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-01-12 00:24:32 INFO:the_graph: Cached properties being calculated: available_external_databases
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Edges: 1757774
+External DBs enabled (count): 24
+External DBs (first 20): [&#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_vega_gene&#39;, &#39;EntrezGene&#39;, &#39;HGNC Symbol&#39;, &#39;Havana gene&#39;, &#39;Havana transcript&#39;, &#39;NCBI gene&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;, &#39;RFAM&#39;, &#39;RefSeq_mRNA&#39;, &#39;RefSeq_mRNA_predicted&#39;, &#39;RefSeq_ncRNA&#39;, &#39;RefSeq_ncRNA_predicted&#39;, &#39;RefSeq_peptide&#39;, &#39;RefSeq_peptide_predicted&#39;, &#39;UniProtKB Gene Name&#39;, &#39;Uniprot/SPTREMBL&#39;, &#39;Uniprot/SWISSPROT&#39;, &#39;VGNC Symbol&#39;, &#39;synonym_id::EntrezGene&#39;]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>11
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">sorted</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;graph_sus_scrofa*.pickle&#39;</span><span class="p">))[</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span>
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>11
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[PosixPath(&#39;/Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache/graph_sus_scrofa_min48_max115_narrow.pickle&#39;)]
+</pre></div></div>
 </div>
 </section>
 </section>
@@ -897,8 +1843,8 @@ else:
 <blockquote>
 <div><p><strong>Warning:</strong> Do not delete caches unless you understand the consequence (you may force a full rebuild).</p>
 </div></blockquote>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>12
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Helper: list what IDTrack has cached in your local repository.</span>
@@ -926,6 +1872,29 @@ else:
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  ...&#39;</span><span class="p">)</span>
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache
+
+graph_*.pickle (3):
+   graph_homo_sapiens_min48_max115_narrow.pickle
+   graph_mus_musculus_min48_max115_narrow.pickle
+   graph_sus_scrofa_min48_max115_narrow.pickle
+
+*_externals_modified.yml (3):
+   homo_sapiens_externals_modified.yml
+   mus_musculus_externals_modified.yml
+   sus_scrofa_externals_modified.yml
+
+*_externals_template.yml (3):
+   homo_sapiens_externals_template.yml
+   mus_musculus_externals_template.yml
+   sus_scrofa_externals_template.yml
+</pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
