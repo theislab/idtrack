@@ -169,6 +169,8 @@ class HarmonizeFeatures:
         self.kept_conversion_failed_identifiers: dict[str, dict[str, list[str]]] = dict()
         # inconsistent matching
         self.removed_inconsistent_identifier_matching: dict[str, dict[str, list[str]]] = dict()
+        # removed due to multiple source IDs mapping to same final_database (ensembl_gene override duplicates)
+        self.removed_final_database_duplicates: dict[str, dict[str, list[str]]] = dict()
 
         self._initialize()
 
@@ -212,6 +214,13 @@ class HarmonizeFeatures:
                 dataset_name=dataset_name,
                 the_dict=self.removed_inconsistent_identifier_matching,
                 the_set=set(gene_list) & self.datataset_conversion_dataframe_issues["gene_names_inconsistency"],
+            )
+
+            self.reporter_dict_creator(
+                dataset_name=dataset_name,
+                the_dict=self.removed_final_database_duplicates,
+                the_set=set(gene_list)
+                & self.datataset_conversion_dataframe_issues["final_database_duplicate_source_ids"],
             )
 
             for the_id in gene_list:
@@ -353,6 +362,9 @@ class HarmonizeFeatures:
         gene_names_inconsistency = set(df[df[self.final_database].isin(_gene_names_inconsistency)]["Query ID"].unique())
 
         final_database_chosen_single_ensembl_dict = dict()
+        # Track source IDs that should be removed because their ensembl_gene was not chosen
+        # (they would cause duplicates after the ensembl_gene override)
+        final_database_duplicate_source_ids = set()
         for final_final_database_gene_name, df_subset in dfa[dfa[self.final_database].duplicated(keep=False)].groupby(
             self.final_database
         ):
@@ -361,10 +373,14 @@ class HarmonizeFeatures:
             # You can see all possible ensembl ids in
             chosen_ensembl_id = sorted(df_subset["ensembl_gene"])[0]  # choose first one
             final_database_chosen_single_ensembl_dict[final_final_database_gene_name] = chosen_ensembl_id
+            # Mark source IDs with non-chosen ensembl_genes for removal to prevent duplicates
+            non_chosen_rows = df_subset[df_subset["ensembl_gene"] != chosen_ensembl_id]
+            final_database_duplicate_source_ids.update(non_chosen_rows["Query ID"].tolist())
 
         return {
             "gene_names_inconsistency": gene_names_inconsistency,
             "final_database_chosen_single_ensembl_dict": final_database_chosen_single_ensembl_dict,
+            "final_database_duplicate_source_ids": final_database_duplicate_source_ids,
         }
 
     def create_dataset_conversion_dataframe(
@@ -399,10 +415,11 @@ class HarmonizeFeatures:
                 populated—indicating an incorrect call order—or if unexpected duplicate target IDs remain
                 after processing.
         """
-        if not (
-            len(self.conversion_failed_identifiers) != 0 and len(self.conversion_failed_but_consistent_identifiers) != 0
-        ):
-            raise AssertionError("Possible function call order issue!")
+        # Ensure unified_matching_dict is populated (verifies proper initialization order).
+        # The cached properties conversion_failed_identifiers and conversion_failed_but_consistent_identifiers
+        # may legitimately be empty when all conversions succeed or when failures are all consistent/inconsistent.
+        if len(self.unified_matching_dict) == 0:
+            raise AssertionError("Possible function call order issue: unified_matching_dict is empty!")
 
         new_var_list = list()
         for the_id in gene_list:
@@ -460,6 +477,7 @@ class HarmonizeFeatures:
         remove_bool = ~(
             adata.var.index.isin(self.conversion_failed_identifiers)
             | adata.var.index.isin(self.datataset_conversion_dataframe_issues["gene_names_inconsistency"])
+            | adata.var.index.isin(self.datataset_conversion_dataframe_issues["final_database_duplicate_source_ids"])
         )
         adata = adata[:, remove_bool]
 

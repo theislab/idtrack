@@ -38,6 +38,7 @@ class TestCanonicalDb:
         assert canonical_db("symbol") == "hgnc_symbol"
         assert canonical_db("hgnc_symbol") == "hgnc_symbol"
         assert canonical_db("gene_symbol") == "hgnc_symbol"
+        assert canonical_db("HGNC Symbol") == "hgnc_symbol"
 
     def test_entrezgene(self):
         """Test canonical name for entrezgene."""
@@ -50,6 +51,7 @@ class TestCanonicalDb:
         assert canonical_db("uniprot") == "uniprot"
         assert canonical_db("uniprotkb") == "uniprot"
         assert canonical_db("swissprot") == "uniprot"
+        assert canonical_db("UniProtKB/Swiss-Prot") == "uniprot"
 
     def test_refseq(self):
         """Test canonical name for refseq."""

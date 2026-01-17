@@ -38,6 +38,8 @@ _DB_ALIASES: dict[str, str] = {
     # Symbols / HGNC (we treat this as "gene symbol" in general)
     "hgnc_symbol": "hgnc_symbol",
     "hgnc": "hgnc_symbol",
+    # IDTrack-native external DB label (common in notebooks / configs)
+    "hgnc symbol": "hgnc_symbol",
     "symbol": "hgnc_symbol",
     "gene_symbol": "hgnc_symbol",
     "genename": "hgnc_symbol",
@@ -60,6 +62,11 @@ _DB_ALIASES: dict[str, str] = {
     "uniprot_acc": "uniprot",
     "uniprotkb": "uniprot",
     "uniprotkb_acc": "uniprot",
+    # Common UniProt labels used in IDTrack graphs
+    "uniprotkb/swiss-prot": "uniprot",
+    "uniprotkb/swissprot": "uniprot",
+    "uniprotkb_swiss-prot": "uniprot",
+    "uniprotkb_swissprot": "uniprot",
     "swissprot": "uniprot",
     # RefSeq
     "refseq_mrna": "refseq_mrna",

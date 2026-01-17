@@ -19,10 +19,10 @@ import json
 import re
 import sys
 import warnings
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-from collections.abc import Iterable, Mapping
 
 import anndata as ad
 import h5py

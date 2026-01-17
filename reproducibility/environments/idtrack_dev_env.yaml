@@ -71,8 +71,8 @@ dependencies:
     - lightning
     - scvi-tools=1.2.2
     - omnipath
-    - cellxgene
-    - cellxgene-census
+    # - cellxgene
+    # - cellxgene-census
 
     # 6) GRAPH, TOPOLOGY & RELATED LIBRARIES
     - pygraphviz
