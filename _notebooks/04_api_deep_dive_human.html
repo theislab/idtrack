@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Part 4 — Core API Deep-Dive (Human Example) &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
       <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
@@ -165,11 +165,11 @@
 <blockquote>
 <div><p><strong>Expected result:</strong> after the setup cell runs, <code class="docutils literal notranslate"><span class="pre">api.track</span></code> exists and conversions become available.</p>
 </div></blockquote>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>1
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
@@ -190,55 +190,166 @@
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-01-17 14:53:38 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
+2026-01-17 14:54:03 INFO:database_manager: Using assembly-specific release range for homo_sapiens assembly 38: releases 76-115 (from config [76, None])
+2026-01-17 14:54:57 INFO:graph_maker: The graph is being read: /ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache/graph_homo_sapiens_min48_max115_narrow.pickle
+2026-01-17 14:56:40 INFO:the_graph: Cached properties being calculated: available_genome_assemblies
+2026-01-17 14:56:40 INFO:the_graph: Cached properties being calculated: combined_edges
+2026-01-17 14:58:16 INFO:the_graph: Cached properties being calculated: combined_edges_genes
+2026-01-17 15:00:04 INFO:the_graph: Cached properties being calculated: combined_edges_assembly_specific_genes
+2026-01-17 15:00:09 INFO:the_graph: Cached properties being calculated: lower_chars_graph
+2026-01-17 15:00:11 INFO:the_graph: Cached properties being calculated: get_active_ranges_of_id
+2026-01-17 15:01:14 INFO:the_graph: Cached properties being calculated: available_external_databases
+2026-01-17 15:01:19 INFO:the_graph: Cached properties being calculated: available_external_databases_assembly
+2026-01-17 15:01:23 INFO:the_graph: Cached properties being calculated: node_trios
+2026-01-17 15:02:16 INFO:the_graph: Cached properties being calculated: hyperconnective_nodes
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Ready: homo_sapiens snapshot 115
+</pre></div></div>
+</div>
 </section>
 <section id="4.2-—-Single-Identifier-Conversion">
 <h2>4.2 — Single Identifier Conversion<a class="headerlink" href="#4.2-—-Single-Identifier-Conversion" title="Link to this heading"></a></h2>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>2
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">&#39;TP53&#39;</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">&#39;TP53&#39;</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>2
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;target_id&#39;: [&#39;ENSG00000141510.20&#39;],
+ &#39;last_node&#39;: [(&#39;ENSG00000141510.20&#39;, &#39;ENSG00000141510.20&#39;)],
+ &#39;final_database&#39;: &#39;ensembl_gene&#39;,
+ &#39;graph_id&#39;: &#39;TP53&#39;,
+ &#39;query_id&#39;: &#39;TP53&#39;,
+ &#39;no_corresponding&#39;: False,
+ &#39;no_conversion&#39;: False,
+ &#39;no_target&#39;: False}
+</pre></div></div>
 </div>
 <p>If you see <code class="docutils literal notranslate"><span class="pre">no_corresponding=True</span></code>, it means the input could not be matched. Try a different spelling/casing, or use an Ensembl ID directly.</p>
 <section id="4.2.1-Example:-time-travel-(convert-to-an-older-release)">
 <h3>4.2.1 Example: time travel (convert to an older release)<a class="headerlink" href="#4.2.1-Example:-time-travel-(convert-to-an-older-release)" title="Link to this heading"></a></h3>
 <p>Why this matters: published datasets often use older releases.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>3
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Choose an older release to demonstrate time travel</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Choose an older release to demonstrate time travel</span>
 <span class="n">older_release</span> <span class="o">=</span> <span class="n">SNAPSHOT_RELEASE</span> <span class="o">-</span> <span class="mi">10</span>
 <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">&#39;TP53&#39;</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">older_release</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>3
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;target_id&#39;: [&#39;ENSG00000141510.18&#39;],
+ &#39;last_node&#39;: [(&#39;ENSG00000141510.18&#39;, &#39;ENSG00000141510.18&#39;)],
+ &#39;final_database&#39;: &#39;ensembl_gene&#39;,
+ &#39;graph_id&#39;: &#39;TP53&#39;,
+ &#39;query_id&#39;: &#39;TP53&#39;,
+ &#39;no_corresponding&#39;: False,
+ &#39;no_conversion&#39;: False,
+ &#39;no_target&#39;: False}
+</pre></div></div>
+</div>
 </section>
 <section id="4.2.2-Convert-into-an-external-database-(HGNC)">
 <h3>4.2.2 Convert into an external database (HGNC)<a class="headerlink" href="#4.2.2-Convert-into-an-external-database-(HGNC)" title="Link to this heading"></a></h3>
 <p>To convert into a specific external database, pass <code class="docutils literal notranslate"><span class="pre">final_database=...</span></code>. Database names are the same names you see in your external YAML.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">&#39;ENSG00000141510&#39;</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">&#39;ENSG00000141510&#39;</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">)</span>
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;target_id&#39;: [&#39;TP53&#39;],
+ &#39;last_node&#39;: [(&#39;ENSG00000141510.20&#39;, &#39;TP53&#39;)],
+ &#39;final_database&#39;: &#39;HGNC Symbol&#39;,
+ &#39;graph_id&#39;: &#39;ENSG00000141510&#39;,
+ &#39;query_id&#39;: &#39;ENSG00000141510&#39;,
+ &#39;no_corresponding&#39;: False,
+ &#39;no_conversion&#39;: False,
+ &#39;no_target&#39;: False}
+</pre></div></div>
 </div>
 </section>
 <section id="4.2.3-How-do-I-know-which-external-databases-are-available?">
 <h3>4.2.3 How do I know which external databases are available?<a class="headerlink" href="#4.2.3-How-do-I-know-which-external-databases-are-available?" title="Link to this heading"></a></h3>
 <p>Use the graph itself to list databases currently represented.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
 <span class="nb">sorted</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">available_external_databases</span><span class="p">)[:</span><span class="mi">50</span><span class="p">]</span>
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&#39;CCDS&#39;,
+ &#39;Clone_based_ensembl_gene&#39;,
+ &#39;Clone_based_vega_gene&#39;,
+ &#39;EntrezGene&#39;,
+ &#39;HGNC Symbol&#39;,
+ &#39;Havana gene&#39;,
+ &#39;Havana transcript&#39;,
+ &#39;Havana translation&#39;,
+ &#39;NCBI gene&#39;,
+ &#39;NCBI gene (formerly Entrezgene)&#39;,
+ &#39;RFAM&#39;,
+ &#39;RefSeq_mRNA&#39;,
+ &#39;RefSeq_mRNA_predicted&#39;,
+ &#39;RefSeq_ncRNA&#39;,
+ &#39;RefSeq_ncRNA_predicted&#39;,
+ &#39;RefSeq_peptide&#39;,
+ &#39;RefSeq_peptide_predicted&#39;,
+ &#39;UniProtKB Gene Name&#39;,
+ &#39;Uniprot/SPTREMBL&#39;,
+ &#39;Uniprot/SWISSPROT&#39;,
+ &#39;Vega gene&#39;,
+ &#39;Vega_gene&#39;,
+ &#39;synonym_id::EntrezGene&#39;,
+ &#39;synonym_id::HGNC Symbol&#39;,
+ &#39;synonym_id::NCBI gene&#39;,
+ &#39;synonym_id::NCBI gene (formerly Entrezgene)&#39;,
+ &#39;synonym_id::UniProtKB Gene Name&#39;]
+</pre></div></div>
 </div>
 </section>
 <section id="4.2.4-Understanding-the-result-dictionary">
@@ -261,13 +372,29 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">strategy='all'</span></code>: returns <em>all</em> candidates IDTrack found</p></li>
 </ul>
 <p>Use <code class="docutils literal notranslate"><span class="pre">'all'</span></code> when you are doing QC or want to inspect ambiguous mappings.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">&#39;TP53&#39;</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">strategy</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">&#39;TP53&#39;</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">strategy</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">)</span>
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;target_id&#39;: [&#39;ENSG00000141510.20&#39;],
+ &#39;last_node&#39;: [(&#39;ENSG00000141510.20&#39;, &#39;ENSG00000141510.20&#39;)],
+ &#39;final_database&#39;: &#39;ensembl_gene&#39;,
+ &#39;graph_id&#39;: &#39;TP53&#39;,
+ &#39;query_id&#39;: &#39;TP53&#39;,
+ &#39;no_corresponding&#39;: False,
+ &#39;no_conversion&#39;: False,
+ &#39;no_target&#39;: False}
+</pre></div></div>
 </div>
 </section>
 </section>
@@ -278,56 +405,152 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">convert_identifier_multiple(...)</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">classify_multiple_conversion(...)</span></code> to summarize outcomes</p></li>
 </ul>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>7
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">genes</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;TP53&#39;</span><span class="p">,</span> <span class="s1">&#39;BRCA1&#39;</span><span class="p">,</span> <span class="s1">&#39;BRCA2&#39;</span><span class="p">,</span> <span class="s1">&#39;BRAF&#39;</span><span class="p">,</span> <span class="s1">&#39;KRAS&#39;</span><span class="p">,</span> <span class="s1">&#39;NOT_A_REAL_GENE&#39;</span><span class="p">]</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">genes</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;TP53&#39;</span><span class="p">,</span> <span class="s1">&#39;BRCA1&#39;</span><span class="p">,</span> <span class="s1">&#39;BRCA2&#39;</span><span class="p">,</span> <span class="s1">&#39;BRAF&#39;</span><span class="p">,</span> <span class="s1">&#39;KRAS&#39;</span><span class="p">,</span> <span class="s1">&#39;NOT_A_REAL_GENE&#39;</span><span class="p">]</span>
 <span class="n">results</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier_multiple</span><span class="p">(</span><span class="n">genes</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">)</span>
 <span class="n">results</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>  <span class="c1"># show first two</span>
 <br/></pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+100%|█████████████████████████████████████████████| 6/6 [00:00&lt;00:00, 73.13it/s, ID:NOT_A_REAL_GENE]
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>7
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">summary</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">classify_multiple_conversion</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[{&#39;target_id&#39;: [&#39;TP53&#39;],
+  &#39;last_node&#39;: [(&#39;ENSG00000141510.20&#39;, &#39;TP53&#39;)],
+  &#39;final_database&#39;: &#39;HGNC Symbol&#39;,
+  &#39;graph_id&#39;: &#39;TP53&#39;,
+  &#39;query_id&#39;: &#39;TP53&#39;,
+  &#39;no_corresponding&#39;: False,
+  &#39;no_conversion&#39;: False,
+  &#39;no_target&#39;: False},
+ {&#39;target_id&#39;: [&#39;BRCA1&#39;],
+  &#39;last_node&#39;: [(&#39;ENSG00000012048.27&#39;, &#39;BRCA1&#39;)],
+  &#39;final_database&#39;: &#39;HGNC Symbol&#39;,
+  &#39;graph_id&#39;: &#39;BRCA1&#39;,
+  &#39;query_id&#39;: &#39;BRCA1&#39;,
+  &#39;no_corresponding&#39;: False,
+  &#39;no_conversion&#39;: False,
+  &#39;no_target&#39;: False}]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>8
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">summary</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">classify_multiple_conversion</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
 <span class="c1"># Each bin is a list of per-gene dictionaries</span>
 <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">summary</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
 <br/></pre></div>
 </div>
 </div>
-<p>If you want a human-readable report, you can print the summary bins:</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>8
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">print_binned_conversion</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;changed_only_1_to_n&#39;: 0,
+ &#39;changed_only_1_to_1&#39;: 0,
+ &#39;alternative_target_1_to_1&#39;: 0,
+ &#39;alternative_target_1_to_n&#39;: 0,
+ &#39;matching_1_to_0&#39;: 1,
+ &#39;matching_1_to_1&#39;: 5,
+ &#39;matching_1_to_n&#39;: 0,
+ &#39;input_identifiers&#39;: 6}
+</pre></div></div>
+</div>
+<p>If you want a human-readable report, you can print the summary bins:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>9
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">print_binned_conversion</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span>
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-01-17 15:02:27 INFO:api:
+IDTrack conversion summary:
+  Total processed: 6
+  1→0: 1 (16.7%)
+  1→1: 5 (83.3%)
+    Changed only: 0 (0.0%)
+    Alternative targets: 0 (0.0%)
+    Rest: 5 (100.0%)
+  1→n: 0 (0.0%)
+    Changed only: 0 (0.0%)
+    Alternative targets: 0 (0.0%)
+  Diagnostics:
+    no_corresponding: 1
+    no_conversion:   0
+    no_target:       0
+</pre></div></div>
 </div>
 </section>
 <section id="4.4-—-Explainability-&amp;-Auditability">
 <h2>4.4 — Explainability &amp; Auditability<a class="headerlink" href="#4.4-—-Explainability-&-Auditability" title="Link to this heading"></a></h2>
 <p>When you set <code class="docutils literal notranslate"><span class="pre">explain=True</span></code>, the result includes a <code class="docutils literal notranslate"><span class="pre">the_path</span></code> field describing the graph edges followed. This is very useful for advanced QC and debugging.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>10
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">explained</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">&#39;TP53&#39;</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">,</span> <span class="n">explain</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">explained</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s1">&#39;TP53&#39;</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">,</span> <span class="n">explain</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="nb">list</span><span class="p">(</span><span class="n">explained</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
 <br/></pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>10
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># The path dictionary keys are (target_id, ensembl_gene_id) pairs</span>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&#39;target_id&#39;,
+ &#39;last_node&#39;,
+ &#39;final_database&#39;,
+ &#39;graph_id&#39;,
+ &#39;query_id&#39;,
+ &#39;no_corresponding&#39;,
+ &#39;no_conversion&#39;,
+ &#39;no_target&#39;,
+ &#39;the_path&#39;]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>11
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># The path dictionary keys are (target_id, ensembl_gene_id) pairs</span>
 <span class="nb">list</span><span class="p">(</span><span class="n">explained</span><span class="p">[</span><span class="s1">&#39;the_path&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())[:</span><span class="mi">3</span><span class="p">]</span>
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>11
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[(&#39;TP53&#39;, &#39;ENSG00000141510.20&#39;)]
+</pre></div></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">the_path</span></code> is intentionally detailed. For most users, the summary flags and <code class="docutils literal notranslate"><span class="pre">target_id</span></code> are enough.</p>
 </section>
@@ -371,11 +594,11 @@
 <span class="p">)</span>
 </pre></div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>12
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Advanced demo: inspect hyperconnected nodes and compare `go_external` behavior.</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Advanced demo: inspect hyperconnected nodes and compare `go_external` behavior.</span>
 <span class="c1"># Safe: does not modify your cache; it only runs conversions.</span>
 
 <span class="c1"># 1) Hyperconnected nodes (performance/ambiguity concept)</span>
@@ -414,6 +637,27 @@
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Hyperconnected external nodes: 1611
+Top 10 by out-degree:
+  1911 - Metazoa_SRP
+  1911 - RF00017
+  1619 - RF00026
+  1619 - U6
+  1090 - RF00019
+  1090 - Y_RNA
+  633 - 5S_rRNA
+  633 - RF00001
+  490 - RF01210
+  490 - snoU13
+go_external=False -&gt; OK
+go_external=True  -&gt; OK
+</pre></div></div>
+</div>
 </section>
 </section>
 <section id="4.6-—-Introspection-&amp;-Discovery">
@@ -426,11 +670,11 @@
 <li><p><em>When was a given identifier active across releases?</em></p></li>
 </ul>
 <p>The next cell demonstrates the most useful introspection calls.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>13
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Introspection demo</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Introspection demo</span>
 
 <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assemblies in this graph:&#39;</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_genome_assemblies</span><span class="p">()))</span>
 
@@ -463,6 +707,41 @@
     <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Example gene not found in graph (unexpected).&#39;</span><span class="p">)</span>
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-01-17 15:02:28 INFO:the_graph: Cached properties being calculated (for tests): external_database_connection_form
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Assemblies in this graph: [36, 37, 38]
+External DBs enabled (count): 27
+External DBs (first 25): [&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_vega_gene&#39;, &#39;EntrezGene&#39;, &#39;HGNC Symbol&#39;, &#39;Havana gene&#39;, &#39;Havana transcript&#39;, &#39;Havana translation&#39;, &#39;NCBI gene&#39;, &#39;NCBI gene (formerly Entrezgene)&#39;, &#39;RFAM&#39;, &#39;RefSeq_mRNA&#39;, &#39;RefSeq_mRNA_predicted&#39;, &#39;RefSeq_ncRNA&#39;, &#39;RefSeq_ncRNA_predicted&#39;, &#39;RefSeq_peptide&#39;, &#39;RefSeq_peptide_predicted&#39;, &#39;UniProtKB Gene Name&#39;, &#39;Uniprot/SPTREMBL&#39;, &#39;Uniprot/SWISSPROT&#39;, &#39;Vega gene&#39;, &#39;Vega_gene&#39;, &#39;synonym_id::EntrezGene&#39;, &#39;synonym_id::HGNC Symbol&#39;, &#39;synonym_id::NCBI gene&#39;]
+
+External DB connection forms (sample):
+  CCDS → transcript
+  Clone_based_ensembl_gene → gene
+  Clone_based_vega_gene → gene
+  EntrezGene → gene
+  HGNC Symbol → gene
+  Havana gene → gene
+  Havana transcript → transcript
+  Havana translation → translation
+  NCBI gene → gene
+  NCBI gene (formerly Entrezgene) → gene
+
+Ensembl releases in snapshot window: (76, 115)
+
+Active ranges (main assembly) for ENSG00000141510 : [[48, 115]]
+All-assemblies active range failed -&gt; ValueError(&#34;Cannot get active ranges for &#39;ENSG00000141510&#39;: node type &#39;base_ensembl_gene&#39; is not a gene type. Expected &#39;ensembl_gene&#39; or an assembly-specific gene type.&#34;)
+</pre></div></div>
 </div>
 </section>
 <section id="4.7-—-Practical-advice-(the-kind-that-saves-you-a-week)">

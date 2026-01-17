@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>idtrack._harmonize_features &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
-      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
       <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
@@ -269,6 +269,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">kept_conversion_failed_identifiers</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="c1"># inconsistent matching</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">removed_inconsistent_identifier_matching</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="c1"># removed due to multiple source IDs mapping to same final_database (ensembl_gene override duplicates)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">removed_final_database_duplicates</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_initialize</span><span class="p">()</span>
 
@@ -314,6 +316,13 @@
                 <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset_name</span><span class="p">,</span>
                 <span class="n">the_dict</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">removed_inconsistent_identifier_matching</span><span class="p">,</span>
                 <span class="n">the_set</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span><span class="s2">&quot;gene_names_inconsistency&quot;</span><span class="p">],</span>
+            <span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">reporter_dict_creator</span><span class="p">(</span>
+                <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset_name</span><span class="p">,</span>
+                <span class="n">the_dict</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">removed_final_database_duplicates</span><span class="p">,</span>
+                <span class="n">the_set</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span><span class="s2">&quot;final_database_duplicate_source_ids&quot;</span><span class="p">],</span>
             <span class="p">)</span>
 
             <span class="k">for</span> <span class="n">the_id</span> <span class="ow">in</span> <span class="n">gene_list</span><span class="p">:</span>
@@ -468,6 +477,9 @@
         <span class="n">gene_names_inconsistency</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">_gene_names_inconsistency</span><span class="p">)][</span><span class="s2">&quot;Query ID&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
 
         <span class="n">final_database_chosen_single_ensembl_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="c1"># Track source IDs that should be removed because their ensembl_gene was not chosen</span>
+        <span class="c1"># (they would cause duplicates after the ensembl_gene override)</span>
+        <span class="n">final_database_duplicate_source_ids</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">final_final_database_gene_name</span><span class="p">,</span> <span class="n">df_subset</span> <span class="ow">in</span> <span class="n">dfa</span><span class="p">[</span><span class="n">dfa</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">]</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)]</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span>
         <span class="p">):</span>
@@ -476,10 +488,14 @@
             <span class="c1"># You can see all possible ensembl ids in</span>
             <span class="n">chosen_ensembl_id</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">df_subset</span><span class="p">[</span><span class="s2">&quot;ensembl_gene&quot;</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># choose first one</span>
             <span class="n">final_database_chosen_single_ensembl_dict</span><span class="p">[</span><span class="n">final_final_database_gene_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">chosen_ensembl_id</span>
+            <span class="c1"># Mark source IDs with non-chosen ensembl_genes for removal to prevent duplicates</span>
+            <span class="n">non_chosen_rows</span> <span class="o">=</span> <span class="n">df_subset</span><span class="p">[</span><span class="n">df_subset</span><span class="p">[</span><span class="s2">&quot;ensembl_gene&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">chosen_ensembl_id</span><span class="p">]</span>
+            <span class="n">final_database_duplicate_source_ids</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">non_chosen_rows</span><span class="p">[</span><span class="s2">&quot;Query ID&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
 
         <span class="k">return</span> <span class="p">{</span>
             <span class="s2">&quot;gene_names_inconsistency&quot;</span><span class="p">:</span> <span class="n">gene_names_inconsistency</span><span class="p">,</span>
             <span class="s2">&quot;final_database_chosen_single_ensembl_dict&quot;</span><span class="p">:</span> <span class="n">final_database_chosen_single_ensembl_dict</span><span class="p">,</span>
+            <span class="s2">&quot;final_database_duplicate_source_ids&quot;</span><span class="p">:</span> <span class="n">final_database_duplicate_source_ids</span><span class="p">,</span>
         <span class="p">}</span>
 
 <div class="viewcode-block" id="HarmonizeFeatures.create_dataset_conversion_dataframe">
@@ -516,10 +532,11 @@
 <span class="sd">                populated—indicating an incorrect call order—or if unexpected duplicate target IDs remain</span>
 <span class="sd">                after processing.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
-            <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conversion_failed_identifiers</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conversion_failed_but_consistent_identifiers</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span>
-        <span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">&quot;Possible function call order issue!&quot;</span><span class="p">)</span>
+        <span class="c1"># Ensure unified_matching_dict is populated (verifies proper initialization order).</span>
+        <span class="c1"># The cached properties conversion_failed_identifiers and conversion_failed_but_consistent_identifiers</span>
+        <span class="c1"># may legitimately be empty when all conversions succeed or when failures are all consistent/inconsistent.</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unified_matching_dict</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">&quot;Possible function call order issue: unified_matching_dict is empty!&quot;</span><span class="p">)</span>
 
         <span class="n">new_var_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">the_id</span> <span class="ow">in</span> <span class="n">gene_list</span><span class="p">:</span>
@@ -580,6 +597,7 @@
         <span class="n">remove_bool</span> <span class="o">=</span> <span class="o">~</span><span class="p">(</span>
             <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conversion_failed_identifiers</span><span class="p">)</span>
             <span class="o">|</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span><span class="s2">&quot;gene_names_inconsistency&quot;</span><span class="p">])</span>
+            <span class="o">|</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span><span class="s2">&quot;final_database_duplicate_source_ids&quot;</span><span class="p">])</span>
         <span class="p">)</span>
         <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[:,</span> <span class="n">remove_bool</span><span class="p">]</span>
 

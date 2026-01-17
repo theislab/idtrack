@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Part 7 — Advanced Topics &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
       <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
@@ -155,11 +155,11 @@
 </ul>
 <p>In IDTrack today, the active YAML file name is fixed (<code class="docutils literal notranslate"><span class="pre">&lt;organism&gt;_externals_modified.yml</span></code>). A practical pattern is to keep multiple profiles as <em>side-by-side files</em> and copy/rename the one you want for a given run.</p>
 <p>The next cell demonstrates how to generate two profile files <strong>without overwriting</strong> your active YAML.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>1
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
@@ -234,6 +234,20 @@
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Local repository: /ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache
+Reading YAML from: /ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache/homo_sapiens_externals_modified.yml
+Wrote strict profile: homo_sapiens_externals_modified_strict.yml
+Wrote broad  profile: homo_sapiens_externals_modified_broad.yml
+
+To activate a profile: copy/rename it to:
+  /ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache/homo_sapiens_externals_modified.yml
+</pre></div></div>
+</div>
 </section>
 <section id="7.2-—-Programmatic-YAML-Management">
 <h2>7.2 — Programmatic YAML Management<a class="headerlink" href="#7.2-—-Programmatic-YAML-Management" title="Link to this heading"></a></h2>
@@ -253,11 +267,11 @@
 <blockquote>
 <div><p><strong>Tip:</strong> Keep allowlists per organism in your pipeline repository (as Python sets or a small TOML/YAML). That makes your configuration reviewable.</p>
 </div></blockquote>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>2
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
@@ -303,6 +317,16 @@
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Wrote: /ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache/mus_musculus_externals_modified.yml
+Enabled (count): 2
+Enabled (sample): [&#39;EntrezGene&#39;, &#39;MGI Symbol&#39;]
+</pre></div></div>
+</div>
 </section>
 <section id="7.3-—-Troubleshooting-&amp;-Diagnostics">
 <h2>7.3 — Troubleshooting &amp; Diagnostics<a class="headerlink" href="#7.3-—-Troubleshooting-&-Diagnostics" title="Link to this heading"></a></h2>
@@ -315,11 +339,11 @@
 <li><p><strong>Unexpected 1→n explosion:</strong> your external allowlist is too broad or contains promiscuous namespaces.</p></li>
 </ul>
 <p>The next cell is a compact diagnostic report you can paste into issues or lab notes.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>3
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
@@ -392,6 +416,49 @@
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-01-17 14:59:09 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+local_repository: /ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache
+local_repository_writable: True
+yaml_files: [&#39;homo_sapiens_externals_modified.yml&#39;, &#39;mus_musculus_externals_modified.yml&#39;, &#39;sus_scrofa_externals_modified.yml&#39;]
+graph_snapshots: [&#39;graph_homo_sapiens_min48_max115_narrow.pickle&#39;, &#39;graph_mus_musculus_min48_max115_narrow.pickle&#39;, &#39;graph_sus_scrofa_min48_max115_narrow.pickle&#39;]
+ensembl_rest_status: 200
+ensembl_mysql_ports: {3306: &#39;TimeoutError&#39;, 5306: &#39;TimeoutError&#39;, 3337: &#39;TimeoutError&#39;}
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-01-17 14:59:34 INFO:database_manager: Using assembly-specific release range for homo_sapiens assembly 38: releases 76-115 (from config [76, None])
+2026-01-17 15:00:28 INFO:graph_maker: The graph is being read: /ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache/graph_homo_sapiens_min48_max115_narrow.pickle
+2026-01-17 15:05:09 INFO:the_graph: Cached properties being calculated: available_genome_assemblies
+2026-01-17 15:05:09 INFO:the_graph: Cached properties being calculated: combined_edges
+2026-01-17 15:08:47 INFO:the_graph: Cached properties being calculated: combined_edges_genes
+2026-01-17 15:10:11 INFO:the_graph: Cached properties being calculated: combined_edges_assembly_specific_genes
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Quick TrackTests check (edge nts invariant): True
+</pre></div></div>
+</div>
 </section>
 <section id="7.4-—-Integration-Patterns">
 <h2>7.4 — Integration Patterns<a class="headerlink" href="#7.4-—-Integration-Patterns" title="Link to this heading"></a></h2>
@@ -403,11 +470,11 @@
 <li><p>Store your external YAML alongside your pipeline so the configuration is reviewable.</p></li>
 </ul>
 <p>Below are lightweight patterns you can adapt.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Snakemake / Nextflow snippets (printed as plain text)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Snakemake / Nextflow snippets (printed as plain text)</span>
 
 <span class="n">snakemake_rule</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">rule idtrack_build_human_graph:</span>
@@ -432,6 +499,51 @@
 <span class="nb">print</span><span class="p">(</span><span class="n">nextflow_process</span><span class="p">)</span>
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+--- Snakemake example ---
+rule idtrack_build_human_graph:
+    output:
+        &#39;idtrack_cache/graph_homo_sapiens_*.pickle&#39;
+    shell:
+        &#34;python - &lt;&lt;&#39;PY&#39;
+import os
+from pathlib import Path
+import idtrack
+
+os.environ[&#39;IDTRACK_LOCAL_REPO&#39;] = os.path.abspath(&#39;idtrack_cache&#39;)
+Path(os.environ[&#39;IDTRACK_LOCAL_REPO&#39;]).mkdir(parents=True, exist_ok=True)
+
+api = idtrack.API(local_repository=os.environ[&#39;IDTRACK_LOCAL_REPO&#39;])
+org, latest = api.resolve_organism(&#39;human&#39;)
+api.build_graph(organism_name=org, snapshot_release=latest, calculate_caches=True)
+print(&#39;Built:&#39;, org, latest)
+PY&#34;
+--- Nextflow example ---
+process BUILD_IDTRACK_HUMAN {
+  output:
+    path &#34;idtrack_cache/graph_homo_sapiens_*.pickle&#34;
+  script:
+    &#34;export IDTRACK_LOCAL_REPO=$PWD/idtrack_cache
+python - &lt;&lt;&#39;PY&#39;
+import os
+from pathlib import Path
+import idtrack
+
+repo = os.environ[&#39;IDTRACK_LOCAL_REPO&#39;]
+Path(repo).mkdir(parents=True, exist_ok=True)
+
+api = idtrack.API(local_repository=repo)
+org, latest = api.resolve_organism(&#39;human&#39;)
+api.build_graph(organism_name=org, snapshot_release=latest, calculate_caches=True)
+print(&#39;Built:&#39;, org, latest)
+PY&#34;
+}
+</pre></div></div>
 </div>
 </section>
 <section id="7.5-—-No-Internet-Servers:-SSH-ConnectionBridge">
@@ -535,11 +647,11 @@ bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tu
 bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tunnel.sh<span class="w"> </span>--jump<span class="w"> </span>user@login<span class="w"> </span>--with-jupyter<span class="w"> </span><span class="s2">&quot;http://compute123:8888/lab?token=...&quot;</span>
 </pre></div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 
@@ -561,6 +673,46 @@ bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tu
 <span class="n">b</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Bridge disabled&#39;</span><span class="p">)</span>
 <br/></pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-01-17 15:10:38 INFO:connection_bridge: [idtrack] ConnectionBridge enabled: all TCP sockets in this Python process are routed through 127.0.0.1:1080. Call `b.stop()` to restore normal networking.
+2026-01-17 15:10:39 ERROR:connection_bridge: [idtrack] ConnectionBridge check failed: SOCKSHTTPSConnectionPool(host=&#39;rest.ensembl.org&#39;, port=443): Max retries exceeded with url: /info/ping (Caused by NewConnectionError(&#34;SOCKSHTTPSConnection(host=&#39;rest.ensembl.org&#39;, port=443): Failed to establish a new connection: [Errno 111] Connection refused&#34;))
+  Troubleshooting:
+  - Ensure the SSH session is established from your local machine: `ssh -R 1080 user@server`
+  - On the server, check the SOCKS port is listening: `ss -tlnp | grep 1080`
+2026-01-17 15:10:39 WARNING:connection_bridge: [idtrack] ConnectionBridge test failed; disabling bridge.
+2026-01-17 15:10:39 INFO:connection_bridge: [idtrack] ConnectionBridge disabled: normal networking restored.
+2026-01-17 15:10:39 INFO:connection_bridge: [idtrack] ConnectionBridge already stopped.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[idtrack] ConnectionBridge enabled: all TCP sockets in this Python process are routed through 127.0.0.1:1080. Call `b.stop()` to restore normal networking.
+[idtrack] ConnectionBridge check failed: SOCKSHTTPSConnectionPool(host=&#39;rest.ensembl.org&#39;, port=443): Max retries exceeded with url: /info/ping (Caused by NewConnectionError(&#34;SOCKSHTTPSConnection(host=&#39;rest.ensembl.org&#39;, port=443): Failed to establish a new connection: [Errno 111] Connection refused&#34;))
+  Troubleshooting:
+  - Ensure the SSH session is established from your local machine: `ssh -R 1080 user@server`
+  - On the server, check the SOCKS port is listening: `ss -tlnp | grep 1080`
+[idtrack] ConnectionBridge test failed; disabling bridge.
+[idtrack] ConnectionBridge disabled: normal networking restored.
+Bridge enabled: False
+[idtrack] ConnectionBridge already stopped.
+Bridge disabled
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
 </div>
 </div>
 </section>

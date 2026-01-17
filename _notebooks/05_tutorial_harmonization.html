@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Part 5 — Real-World Experiments: Harmonization &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
       <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
@@ -77,7 +77,7 @@
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Part 5 — Real-World Experiments: Harmonization</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#5.0-—-Why-harmonization-matters-(plain-language)">5.0 — Why harmonization matters (plain language)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#5.0.1-Pre-requisites">5.0.1 Pre-requisites</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#5.1-—-HLCA-(Human-Lung-Cell-Atlas)-Harmonization-(start-small,-then-scale)">5.1 — HLCA (Human Lung Cell Atlas) Harmonization (start small, then scale)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#5.1-—-Toy-Harmonization-(start-small,-then-scale)">5.1 — Toy Harmonization (start small, then scale)</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#5.1.1-Run-the-harmonizer">5.1.1 Run the harmonizer</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#5.1.2-Inspect-what-happened">5.1.2 Inspect what happened</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#5.1.3-Produce-a-unified-AnnData-(union-or-intersection)">5.1.3 Produce a unified AnnData (union or intersection)</a></li>
@@ -85,10 +85,11 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#5.2-—-Multi-Dataset-Integration-(best-practices)">5.2 — Multi-Dataset Integration (best practices)</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#5.2.1-Scaling-up-to-HLCA-(the-real-use-case)">5.2.1 Scaling up to HLCA (the real use case)</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#5.2.2-Point-IDTrack-to-your-HLCA-data">5.2.2 Point IDTrack to your HLCA data</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#5.2.3-Run-harmonization-on-HLCA">5.2.3 Run harmonization on HLCA</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#5.2.4-Advanced-notes-(recommended-once-you’re-comfortable)">5.2.4 Advanced notes (recommended once you’re comfortable)</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#5.2.5-HLCA-experiments-(extended):-large-scale-harmonization-+-QA">5.2.5 HLCA experiments (extended): large-scale harmonization + QA</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#5.2.2-HLCA-datasets-used-in-this-tutorial">5.2.2 HLCA datasets used in this tutorial</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#5.2.3-Tutorial-subset-(4-studies;-easy-to-inspect)">5.2.3 Tutorial subset (4 studies; easy to inspect)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#5.2.4-Run-harmonization-(HGNC-target;-tutorial-subset)">5.2.4 Run harmonization (HGNC target; tutorial subset)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#5.2.5-Inspect-what-happened-(simple-tables)">5.2.5 Inspect what happened (simple tables)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#5.2.6-Build-harmonized-AnnData-(union-vs-intersect)">5.2.6 Build harmonized AnnData (union vs intersect)</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#5.3-—-Legacy-Data-Rescue">5.3 — Legacy Data Rescue</a></li>
@@ -168,10 +169,19 @@
 <li><p>For the HLCA section, you need access to the HLCA <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> files (not bundled here).</p></li>
 </ul>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>1
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1) Setup</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load notebook utilities (collapsible output magic for tutorials)</span>
+<span class="o">%</span><span class="k">load_ext</span> _notebook_utils
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>2
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1) Setup</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
@@ -191,15 +201,23 @@
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+IDTrack local repository: /ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache
+</pre></div></div>
+</div>
 </section>
-<section id="5.1-—-HLCA-(Human-Lung-Cell-Atlas)-Harmonization-(start-small,-then-scale)">
-<h2>5.1 — HLCA (Human Lung Cell Atlas) Harmonization (start small, then scale)<a class="headerlink" href="#5.1-—-HLCA-(Human-Lung-Cell-Atlas)-Harmonization-(start-small,-then-scale)" title="Link to this heading"></a></h2>
+<section id="5.1-—-Toy-Harmonization-(start-small,-then-scale)">
+<h2>5.1 — Toy Harmonization (start small, then scale)<a class="headerlink" href="#5.1-—-Toy-Harmonization-(start-small,-then-scale)" title="Link to this heading"></a></h2>
 <p>We will create two small <code class="docutils literal notranslate"><span class="pre">AnnData</span></code> objects with overlapping genes but different identifier styles. This shows the workflow without requiring large data downloads.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>3
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 2.1 Create toy datasets</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 2.1 Create toy datasets</span>
 
 <span class="n">toy_dir</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;toy_harmonization_demo&#39;</span>
 <span class="n">toy_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -223,6 +241,16 @@
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>3
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(PosixPath(&#39;/ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache/toy_harmonization_demo/toy_A_symbols.h5ad&#39;),
+ PosixPath(&#39;/ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache/toy_harmonization_demo/toy_B_mixed.h5ad&#39;))
+</pre></div></div>
+</div>
 <section id="5.1.1-Run-the-harmonizer">
 <h3>5.1.1 Run the harmonizer<a class="headerlink" href="#5.1.1-Run-the-harmonizer" title="Link to this heading"></a></h3>
 <p>IDTrack provides <code class="docutils literal notranslate"><span class="pre">idtrack.HarmonizeFeatures</span></code>.</p>
@@ -233,37 +261,75 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">target_ensembl_release</span></code>: the release you want to harmonize <em>to</em></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">final_database</span></code>: what you want to keep as feature IDs (HGNC, Ensembl, …)</p></li>
 </ul>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 2.2 Harmonize the toy datasets</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%</span><span class="k">collapse</span> Click to show conversion logs
+# Included for tutorial purposes only.
 
-<span class="n">data_h5ad_dict</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s1">&#39;toy_A&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">path_a</span><span class="p">),</span>
-    <span class="s1">&#39;toy_B&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">path_b</span><span class="p">),</span>
-<span class="p">}</span>
+# 2.2 Harmonize the toy datasets
 
-<span class="n">project_out</span> <span class="o">=</span> <span class="n">toy_dir</span> <span class="o">/</span> <span class="s1">&#39;outputs&#39;</span>
-<span class="n">project_out</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+data_h5ad_dict = {
+    &#39;toy_A&#39;: str(path_a),
+    &#39;toy_B&#39;: str(path_b),
+}
 
-<span class="n">organism_name</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;human&#39;</span><span class="p">)</span>
+project_out = toy_dir / &#39;outputs&#39;
+project_out.mkdir(parents=True, exist_ok=True)
 
-<span class="n">harmonizer</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">HarmonizeFeatures</span><span class="p">(</span>
-    <span class="n">project_name</span><span class="o">=</span><span class="s1">&#39;toy_demo&#39;</span><span class="p">,</span>
-    <span class="n">data_h5ad_dict</span><span class="o">=</span><span class="n">data_h5ad_dict</span><span class="p">,</span>
-    <span class="n">project_local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">project_out</span><span class="p">),</span>
-    <span class="n">idtrack_local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">),</span>
-    <span class="n">target_ensembl_release</span><span class="o">=</span><span class="n">latest_release</span><span class="p">,</span>
-    <span class="n">final_database</span><span class="o">=</span><span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">,</span>
-    <span class="n">organism_name</span><span class="o">=</span><span class="n">organism_name</span><span class="p">,</span>
-    <span class="n">graph_last_ensembl_release</span><span class="o">=</span><span class="n">latest_release</span><span class="p">,</span>
-    <span class="n">verbose_level</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-<span class="p">)</span>
+organism_name, latest_release = idtrack.API(str(LOCAL_REPOSITORY)).resolve_organism(&#39;human&#39;)
 
-<span class="n">harmonizer</span>
+harmonizer = idtrack.HarmonizeFeatures(
+    project_name=&#39;toy_demo&#39;,
+    data_h5ad_dict=data_h5ad_dict,
+    project_local_repository=str(project_out),
+    idtrack_local_repository=str(LOCAL_REPOSITORY),
+    target_ensembl_release=latest_release,
+    final_database=&#39;HGNC Symbol&#39;,
+    organism_name=organism_name,
+    graph_last_ensembl_release=latest_release,
+    verbose_level=1,
+)
+
+harmonizer
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<details class="idtrack-collapse" open>
+<summary>Click to show conversion logs</summary>
+<pre class="idtrack-collapse-content"><span class="stderr">2026-01-17 19:15:44 ERROR:ipykernel.comm: No such comm target registered: jupyter.widget.control</span></pre>
+</details></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;idtrack._harmonize_features.HarmonizeFeatures at 0x7f326447b190&gt;
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<details class="idtrack-collapse">
+<summary>Click to show conversion logs</summary>
+<pre class="idtrack-collapse-content">(no output)</pre>
+</details></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;idtrack._harmonize_features.HarmonizeFeatures at 0x7f326447b190&gt;
+</pre></div></div>
 </div>
 </section>
 <section id="5.1.2-Inspect-what-happened">
@@ -274,15 +340,25 @@
 <li><p>which identifiers were ambiguous</p></li>
 <li><p>per-dataset result pickle files written under <code class="docutils literal notranslate"><span class="pre">project_local_repository</span></code></p></li>
 </ul>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Conversion failed (any dataset):&#39;</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">harmonizer</span><span class="o">.</span><span class="n">conversion_failed_identifiers</span><span class="p">))[:</span><span class="mi">20</span><span class="p">])</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Conversion failed (any dataset):&#39;</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">harmonizer</span><span class="o">.</span><span class="n">conversion_failed_identifiers</span><span class="p">))[:</span><span class="mi">20</span><span class="p">])</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Conversion failed but consistent:&#39;</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">harmonizer</span><span class="o">.</span><span class="n">conversion_failed_but_consistent_identifiers</span><span class="p">))[:</span><span class="mi">20</span><span class="p">])</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Converted IDs with multiple Ensembl possibilities (collapsed):&#39;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">harmonizer</span><span class="o">.</span><span class="n">multiple_ensembl_dict</span><span class="p">)[:</span><span class="mi">10</span><span class="p">])</span>
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Conversion failed (any dataset): [&#39;ENSG00000141510&#39;, &#39;NOT_A_REAL_GENE&#39;]
+Conversion failed but consistent: []
+Converted IDs with multiple Ensembl possibilities (collapsed): [&#39;TP53&#39;, &#39;BRCA1&#39;, &#39;BRCA2&#39;, &#39;BRAF&#39;, &#39;KRAS&#39;]
+</pre></div></div>
 </div>
 </section>
 <section id="5.1.3-Produce-a-unified-AnnData-(union-or-intersection)">
@@ -293,11 +369,11 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">mode='union'</span></code> (default): keep the union of all features (missing genes become zeros)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">mode='intersect'</span></code>: keep only features present in every dataset</p></li>
 </ul>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Merge the toy datasets (this uses AnnData.concat under the hood)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Merge the toy datasets (this uses AnnData.concat under the hood)</span>
 <span class="n">unified_union</span> <span class="o">=</span> <span class="n">harmonizer</span><span class="o">.</span><span class="n">unify_multiple_anndatas</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;union&#39;</span><span class="p">)</span>
 <span class="n">unified_intersect</span> <span class="o">=</span> <span class="n">harmonizer</span><span class="o">.</span><span class="n">unify_multiple_anndatas</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;intersect&#39;</span><span class="p">)</span>
 
@@ -305,6 +381,32 @@
 <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Intersect shape:&#39;</span><span class="p">,</span> <span class="n">unified_intersect</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+100%|█████████████████████████████████████████████████████████| 2/2 [00:01&lt;00:00,  1.73it/s, dataset=toy_B, study_var=2, union_var=5, dbh=2]
+100%|█████████████████████████████████████████████████████████| 2/2 [00:00&lt;00:00,  4.91it/s, dataset=toy_B, study_var=2, union_var=5, dbh=2]
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Union shape: (110, 5)
+Intersect shape: (110, 2)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+
+</pre></div></div>
 </div>
 <p>At HLCA scale, <code class="docutils literal notranslate"><span class="pre">union</span></code> can create a very large feature matrix. If you plan to run memory-heavy models, consider starting with <code class="docutils literal notranslate"><span class="pre">intersect</span></code> or filtering genes first.</p>
 </section>
@@ -337,345 +439,661 @@
 <h3>5.2.1 Scaling up to HLCA (the real use case)<a class="headerlink" href="#5.2.1-Scaling-up-to-HLCA-(the-real-use-case)" title="Link to this heading"></a></h3>
 <p>HLCA-scale harmonization is the same logic, but you need to manage:</p>
 <ul class="simple">
-<li><p>many datasets</p></li>
-<li><p>large gene lists</p></li>
-<li><p>storage for intermediate results</p></li>
+<li><p>many datasets (often <em>multiple files per study</em>)</p></li>
+<li><p>large gene lists (tens of thousands of identifiers)</p></li>
+<li><p>choosing a snapshot release (what you harmonize <em>to</em>)</p></li>
+<li><p>disk for intermediate artifacts (pickles/logs)</p></li>
 </ul>
 </section>
-<section id="5.2.2-Point-IDTrack-to-your-HLCA-data">
-<h3>5.2.2 Point IDTrack to your HLCA data<a class="headerlink" href="#5.2.2-Point-IDTrack-to-your-HLCA-data" title="Link to this heading"></a></h3>
-<p>Set <code class="docutils literal notranslate"><span class="pre">HLCA_BASE_PATH</span></code> to a folder containing <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> files. Example layout:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>HLCA_BASE_PATH/
-  Dataset1.h5ad
-  Dataset2.h5ad
-  ...
+<section id="5.2.2-HLCA-datasets-used-in-this-tutorial">
+<h3>5.2.2 HLCA datasets used in this tutorial<a class="headerlink" href="#5.2.2-HLCA-datasets-used-in-this-tutorial" title="Link to this heading"></a></h3>
+<p>HLCA <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> files are not shipped with IDTrack. In this tutorial we simply <em>point to existing files</em> (no downloads).</p>
+<p>The next cell defines a curated HLCA list (study → list of <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> paths). If you’re running this notebook on a different system, edit <code class="docutils literal notranslate"><span class="pre">base_path</span></code> in the next cell to match where the HLCA data lives.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>7
 </pre></div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
-</pre></div>
-</div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">HLCA_BASE_PATH</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;HLCA_BASE_PATH&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
-<span class="n">HLCA_BASE_PATH</span>
-<br/></pre></div>
-</div>
-</div>
-<p>If that prints an empty path, set it in your environment or replace it manually in the cell.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
-</pre></div>
-</div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 3.2 Build a dataset dictionary (dataset name -&gt; .h5ad path)</span>
-<span class="c1"># This scans only the top level. Adjust if your HLCA layout is nested.</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 5.2.2 HLCA dataset paths used in this tutorial</span>
+<span class="c1">#</span>
+<span class="c1"># This notebook is meant to be easy to follow: edit *one* string if your HLCA data lives elsewhere.</span>
 
-<span class="k">if</span> <span class="n">HLCA_BASE_PATH</span> <span class="ow">and</span> <span class="n">HLCA_BASE_PATH</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-    <span class="n">hlca_files</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">HLCA_BASE_PATH</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;*.h5ad&#39;</span><span class="p">))</span>
-    <span class="n">data_h5ad_dict_hlca</span> <span class="o">=</span> <span class="p">{</span><span class="n">p</span><span class="o">.</span><span class="n">stem</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">hlca_files</span><span class="p">}</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Found .h5ad files:&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_h5ad_dict_hlca</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Example keys:&#39;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">data_h5ad_dict_hlca</span><span class="p">)[:</span><span class="mi">10</span><span class="p">])</span>
-<span class="k">else</span><span class="p">:</span>
-    <span class="n">data_h5ad_dict_hlca</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;HLCA_BASE_PATH not set or does not exist; skipping HLCA run.&#39;</span><span class="p">)</span>
+<span class="n">base_path</span> <span class="o">=</span> <span class="s1">&#39;/lustre/groups/ml01/projects/2023_HLCA_LSikkema/HLCA_reproducibility/data&#39;</span>
+<span class="n">dset0_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base_path</span><span class="p">,</span> <span class="s1">&#39;HLCA_extended/extension_datasets/ready/full&#39;</span><span class="p">)</span>
+<span class="n">dset1_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base_path</span><span class="p">,</span> <span class="s1">&#39;HLCA_extended/extension_datasets/raw&#39;</span><span class="p">)</span>
+
+<span class="c1"># Curated HLCA AnnData list (study → list of .h5ad files)</span>
+<span class="n">hlca_adata_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;Kaminski_2020&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/adams.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Meyer_2021&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/meyer_2021.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;MeyerNikolic_unpubl&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/meyer_nikolic_unpubl.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Barbry_unpubl&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/barbry.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Regev_2021&#39;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/delorey_cryo.h5ad&#39;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/delorey_fresh.h5ad&#39;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/delorey_nuclei.h5ad&#39;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="s1">&#39;Thienpont_2018&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset1_dir</span><span class="si">}</span><span class="s1">/Lambrechts/lambrechts.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Budinger_2020&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/bharat.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Banovich_Kropski_2020&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/haberman.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Sheppard_2020&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/tsukui.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Wunderink_2021&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/grant_cryo.h5ad&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/grant_fresh.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Lambrechts_2021&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/wouters.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Zhang_2021&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset1_dir</span><span class="si">}</span><span class="s1">/Liao/covid_for_publish.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Duong_lungMAP_unpubl&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/duong.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Janssen_2020&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/mould.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Sun_2020&#39;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/wang_sub_batch1.h5ad&#39;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/wang_sub_batch2.h5ad&#39;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/wang_sub_batch3.h5ad&#39;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/wang_sub_batch4.h5ad&#39;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="s1">&#39;Gomperts_2021&#39;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/carraro_ucla.h5ad&#39;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/carraro_cff.h5ad&#39;</span><span class="p">,</span>
+        <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/carraro_csmc.h5ad&#39;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="s1">&#39;Eils_2020&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/lukassen.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Schiller_2020&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/mayr.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Misharin_Budinger_2018&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/reyfman_disease.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Shalek_2018&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/ordovasmontanes.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Schiller_2021&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/schiller_discovair.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Peer_Massague_2020&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/laughney.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Lafyatis_2019&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/valenzi.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Tata_unpubl&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/tata_unpubl.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Xu_2020&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/guo.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Sims_2019&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/szabo.h5ad&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;Schultze_unpubl&#39;</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/schultze_unpubl.h5ad&#39;</span><span class="p">],</span>
+<span class="p">}</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;HLCA data root:&#39;</span><span class="p">,</span> <span class="n">base_path</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Studies in curated list:&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">hlca_adata_dict</span><span class="p">))</span>
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+HLCA data root: /lustre/groups/ml01/projects/2023_HLCA_LSikkema/HLCA_reproducibility/data
+Studies in curated list: 27
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>8
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">study</span><span class="p">,</span> <span class="n">paths</span> <span class="ow">in</span> <span class="n">hlca_adata_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
+        <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;study&#39;</span><span class="p">:</span> <span class="n">study</span><span class="p">,</span> <span class="s1">&#39;file&#39;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">p</span><span class="p">),</span> <span class="s1">&#39;path&#39;</span><span class="p">:</span> <span class="n">p</span><span class="p">,</span> <span class="s1">&#39;exists&#39;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">p</span><span class="p">)})</span>
+
+<span class="n">hlca_path_status</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span>
+<span class="n">missing</span> <span class="o">=</span> <span class="n">hlca_path_status</span><span class="p">[</span><span class="o">~</span><span class="n">hlca_path_status</span><span class="p">[</span><span class="s1">&#39;exists&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;HLCA files in curated list: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">hlca_path_status</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Missing files: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="ow">not</span> <span class="n">missing</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+    <span class="n">missing</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s1">&#39;study&#39;</span><span class="p">,</span> <span class="s1">&#39;file&#39;</span><span class="p">])</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+HLCA files in curated list: 35
+Missing files: 0
+</pre></div></div>
 </div>
 </section>
-<section id="5.2.3-Run-harmonization-on-HLCA">
-<h3>5.2.3 Run harmonization on HLCA<a class="headerlink" href="#5.2.3-Run-harmonization-on-HLCA" title="Link to this heading"></a></h3>
-<p>This can take time. IDTrack will:</p>
+<section id="5.2.3-Tutorial-subset-(4-studies;-easy-to-inspect)">
+<h3>5.2.3 Tutorial subset (4 studies; easy to inspect)<a class="headerlink" href="#5.2.3-Tutorial-subset-(4-studies;-easy-to-inspect)" title="Link to this heading"></a></h3>
+<p>The full <code class="docutils literal notranslate"><span class="pre">hlca_adata_dict</span></code> contains many studies (and some have multiple <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> files). For a <em>tutorial notebook</em>, we intentionally keep the example small so it is easy to read, debug, and reproduce.</p>
+<p>We will only use these 4 single-file studies:</p>
 <ul class="simple">
-<li><p>load/build the graph snapshot (from your local repository)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Kaminski_2020</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Meyer_2021</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MeyerNikolic_unpubl</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Barbry_unpubl</span></code></p></li>
+</ul>
+<p>Important: <code class="docutils literal notranslate"><span class="pre">idtrack.HarmonizeFeatures</span></code> expects <strong>``dict[str, str]``</strong> (<code class="docutils literal notranslate"><span class="pre">dataset_alias</span> <span class="pre">→</span> <span class="pre">single</span> <span class="pre">.h5ad</span> <span class="pre">path</span></code>). So we convert the curated <code class="docutils literal notranslate"><span class="pre">hlca_adata_dict</span></code> (study → list[path]) into a small tutorial dictionary.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>9
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">HLCA_TUTORIAL_STUDIES</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s1">&#39;Kaminski_2020&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;Meyer_2021&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;MeyerNikolic_unpubl&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;Barbry_unpubl&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">data_h5ad_dict_hlca_tutorial</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="k">for</span> <span class="n">study</span> <span class="ow">in</span> <span class="n">HLCA_TUTORIAL_STUDIES</span><span class="p">:</span>
+    <span class="n">paths</span> <span class="o">=</span> <span class="n">hlca_adata_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">study</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># The tutorial subset is intentionally restricted to single-file studies.</span>
+        <span class="c1"># If this triggers, update HLCA_TUTORIAL_STUDIES to pick a different study.</span>
+        <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">study</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;Expected 1 file, got </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">))</span>
+        <span class="k">continue</span>
+
+    <span class="n">p</span> <span class="o">=</span> <span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">exists</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+    <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">study</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">exists</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">exists</span><span class="p">:</span>
+        <span class="n">data_h5ad_dict_hlca_tutorial</span><span class="p">[</span><span class="n">study</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span>
+
+<span class="n">hlca_tutorial_status</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;study&#39;</span><span class="p">,</span> <span class="s1">&#39;path&#39;</span><span class="p">,</span> <span class="s1">&#39;exists&#39;</span><span class="p">,</span> <span class="s1">&#39;note&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;study&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Tutorial datasets found:&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_h5ad_dict_hlca_tutorial</span><span class="p">),</span> <span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">HLCA_TUTORIAL_STUDIES</span><span class="p">))</span>
+
+<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_h5ad_dict_hlca_tutorial</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">No tutorial HLCA files found. Edit `base_path` in section 5.2.2 (or update the paths) and re-run.&#39;</span><span class="p">)</span>
+
+<span class="n">hlca_tutorial_status</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Tutorial datasets found: 4 / 4
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>9
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>path</th>
+      <th>exists</th>
+      <th>note</th>
+    </tr>
+    <tr>
+      <th>study</th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Kaminski_2020</th>
+      <td>/lustre/groups/ml01/projects/2023_HLCA_LSikkem...</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>Meyer_2021</th>
+      <td>/lustre/groups/ml01/projects/2023_HLCA_LSikkem...</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>MeyerNikolic_unpubl</th>
+      <td>/lustre/groups/ml01/projects/2023_HLCA_LSikkem...</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>Barbry_unpubl</th>
+      <td>/lustre/groups/ml01/projects/2023_HLCA_LSikkem...</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+</section>
+<section id="5.2.4-Run-harmonization-(HGNC-target;-tutorial-subset)">
+<h3>5.2.4 Run harmonization (HGNC target; tutorial subset)<a class="headerlink" href="#5.2.4-Run-harmonization-(HGNC-target;-tutorial-subset)" title="Link to this heading"></a></h3>
+<p>This can take time (and is best run on a workstation/server). IDTrack will:</p>
+<ul class="simple">
+<li><p>load/build the human graph snapshot (cached in your local repository)</p></li>
 <li><p>run identifier conversion for each dataset</p></li>
 <li><p>write per-dataset mapping results as pickles under the project output directory</p></li>
 </ul>
-<p>Tip: start with a <strong>small subset</strong> (e.g. 2–3 datasets) to validate your setup.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<p>This cell is wrapped in a collapsible block because conversion logs can be long.</p>
+<p>Note on outputs: when you build a merged AnnData (section 5.2.6), <code class="docutils literal notranslate"><span class="pre">.var_names</span></code> are <strong>Ensembl gene IDs</strong>. Mapped HGNC symbols are stored in <code class="docutils literal notranslate"><span class="pre">.var['converted_id']</span></code> for readable reporting.</p>
+<blockquote>
+<div><p><strong>Reproducibility tip:</strong> pin the release (set <code class="docutils literal notranslate"><span class="pre">TARGET_RELEASE</span></code> explicitly) for manuscripts and pipelines.</p>
+</div></blockquote>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>10
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 3.3 (OPTIONAL) HLCA run — uncomment to execute</span>
-<span class="c1">#</span>
-<span class="c1"># if data_h5ad_dict_hlca:</span>
-<span class="c1">#     project_out_hlca = LOCAL_REPOSITORY / &#39;hlca_harmonization_outputs&#39;</span>
-<span class="c1">#     project_out_hlca.mkdir(parents=True, exist_ok=True)</span>
-<span class="c1">#</span>
-<span class="c1">#     organism_name, latest_release = idtrack.API(str(LOCAL_REPOSITORY)).resolve_organism(&#39;human&#39;)</span>
-<span class="c1">#</span>
-<span class="c1">#     harmonizer_hlca = idtrack.HarmonizeFeatures(</span>
-<span class="c1">#         project_name=&#39;hlca&#39;,</span>
-<span class="c1">#         data_h5ad_dict=data_h5ad_dict_hlca,</span>
-<span class="c1">#         project_local_repository=str(project_out_hlca),</span>
-<span class="c1">#         idtrack_local_repository=str(LOCAL_REPOSITORY),</span>
-<span class="c1">#         target_ensembl_release=latest_release,</span>
-<span class="c1">#         final_database=&#39;HGNC Symbol&#39;,</span>
-<span class="c1">#         organism_name=organism_name,</span>
-<span class="c1">#         graph_last_ensembl_release=latest_release,</span>
-<span class="c1">#         verbose_level=2,</span>
-<span class="c1">#     )</span>
-<span class="c1">#</span>
-<span class="c1">#     harmonizer_hlca</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%</span><span class="k">collapse</span> Click to show conversion logs
+# Included for tutorial purposes only.
+
+# HLCA tutorial harmonization (4 datasets)
+#
+# Note: this is best run on a workstation/server because it can download/build caches on first run.
+
+if not data_h5ad_dict_hlca_tutorial:
+    print(&#39;No tutorial datasets found; skipping harmonization. Edit `base_path` in section 5.2.2 (or update the paths) and re-run.&#39;)
+    harmonizer_hlca = None
+else:
+    project_out_hlca = (LOCAL_REPOSITORY / &#39;hlca_tutorial_outputs&#39;).resolve()
+    project_out_hlca.mkdir(parents=True, exist_ok=True)
+
+    # Resolve the organism and pick a snapshot boundary
+    api = idtrack.API(local_repository=str(LOCAL_REPOSITORY))
+    organism_name, latest_release = api.resolve_organism(&#39;human&#39;)
+
+    # Option A (default): always use the latest release available in your graph
+    TARGET_RELEASE = latest_release
+
+    # Option B (recommended for pipelines/papers): pin the release explicitly
+    # TARGET_RELEASE = 110
+
+    harmonizer_hlca = idtrack.HarmonizeFeatures(
+        project_name=&#39;hlca_tutorial&#39;,
+        data_h5ad_dict=data_h5ad_dict_hlca_tutorial,
+        project_local_repository=str(project_out_hlca),
+        idtrack_local_repository=str(LOCAL_REPOSITORY),
+        target_ensembl_release=TARGET_RELEASE,
+        final_database=&#39;HGNC Symbol&#39;,
+        organism_name=organism_name,
+        graph_last_ensembl_release=TARGET_RELEASE,
+        verbose_level=1,
+    )
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<!-- empty output --></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<details class="idtrack-collapse">
+<summary>Click to show conversion logs</summary>
+<pre class="idtrack-collapse-content">(no output)</pre>
+</details></div>
+</div>
 </section>
-<section id="5.2.4-Advanced-notes-(recommended-once-you’re-comfortable)">
-<h3>5.2.4 Advanced notes (recommended once you’re comfortable)<a class="headerlink" href="#5.2.4-Advanced-notes-(recommended-once-you’re-comfortable)" title="Link to this heading"></a></h3>
-<ol class="arabic simple">
-<li><p><strong>Choice of ``final_database``</strong></p>
+<section id="5.2.5-Inspect-what-happened-(simple-tables)">
+<h3>5.2.5 Inspect what happened (simple tables)<a class="headerlink" href="#5.2.5-Inspect-what-happened-(simple-tables)" title="Link to this heading"></a></h3>
+<p>After the harmonizer is created, it exposes diagnostics that tell you whether harmonization is trustworthy.</p>
+<p>In this tutorial we focus on a few practical checks:</p>
 <ul class="simple">
-<li><p>For integration, Ensembl IDs are often the most stable.</p></li>
-<li><p>For interpretability, HGNC symbols are convenient but can be ambiguous.</p></li>
+<li><p>how many identifiers mapped cleanly (1→1)</p></li>
+<li><p>how many failed (1→0)</p></li>
+<li><p>how many were ambiguous (1→n)</p></li>
+<li><p>how many HGNC targets were actually <strong>fallbacks</strong> (no symbol available at the snapshot)</p></li>
 </ul>
-</li>
-<li><p><strong>Handling 1→n mappings</strong></p>
-<ul class="simple">
-<li><p>Decide whether you keep all targets, pick best, or drop ambiguous genes.</p></li>
-<li><p>The right choice depends on your downstream analysis.</p></li>
-</ul>
-</li>
-<li><p><strong>Auditability</strong></p>
-<ul class="simple">
-<li><p>IDTrack writes intermediate results (pickles).</p></li>
-<li><p>Treat those as provenance artifacts: keep them with your analysis.</p></li>
-</ul>
-</li>
-</ol>
-</section>
-<section id="5.2.5-HLCA-experiments-(extended):-large-scale-harmonization-+-QA">
-<h3>5.2.5 HLCA experiments (extended): large-scale harmonization + QA<a class="headerlink" href="#5.2.5-HLCA-experiments-(extended):-large-scale-harmonization-+-QA" title="Link to this heading"></a></h3>
-<p>The minimal HLCA snippet above is intentionally conservative: it shows how to <em>wire</em> IDTrack into an HLCA-style run. This extended section turns it into a robust, paper-friendly workflow:</p>
-<ul class="simple">
-<li><p>verify your inputs and environment variables</p></li>
-<li><p>pin a snapshot release (for reproducibility)</p></li>
-<li><p>run a small pilot first (2–3 datasets)</p></li>
-<li><p>read diagnostics (1→0 and 1→n signals)</p></li>
-<li><p>only then scale to the full collection</p></li>
-</ul>
-<blockquote>
-<div><p><strong>Why this matters:</strong> large runs are slow and generate many artifacts. A pilot run gives you early feedback and a clean audit trail.</p>
-</div></blockquote>
-<section id="5.2.5.1-Verify-HLCA-discovery-(safe-to-run)">
-<h4>5.2.5.1 Verify HLCA discovery (safe to run)<a class="headerlink" href="#5.2.5.1-Verify-HLCA-discovery-(safe-to-run)" title="Link to this heading"></a></h4>
-<p>This cell does <em>not</em> download anything. It only checks whether your <code class="docutils literal notranslate"><span class="pre">HLCA_BASE_PATH</span></code> pointed to real <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> files.</p>
-<p><strong>Expected output:</strong> a boolean and (if available) a dataset count.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<p>We keep the output as small tables so it is easy to read in a tutorial notebook.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>11
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># HLCA presence check (uses the dataset dictionary built earlier)</span>
-<span class="n">HAS_HLCA</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">data_h5ad_dict_hlca</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;HLCA detected:&#39;</span><span class="p">,</span> <span class="n">HAS_HLCA</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Datasets found:&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_h5ad_dict_hlca</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Example dataset names:&#39;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">data_h5ad_dict_hlca</span><span class="p">)[:</span><span class="mi">10</span><span class="p">])</span>
-<br/></pre></div>
-</div>
-</div>
-</section>
-<section id="5.2.5.2-Choose-your-snapshot-release-(reproducibility-knob)">
-<h4>5.2.5.2 Choose your snapshot release (reproducibility knob)<a class="headerlink" href="#5.2.5.2-Choose-your-snapshot-release-(reproducibility-knob)" title="Link to this heading"></a></h4>
-<p>For exploratory work, using the latest release is fine. For a manuscript or production pipeline, pin the release explicitly.</p>
-<blockquote>
-<div><p><strong>Tip:</strong> keep the chosen release in your analysis metadata (or config) so you can reproduce results later.</p>
-</div></blockquote>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
-</pre></div>
-</div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create an API handle (reuses the same local repository)</span>
-<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Per-dataset conversion summary (HGNC target)</span>
 
-<span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s2">&quot;human&quot;</span><span class="p">)</span>
-
-<span class="c1"># Option A (default): always use latest available release</span>
-<span class="n">TARGET_RELEASE</span> <span class="o">=</span> <span class="n">latest_release</span>
-
-<span class="c1"># Option B (recommended for papers): pin to an explicit release</span>
-<span class="c1"># TARGET_RELEASE = 110</span>
-
-<span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span><span class="p">,</span> <span class="n">TARGET_RELEASE</span>
-<br/></pre></div>
-</div>
-</div>
-</section>
-<section id="5.2.5.3-Ensure-the-human-graph-snapshot-is-available">
-<h4>5.2.5.3 Ensure the human graph snapshot is available<a class="headerlink" href="#5.2.5.3-Ensure-the-human-graph-snapshot-is-available" title="Link to this heading"></a></h4>
-<p>If you already ran Part 3 for human, this should load quickly from cache. If not, this will download reference tables and build the snapshot (minutes, one-time).</p>
-<blockquote>
-<div><p><strong>Warning:</strong> building a snapshot requires network access the first time (unless your cache is already populated).</p>
-</div></blockquote>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
-</pre></div>
-</div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_HLCA</span><span class="p">:</span>
-    <span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">TARGET_RELEASE</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-    <span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Graph organism:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;organism&#39;</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Graph snapshot release:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ensembl_release&#39;</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Graph nodes:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_nodes</span><span class="p">())</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Graph edges:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_edges</span><span class="p">())</span>
+<span class="k">if</span> <span class="s1">&#39;harmonizer_hlca&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">globals</span><span class="p">()</span> <span class="ow">or</span> <span class="n">harmonizer_hlca</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;HLCA harmonizer not created; run section 5.2.4 first.&#39;</span><span class="p">)</span>
 <span class="k">else</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;No HLCA datasets detected; skipping graph build.&#39;</span><span class="p">)</span>
+    <span class="n">matchings_by_dataset</span> <span class="o">=</span> <span class="n">harmonizer_hlca</span><span class="o">.</span><span class="n">get_idtrack_matchings_for_all_datasets</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_summarize_matchings</span><span class="p">(</span><span class="n">matchings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;input_ids&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s1">&#39;one_to_one&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s1">&#39;one_to_many&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s1">&#39;one_to_none&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s1">&#39;fallback_1_to_1&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s1">&#39;fallback_1_to_n&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">matchings</span><span class="p">:</span>
+            <span class="n">c</span><span class="p">[</span><span class="s1">&#39;input_ids&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;no_corresponding&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">m</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;no_conversion&#39;</span><span class="p">):</span>
+                <span class="n">c</span><span class="p">[</span><span class="s1">&#39;one_to_none&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">continue</span>
+
+            <span class="n">target_ids</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;target_id&#39;</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="n">n_targets</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">target_ids</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">n_targets</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">c</span><span class="p">[</span><span class="s1">&#39;one_to_one&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;no_target&#39;</span><span class="p">):</span>
+                    <span class="n">c</span><span class="p">[</span><span class="s1">&#39;fallback_1_to_1&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">n_targets</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">c</span><span class="p">[</span><span class="s1">&#39;one_to_many&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;no_target&#39;</span><span class="p">):</span>
+                    <span class="n">c</span><span class="p">[</span><span class="s1">&#39;fallback_1_to_n&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Defensive fallback: treat empty target list as 1→0</span>
+                <span class="n">c</span><span class="p">[</span><span class="s1">&#39;one_to_none&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">return</span> <span class="n">c</span>
+
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">matchings</span> <span class="ow">in</span> <span class="n">matchings_by_dataset</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">_summarize_matchings</span><span class="p">(</span><span class="n">matchings</span><span class="p">)</span>
+        <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;dataset&#39;</span><span class="p">:</span> <span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">s</span><span class="p">})</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;dataset&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">sort_index</span><span class="p">()</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;one_to_one_target&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;one_to_one&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;fallback_1_to_1&#39;</span><span class="p">]</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;one_to_many_target&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;one_to_many&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;fallback_1_to_n&#39;</span><span class="p">]</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;success_rate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;one_to_one&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;one_to_many&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;input_ids&#39;</span><span class="p">]</span>
+    <span class="n">df</span><span class="p">[</span><span class="s1">&#39;failure_rate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;one_to_none&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;input_ids&#39;</span><span class="p">]</span>
+
+    <span class="c1"># Keep the tutorial table compact</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span>
+        <span class="s1">&#39;input_ids&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;one_to_one_target&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;fallback_1_to_1&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;one_to_many_target&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;fallback_1_to_n&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;one_to_none&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;success_rate&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;failure_rate&#39;</span><span class="p">,</span>
+    <span class="p">]]</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>input_ids</th>
+      <th>one_to_one_target</th>
+      <th>fallback_1_to_1</th>
+      <th>one_to_many_target</th>
+      <th>fallback_1_to_n</th>
+      <th>one_to_none</th>
+      <th>success_rate</th>
+      <th>failure_rate</th>
+    </tr>
+    <tr>
+      <th>dataset</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Barbry_unpubl</th>
+      <td>16859</td>
+      <td>15721</td>
+      <td>1095</td>
+      <td>4</td>
+      <td>12</td>
+      <td>27</td>
+      <td>0.998398</td>
+      <td>0.001602</td>
+    </tr>
+    <tr>
+      <th>Kaminski_2020</th>
+      <td>45947</td>
+      <td>34808</td>
+      <td>11002</td>
+      <td>19</td>
+      <td>19</td>
+      <td>99</td>
+      <td>0.997845</td>
+      <td>0.002155</td>
+    </tr>
+    <tr>
+      <th>MeyerNikolic_unpubl</th>
+      <td>33582</td>
+      <td>27722</td>
+      <td>5689</td>
+      <td>22</td>
+      <td>23</td>
+      <td>126</td>
+      <td>0.996248</td>
+      <td>0.003752</td>
+    </tr>
+    <tr>
+      <th>Meyer_2021</th>
+      <td>20922</td>
+      <td>20591</td>
+      <td>312</td>
+      <td>1</td>
+      <td>0</td>
+      <td>18</td>
+      <td>0.999140</td>
+      <td>0.000860</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
 </section>
-<section id="5.2.5.4-Build-a-pilot-dataset-dictionary">
-<h4>5.2.5.4 Build a pilot dataset dictionary<a class="headerlink" href="#5.2.5.4-Build-a-pilot-dataset-dictionary" title="Link to this heading"></a></h4>
-<p>Start with a tiny pilot (2–3 datasets). The pilot run answers:</p>
+<section id="5.2.6-Build-harmonized-AnnData-(union-vs-intersect)">
+<h3>5.2.6 Build harmonized AnnData (union vs intersect)<a class="headerlink" href="#5.2.6-Build-harmonized-AnnData-(union-vs-intersect)" title="Link to this heading"></a></h3>
+<p>Now that identifiers are harmonized, we can actually merge the datasets into a single AnnData object.</p>
+<p>IDTrack provides two practical merge modes:</p>
 <ul class="simple">
-<li><p>Do my files load?</p></li>
-<li><p>Does conversion work for my typical identifiers?</p></li>
-<li><p>Are there many 1→0 failures or 1→n ambiguities?</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mode='union'</span></code>: keep the union of genes (missing genes become zeros; wider matrix)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mode='intersect'</span></code>: keep only genes shared by <em>all</em> datasets (stricter; narrower matrix)</p></li>
 </ul>
-<p>Only after the pilot looks sensible should you scale to the full HLCA collection.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<p>Feature naming reminder: <code class="docutils literal notranslate"><span class="pre">.var_names</span></code> are Ensembl gene IDs and <code class="docutils literal notranslate"><span class="pre">.var['converted_id']</span></code> holds the HGNC symbol.</p>
+<p>This step loads the datasets into memory, so run it on a workstation/server.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>12
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">_pick_first_items</span><span class="p">(</span><span class="n">d</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-    <span class="n">keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">d</span><span class="p">)[:</span><span class="n">n</span><span class="p">]</span>
-    <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">d</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">}</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%</span><span class="k">collapse</span> Click to show merge logs
+# Included for tutorial purposes only.
 
-<span class="n">data_h5ad_dict_hlca_all</span> <span class="o">=</span> <span class="n">data_h5ad_dict_hlca</span>
-<span class="n">data_h5ad_dict_hlca_pilot</span> <span class="o">=</span> <span class="n">_pick_first_items</span><span class="p">(</span><span class="n">data_h5ad_dict_hlca_all</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+if &#39;harmonizer_hlca&#39; not in globals() or harmonizer_hlca is None:
+    print(&#39;HLCA harmonizer not created; run section 5.2.4 first.&#39;)
+    hlca_union = None
+    hlca_intersect = None
+else:
+    hlca_union = harmonizer_hlca.unify_multiple_anndatas(mode=&#39;union&#39;)
+    hlca_intersect = harmonizer_hlca.unify_multiple_anndatas(mode=&#39;intersect&#39;)
 
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;All HLCA datasets:&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_h5ad_dict_hlca_all</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Pilot datasets:&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_h5ad_dict_hlca_pilot</span><span class="p">))</span>
-<span class="nb">list</span><span class="p">(</span><span class="n">data_h5ad_dict_hlca_pilot</span><span class="p">)[:</span><span class="mi">10</span><span class="p">]</span>
+    comparison = pd.DataFrame(
+        {
+            &#39;n_cells&#39;: [hlca_union.n_obs, hlca_intersect.n_obs],
+            &#39;n_genes&#39;: [hlca_union.n_vars, hlca_intersect.n_vars],
+        },
+        index=[&#39;union&#39;, &#39;intersect&#39;],
+    )
+    if hlca_union.n_vars:
+        comparison[&#39;genes_retained_vs_union&#39;] = [1.0, hlca_intersect.n_vars / hlca_union.n_vars]
+
+    # Quick sanity checks
+    if &#39;intersection&#39; in hlca_union.var.columns:
+        print(&quot;Genes present in all datasets (from union .var[&#39;intersection&#39;]):&quot;, int(hlca_union.var[&#39;intersection&#39;].sum()))
+
+    # You now have two harmonized AnnDatas to use downstream:
+    #   - hlca_union
+    #   - hlca_intersect
+
+    # Optional: save to disk (can be large)
+    # hlca_union.write_h5ad(project_out_hlca / &#39;hlca_union_harmonized.h5ad&#39;)
+    # hlca_intersect.write_h5ad(project_out_hlca / &#39;hlca_intersect_harmonized.h5ad&#39;)
+
+    display(comparison)
 <br/></pre></div>
 </div>
 </div>
-</section>
-<section id="5.2.5.5-Pilot-harmonization-run">
-<h4>5.2.5.5 Pilot harmonization run<a class="headerlink" href="#5.2.5.5-Pilot-harmonization-run" title="Link to this heading"></a></h4>
-<p>This constructs a harmonizer object. It will run conversions and write intermediate artifacts under a dedicated project folder.</p>
-<p><strong>Expected output:</strong> a <code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures</span></code> object (or a helpful message if HLCA data was not detected).</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
-</pre></div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Keep experiment outputs separate from the global cache</span>
-<span class="n">project_out_hlca</span> <span class="o">=</span> <span class="p">(</span><span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;hlca_experiments&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
-<span class="n">project_out_hlca</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-<span class="c1"># Choose your final namespace</span>
-<span class="n">FINAL_DATABASE</span> <span class="o">=</span> <span class="s1">&#39;HGNC Symbol&#39;</span>  <span class="c1"># try also: &#39;ensembl_gene&#39;</span>
-
-<span class="k">if</span> <span class="ow">not</span> <span class="n">data_h5ad_dict_hlca_pilot</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;No pilot datasets found; set HLCA_BASE_PATH and re-run from section 5.2.2.&#39;</span><span class="p">)</span>
-    <span class="n">harmonizer_hlca_pilot</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="k">else</span><span class="p">:</span>
-    <span class="n">harmonizer_hlca_pilot</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">HarmonizeFeatures</span><span class="p">(</span>
-        <span class="n">project_name</span><span class="o">=</span><span class="s1">&#39;hlca_pilot&#39;</span><span class="p">,</span>
-        <span class="n">data_h5ad_dict</span><span class="o">=</span><span class="n">data_h5ad_dict_hlca_pilot</span><span class="p">,</span>
-        <span class="n">project_local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">project_out_hlca</span><span class="p">),</span>
-        <span class="n">idtrack_local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">),</span>
-        <span class="n">target_ensembl_release</span><span class="o">=</span><span class="n">TARGET_RELEASE</span><span class="p">,</span>
-        <span class="n">final_database</span><span class="o">=</span><span class="n">FINAL_DATABASE</span><span class="p">,</span>
-        <span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span>
-        <span class="n">graph_last_ensembl_release</span><span class="o">=</span><span class="n">TARGET_RELEASE</span><span class="p">,</span>
-        <span class="n">verbose_level</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-    <span class="p">)</span>
-
-<span class="n">harmonizer_hlca_pilot</span>
-<br/></pre></div>
+<div class="output_area rendered_html docutils container">
+<!-- empty output --></div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
 </div>
-</section>
-<section id="5.2.5.6-Read-the-diagnostics-(this-is-the-most-important-part)">
-<h4>5.2.5.6 Read the diagnostics (this is the most important part)<a class="headerlink" href="#5.2.5.6-Read-the-diagnostics-(this-is-the-most-important-part)" title="Link to this heading"></a></h4>
-<p>Treat diagnostics as first-class results. They tell you whether harmonization is trustworthy for your data.</p>
-<ul class="simple">
-<li><p><strong>Conversion failures (1→0)</strong>: identifiers that could not be placed on the graph</p></li>
-<li><p><strong>Ambiguity (1→n)</strong>: identifiers that map to multiple plausible targets</p></li>
-</ul>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>n_cells</th>
+      <th>n_genes</th>
+      <th>genes_retained_vs_union</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>union</th>
+      <td>774178</td>
+      <td>47188</td>
+      <td>1.000000</td>
+    </tr>
+    <tr>
+      <th>intersect</th>
+      <td>774178</td>
+      <td>13405</td>
+      <td>0.284076</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
 <blockquote>
-<div><p><strong>Tip:</strong> store these diagnostics alongside your paper or pipeline outputs. They explain why features were dropped or changed.</p>
+<div><blockquote>
+<div><div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<details class="idtrack-collapse">
+<summary>Click to show merge logs</summary>
+<pre class="idtrack-collapse-content">Genes present in all datasets (from union .var[&#x27;intersection&#x27;]): 13405
+<span class="stderr"></div>
+</div>
 </div></blockquote>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
-</pre></div>
-</div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">harmonizer_hlca_pilot</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Pilot harmonizer not created; skipping diagnostics.&#39;</span><span class="p">)</span>
-<span class="k">else</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Datasets in pilot:&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">harmonizer_hlca_pilot</span><span class="o">.</span><span class="n">data_h5ad_dict</span><span class="p">))</span>
-
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">--- Conversion failures (1→0) ---&#39;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Count:&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">harmonizer_hlca_pilot</span><span class="o">.</span><span class="n">conversion_failed_identifiers</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Example (first 25):&#39;</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">harmonizer_hlca_pilot</span><span class="o">.</span><span class="n">conversion_failed_identifiers</span><span class="p">))[:</span><span class="mi">25</span><span class="p">])</span>
-
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">--- Failed but consistent (kept) ---&#39;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Count:&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">harmonizer_hlca_pilot</span><span class="o">.</span><span class="n">conversion_failed_but_consistent_identifiers</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Example (first 25):&#39;</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">harmonizer_hlca_pilot</span><span class="o">.</span><span class="n">conversion_failed_but_consistent_identifiers</span><span class="p">))[:</span><span class="mi">25</span><span class="p">])</span>
-
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">--- Collapsed ambiguous mappings (1→n; multiple Ensembl candidates) ---&#39;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Count:&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">harmonizer_hlca_pilot</span><span class="o">.</span><span class="n">multiple_ensembl_dict</span><span class="p">))</span>
-    <span class="n">some_keys</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">harmonizer_hlca_pilot</span><span class="o">.</span><span class="n">multiple_ensembl_dict</span><span class="p">)[:</span><span class="mi">10</span><span class="p">]</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Example keys:&#39;</span><span class="p">,</span> <span class="n">some_keys</span><span class="p">)</span>
-<br/></pre></div>
-</div>
-</div>
-</section>
-<section id="5.2.5.7-“Union-vs-intersect”-experiment-(feature-retention)">
-<h4>5.2.5.7 “Union vs intersect” experiment (feature retention)<a class="headerlink" href="#5.2.5.7-“Union-vs-intersect”-experiment-(feature-retention)" title="Link to this heading"></a></h4>
-<p>This is a quick way to understand how much “feature width” you are adding when you merge many datasets. Start with the pilot: it is fast and gives you the same qualitative signal.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
-</pre></div>
-</div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">harmonizer_hlca_pilot</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Pilot harmonizer not created; skipping merge step.&#39;</span><span class="p">)</span>
-<span class="k">else</span><span class="p">:</span>
-    <span class="n">hlca_pilot_union</span> <span class="o">=</span> <span class="n">harmonizer_hlca_pilot</span><span class="o">.</span><span class="n">unify_multiple_anndatas</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;union&quot;</span><span class="p">)</span>
-    <span class="n">hlca_pilot_intersect</span> <span class="o">=</span> <span class="n">harmonizer_hlca_pilot</span><span class="o">.</span><span class="n">unify_multiple_anndatas</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;intersect&quot;</span><span class="p">)</span>
-
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Union shape (cells x genes):&#39;</span><span class="p">,</span> <span class="n">hlca_pilot_union</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Intersect shape (cells x genes):&#39;</span><span class="p">,</span> <span class="n">hlca_pilot_intersect</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
-<br/></pre></div>
-</div>
-</div>
-</section>
-<section id="5.2.5.8-Scale-up-to-full-HLCA-(template)">
-<h4>5.2.5.8 Scale up to full HLCA (template)<a class="headerlink" href="#5.2.5.8-Scale-up-to-full-HLCA-(template)" title="Link to this heading"></a></h4>
-<p>Once the pilot looks good, you can scale up by switching the dataset dictionary. The code below is commented out by default because a full HLCA run can take a long time and use significant disk.</p>
+<p>0%|                                                                                                                 | 0/4 [00:00&amp;lt;?, ?it/s]
+0%|                                                  | 0/4 [00:10&amp;lt;?, ?it/s, dataset=Kaminski_2020, study_var=43939, union_var=0, dbh=2008]
+0%|                                                  | 0/4 [00:10&amp;lt;?, ?it/s, dataset=Kaminski_2020, study_var=43939, union_var=0, dbh=2008]</p>
+</div></blockquote>
+<p>25%|##########5                               | 1/4 [00:12&amp;lt;00:38, 12.91s/it, dataset=Kaminski_2020, study_var=43939, union_var=0, dbh=2008]
+25%|##########5                               | 1/4 [00:16&amp;lt;00:38, 12.91s/it, dataset=Meyer_2021, study_var=20517, union_var=43939, dbh=405]
+25%|##########5                               | 1/4 [00:16&amp;lt;00:38, 12.91s/it, dataset=Meyer_2021, study_var=20517, union_var=43939, dbh=405]
+50%|#####################                     | 2/4 [00:30&amp;lt;00:31, 15.58s/it, dataset=Meyer_2021, study_var=20517, union_var=43939, dbh=405]
+50%|################                | 2/4 [00:38&amp;lt;00:31, 15.58s/it, dataset=MeyerNikolic_unpubl, study_var=30727, union_var=44641, dbh=2855]
+50%|################                | 2/4 [00:38&amp;lt;00:31, 15.58s/it, dataset=MeyerNikolic_unpubl, study_var=30727, union_var=44641, dbh=2855]
+75%|########################        | 3/4 [01:00&amp;lt;00:22, 22.21s/it, dataset=MeyerNikolic_unpubl, study_var=30727, union_var=44641, dbh=2855]
+75%|#############################2         | 3/4 [01:08&amp;lt;00:22, 22.21s/it, dataset=Barbry_unpubl, study_var=16251, union_var=46761, dbh=608]
+75%|#############################2         | 3/4 [01:08&amp;lt;00:22, 22.21s/it, dataset=Barbry_unpubl, study_var=16251, union_var=46761, dbh=608]</p>
+<p>100%|#######################################| 4/4 [01:39&amp;lt;00:00, 28.79s/it, dataset=Barbry_unpubl, study_var=16251, union_var=46761, dbh=608]
+100%|#######################################| 4/4 [01:39&amp;lt;00:00, 24.83s/it, dataset=Barbry_unpubl, study_var=16251, union_var=46761, dbh=608]</p>
 <blockquote>
-<div><p><strong>Warning:</strong> keep the output folder and intermediate artifacts. They are your provenance record.</p>
+<div><blockquote>
+<div><p>0%|                                                                                                                 | 0/4 [00:00&amp;lt;?, ?it/s]
+0%|                                                  | 0/4 [00:09&amp;lt;?, ?it/s, dataset=Kaminski_2020, study_var=43939, union_var=0, dbh=2008]
+0%|                                                  | 0/4 [00:09&amp;lt;?, ?it/s, dataset=Kaminski_2020, study_var=43939, union_var=0, dbh=2008]</p>
 </div></blockquote>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<p>25%|##########5                               | 1/4 [00:12&amp;lt;00:36, 12.08s/it, dataset=Kaminski_2020, study_var=43939, union_var=0, dbh=2008]
+25%|##########5                               | 1/4 [00:14&amp;lt;00:36, 12.08s/it, dataset=Meyer_2021, study_var=20517, union_var=43939, dbh=405]
+25%|##########5                               | 1/4 [00:14&amp;lt;00:36, 12.08s/it, dataset=Meyer_2021, study_var=20517, union_var=43939, dbh=405]
+50%|#####################                     | 2/4 [00:27&amp;lt;00:28, 14.12s/it, dataset=Meyer_2021, study_var=20517, union_var=43939, dbh=405]
+50%|################                | 2/4 [00:35&amp;lt;00:28, 14.12s/it, dataset=MeyerNikolic_unpubl, study_var=30727, union_var=19815, dbh=2855]
+50%|################                | 2/4 [00:35&amp;lt;00:28, 14.12s/it, dataset=MeyerNikolic_unpubl, study_var=30727, union_var=19815, dbh=2855]
+75%|########################        | 3/4 [00:45&amp;lt;00:16, 16.00s/it, dataset=MeyerNikolic_unpubl, study_var=30727, union_var=19815, dbh=2855]
+75%|#############################2         | 3/4 [00:52&amp;lt;00:16, 16.00s/it, dataset=Barbry_unpubl, study_var=16251, union_var=19815, dbh=608]
+75%|#############################2         | 3/4 [00:52&amp;lt;00:16, 16.00s/it, dataset=Barbry_unpubl, study_var=16251, union_var=19815, dbh=608]</p>
+</div></blockquote>
+<p>100%|#######################################| 4/4 [01:18&amp;lt;00:00, 22.73s/it, dataset=Barbry_unpubl, study_var=16251, union_var=19815, dbh=608]
+100%|#######################################| 4/4 [01:18&amp;lt;00:00, 19.73s/it, dataset=Barbry_unpubl, study_var=16251, union_var=19815, dbh=608]&lt;/span&gt;&lt;/pre&gt;</p>
+<blockquote>
+<div><p>&lt;/details&gt;</p>
+</div></blockquote>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>14
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Full HLCA run template (commented out by default)</span>
-<span class="c1">#</span>
-<span class="c1"># if data_h5ad_dict_hlca_all:</span>
-<span class="c1">#     project_out_full = (LOCAL_REPOSITORY / &#39;hlca_full_run&#39;).resolve()</span>
-<span class="c1">#     project_out_full.mkdir(parents=True, exist_ok=True)</span>
-<span class="c1">#</span>
-<span class="c1">#     harmonizer_full = idtrack.HarmonizeFeatures(</span>
-<span class="c1">#         project_name=&#39;hlca_full&#39;,</span>
-<span class="c1">#         data_h5ad_dict=data_h5ad_dict_hlca_all,</span>
-<span class="c1">#         project_local_repository=str(project_out_full),</span>
-<span class="c1">#         idtrack_local_repository=str(LOCAL_REPOSITORY),</span>
-<span class="c1">#         target_ensembl_release=TARGET_RELEASE,</span>
-<span class="c1">#         final_database=FINAL_DATABASE,</span>
-<span class="c1">#         organism_name=organism,</span>
-<span class="c1">#         graph_last_ensembl_release=TARGET_RELEASE,</span>
-<span class="c1">#         verbose_level=2,</span>
-<span class="c1">#     )</span>
-<span class="c1">#</span>
-<span class="c1">#     hlca_union = harmonizer_full.unify_multiple_anndatas(mode=&quot;union&quot;)</span>
-<span class="c1">#     hlca_union.write_h5ad(project_out_full / &#39;hlca_union_harmonized.h5ad&#39;)</span>
-<span class="c1">#</span>
-<span class="c1">#     # Optional: also keep an intersect version</span>
-<span class="c1">#     # hlca_intersect = harmonizer_full.unify_multiple_anndatas(mode=&quot;intersect&quot;)</span>
-<span class="c1">#     # hlca_intersect.write_h5ad(project_out_full / &#39;hlca_intersect_harmonized.h5ad&#39;)</span>
-<br/></pre></div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">display</span><span class="p">(</span><span class="n">hlca_union</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">hlca_intersect</span><span class="p">)</span>
+</pre></div>
 </div>
 </div>
-</section>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+AnnData object with n_obs × n_vars = 774178 × 47188
+    obs: &#39;handle_anndata&#39;
+    var: &#39;converted_id_Kaminski_2020&#39;, &#39;converted_id_Meyer_2021&#39;, &#39;converted_id_MeyerNikolic_unpubl&#39;, &#39;converted_id_Barbry_unpubl&#39;, &#39;converted_id&#39;, &#39;intersection&#39;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+AnnData object with n_obs × n_vars = 774178 × 13405
+    obs: &#39;handle_anndata&#39;
+    var: &#39;converted_id&#39;
+</pre></div></div>
+</div>
 </section>
 </section>
 <section id="5.3-—-Legacy-Data-Rescue">
@@ -697,11 +1115,11 @@
 <blockquote>
 <div><p><strong>Tip:</strong> Legacy data rescue often involves older releases <em>and</em> older assemblies. The default human snapshot is multi-assembly and can map GRCh37-derived identifiers into your chosen snapshot/primary assembly. Only rebuild with <code class="docutils literal notranslate"><span class="pre">genome_assembly=37</span></code> if your downstream reference is GRCh37 and you want outputs anchored to that build (see Part 3).</p>
 </div></blockquote>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>13
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Legacy rescue demo (human)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Legacy rescue demo (human)</span>
 
 <span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
 <span class="n">api</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
@@ -728,9 +1146,58 @@
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>13
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[{&#39;target_id&#39;: [&#39;ENSG00000141510.20&#39;],
+  &#39;last_node&#39;: [(&#39;ENSG00000141510.20&#39;, &#39;ENSG00000141510.20&#39;)],
+  &#39;final_database&#39;: &#39;ensembl_gene&#39;,
+  &#39;graph_id&#39;: &#39;TP53&#39;,
+  &#39;query_id&#39;: &#39;TP53&#39;,
+  &#39;no_corresponding&#39;: False,
+  &#39;no_conversion&#39;: False,
+  &#39;no_target&#39;: False},
+ {&#39;target_id&#39;: [&#39;LRG_321.1&#39;],
+  &#39;last_node&#39;: [(&#39;LRG_321.1&#39;, &#39;LRG_321.1&#39;)],
+  &#39;final_database&#39;: &#39;ensembl_gene&#39;,
+  &#39;graph_id&#39;: &#39;P53&#39;,
+  &#39;query_id&#39;: &#39;P53&#39;,
+  &#39;no_corresponding&#39;: False,
+  &#39;no_conversion&#39;: False,
+  &#39;no_target&#39;: False},
+ {&#39;target_id&#39;: [&#39;ENSG00000141510.20&#39;],
+  &#39;last_node&#39;: [(&#39;ENSG00000141510.20&#39;, &#39;ENSG00000141510.20&#39;)],
+  &#39;final_database&#39;: &#39;ensembl_gene&#39;,
+  &#39;graph_id&#39;: &#39;ENSG00000141510&#39;,
+  &#39;query_id&#39;: &#39;ENSG00000141510&#39;,
+  &#39;no_corresponding&#39;: False,
+  &#39;no_conversion&#39;: False,
+  &#39;no_target&#39;: False}]
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">api</span><span class="o">.</span><span class="n">print_binned_conversion</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
 </section>
 <section id="5.4-Summary">
 <h2>5.4 Summary<a class="headerlink" href="#5.4-Summary" title="Link to this heading"></a></h2>
+<p>You now have a tutorial workflow for <em>feature identifier harmonization</em> across multiple <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> datasets.</p>
+<p><strong>Core ideas to keep:</strong></p>
+<ul class="simple">
+<li><p>Harmonize identifiers before integration; otherwise you risk mixing incompatible feature definitions.</p></li>
+<li><p>Use Ensembl gene IDs as the stable integration backbone; keep HGNC symbols (or other externals) for readable reporting.</p></li>
+<li><p>Treat 1→0 (no match) and 1→n (ambiguity) as diagnostics: inspect and decide a policy.</p></li>
+<li><p>Create both <code class="docutils literal notranslate"><span class="pre">union</span></code> and <code class="docutils literal notranslate"><span class="pre">intersect</span></code> merged AnnDatas early; they answer different downstream questions.</p></li>
+</ul>
+<p><strong>Practical next step:</strong> Use <code class="docutils literal notranslate"><span class="pre">hlca_union</span></code> or <code class="docutils literal notranslate"><span class="pre">hlca_intersect</span></code> as input to your integration model of choice.</p>
 </section>
 </section>
 

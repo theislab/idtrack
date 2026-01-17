@@ -3,7 +3,11 @@
   {
    "cell_type": "markdown",
    "id": "9e76fd7d",
-   "metadata": {},
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
    "source": [
     "# Part 6 — Cross-Species Workflows: Humanization\n",
     "\n",
@@ -24,7 +28,11 @@
   {
    "cell_type": "markdown",
    "id": "77955920",
-   "metadata": {},
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
    "source": [
     "## 6.1 — Humanization workflow (what it is, and when to use it)\n",
     "\n",
@@ -46,7 +54,11 @@
   {
    "cell_type": "markdown",
    "id": "7d88b0c2",
-   "metadata": {},
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
    "source": [
     "### 6.1.1 Pre-requisites\n",
     "\n",
@@ -65,10 +77,23 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 1,
    "id": "0dbad394",
-   "metadata": {},
-   "outputs": [],
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Optional dependency status: {'gget': True, 'mygene': True, 'pybiomart': True, 'gprofiler-official': True, 'biopython': True}\n",
+      "Ortholog utilities available: True\n"
+     ]
+    }
+   ],
    "source": [
     "# Check optional dependency status (ortholog utilities require gget + biopython)\n",
     "from __future__ import annotations\n",
@@ -85,7 +110,11 @@
   {
    "cell_type": "markdown",
    "id": "47417495",
-   "metadata": {},
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
    "source": [
     "### 6.1.2 Step-by-step: mouse → human\n",
     "\n",
@@ -96,10 +125,51 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 2,
    "id": "8ba01c6b",
-   "metadata": {},
-   "outputs": [],
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2026-01-17 14:57:40 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.\n",
+      "2026-01-17 14:58:05 INFO:database_manager: Using assembly-specific release range for mus_musculus assembly 39: releases 103-115 (from config [103, None])\n",
+      "2026-01-17 14:58:55 INFO:graph_maker: The graph is being read: /ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache/graph_mus_musculus_min48_max115_narrow.pickle\n",
+      "2026-01-17 15:01:06 INFO:the_graph: Cached properties being calculated: available_genome_assemblies\n",
+      "2026-01-17 15:01:06 INFO:the_graph: Cached properties being calculated: combined_edges\n",
+      "2026-01-17 15:02:36 INFO:the_graph: Cached properties being calculated: combined_edges_genes\n",
+      "2026-01-17 15:04:36 INFO:the_graph: Cached properties being calculated: combined_edges_assembly_specific_genes\n",
+      "2026-01-17 15:04:44 INFO:the_graph: Cached properties being calculated: lower_chars_graph\n",
+      "2026-01-17 15:04:47 INFO:the_graph: Cached properties being calculated: get_active_ranges_of_id\n",
+      "2026-01-17 15:06:36 INFO:the_graph: Cached properties being calculated: available_external_databases\n",
+      "2026-01-17 15:06:41 INFO:the_graph: Cached properties being calculated: available_external_databases_assembly\n",
+      "2026-01-17 15:06:46 INFO:the_graph: Cached properties being calculated: node_trios\n",
+      "2026-01-17 15:08:37 INFO:the_graph: Cached properties being calculated: hyperconnective_nodes\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "{'target_id': ['ENSMUSG00000059552'],\n",
+       " 'last_node': [('ENSMUSG00000059552.14', 'ENSMUSG00000059552')],\n",
+       " 'final_database': 'base_ensembl_gene',\n",
+       " 'graph_id': 'TRP53',\n",
+       " 'query_id': 'Trp53',\n",
+       " 'no_corresponding': False,\n",
+       " 'no_conversion': False,\n",
+       " 'no_target': False}"
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
    "source": [
     "import os\n",
     "from pathlib import Path\n",
@@ -126,7 +196,11 @@
   {
    "cell_type": "markdown",
    "id": "dd07348f",
-   "metadata": {},
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
    "source": [
     "Take one of the returned `target_id` entries as your mouse Ensembl gene ID.\n",
     "If you get multiple candidates, you are in a 1→n case — you may need to decide how to handle it.\n"
@@ -135,7 +209,11 @@
   {
    "cell_type": "markdown",
    "id": "1b1842d9",
-   "metadata": {},
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
    "source": [
     "### 6.1.2.2 Find human ortholog(s) (ortholog utilities)\n",
     "\n",
@@ -144,10 +222,35 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 3,
    "id": "c1155eab",
-   "metadata": {},
-   "outputs": [],
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "15:10:53 - INFO - Getting species ID for gene ENSMUSG00000059552 from Bgee\n",
+      "2026-01-17 15:10:53 INFO:gget.utils: Getting species ID for gene ENSMUSG00000059552 from Bgee\n",
+      "15:10:53 - INFO - Getting orthologs for gene ENSMUSG00000059552 from Bgee\n",
+      "2026-01-17 15:10:53 INFO:gget.utils: Getting orthologs for gene ENSMUSG00000059552 from Bgee\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "['ENSG00000141510']"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
    "source": [
     "human_ensembl_gene_ids = []\n",
     "\n",
@@ -169,7 +272,11 @@
   {
    "cell_type": "markdown",
    "id": "9f4d2952",
-   "metadata": {},
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
    "source": [
     "### 6.1.2.3 Convert human Ensembl IDs into HGNC symbols (IDTrack)\n",
     "\n",
@@ -178,10 +285,35 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 4,
    "id": "8939e41c",
-   "metadata": {},
-   "outputs": [],
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2026-01-17 15:10:54 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.\n",
+      "2026-01-17 15:11:18 INFO:database_manager: Using assembly-specific release range for homo_sapiens assembly 38: releases 76-115 (from config [76, None])\n",
+      "2026-01-17 15:12:13 INFO:graph_maker: The graph is being read: /ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache/graph_homo_sapiens_min48_max115_narrow.pickle\n",
+      "2026-01-17 15:16:21 INFO:the_graph: Cached properties being calculated: available_genome_assemblies\n",
+      "2026-01-17 15:16:21 INFO:the_graph: Cached properties being calculated: combined_edges\n",
+      "2026-01-17 15:17:43 INFO:the_graph: Cached properties being calculated: combined_edges_genes\n",
+      "2026-01-17 15:20:47 INFO:the_graph: Cached properties being calculated: combined_edges_assembly_specific_genes\n",
+      "2026-01-17 15:20:52 INFO:the_graph: Cached properties being calculated: lower_chars_graph\n",
+      "2026-01-17 15:20:55 INFO:the_graph: Cached properties being calculated: get_active_ranges_of_id\n",
+      "2026-01-17 15:22:21 INFO:the_graph: Cached properties being calculated: available_external_databases\n",
+      "2026-01-17 15:22:26 INFO:the_graph: Cached properties being calculated: available_external_databases_assembly\n",
+      "2026-01-17 15:22:30 INFO:the_graph: Cached properties being calculated: node_trios\n",
+      "2026-01-17 15:23:35 INFO:the_graph: Cached properties being calculated: hyperconnective_nodes\n",
+      "100%|█████████████████████████████████████████████| 1/1 [00:00<00:00, 10.34it/s, ID:ENSG00000141510]\n"
+     ]
+    }
+   ],
    "source": [
     "if not human_ensembl_gene_ids:\n",
     "    print('No human ortholog IDs available; skipping human conversion step.')\n",
@@ -204,7 +336,11 @@
   {
    "cell_type": "markdown",
    "id": "6dd04685",
-   "metadata": {},
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
    "source": [
     "### 6.1.3 Step-by-step: pig → human (same pattern)\n",
     "\n",
@@ -214,15 +350,56 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 6,
    "id": "1b639fa5",
-   "metadata": {},
-   "outputs": [],
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2026-01-17 15:26:45 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.\n",
+      "2026-01-17 15:27:10 INFO:database_manager: Using assembly-specific release range for sus_scrofa assembly 111: releases 90-115 (from config [90, None])\n",
+      "2026-01-17 15:28:02 INFO:graph_maker: The graph is being read: /ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache/graph_sus_scrofa_min48_max115_narrow.pickle\n",
+      "2026-01-17 15:28:18 INFO:the_graph: Cached properties being calculated: available_genome_assemblies\n",
+      "2026-01-17 15:28:18 INFO:the_graph: Cached properties being calculated: combined_edges\n",
+      "2026-01-17 15:28:33 INFO:the_graph: Cached properties being calculated: combined_edges_genes\n",
+      "2026-01-17 15:31:27 INFO:the_graph: Cached properties being calculated: combined_edges_assembly_specific_genes\n",
+      "2026-01-17 15:31:28 INFO:the_graph: Cached properties being calculated: lower_chars_graph\n",
+      "2026-01-17 15:31:29 INFO:the_graph: Cached properties being calculated: get_active_ranges_of_id\n",
+      "2026-01-17 15:31:51 INFO:the_graph: Cached properties being calculated: available_external_databases\n",
+      "2026-01-17 15:31:52 INFO:the_graph: Cached properties being calculated: available_external_databases_assembly\n",
+      "2026-01-17 15:31:53 INFO:the_graph: Cached properties being calculated: node_trios\n",
+      "2026-01-17 15:32:08 INFO:the_graph: Cached properties being calculated: hyperconnective_nodes\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "{'target_id': ['ENSSSCG00000017950'],\n",
+       " 'last_node': [('ENSSSCG00000017950.5', 'ENSSSCG00000017950')],\n",
+       " 'final_database': 'base_ensembl_gene',\n",
+       " 'graph_id': 'TP53',\n",
+       " 'query_id': 'TP53',\n",
+       " 'no_corresponding': False,\n",
+       " 'no_conversion': False,\n",
+       " 'no_target': False}"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
    "source": [
     "api_pig = idtrack.API(local_repository=str(LOCAL_REPOSITORY))\n",
     "api_pig.configure_logger()\n",
     "\n",
-    "pig_name, pig_latest = api_pig.resolve_organism('pig')\n",
+    "pig_name, pig_latest = api_pig.resolve_organism('sus_scrofa')\n",
     "api_pig.build_graph(organism_name=pig_name, snapshot_release=pig_latest)\n",
     "\n",
     "pig_query = 'TP53'  # example; replace with your pig gene symbol or ID\n",
@@ -237,7 +414,11 @@
   {
    "cell_type": "markdown",
    "id": "6f5fe9ab",
-   "metadata": {},
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
    "source": [
     "From here, reuse the same ortholog + human conversion steps as in the mouse section.\n"
    ]
@@ -245,7 +426,11 @@
   {
    "cell_type": "markdown",
    "id": "8a3b39de",
-   "metadata": {},
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
    "source": [
     "### 6.1.4 Advanced: choose among multiple ortholog candidates\n",
     "\n",
@@ -255,22 +440,138 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 7,
    "id": "0facb2bb",
-   "metadata": {},
-   "outputs": [],
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "15:32:11 - INFO - Getting species ID for gene ENSMUSG00000059552 from Bgee\n",
+      "2026-01-17 15:32:11 INFO:gget.utils: Getting species ID for gene ENSMUSG00000059552 from Bgee\n",
+      "15:32:11 - INFO - Getting orthologs for gene ENSMUSG00000059552 from Bgee\n",
+      "2026-01-17 15:32:11 INFO:gget.utils: Getting orthologs for gene ENSMUSG00000059552 from Bgee\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[INFO] Found 1 ortholog(s) for 'ENSMUSG00000059552' in target species 'human' (canonical='hsapiens', genus='Homo', species='sapiens').\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "15:32:13 - INFO - Requesting amino acid sequence of the canonical transcript ENSMUST00000108658 of gene ENSMUSG00000059552 from UniProt.\n",
+      "2026-01-17 15:32:13 INFO:gget.utils: Requesting amino acid sequence of the canonical transcript ENSMUST00000108658 of gene ENSMUSG00000059552 from UniProt.\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "[INFO] Aligning 'ENSMUSG00000059552' -> 'ENSG00000141510' ('human')\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "15:32:15 - INFO - Requesting amino acid sequence of the canonical transcript ENST00000269305 of gene ENSG00000141510 from UniProt.\n",
+      "2026-01-17 15:32:15 INFO:gget.utils: Requesting amino acid sequence of the canonical transcript ENST00000269305 of gene ENSG00000141510 from UniProt.\n",
+      "15:32:15 - INFO - MUSCLE compiled. \n",
+      "2026-01-17 15:32:15 INFO:gget.utils: MUSCLE compiled. \n",
+      "15:32:15 - INFO - MUSCLE aligning... \n",
+      "2026-01-17 15:32:15 INFO:gget.utils: MUSCLE aligning... \n",
+      "\n",
+      "muscle 5.2.linux64 [00617b]  1056Gb RAM, 96 cores\n",
+      "Built Apr 13 2022 00:43:46\n",
+      "(C) Copyright 2004-2021 Robert C. Edgar.\n",
+      "https://drive5.com\n",
+      "\n",
+      "Input: 2 seqs, avg length 392, max 393\n",
+      "\n",
+      "00:00 7.8Mb  CPU has 96 cores, defaulting to 20 threads\n",
+      "\n",
+      "WARNING: Max OMP threads 2\n",
+      "\n",
+      "00:00 16Mb    100.0% Calc posteriors\n",
+      "00:00 16Mb    100.0% UPGMA5         \n",
+      "15:32:15 - INFO - MUSCLE alignment complete. Alignment time: 0.1 seconds\n",
+      "2026-01-17 15:32:15 INFO:gget.utils: MUSCLE alignment complete. Alignment time: 0.1 seconds\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "\n",
+      "ENSMUSG00000059552\n",
+      " \t \u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mI\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mW\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mI\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;15m-\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;15m-\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;15m-\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;15m-\u001b[0;0m\u001b[38;5;0m\u001b[48;5;15m-\u001b[0;0m\u001b[38;5;0m\u001b[48;5;15m-\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\n",
+      "ENSG00000141510\n",
+      " \t \u001b[38;5;0m\u001b[48;5;15m-\u001b[0;0m\u001b[38;5;0m\u001b[48;5;15m-\u001b[0;0m\u001b[38;5;0m\u001b[48;5;15m-\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mW\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mI\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mW\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\n",
+      "\n",
+      "\n",
+      "ENSMUSG00000059552\n",
+      " \t \u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mW\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mW\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\n",
+      "ENSG00000141510\n",
+      " \t \u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mW\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mW\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\n",
+      "\n",
+      "\n",
+      "ENSMUSG00000059552\n",
+      " \t \u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mI\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mI\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mI\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\n",
+      "ENSG00000141510\n",
+      " \t \u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mI\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mI\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mI\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\n",
+      "\n",
+      "\n",
+      "ENSMUSG00000059552\n",
+      " \t \u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mI\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mI\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mI\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\n",
+      "ENSG00000141510\n",
+      " \t \u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mI\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mI\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mI\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;13mC\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\n",
+      "\n",
+      "\n",
+      "ENSMUSG00000059552\n",
+      " \t \u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mI\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mV\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\n",
+      "ENSG00000141510\n",
+      " \t \u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mY\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mI\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mN\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mA\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mQ\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mR\u001b[0;0m\u001b[38;5;0m\u001b[48;5;14mH\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mL\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mM\u001b[0;0m\u001b[38;5;15m\u001b[48;5;12mF\u001b[0;0m\u001b[38;5;15m\u001b[48;5;9mK\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mT\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mE\u001b[0;0m\u001b[38;5;15m\u001b[48;5;1mG\u001b[0;0m\u001b[38;5;0m\u001b[48;5;11mP\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\u001b[38;5;0m\u001b[48;5;10mS\u001b[0;0m\u001b[38;5;15m\u001b[48;5;5mD\u001b[0;0m\n",
+      "[WARN] MUSCLE failed for ENSG00000141510: 'NoneType' object has no attribute 'splitlines'\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "{}"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
    "source": [
     "# Example (advanced): compute sequence-based alignment features for each ortholog candidate\n",
-    "# from idtrack._external_mappers import align_ortholog_pair_with_features\n",
-    "#\n",
-    "# features = align_ortholog_pair_with_features(mouse_ensembl_gene_id, target_species='human', verbose=True)\n",
-    "# features\n"
+    "from idtrack._external_mappers import align_ortholog_pair_with_features\n",
+    "\n",
+    "features = align_ortholog_pair_with_features(mouse_ensembl_gene_id, target_species='human', verbose=True)\n",
+    "features\n"
    ]
   },
   {
    "cell_type": "markdown",
    "id": "91aa07b2",
-   "metadata": {},
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
    "source": [
     "### 6.1.5 Practical cautions (please read)\n",
     "\n",
@@ -282,7 +583,11 @@
   {
    "cell_type": "markdown",
    "id": "5844b4e5",
-   "metadata": {},
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
    "source": [
     "## 6.2 — Comparative Analysis Preparation\n",
     "\n",
@@ -301,10 +606,94 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 8,
    "id": "66fe47ab",
-   "metadata": {},
-   "outputs": [],
+   "metadata": {
+    "deletable": true,
+    "editable": true,
+    "frozen": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>source_species</th>\n",
+       "      <th>source_namespace</th>\n",
+       "      <th>source_id</th>\n",
+       "      <th>human_ensembl_gene_id</th>\n",
+       "      <th>human_hgnc_symbol</th>\n",
+       "      <th>orthology_candidates</th>\n",
+       "      <th>snapshot_release_human</th>\n",
+       "      <th>snapshot_release_source</th>\n",
+       "      <th>notes</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>mus_musculus</td>\n",
+       "      <td>MGI Symbol</td>\n",
+       "      <td>Trp53</td>\n",
+       "      <td>ENSG00000141510</td>\n",
+       "      <td>TP53</td>\n",
+       "      <td>[ENSG00000141510]</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>Example row; fill with your real results.</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>sus_scrofa</td>\n",
+       "      <td>Ensembl Gene ID</td>\n",
+       "      <td>ENSSSCG00000000001</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>[]</td>\n",
+       "      <td>None</td>\n",
+       "      <td>None</td>\n",
+       "      <td>Example 1→0 / not found; keep these rows for r...</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "  source_species source_namespace           source_id human_ensembl_gene_id  \\\n",
+       "0   mus_musculus       MGI Symbol               Trp53       ENSG00000141510   \n",
+       "1     sus_scrofa  Ensembl Gene ID  ENSSSCG00000000001                  None   \n",
+       "\n",
+       "  human_hgnc_symbol orthology_candidates snapshot_release_human  \\\n",
+       "0              TP53    [ENSG00000141510]                   None   \n",
+       "1              None                   []                   None   \n",
+       "\n",
+       "  snapshot_release_source                                              notes  \n",
+       "0                    None          Example row; fill with your real results.  \n",
+       "1                    None  Example 1→0 / not found; keep these rows for r...  "
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
    "source": [
     "# Example: a tidy, audit-friendly mapping table schema\n",
     "\n",
@@ -339,16 +728,33 @@
     "\n",
     "mapping_table\n"
    ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "20878e40-bb46-4c61-8add-7150d2494141",
+   "metadata": {},
+   "outputs": [],
+   "source": []
   }
  ],
  "metadata": {
   "kernelspec": {
-   "display_name": "Python 3",
+   "display_name": "Python 3 (ipykernel)",
    "language": "python",
    "name": "python3"
   },
   "language_info": {
-   "name": "python"
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.11.12"
   }
  },
  "nbformat": 4,
