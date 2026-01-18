@@ -3,7 +3,7 @@
 This module is intentionally lightweight and avoids importing IDTrack itself.
 It provides:
   - repo-relative path discovery (works from nested notebook folders)
-  - standard locations for caches and manuscript outputs
+  - standard locations for caches and exported artefacts
   - standard locations for experiment-local outputs
   - Matplotlib rcParams loading used across manuscript-ready figures
   - small plotting/style helpers (colors, palettes)
@@ -26,18 +26,38 @@ from typing import Any, Callable, TypeVar
 def find_repo_root(start: Path | None = None) -> Path:
     """Return the repository root by searching parents for expected markers.
 
-    Markers:
-      - `idtrack/` (python package root)
-      - `idtrack-manuscript/` (LaTeX manuscript root)
+    This supports two common layouts:
+      - package-only: `<root>/idtrack` + `<root>/reproducibility`
+      - umbrella:     `<root>/idtrack` + `<root>/idtrack/reproducibility`
 
+    If `REPO_ROOT` is set and points to a valid root, it is preferred.
     If markers are not found, fall back to the current working directory.
     """
 
+    env_root = os.environ.get("REPO_ROOT", "").strip()
+    if env_root:
+        candidate = Path(env_root).expanduser().resolve()
+        if (candidate / "idtrack").is_dir() and (
+            (candidate / "reproducibility").is_dir() or (candidate / "idtrack" / "reproducibility").is_dir()
+        ):
+            return candidate
+
     here = (start or Path.cwd()).resolve()
     for candidate in [here, *here.parents]:
-        if (candidate / "idtrack").is_dir() and (candidate / "idtrack-manuscript").is_dir():
+        if (candidate / "idtrack").is_dir() and (
+            (candidate / "reproducibility").is_dir() or (candidate / "idtrack" / "reproducibility").is_dir()
+        ):
             return candidate
     return here
+
+
+def reproducibility_root(start: Path | None = None) -> Path:
+    """Return the repo-relative `reproducibility/` root (layout-aware)."""
+
+    root = find_repo_root(start)
+    if (root / "reproducibility").is_dir():
+        return root / "reproducibility"
+    return root / "idtrack" / "reproducibility"
 
 
 def ensure_dir(path: Path) -> Path:
@@ -70,14 +90,16 @@ def idtrack_cache_dir(start: Path | None = None, *, env_var: str = "IDTRACK_LOCA
     if raw:
         return ensure_dir(Path(raw).expanduser().resolve())
     root = find_repo_root(start)
-    return ensure_dir(root / "idtrack" / "docs" / "_notebooks" / "idtrack_cache")
+    if (root / "idtrack" / "docs" / "_notebooks").is_dir():
+        return ensure_dir(root / "idtrack" / "docs" / "_notebooks" / "idtrack_cache")
+    return ensure_dir(root / "docs" / "_notebooks" / "idtrack_cache")
 
 
 def experiments_outputs_dir(start: Path | None = None, *, folder_name: str = "_outputs") -> Path:
     """Directory for experiment-local outputs (kept out of the global IDTrack cache)."""
 
-    root = find_repo_root(start)
-    return ensure_dir(root / "idtrack" / "reproducibility" / "experiments" / folder_name)
+    repro_root = reproducibility_root(start)
+    return ensure_dir(repro_root / "experiments" / folder_name)
 
 
 def experiment_outputs_dir(
@@ -91,24 +113,28 @@ def experiment_outputs_dir(
 
 
 def manuscript_figures_dir(start: Path | None = None) -> Path:
-    """Return `idtrack-manuscript/figures`."""
+    """Directory for publication-ready figures (export location).
 
-    root = find_repo_root(start)
-    return ensure_dir(root / "idtrack-manuscript" / "figures")
+    Stored under `reproducibility/experiments/_outputs/_publication/figures/`.
+    """
+
+    return ensure_dir(experiments_outputs_dir(start) / "_publication" / "figures")
 
 
 def manuscript_tables_dir(start: Path | None = None) -> Path:
-    """Return `idtrack-manuscript/tables`."""
+    """Directory for publication-ready tables (export location).
 
-    root = find_repo_root(start)
-    return ensure_dir(root / "idtrack-manuscript" / "tables")
+    Stored under `reproducibility/experiments/_outputs/_publication/tables/`.
+    """
+
+    return ensure_dir(experiments_outputs_dir(start) / "_publication" / "tables")
 
 
 def default_rcparams_pickle(start: Path | None = None) -> Path:
     """Return the path to the shared rcParams pickle used by experiments."""
 
-    root = find_repo_root(start)
-    return root / "idtrack" / "reproducibility" / "experiments" / "figure_rcparams" / "rcparams.pickle"
+    repro_root = reproducibility_root(start)
+    return repro_root / "experiments" / "figure_rcparams" / "rcparams.pickle"
 
 
 def load_rcparams(path: Path | None = None) -> dict[str, Any]:
@@ -160,9 +186,9 @@ def save_figure(
     formats: tuple[str, ...] = ("pdf",),
     also_experiment_outputs: bool = True,
 ) -> dict[str, Path]:
-    """Save a figure into manuscript figures (and optionally experiment-local outputs).
+    """Save a figure into the publication export dir (and optionally experiment-local outputs).
 
-    Returns a dict of format -> written path (manuscript location).
+    Returns a dict of format -> written path (export location).
     """
 
     if not isinstance(filename, str) or not filename.strip():
@@ -547,10 +573,10 @@ def notebook_context(
     apply_style: bool = True,
     seaborn: bool = True,
 ) -> NotebookContext:
-    """Return commonly used paths for a notebook (cache dirs + manuscript output dirs)."""
+    """Return commonly used paths for a notebook (cache dirs + export dirs)."""
 
     root = find_repo_root(start)
-    experiments_src = root / "idtrack" / "reproducibility" / "experiments" / "src"
+    experiments_src = reproducibility_root(root) / "experiments" / "src"
 
     ctx = NotebookContext(
         repo_root=root,

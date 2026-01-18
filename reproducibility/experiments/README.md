@@ -5,7 +5,7 @@ This folder contains experiment notebooks and small helper modules used to gener
 ## Notebook Index
 
 -   `experiment_hlca/00_hlca_manuscript_table1_and_figures.ipynb`
-    -   Generates Table 1 (`idtrack-manuscript/tables/hlca_harmonization.tex`) plus additional manuscript tables/figures (HGNC overlap, feature-space summaries).
+    -   Generates Table 1 plus additional publication-ready tables/figures (HGNC overlap, feature-space summaries).
     -   Uses the curated HLCA study→files mapping aligned with `idtrack/docs/_notebooks/05_tutorial_harmonization.ipynb`.
 -   `experiment_hlca/01_hlca_extended_experiments.ipynb`
     -   Extended HLCA analysis notebook (large-scale harmonization + QA; tutorial-style).
@@ -60,31 +60,33 @@ This folder contains experiment notebooks and small helper modules used to gener
 
 ## Outputs
 
--   Experiment caches (heavy / time-consuming): `idtrack/docs/_notebooks/idtrack_cache/experiments/`
--   Manuscript artefacts:
-    -   Figures: `idtrack-manuscript/figures/`
-    -   Tables: `idtrack-manuscript/tables/`
--   Mirrored, experiment-local copies (for quick inspection / sharing):
-    -   `idtrack/reproducibility/experiments/_outputs/<experiment>/figures/`
-    -   `idtrack/reproducibility/experiments/_outputs/<experiment>/tables/`
+-   Experiment caches (heavy / time-consuming): `IDTRACK_LOCAL_REPO/experiments/` (default: `idtrack/docs/_notebooks/idtrack_cache/experiments/`)
+-   Publication-ready exports (single location across notebooks):
+    -   Figures: `_outputs/_publication/figures/`
+    -   Tables: `_outputs/_publication/tables/`
+-   Experiment-local copies (per notebook/experiment):
+    -   `_outputs/<experiment>/figures/`
+    -   `_outputs/<experiment>/tables/`
 
 ## Batch Execution (Slurm)
 
 For friction-free, parallel execution on Slurm (with dependency staging and per-notebook logs):
 
--   Submit both stages (recommended): `idtrack/reproducibility/scripts/submit_experiment_notebooks_slurm.sh`
+-   Submit both stages (recommended): `reproducibility/scripts/submit_experiment_notebooks_slurm.sh` (umbrella checkout: prefix with `idtrack/`)
 -   Notebook manifests:
-    -   Stage 0: `idtrack/reproducibility/experiments/notebooks_manifest_stage0.txt`
-    -   Stage 1: `idtrack/reproducibility/experiments/notebooks_manifest_stage1.txt`
-    -   Stage 2: `idtrack/reproducibility/experiments/notebooks_manifest_stage2.txt` (dashboards / final summaries)
+    -   Stage 0: `notebooks_manifest_stage0.txt`
+    -   Stage 1: `notebooks_manifest_stage1.txt`
+    -   Stage 2: `notebooks_manifest_stage2.txt` (dashboards / final summaries)
+    -   Manifest entries are paths relative to the `.../reproducibility/experiments/` folder (layout-agnostic).
 -   Logs:
-    -   Slurm stdout/stderr: `idtrack/reproducibility/experiments/_logs/`
-    -   Notebook execution logs: `idtrack/reproducibility/experiments/_logs/nbconvert/`
+    -   Slurm stdout/stderr: `_logs/`
+    -   Notebook execution logs: `_logs/nbconvert/`
+    -   If Slurm logs are empty, check job state/exit codes with `sacct` (jobs may have failed before running the script).
 
 Common overrides:
 
--   `CONDA_ENV=idtrack_dev_env MAX_PARALLEL=3 ./idtrack/reproducibility/scripts/submit_experiment_notebooks_slurm.sh`
--   `IDTRACK_LOCAL_REPO=/path/to/idtrack_cache ./idtrack/reproducibility/scripts/submit_experiment_notebooks_slurm.sh`
+    -   `CONDA_ENV=idtrack_dev_env ./reproducibility/scripts/submit_experiment_notebooks_slurm.sh`
+    -   `IDTRACK_LOCAL_REPO=/path/to/idtrack_cache ./reproducibility/scripts/submit_experiment_notebooks_slurm.sh`
 
 ## Notes on Memory / Runtime
 
