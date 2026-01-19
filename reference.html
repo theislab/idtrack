@@ -116,6 +116,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.removed_conversion_failed_identifiers"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.removed_conversion_failed_identifiers</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.kept_conversion_failed_identifiers"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.kept_conversion_failed_identifiers</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.removed_inconsistent_identifier_matching"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.removed_inconsistent_identifier_matching</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._get_column_as_series"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures._get_column_as_series()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures._initialize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize_idt"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures._initialize_idt()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_but_consistent_identifiers"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.conversion_failed_but_consistent_identifiers</span></code></a></li>
@@ -1375,6 +1376,29 @@ resolution—happens lazily when the first harmonisation method is called.</p>
 </dd>
 </dl>
 <dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures._get_column_as_series">
+<em class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_get_column_as_series</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures._get_column_as_series"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures._get_column_as_series" title="Link to this definition"></a></dt>
+<dd><p>Safely extract a single column from a DataFrame, always returning a Series.</p>
+<p>When a DataFrame has duplicate column names, <code class="docutils literal notranslate"><span class="pre">df[column]</span></code> returns a DataFrame
+instead of a Series. This method handles such edge cases by selecting the first
+matching column when duplicates exist.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>pd.DataFrame</em>) – The DataFrame to extract from.</p></li>
+<li><p><strong>column</strong> (<em>str</em>) – The column name to extract.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The column data as a Series.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures._initialize">
 <span class="sig-name descname"><span class="pre">_initialize</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures._initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize" title="Link to this definition"></a></dt>
 <dd><p>Populate diagnostic structures for failed or ambiguous identifier conversions.</p>
@@ -1463,7 +1487,7 @@ all datasets share the same mapping).</p>
 <dd><p>Build a two-column mapping table for a single dataset’s feature identifiers.</p>
 <p>The routine transforms every source identifier in <em>gene_list</em> into the target namespace defined by
 <code class="docutils literal notranslate"><span class="pre">self.final_database</span></code> and Ensembl gene IDs.  The resulting convertible subset is written into a
-new <code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code> with three columns—<code class="docutils literal notranslate"><span class="pre">&quot;ensembl_gene&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">self.final_database</span></code>,
+new <code class="xref py py-class docutils literal notranslate"><span class="pre">pandas.DataFrame</span></code> with three columns—<code class="docutils literal notranslate"><span class="pre">_ENSEMBL_GENE_COLUMN</span></code>, <code class="docutils literal notranslate"><span class="pre">self.final_database</span></code>,
 and <code class="docutils literal notranslate"><span class="pre">&quot;Query</span> <span class="pre">ID&quot;</span></code>—while problematic identifiers are annotated or filtered according to the rules
 established during <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize" title="idtrack._harmonize_features.HarmonizeFeatures._initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_initialize()</span></code></a>.</p>
 <p>When called by <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize" title="idtrack._harmonize_features.HarmonizeFeatures._initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_initialize()</span></code></a> (<em>initialization_run</em> <code class="docutils literal notranslate"><span class="pre">True</span></code>), the method writes provisional
@@ -1482,15 +1506,18 @@ single-Ensembl disambiguation step applied in later passes.</p></li>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Mapping table ready to become <code class="docutils literal notranslate"><span class="pre">adata.var</span></code>.  Columns are
-<code class="docutils literal notranslate"><span class="pre">&quot;ensembl_gene&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">self.final_database</span></code>, and the original <code class="docutils literal notranslate"><span class="pre">&quot;Query</span> <span class="pre">ID&quot;</span></code> for traceability.</p>
+<code class="docutils literal notranslate"><span class="pre">_ENSEMBL_GENE_COLUMN</span></code>, <code class="docutils literal notranslate"><span class="pre">self.final_database</span></code>, and the original <code class="docutils literal notranslate"><span class="pre">&quot;Query</span> <span class="pre">ID&quot;</span></code> for traceability.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>pandas.DataFrame</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>AssertionError</strong> – If diagnostic sets such as <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_identifiers" title="idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_identifiers"><code class="xref py py-attr docutils literal notranslate"><span class="pre">conversion_failed_identifiers</span></code></a> were not
+<dd class="field-even"><ul class="simple">
+<li><p><strong>AssertionError</strong> – If diagnostic sets such as <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_identifiers" title="idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_identifiers"><code class="xref py py-attr docutils literal notranslate"><span class="pre">conversion_failed_identifiers</span></code></a> were not
     populated—indicating an incorrect call order—or if unexpected duplicate target IDs remain
-    after processing.</p>
+    after processing.</p></li>
+<li><p><strong>ValueError</strong> – When malformed conversion entry.</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -1641,7 +1668,7 @@ harmonise.</p>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><ul class="simple">
 <li><p><strong>resulting_adata</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">anndata.AnnData</span></code>) - Dataset whose <code class="docutils literal notranslate"><span class="pre">var</span></code> now contains
-<code class="docutils literal notranslate"><span class="pre">&quot;ensembl_gene&quot;</span></code> as index and <code class="docutils literal notranslate"><span class="pre">self.final_database</span></code> as a column.</p></li>
+<code class="docutils literal notranslate"><span class="pre">_ENSEMBL_GENE_COLUMN</span></code> (matching Ensembl gene ID) as index and <code class="docutils literal notranslate"><span class="pre">self.final_database</span></code> as a column.</p></li>
 <li><p><strong>t0</strong> (int) - Number of features <em>before</em> filtering and harmonisation.</p></li>
 <li><p><strong>t1</strong> (int) - Number of features <em>after</em> the procedure (i.e., retained in
 <em>resulting_adata</em>).</p></li>

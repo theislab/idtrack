@@ -177,6 +177,34 @@
 
     <span class="n">nonmatching_but_consistent_suffix</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
 
+    <span class="c1"># Internal column name for matched Ensembl gene IDs.</span>
+    <span class="c1"># Using a distinct name avoids conflicts when final_database=&quot;ensembl_gene&quot;.</span>
+    <span class="n">_ENSEMBL_GENE_COLUMN</span> <span class="o">=</span> <span class="s2">&quot;matching_ensembl_gene&quot;</span>
+
+<div class="viewcode-block" id="HarmonizeFeatures._get_column_as_series">
+<a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures._get_column_as_series">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_column_as_series</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Safely extract a single column from a DataFrame, always returning a Series.</span>
+
+<span class="sd">        When a DataFrame has duplicate column names, ``df[column]`` returns a DataFrame</span>
+<span class="sd">        instead of a Series. This method handles such edge cases by selecting the first</span>
+<span class="sd">        matching column when duplicates exist.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            df (pd.DataFrame): The DataFrame to extract from.</span>
+<span class="sd">            column (str): The column name to extract.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Series: The column data as a Series.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+            <span class="c1"># Duplicate column names exist; take the first one and warn</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">project_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -472,25 +500,38 @@
         <span class="c1"># ENSG00000268674.2	FAM231C	FAM231C</span>
         <span class="c1"># ENSG00000268674.2	FAM231B	FAM231B</span>
         <span class="c1"># Report and remove from all conversion lists.</span>
-        <span class="n">dfa</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ensembl_gene&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="s2">&quot;first&quot;</span><span class="p">)</span>
-        <span class="n">_gene_names_inconsistency</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">dfa</span><span class="p">[</span><span class="n">dfa</span><span class="p">[</span><span class="s2">&quot;ensembl_gene&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)][</span><span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
-        <span class="n">gene_names_inconsistency</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">_gene_names_inconsistency</span><span class="p">)][</span><span class="s2">&quot;Query ID&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+        <span class="n">ensembl_col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ENSEMBL_GENE_COLUMN</span>
+        <span class="n">dfa</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="n">ensembl_col</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="s2">&quot;first&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Use safe column accessor to handle potential duplicate column names edge cases</span>
+        <span class="n">ensembl_gene_duplicated_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_as_series</span><span class="p">(</span><span class="n">dfa</span><span class="p">,</span> <span class="n">ensembl_col</span><span class="p">)</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">dfa_duplicated_ensembl</span> <span class="o">=</span> <span class="n">dfa</span><span class="p">[</span><span class="n">ensembl_gene_duplicated_mask</span><span class="p">]</span>
+        <span class="n">_gene_names_inconsistency</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_as_series</span><span class="p">(</span><span class="n">dfa_duplicated_ensembl</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">)</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+        <span class="p">)</span>
+
+        <span class="n">final_db_col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_as_series</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">)</span>
+        <span class="n">gene_names_inconsistency</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_as_series</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">final_db_col</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">_gene_names_inconsistency</span><span class="p">)],</span> <span class="s2">&quot;Query ID&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+        <span class="p">)</span>
 
         <span class="n">final_database_chosen_single_ensembl_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="c1"># Track source IDs that should be removed because their ensembl_gene was not chosen</span>
         <span class="c1"># (they would cause duplicates after the ensembl_gene override)</span>
         <span class="n">final_database_duplicate_source_ids</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">final_final_database_gene_name</span><span class="p">,</span> <span class="n">df_subset</span> <span class="ow">in</span> <span class="n">dfa</span><span class="p">[</span><span class="n">dfa</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">]</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)]</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span>
-        <span class="p">):</span>
+
+        <span class="n">final_db_col_dfa</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_as_series</span><span class="p">(</span><span class="n">dfa</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">)</span>
+        <span class="n">dfa_duplicated_final_db</span> <span class="o">=</span> <span class="n">dfa</span><span class="p">[</span><span class="n">final_db_col_dfa</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)]</span>
+        <span class="k">for</span> <span class="n">final_final_database_gene_name</span><span class="p">,</span> <span class="n">df_subset</span> <span class="ow">in</span> <span class="n">dfa_duplicated_final_db</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">):</span>
             <span class="c1"># Due to the path, idtrack may choose different ensembl_gene</span>
             <span class="c1"># for corresponding final_database (e.g. HGNC). Here, make a rule for each final_database id.</span>
             <span class="c1"># You can see all possible ensembl ids in</span>
-            <span class="n">chosen_ensembl_id</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">df_subset</span><span class="p">[</span><span class="s2">&quot;ensembl_gene&quot;</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># choose first one</span>
+            <span class="n">ensembl_gene_col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_as_series</span><span class="p">(</span><span class="n">df_subset</span><span class="p">,</span> <span class="n">ensembl_col</span><span class="p">)</span>
+            <span class="n">chosen_ensembl_id</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">ensembl_gene_col</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># choose first one</span>
             <span class="n">final_database_chosen_single_ensembl_dict</span><span class="p">[</span><span class="n">final_final_database_gene_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">chosen_ensembl_id</span>
             <span class="c1"># Mark source IDs with non-chosen ensembl_genes for removal to prevent duplicates</span>
-            <span class="n">non_chosen_rows</span> <span class="o">=</span> <span class="n">df_subset</span><span class="p">[</span><span class="n">df_subset</span><span class="p">[</span><span class="s2">&quot;ensembl_gene&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">chosen_ensembl_id</span><span class="p">]</span>
-            <span class="n">final_database_duplicate_source_ids</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">non_chosen_rows</span><span class="p">[</span><span class="s2">&quot;Query ID&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+            <span class="n">non_chosen_rows</span> <span class="o">=</span> <span class="n">df_subset</span><span class="p">[</span><span class="n">ensembl_gene_col</span> <span class="o">!=</span> <span class="n">chosen_ensembl_id</span><span class="p">]</span>
+            <span class="n">final_database_duplicate_source_ids</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_column_as_series</span><span class="p">(</span><span class="n">non_chosen_rows</span><span class="p">,</span> <span class="s2">&quot;Query ID&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
 
         <span class="k">return</span> <span class="p">{</span>
             <span class="s2">&quot;gene_names_inconsistency&quot;</span><span class="p">:</span> <span class="n">gene_names_inconsistency</span><span class="p">,</span>
@@ -507,7 +548,7 @@
 
 <span class="sd">        The routine transforms every source identifier in *gene_list* into the target namespace defined by</span>
 <span class="sd">        ``self.final_database`` and Ensembl gene IDs.  The resulting convertible subset is written into a</span>
-<span class="sd">        new :py:class:`pandas.DataFrame` with three columns—``&quot;ensembl_gene&quot;``, ``self.final_database``,</span>
+<span class="sd">        new :py:class:`pandas.DataFrame` with three columns—``_ENSEMBL_GENE_COLUMN``, ``self.final_database``,</span>
 <span class="sd">        and ``&quot;Query ID&quot;``—while problematic identifiers are annotated or filtered according to the rules</span>
 <span class="sd">        established during :py:meth:`_initialize`.</span>
 
@@ -525,12 +566,13 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            pandas.DataFrame: Mapping table ready to become ``adata.var``.  Columns are</span>
-<span class="sd">            ``&quot;ensembl_gene&quot;``, ``self.final_database``, and the original ``&quot;Query ID&quot;`` for traceability.</span>
+<span class="sd">            ``_ENSEMBL_GENE_COLUMN``, ``self.final_database``, and the original ``&quot;Query ID&quot;`` for traceability.</span>
 
 <span class="sd">        Raises:</span>
 <span class="sd">            AssertionError: If diagnostic sets such as :py:attr:`conversion_failed_identifiers` were not</span>
 <span class="sd">                populated—indicating an incorrect call order—or if unexpected duplicate target IDs remain</span>
 <span class="sd">                after processing.</span>
+<span class="sd">            ValueError: When malformed conversion entry.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Ensure unified_matching_dict is populated (verifies proper initialization order).</span>
         <span class="c1"># The cached properties conversion_failed_identifiers and conversion_failed_but_consistent_identifiers</span>
@@ -551,17 +593,37 @@
             <span class="c1"># it keeps the first one for now, the possible lists are saved self.multiple_ensembl_list in `initialize` method</span>
 
             <span class="k">elif</span> <span class="n">initialization_run</span><span class="p">:</span>
-                <span class="n">new_var_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">conversion</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="p">[</span><span class="n">the_id</span><span class="p">])</span>
+                <span class="n">first_match</span> <span class="o">=</span> <span class="n">conversion</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="c1"># Validate the conversion tuple structure to prevent DataFrame column misalignment</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">first_match</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">))</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">first_match</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Malformed conversion entry for identifier </span><span class="si">{</span><span class="n">the_id</span><span class="si">!r}</span><span class="s2">: expected a 2-tuple &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;(ensembl_gene, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="si">}</span><span class="s2">), got </span><span class="si">{</span><span class="n">first_match</span><span class="si">!r}</span><span class="s2"> with &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;type=</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">first_match</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">, len=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">first_match</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">hasattr</span><span class="p">(</span><span class="n">first_match</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;__len__&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;N/A&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+                <span class="n">ensembl_gene</span><span class="p">,</span> <span class="n">final_db_value</span> <span class="o">=</span> <span class="n">first_match</span>
+                <span class="n">new_var_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">ensembl_gene</span><span class="p">,</span> <span class="n">final_db_value</span><span class="p">,</span> <span class="n">the_id</span><span class="p">])</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">c</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">conversion</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">&quot;len(c) != 2&quot;</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span><span class="s2">&quot;final_database_chosen_single_ensembl_dict&quot;</span><span class="p">]:</span>
-                    <span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span><span class="s2">&quot;final_database_chosen_single_ensembl_dict&quot;</span><span class="p">][</span><span class="n">c</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+                <span class="n">first_match</span> <span class="o">=</span> <span class="n">conversion</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="c1"># Validate the conversion tuple structure</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">first_match</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">))</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">first_match</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Malformed conversion entry for identifier </span><span class="si">{</span><span class="n">the_id</span><span class="si">!r}</span><span class="s2">: expected a 2-tuple &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;(ensembl_gene, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="si">}</span><span class="s2">), got </span><span class="si">{</span><span class="n">first_match</span><span class="si">!r}</span><span class="s2"> with &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;type=</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">first_match</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">, len=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">first_match</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">hasattr</span><span class="p">(</span><span class="n">first_match</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;__len__&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;N/A&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+                <span class="n">ensembl_gene</span><span class="p">,</span> <span class="n">final_db_value</span> <span class="o">=</span> <span class="n">first_match</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="n">final_db_value</span>
+                    <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span><span class="s2">&quot;final_database_chosen_single_ensembl_dict&quot;</span><span class="p">]</span>
+                <span class="p">):</span>
+                    <span class="n">ensembl_gene</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span>
+                        <span class="s2">&quot;final_database_chosen_single_ensembl_dict&quot;</span>
+                    <span class="p">][</span><span class="n">final_db_value</span><span class="p">]</span>
 
-                <span class="n">new_var_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span> <span class="o">+</span> <span class="p">[</span><span class="n">the_id</span><span class="p">])</span>
+                <span class="n">new_var_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">ensembl_gene</span><span class="p">,</span> <span class="n">final_db_value</span><span class="p">,</span> <span class="n">the_id</span><span class="p">])</span>
 
-        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">new_var_list</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ensembl_gene&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">,</span> <span class="s2">&quot;Query ID&quot;</span><span class="p">])</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">new_var_list</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_ENSEMBL_GENE_COLUMN</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">,</span> <span class="s2">&quot;Query ID&quot;</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">df</span></div>
 
 
@@ -583,7 +645,7 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            tuple:</span>
 <span class="sd">                * **resulting_adata** (:py:class:`anndata.AnnData`) - Dataset whose ``var`` now contains</span>
-<span class="sd">                  ``&quot;ensembl_gene&quot;`` as index and ``self.final_database`` as a column.</span>
+<span class="sd">                  ``_ENSEMBL_GENE_COLUMN`` (matching Ensembl gene ID) as index and ``self.final_database`` as a column.</span>
 <span class="sd">                * **t0** (int) - Number of features *before* filtering and harmonisation.</span>
 <span class="sd">                * **t1** (int) - Number of features *after* the procedure (i.e., retained in</span>
 <span class="sd">                  *resulting_adata*).</span>
@@ -603,13 +665,15 @@
 
         <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_dataset_conversion_dataframe</span><span class="p">(</span><span class="n">gene_list</span><span class="o">=</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">initialization_run</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
-        <span class="n">bool_remove</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">df</span><span class="p">[</span><span class="s2">&quot;ensembl_gene&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="ow">or</span> <span class="n">df</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">]</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">()</span>
-        <span class="p">)</span>
+        <span class="c1"># Use safe column accessor to check for duplicates</span>
+        <span class="n">ensembl_col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ENSEMBL_GENE_COLUMN</span>
+        <span class="n">ensembl_gene_col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_as_series</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">ensembl_col</span><span class="p">)</span>
+        <span class="n">final_db_col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_as_series</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">)</span>
+        <span class="n">bool_remove</span> <span class="o">=</span> <span class="n">ensembl_gene_col</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="ow">or</span> <span class="n">final_db_col</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">bool_remove</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">&quot;Unexpected duplicated entry!&quot;</span><span class="p">)</span>
 
-        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;ensembl_gene&quot;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="n">ensembl_col</span><span class="p">)</span>
         <span class="n">resulting_adata</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">(</span><span class="n">X</span><span class="o">=</span><span class="n">adata</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">obs</span><span class="o">=</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span> <span class="n">var</span><span class="o">=</span><span class="n">df</span><span class="p">)</span>  <span class="c1"># dtype=adata.X.dtype,</span>
 
         <span class="n">t1</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">n_vars</span>
