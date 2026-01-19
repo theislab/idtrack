@@ -198,3 +198,23 @@ def test_unify_multiple_anndatas_intersect_keeps_shared_features(harmonizer):
         "TP53_ALIAS",
     }
     assert "intersection" not in adata.var.columns
+
+
+def test_get_column_as_series_handles_duplicates():
+    """Ensure _get_column_as_series returns Series even with duplicate column names."""
+    # Normal DataFrame with unique columns
+    df_normal = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    result = HarmonizeFeatures._get_column_as_series(df_normal, "a")
+    assert isinstance(result, pd.Series)
+    assert list(result) == [1, 2, 3]
+
+    # DataFrame with duplicate column names
+    df_dup = pd.DataFrame([[1, 2, 3], [4, 5, 6]], columns=["a", "a", "b"])
+    result_dup = HarmonizeFeatures._get_column_as_series(df_dup, "a")
+    assert isinstance(result_dup, pd.Series)
+    # Should return the first column named "a"
+    assert list(result_dup) == [1, 4]
+
+    # Test that KeyError is raised for non-existent column
+    with pytest.raises(KeyError):
+        HarmonizeFeatures._get_column_as_series(df_normal, "nonexistent")

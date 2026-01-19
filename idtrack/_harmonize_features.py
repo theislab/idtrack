@@ -77,6 +77,31 @@ class HarmonizeFeatures:
 
     nonmatching_but_consistent_suffix = ""
 
+    # Internal column name for matched Ensembl gene IDs.
+    # Using a distinct name avoids conflicts when final_database="ensembl_gene".
+    _ENSEMBL_GENE_COLUMN = "matching_ensembl_gene"
+
+    @staticmethod
+    def _get_column_as_series(df: pd.DataFrame, column: str) -> pd.Series:
+        """Safely extract a single column from a DataFrame, always returning a Series.
+
+        When a DataFrame has duplicate column names, ``df[column]`` returns a DataFrame
+        instead of a Series. This method handles such edge cases by selecting the first
+        matching column when duplicates exist.
+
+        Args:
+            df (pd.DataFrame): The DataFrame to extract from.
+            column (str): The column name to extract.
+
+        Returns:
+            pd.Series: The column data as a Series.
+        """
+        result = df[column]
+        if isinstance(result, pd.DataFrame):
+            # Duplicate column names exist; take the first one and warn
+            result = result.iloc[:, 0]
+        return result
+
     def __init__(
         self,
         project_name: str,
@@ -357,25 +382,38 @@ class HarmonizeFeatures:
         # ENSG00000268674.2	FAM231C	FAM231C
         # ENSG00000268674.2	FAM231B	FAM231B
         # Report and remove from all conversion lists.
-        dfa = df.drop_duplicates(subset=["ensembl_gene", self.final_database], keep="first")
-        _gene_names_inconsistency = set(dfa[dfa["ensembl_gene"].duplicated(keep=False)][self.final_database].unique())
-        gene_names_inconsistency = set(df[df[self.final_database].isin(_gene_names_inconsistency)]["Query ID"].unique())
+        ensembl_col = self._ENSEMBL_GENE_COLUMN
+        dfa = df.drop_duplicates(subset=[ensembl_col, self.final_database], keep="first")
+
+        # Use safe column accessor to handle potential duplicate column names edge cases
+        ensembl_gene_duplicated_mask = self._get_column_as_series(dfa, ensembl_col).duplicated(keep=False)
+        dfa_duplicated_ensembl = dfa[ensembl_gene_duplicated_mask]
+        _gene_names_inconsistency = set(
+            self._get_column_as_series(dfa_duplicated_ensembl, self.final_database).unique()
+        )
+
+        final_db_col = self._get_column_as_series(df, self.final_database)
+        gene_names_inconsistency = set(
+            self._get_column_as_series(df[final_db_col.isin(_gene_names_inconsistency)], "Query ID").unique()
+        )
 
         final_database_chosen_single_ensembl_dict = dict()
         # Track source IDs that should be removed because their ensembl_gene was not chosen
         # (they would cause duplicates after the ensembl_gene override)
         final_database_duplicate_source_ids = set()
-        for final_final_database_gene_name, df_subset in dfa[dfa[self.final_database].duplicated(keep=False)].groupby(
-            self.final_database
-        ):
+
+        final_db_col_dfa = self._get_column_as_series(dfa, self.final_database)
+        dfa_duplicated_final_db = dfa[final_db_col_dfa.duplicated(keep=False)]
+        for final_final_database_gene_name, df_subset in dfa_duplicated_final_db.groupby(self.final_database):
             # Due to the path, idtrack may choose different ensembl_gene
             # for corresponding final_database (e.g. HGNC). Here, make a rule for each final_database id.
             # You can see all possible ensembl ids in
-            chosen_ensembl_id = sorted(df_subset["ensembl_gene"])[0]  # choose first one
+            ensembl_gene_col = self._get_column_as_series(df_subset, ensembl_col)
+            chosen_ensembl_id = sorted(ensembl_gene_col)[0]  # choose first one
             final_database_chosen_single_ensembl_dict[final_final_database_gene_name] = chosen_ensembl_id
             # Mark source IDs with non-chosen ensembl_genes for removal to prevent duplicates
-            non_chosen_rows = df_subset[df_subset["ensembl_gene"] != chosen_ensembl_id]
-            final_database_duplicate_source_ids.update(non_chosen_rows["Query ID"].tolist())
+            non_chosen_rows = df_subset[ensembl_gene_col != chosen_ensembl_id]
+            final_database_duplicate_source_ids.update(self._get_column_as_series(non_chosen_rows, "Query ID").tolist())
 
         return {
             "gene_names_inconsistency": gene_names_inconsistency,
@@ -390,7 +428,7 @@ class HarmonizeFeatures:
 
         The routine transforms every source identifier in *gene_list* into the target namespace defined by
         ``self.final_database`` and Ensembl gene IDs.  The resulting convertible subset is written into a
-        new :py:class:`pandas.DataFrame` with three columns—``"ensembl_gene"``, ``self.final_database``,
+        new :py:class:`pandas.DataFrame` with three columns—``_ENSEMBL_GENE_COLUMN``, ``self.final_database``,
         and ``"Query ID"``—while problematic identifiers are annotated or filtered according to the rules
         established during :py:meth:`_initialize`.
 
@@ -408,12 +446,13 @@ class HarmonizeFeatures:
 
         Returns:
             pandas.DataFrame: Mapping table ready to become ``adata.var``.  Columns are
-            ``"ensembl_gene"``, ``self.final_database``, and the original ``"Query ID"`` for traceability.
+            ``_ENSEMBL_GENE_COLUMN``, ``self.final_database``, and the original ``"Query ID"`` for traceability.
 
         Raises:
             AssertionError: If diagnostic sets such as :py:attr:`conversion_failed_identifiers` were not
                 populated—indicating an incorrect call order—or if unexpected duplicate target IDs remain
                 after processing.
+            ValueError: When malformed conversion entry.
         """
         # Ensure unified_matching_dict is populated (verifies proper initialization order).
         # The cached properties conversion_failed_identifiers and conversion_failed_but_consistent_identifiers
@@ -434,17 +473,37 @@ class HarmonizeFeatures:
             # it keeps the first one for now, the possible lists are saved self.multiple_ensembl_list in `initialize` method
 
             elif initialization_run:
-                new_var_list.append(list(conversion[0]) + [the_id])
+                first_match = conversion[0]
+                # Validate the conversion tuple structure to prevent DataFrame column misalignment
+                if not isinstance(first_match, (tuple, list)) or len(first_match) != 2:
+                    raise ValueError(
+                        f"Malformed conversion entry for identifier {the_id!r}: expected a 2-tuple "
+                        f"(ensembl_gene, {self.final_database}), got {first_match!r} with "
+                        f"type={type(first_match).__name__}, len={len(first_match) if hasattr(first_match, '__len__') else 'N/A'}"
+                    )
+                ensembl_gene, final_db_value = first_match
+                new_var_list.append([ensembl_gene, final_db_value, the_id])
             else:
-                c = list(conversion[0])
-                if len(c) != 2:
-                    raise AssertionError("len(c) != 2")
-                if c[1] in self.datataset_conversion_dataframe_issues["final_database_chosen_single_ensembl_dict"]:
-                    c[0] = self.datataset_conversion_dataframe_issues["final_database_chosen_single_ensembl_dict"][c[1]]
+                first_match = conversion[0]
+                # Validate the conversion tuple structure
+                if not isinstance(first_match, (tuple, list)) or len(first_match) != 2:
+                    raise ValueError(
+                        f"Malformed conversion entry for identifier {the_id!r}: expected a 2-tuple "
+                        f"(ensembl_gene, {self.final_database}), got {first_match!r} with "
+                        f"type={type(first_match).__name__}, len={len(first_match) if hasattr(first_match, '__len__') else 'N/A'}"
+                    )
+                ensembl_gene, final_db_value = first_match
+                if (
+                    final_db_value
+                    in self.datataset_conversion_dataframe_issues["final_database_chosen_single_ensembl_dict"]
+                ):
+                    ensembl_gene = self.datataset_conversion_dataframe_issues[
+                        "final_database_chosen_single_ensembl_dict"
+                    ][final_db_value]
 
-                new_var_list.append(c + [the_id])
+                new_var_list.append([ensembl_gene, final_db_value, the_id])
 
-        df = pd.DataFrame(new_var_list, columns=["ensembl_gene", self.final_database, "Query ID"])
+        df = pd.DataFrame(new_var_list, columns=[self._ENSEMBL_GENE_COLUMN, self.final_database, "Query ID"])
         return df
 
     def feature_harmonizer(self, dataset_name: str) -> tuple[ad.AnnData, int, int]:
@@ -463,7 +522,7 @@ class HarmonizeFeatures:
         Returns:
             tuple:
                 * **resulting_adata** (:py:class:`anndata.AnnData`) - Dataset whose ``var`` now contains
-                  ``"ensembl_gene"`` as index and ``self.final_database`` as a column.
+                  ``_ENSEMBL_GENE_COLUMN`` (matching Ensembl gene ID) as index and ``self.final_database`` as a column.
                 * **t0** (int) - Number of features *before* filtering and harmonisation.
                 * **t1** (int) - Number of features *after* the procedure (i.e., retained in
                   *resulting_adata*).
@@ -483,13 +542,15 @@ class HarmonizeFeatures:
 
         df = self.create_dataset_conversion_dataframe(gene_list=adata.var.index, initialization_run=False)
 
-        bool_remove = (
-            df["ensembl_gene"].duplicated(keep=False).any() or df[self.final_database].duplicated(keep=False).any()
-        )
+        # Use safe column accessor to check for duplicates
+        ensembl_col = self._ENSEMBL_GENE_COLUMN
+        ensembl_gene_col = self._get_column_as_series(df, ensembl_col)
+        final_db_col = self._get_column_as_series(df, self.final_database)
+        bool_remove = ensembl_gene_col.duplicated(keep=False).any() or final_db_col.duplicated(keep=False).any()
         if bool_remove:
             raise AssertionError("Unexpected duplicated entry!")
 
-        df = df.set_index("ensembl_gene")
+        df = df.set_index(ensembl_col)
         resulting_adata = ad.AnnData(X=adata.X, obs=adata.obs, var=df)  # dtype=adata.X.dtype,
 
         t1 = adata.n_vars

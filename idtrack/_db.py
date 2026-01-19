@@ -179,7 +179,7 @@ class DB:
     no_old_node_id = "Void"
     no_new_node_id = "Retired"
     alternative_versions = {no_new_node_id, no_old_node_id}
-    hyperconnecting_threshold = 50
+    hyperconnecting_threshold = 20
 
     # Node Types
     node_type_str = "node_type"

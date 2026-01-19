@@ -628,6 +628,276 @@ def write_csv_text(text: str, path: Path) -> Path:
 
 
 # ---------------------------------------------------------------------------
+# Gene cohorts / query sets (used by tool-comparison notebooks)
+# ---------------------------------------------------------------------------
+
+# HGNC provides a complete, human-only crosswalk. We use it to generate non-hardcoded
+# identifier cohorts for tool comparisons (external mappers, plus optional IDTrack caches).
+HGNC_COMPLETE_SET_URL = (
+    "https://ftp.ebi.ac.uk/pub/databases/genenames/out_of_date_hgnc/tsv/hgnc_complete_set.txt"
+)
+
+
+def _download_bytes(url: str, *, timeout_s: float = 60.0) -> bytes:
+    """Download a URL to memory (stdlib-only; used for small reference files)."""
+
+    import urllib.request
+
+    req = urllib.request.Request(url, headers={"User-Agent": "idtrack-experiments"})
+    with urllib.request.urlopen(req, timeout=float(timeout_s)) as resp:
+        return resp.read()
+
+
+def cache_download_bytes(
+    url: str,
+    path: Path,
+    *,
+    force: bool = False,
+    timeout_s: float = 60.0,
+    use_lock: bool = True,
+) -> Path:
+    """Download a URL to a local path (cache-first; atomic write + optional lock)."""
+
+    p = Path(path).expanduser().resolve()
+    if p.exists() and not force:
+        return p
+
+    lock_path = p.with_suffix(p.suffix + ".lock")
+    ctx = file_lock(lock_path) if use_lock else nullcontext()
+    with ctx:
+        # Another worker may have finished while we waited.
+        if p.exists() and not force:
+            return p
+        data = _download_bytes(url, timeout_s=timeout_s)
+        atomic_write_bytes(p, data)
+    return p
+
+
+def hgnc_cache_dir(*, start: Path | None = None) -> Path:
+    """Return a shared cache directory for HGNC downloads."""
+
+    return ensure_dir(experiments_cache_dir(start, experiment="_shared") / "hgnc")
+
+
+def load_hgnc_complete_set(
+    *,
+    start: Path | None = None,
+    force_download: bool = False,
+) -> "pd.DataFrame":
+    """Load the HGNC complete set (human) as a DataFrame, downloading on first use."""
+
+    import pandas as pd
+
+    cache_dir = hgnc_cache_dir(start=start)
+    path = cache_dir / "hgnc_complete_set.txt"
+    cache_download_bytes(HGNC_COMPLETE_SET_URL, path, force=force_download, timeout_s=120.0)
+    return pd.read_csv(path, sep="\t", dtype=str)
+
+
+def _split_pipe_list(value: Any) -> list[str]:
+    """Split an HGNC pipe-delimited field into a stable list (unique, non-empty)."""
+
+    if value is None:
+        return []
+    s = str(value).strip()
+    if not s or s.lower() in {"nan", "none", "null"}:
+        return []
+
+    parts = [p.strip() for p in s.split("|")]
+    out: list[str] = []
+    seen: set[str] = set()
+    for p in parts:
+        if not p or p in seen:
+            continue
+        seen.add(p)
+        out.append(p)
+    return out
+
+
+def build_tool_comparison_query_sets(
+    cache_dir: Path,
+    *,
+    start: Path | None = None,
+    species: str = "human",
+    n: int = 750,
+    seed: int = 0,
+    symbol_alias_fraction: float = 0.25,
+    symbol_prev_fraction: float = 0.15,
+    ensembl_versioned_fraction: float = 0.01,
+    include_negative_controls: bool = True,
+    force: bool = False,
+) -> dict[str, Any]:
+    """Create reproducible, non-hardcoded ID query cohorts for tool-comparison notebooks.
+
+    Notes:
+      - Sampling is deterministic (seeded), and the sampled lists are cached as JSON under `cache_dir`.
+      - Symbol cohorts can include alias/previous symbols to make ambiguity and 1→0 outcomes visible without
+        hardcoding specific gene names.
+      - A small fraction of Ensembl IDs are version-suffixed to exercise `strip_versions` behaviour.
+    """
+
+    cache_dir = ensure_dir(Path(cache_dir).expanduser().resolve())
+
+    if species.strip().lower() not in {"human", "hsapiens", "homo_sapiens"}:
+        raise ValueError(
+            "build_tool_comparison_query_sets currently supports human only (HGNC-based). "
+            f"Got species={species!r}."
+        )
+
+    if n <= 0:
+        raise ValueError("n must be a positive integer")
+
+    if not (0.0 <= float(symbol_alias_fraction) <= 1.0):
+        raise ValueError("symbol_alias_fraction must be between 0 and 1")
+    if not (0.0 <= float(symbol_prev_fraction) <= 1.0):
+        raise ValueError("symbol_prev_fraction must be between 0 and 1")
+    if float(symbol_alias_fraction) + float(symbol_prev_fraction) > 1.0:
+        raise ValueError("symbol_alias_fraction + symbol_prev_fraction must be <= 1")
+    if not (0.0 <= float(ensembl_versioned_fraction) <= 1.0):
+        raise ValueError("ensembl_versioned_fraction must be between 0 and 1")
+
+    config = {
+        "species": "human",
+        "n": int(n),
+        "seed": int(seed),
+        "symbol_alias_fraction": float(symbol_alias_fraction),
+        "symbol_prev_fraction": float(symbol_prev_fraction),
+        "ensembl_versioned_fraction": float(ensembl_versioned_fraction),
+        "include_negative_controls": bool(include_negative_controls),
+        "hgnc_url": HGNC_COMPLETE_SET_URL,
+    }
+    fp = stable_hash(json.dumps(config, sort_keys=True), n=12)
+    out_json = cache_dir / f"tool_comparison_queries_{fp}.json"
+
+    def _compute() -> dict[str, Any]:
+        import numpy as np
+
+        df = load_hgnc_complete_set(start=start)
+
+        required = {"status", "ensembl_gene_id", "symbol"}
+        missing = required.difference(df.columns)
+        if missing:
+            raise ValueError(f"HGNC complete set is missing required columns: {sorted(missing)}")
+
+        dfa = df.copy()
+        dfa = dfa[dfa["status"].fillna("").astype(str).str.strip().eq("Approved")].copy()
+
+        # --- Ensembl gene IDs (broad pool; includes genes with/without UniProt) ---
+        ensg_pool = (
+            dfa["ensembl_gene_id"]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+            .loc[lambda s: s.str.match(r"^ENSG\d+$", na=False)]
+            .drop_duplicates()
+            .tolist()
+        )
+        if len(ensg_pool) < int(n):
+            raise ValueError(f"Not enough HGNC Ensembl IDs to sample n={n} (pool={len(ensg_pool)}).")
+
+        rng = np.random.default_rng(int(seed))
+        query_ensg = rng.choice(ensg_pool, size=int(n), replace=False).tolist()
+
+        # Introduce a small fraction of version-suffixed Ensembl IDs to exercise `strip_versions`.
+        k_ver = int(round(float(ensembl_versioned_fraction) * int(n)))
+        if k_ver > 0 and query_ensg:
+            idx = rng.choice(np.arange(len(query_ensg)), size=min(k_ver, len(query_ensg)), replace=False)
+            for j, i in enumerate(sorted(map(int, idx))):
+                query_ensg[i] = f"{query_ensg[i]}.{(j % 20) + 1}"
+
+        # --- HGNC symbols (approved + alias + previous) ---
+        dfa_syms = dfa[dfa["ensembl_gene_id"].fillna("").astype(str).str.strip().ne("")].copy()
+        approved_pool = (
+            dfa_syms["symbol"].fillna("").astype(str).str.strip().loc[lambda s: s.ne("")].drop_duplicates().tolist()
+        )
+        if len(approved_pool) < int(n):
+            raise ValueError(f"Not enough HGNC symbols to sample n={n} (pool={len(approved_pool)}).")
+
+        k_alias = int(round(float(symbol_alias_fraction) * int(n)))
+        k_prev = int(round(float(symbol_prev_fraction) * int(n)))
+        k_approved = int(n) - k_alias - k_prev
+
+        approved = rng.choice(approved_pool, size=k_approved, replace=False).tolist() if k_approved > 0 else []
+
+        alias_pool: list[str] = []
+        if k_alias > 0 and "alias_symbol" in dfa_syms.columns:
+            for v in dfa_syms["alias_symbol"].tolist():
+                alias_pool.extend(_split_pipe_list(v))
+            alias_pool = [s for s in alias_pool if s]
+            alias_pool = list(dict.fromkeys(alias_pool))
+
+        prev_pool: list[str] = []
+        if k_prev > 0 and "prev_symbol" in dfa_syms.columns:
+            for v in dfa_syms["prev_symbol"].tolist():
+                prev_pool.extend(_split_pipe_list(v))
+            prev_pool = [s for s in prev_pool if s]
+            prev_pool = list(dict.fromkeys(prev_pool))
+
+        aliases = (
+            rng.choice(alias_pool, size=min(k_alias, len(alias_pool)), replace=False).tolist()
+            if alias_pool and k_alias > 0
+            else []
+        )
+        prevs = (
+            rng.choice(prev_pool, size=min(k_prev, len(prev_pool)), replace=False).tolist()
+            if prev_pool and k_prev > 0
+            else []
+        )
+
+        query_symbols_raw = approved + aliases + prevs
+        # Deduplicate while preserving order; backfill with more approved symbols if needed.
+        query_symbols = list(dict.fromkeys(query_symbols_raw))
+        if len(query_symbols) < int(n):
+            needed = int(n) - len(query_symbols)
+            fill = [s for s in approved_pool if s not in set(query_symbols)]
+            query_symbols.extend(fill[:needed])
+        query_symbols = query_symbols[: int(n)]
+
+        # --- UniProt IDs (use first accession per gene; avoids exploding isoform lists) ---
+        if "uniprot_ids" not in dfa.columns:
+            raise ValueError("HGNC complete set is missing 'uniprot_ids' column; cannot build UniProt cohort.")
+
+        uni_first: list[str] = []
+        for v in dfa["uniprot_ids"].tolist():
+            parts = _split_pipe_list(v)
+            if parts:
+                uni_first.append(parts[0])
+        uniprot_pool = [u for u in uni_first if u]
+        uniprot_pool = list(dict.fromkeys(uniprot_pool))
+
+        if len(uniprot_pool) < int(n):
+            raise ValueError(
+                f"Not enough UniProt IDs in HGNC to sample n={n} (pool={len(uniprot_pool)}). "
+                "Lower n or set scenario sizes separately."
+            )
+
+        query_uniprot = rng.choice(uniprot_pool, size=int(n), replace=False).tolist()
+
+        if include_negative_controls:
+            query_ensg = list(query_ensg) + [f"ENSG_DOES_NOT_EXIST_{seed}"]
+            query_symbols = list(query_symbols) + [f"SYMBOL_DOES_NOT_EXIST_{seed}"]
+            query_uniprot = list(query_uniprot) + [f"UNIPROT_DOES_NOT_EXIST_{seed}"]
+
+        return {
+            "meta": {
+                **config,
+                "fingerprint": fp,
+                "hgnc_local_path": str(hgnc_cache_dir(start=start) / "hgnc_complete_set.txt"),
+                "counts": {
+                    "QUERY_ENSG": int(len(query_ensg)),
+                    "QUERY_SYMBOLS": int(len(query_symbols)),
+                    "QUERY_UNIPROT": int(len(query_uniprot)),
+                },
+            },
+            "QUERY_ENSG": query_ensg,
+            "QUERY_SYMBOLS": query_symbols,
+            "QUERY_UNIPROT": query_uniprot,
+        }
+
+    return cache_json_or_compute(out_json, _compute, force=force, use_lock=True)
+
+
+# ---------------------------------------------------------------------------
 # Figure helpers (panel labels, consistent exports)
 # ---------------------------------------------------------------------------
 

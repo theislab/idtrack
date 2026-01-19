@@ -245,7 +245,7 @@ class TestDBSentinels:
 
         assert isinstance(DB.hyperconnecting_threshold, int)
         assert DB.hyperconnecting_threshold > 0
-        assert DB.hyperconnecting_threshold == 50
+        assert DB.hyperconnecting_threshold == 20
 
 
 class TestDBEdgeAttributes:
