@@ -7,8 +7,6 @@ discovery paths (a mocked MySQL listing and a mocked HTTPS dump listing): rhesus
 MMUL_1 release, and key 1 (MMUL_1) never a Mmul_10 release, although both are named `macaca_mulatta_core_<r>_10`.
 """
 
-from __future__ import annotations
-
 import copy
 from contextlib import contextmanager
 from types import MappingProxyType
@@ -131,6 +129,8 @@ class TestValidator:
             ({"danio_rerio": {"11": _entry()}}, "positive integers"),
             ({"danio_rerio": {0: _entry()}}, "positive integers"),
             ({"danio_rerio": {11: _entry(Ports=[1234])}}, "unknown MySQL ports"),
+            ({"sus_scrofa": {102: _entry(Ports=[3306, 5306, 3337])}}, r"serve only \[\('homo_sapiens', 37\)\]"),
+            ({"homo_sapiens": {38: _entry(Ports=[3306, 3337])}}, r"serve only \[\('homo_sapiens', 37\)\]"),
             ({"danio_rerio": {11: _entry(Ports=[])}}, "non-empty list"),
             ({"danio_rerio": {11: _entry(Priority=2)}}, "start at 1"),
             ({"danio_rerio": {11: _entry(), 10: _entry()}}, "unique"),
@@ -146,6 +146,14 @@ class TestValidator:
         """Rejects."""
         with pytest.raises(ValueError, match=message):
             self._check(table)
+
+    def test_grch37_archive_port_is_human_grch37_only(self):
+        """Port 3337 (the GRCh37 archive) is accepted for human GRCh37 and listed by no other shipped assembly."""
+        self._check({"homo_sapiens": {37: _entry(Ports=[3337, 3306, 5306])}})
+        assert DB.mysql_port_assembly == {3337: ("homo_sapiens", 37)}
+        for organism, entries in DB.assembly_mysqlport_priority.items():
+            for key, entry in entries.items():
+                assert (3337 in entry["Ports"]) == ((organism, key) == ("homo_sapiens", 37)), (organism, key)
 
     def test_shared_suffix_requires_disjoint_ranges(self):
         """Shared suffix requires disjoint ranges."""
@@ -383,6 +391,106 @@ class TestReleaseRangeOnHTTPSListing:
         assert min(asked) >= max(first, 48) and max(asked) <= (last or 116)
 
 
+# What Ensembl's public MySQL showed in November 2026 (run 43109865432): the GRCh37 archive port 3337 holds rhesus
+# MMUL_1 under the archive's release numbers 79 to 99 (`meta` assembly.default "MMUL_1" for all of them, including
+# `_98_10` and `_99_10`, which the main ports name Mmul_10), and pig Sscrofa10.2 beyond its last main release 89.
+ARCHIVE_PORT_CORE_DBS = {
+    "macaca_mulatta": [f"macaca_mulatta_core_{r}_10" for r in range(79, 100)],
+    "sus_scrofa": [f"sus_scrofa_core_{r}_102" for r in range(79, 100)],
+}
+PIG_MAIN_CORE_DBS = [f"sus_scrofa_core_{r}_102" for r in range(67, 90)] + [
+    f"sus_scrofa_core_{r}_111" for r in range(90, 117)
+]
+
+
+def _fake_mysql_connect_by_port(names_by_port: dict[int, list[str]], connected: list[int]):
+    """Return a `pymysql.connect` replacement answering the information_schema query per port."""
+
+    def _connect(**kwargs):
+        port = int(kwargs["port"])
+        connected.append(port)
+        return _fake_mysql_connect(names_by_port.get(port, []))(**kwargs)
+
+    return _connect
+
+
+class TestArchivePortCopies:
+    """Port 3337 is read for human GRCh37 only, so its archive copies are never attributed to an assembly."""
+
+    @pytest.fixture(autouse=True)
+    def _mysql_reachable(self, monkeypatch):
+        monkeypatch.setattr(reachability, "mysql_port_usable", lambda port: True)
+
+    @pytest.mark.parametrize(
+        ("organism", "assembly", "main", "expected"),
+        [
+            ("macaca_mulatta", 10, list(RHESUS_CORE_DBS.values()), list(range(98, 117))),
+            ("macaca_mulatta", 801, list(RHESUS_CORE_DBS.values()), list(range(86, 98))),
+            ("macaca_mulatta", 1, list(RHESUS_CORE_DBS.values()), list(range(48, 86))),
+            ("sus_scrofa", 102, PIG_MAIN_CORE_DBS, list(range(67, 90))),
+            ("sus_scrofa", 111, PIG_MAIN_CORE_DBS, list(range(90, 117))),
+        ],
+    )
+    def test_probe_never_reads_the_archive_port(self, organism, assembly, main, expected):
+        """Even with 3337 passed in, the probe reads only the main ports, so `_98_10` on 3337 never becomes Mmul_10."""
+        listing = {3306: main, 5306: main, 3337: ARCHIVE_PORT_CORE_DBS[organism]}
+        connected: list[int] = []
+        with patch(
+            "idtrack._database_manager.pymysql.connect",
+            side_effect=_fake_mysql_connect_by_port(listing, connected),
+        ):
+            releases_by_port, db_by_port_release, errors = DatabaseManager._probe_mysql_core_schemas_by_port(
+                organism=organism, genome_assembly=assembly, ports=[3306, 5306, 3337]
+            )
+        assert 3337 not in connected and not errors
+        assert sorted(releases_by_port[3306]) == expected and not releases_by_port[3337]
+        assert not db_by_port_release[3337]
+
+    def test_archive_port_is_read_for_human_grch37_only(self):
+        """GRCh37 reads its releases on 3337; GRCh38 never connects to 3337 even when it is passed in."""
+        grch37 = [f"homo_sapiens_core_{r}_37" for r in range(79, 117)]
+        listing = {3337: grch37, 3306: [f"homo_sapiens_core_{r}_38" for r in range(76, 117)]}
+        connected: list[int] = []
+        with patch(
+            "idtrack._database_manager.pymysql.connect",
+            side_effect=_fake_mysql_connect_by_port(listing, connected),
+        ):
+            releases_37, _, _ = DatabaseManager._probe_mysql_core_schemas_by_port(
+                organism="homo_sapiens", genome_assembly=37, ports=[3337]
+            )
+            assert connected == [3337]
+            releases_38, _, _ = DatabaseManager._probe_mysql_core_schemas_by_port(
+                organism="homo_sapiens", genome_assembly=38, ports=[3306, 3337]
+            )
+        assert connected == [3337, 3306]
+        assert sorted(releases_37[3337]) == list(range(79, 117))
+        assert sorted(releases_38[3306]) == list(range(76, 117)) and not releases_38[3337]
+
+    def test_both_access_modes_give_the_same_releases(self, monkeypatch):
+        """The MySQL listing (main ports) and the HTTPS listing give each rhesus assembly the same releases."""
+        monkeypatch.setattr(DatabaseManager, "_ensembl_latest_release_cache", 116)
+        listing = {3306: list(RHESUS_CORE_DBS.values()), 5306: list(RHESUS_CORE_DBS.values())}
+        listing[3337] = ARCHIVE_PORT_CORE_DBS["macaca_mulatta"]
+        for assembly in (10, 801, 1):
+            connected: list[int] = []
+            with patch(
+                "idtrack._database_manager.pymysql.connect",
+                side_effect=_fake_mysql_connect_by_port(listing, connected),
+            ):
+                releases_by_port, _, _ = DatabaseManager._probe_mysql_core_schemas_by_port(
+                    organism="macaca_mulatta",
+                    genome_assembly=assembly,
+                    ports=DB.assembly_mysqlport_priority["macaca_mulatta"][assembly]["Ports"],
+                )
+            with patch("idtrack._database_manager.requests.get", side_effect=TestReleaseRangeOnHTTPSListing._fake_get):
+                https_index = DatabaseManager._get_core_db_index_from_ftp(
+                    organism="macaca_mulatta", genome_assembly=assembly, ports=[3306, 5306]
+                )
+            mysql_releases = sorted({r for rels in releases_by_port.values() for r in rels})
+            assert mysql_releases == https_index["releases"], assembly
+            assert 3337 not in connected
+
+
 class TestIndexCacheFollowsTable:
     """The core-database index cache is keyed by the table version, so `register_organism` invalidates it."""
 
@@ -415,7 +523,7 @@ class TestDefaultAssemblyFollowsWindow:
 
     @pytest.fixture(autouse=True)
     def _fake_indexes(self, monkeypatch):
-        def _index(cls, *, organism, genome_assembly):
+        def _index(cls, *, organism, genome_assembly, **_):
             first, last = DB.release_range(organism, genome_assembly)
             releases = list(range(max(first, 48), (last or 116) + 1))
             return {

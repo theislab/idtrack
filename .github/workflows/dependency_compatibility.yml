@@ -65,197 +65,48 @@ jobs:
             fail-fast: false
             matrix:
                 include:
+                    # Each stack runs on Python 3.12 (oldest supported) and on the newest Python it supports.
                     # -------------------------------------------------------------------------
-                    # Python 3.9 (oldest supported) – exercise both legacy and modern stacks.
-                    # -------------------------------------------------------------------------
-                    - python-version: "3.9"
-                      dependency-set: "legacy stack (nx<3, yaml<6, pandas<2, numpy<2)"
-                      constraints: |
-                          numpy<2
-                          pandas<2
-                          scipy<1.12
-                          sparse<0.15
-                          anndata<0.10
-                          networkx<3
-                          PyYAML<6
-                    - python-version: "3.9"
-                      dependency-set: "legacy stack (nx>=3, yaml<6, pandas<2, numpy<2)"
-                      constraints: |
-                          numpy<2
-                          pandas<2
-                          scipy<1.12
-                          sparse<0.15
-                          anndata<0.10
-                          networkx>=3,<4
-                          PyYAML<6
-                    - python-version: "3.9"
-                      dependency-set: "pandas>=2 / numpy<2 (modern deps)"
-                      constraints: |
-                          numpy<2
-                          pandas>=2,<3
-                          anndata>=0.10,<0.12
-                          networkx>=3,<4
-                          PyYAML>=6,<7
-                          sparse<1
-                          requests==2.32.4
-                          urllib3==2.5.0
-                    - python-version: "3.9"
-                      dependency-set: "pandas>=2 / numpy>=2 (modern deps)"
-                      constraints: |
-                          numpy>=2,<3
-                          pandas>=2,<3
-                          anndata>=0.10,<0.12
-                          networkx>=3,<4
-                          PyYAML>=6,<7
-                          sparse>=0.15,<1
-                          requests==2.32.4
-                          urllib3==2.5.0
-
-                    # -------------------------------------------------------------------------
-                    # Python 3.10
-                    # -------------------------------------------------------------------------
-                    # NOTE: PyYAML 5.x does not ship manylinux wheels for Python 3.10+ and its sdist build fails
-                    # under modern setuptools (AttributeError: cython_sources). Keep the "legacy" stacks here focused
-                    # on the scientific stack (numpy/pandas/scipy/anndata/networkx) and pin PyYAML>=6.
-                    - python-version: "3.10"
-                      dependency-set: "legacy stack (nx<3, yaml>=6, pandas<2, numpy<2)"
-                      constraints: |
-                          numpy<2
-                          pandas<2
-                          scipy<1.12
-                          sparse<0.15
-                          anndata<0.10
-                          networkx<3
-                          PyYAML>=6,<7
-                    - python-version: "3.10"
-                      dependency-set: "legacy stack (nx>=3, yaml>=6, pandas<2, numpy<2)"
-                      constraints: |
-                          numpy<2
-                          pandas<2
-                          scipy<1.12
-                          sparse<0.15
-                          anndata<0.10
-                          networkx>=3,<4
-                          PyYAML>=6,<7
-                    - python-version: "3.10"
-                      dependency-set: "pandas>=2 / numpy<2 (modern deps)"
-                      constraints: |
-                          numpy<2
-                          pandas>=2,<3
-                          anndata>=0.10,<0.12
-                          networkx>=3,<4
-                          PyYAML>=6,<7
-                          sparse<1
-                          requests==2.33.0
-                          urllib3==2.8.0
-                    - python-version: "3.10"
-                      dependency-set: "pandas>=2 / numpy>=2 (modern deps)"
-                      constraints: |
-                          numpy>=2,<3
-                          pandas>=2,<3
-                          anndata>=0.10,<0.12
-                          networkx>=3,<4
-                          PyYAML>=6,<7
-                          sparse>=0.15,<1
-                          requests==2.33.0
-                          urllib3==2.8.0
-
-                    # -------------------------------------------------------------------------
-                    # Python 3.11
-                    # -------------------------------------------------------------------------
-                    - python-version: "3.11"
-                      dependency-set: "legacy stack (nx<3, yaml>=6, pandas<2, numpy<2)"
-                      constraints: |
-                          numpy<2
-                          pandas<2
-                          scipy<1.12
-                          sparse<0.15
-                          anndata<0.10
-                          networkx<3
-                          PyYAML>=6,<7
-                    - python-version: "3.11"
-                      dependency-set: "legacy stack (nx>=3, yaml>=6, pandas<2, numpy<2)"
-                      constraints: |
-                          numpy<2
-                          pandas<2
-                          scipy<1.12
-                          sparse<0.15
-                          anndata<0.10
-                          networkx>=3,<4
-                          PyYAML>=6,<7
-                    - python-version: "3.11"
-                      dependency-set: "pandas>=2 / numpy<2 (modern deps)"
-                      constraints: |
-                          numpy<2
-                          pandas>=2,<3
-                          anndata>=0.10,<0.12
-                          networkx>=3,<4
-                          PyYAML>=6,<7
-                          sparse<1
-                          requests==2.33.0
-                          urllib3==2.8.0
-                    - python-version: "3.11"
-                      dependency-set: "pandas>=2 / numpy>=2 (modern deps)"
-                      constraints: |
-                          numpy>=2,<3
-                          pandas>=2,<3
-                          anndata>=0.10,<0.12
-                          networkx>=3,<4
-                          PyYAML>=6,<7
-                          sparse>=0.15,<1
-                          requests==2.33.0
-                          urllib3==2.8.0
-
-                    # -------------------------------------------------------------------------
-                    # Python 3.12+ – focus on modern stacks (older scientific wheels may not exist).
+                    # Oldest stack: every floor of pyproject.toml at once. h5py 3.11 has no wheels after Python 3.12.
                     # -------------------------------------------------------------------------
                     - python-version: "3.12"
-                      dependency-set: "pandas>=2 / numpy<2 (nx<3)"
+                      dependency-set: "oldest stack (every floor)"
                       constraints: |
-                          numpy<2
-                          pandas>=2,<3
-                          anndata>=0.10,<0.12
-                          networkx<3
-                          PyYAML>=6,<7
-                          sparse<1
+                          pandas==2.3.0
+                          anndata==0.13.0
+                          numpy==2.1.0
+                          scipy==1.14.0
+                          h5py==3.11.0
+                          networkx==3.2
+                          sparse==0.15.0
+                          PyYAML==6.0.2
+                          requests==2.33.0
+                          urllib3==2.8.0
+                          PyMySQL==1.1.1
+                          PySocks==1.7.1
+                          tqdm==4.66.3
+                    # -------------------------------------------------------------------------
+                    # pandas 2.3 with everything else newest. pandas 2.3 has no wheels after Python 3.14.
+                    # -------------------------------------------------------------------------
                     - python-version: "3.12"
-                      dependency-set: "pandas>=2 / numpy<2 (nx>=3)"
+                      dependency-set: "pandas 2.3, rest newest"
                       constraints: |
-                          numpy<2
-                          pandas>=2,<3
-                          anndata>=0.10,<0.12
-                          networkx>=3,<4
-                          PyYAML>=6,<7
-                          sparse<1
+                          pandas>=2.3,<2.4
+                    - python-version: "3.14"
+                      dependency-set: "pandas 2.3, rest newest"
+                      constraints: |
+                          pandas>=2.3,<2.4
+                    # -------------------------------------------------------------------------
+                    # Newest stack: the newest release of everything, pandas 3.x.
+                    # -------------------------------------------------------------------------
                     - python-version: "3.12"
-                      dependency-set: "pandas>=2 / numpy>=2 (nx>=3)"
+                      dependency-set: "newest stack (pandas 3)"
                       constraints: |
-                          numpy>=2,<3
-                          pandas>=2,<3
-                          anndata>=0.10,<0.12
-                          networkx>=3,<4
-                          PyYAML>=6,<7
-                          sparse>=0.15,<1
-
-                    # Python 3.13
-                    - python-version: "3.13"
-                      dependency-set: "pandas>=2 / numpy>=2 (nx<3)"
+                          pandas>=3
+                    - python-version: "3.15"
+                      dependency-set: "newest stack (pandas 3)"
                       constraints: |
-                          numpy>=2,<3
-                          pandas>=2,<3
-                          anndata>=0.10,<0.12
-                          networkx<3
-                          PyYAML>=6,<7
-                          sparse>=0.15,<1
-                    - python-version: "3.13"
-                      dependency-set: "pandas>=2 / numpy>=2 (nx>=3)"
-                      constraints: |
-                          numpy>=2,<3
-                          pandas>=2,<3
-                          anndata>=0.10,<0.12
-                          networkx>=3,<4
-                          PyYAML>=6,<7
-                          sparse>=0.15,<1
+                          pandas>=3
 
         steps:
             - name: Download wheel
@@ -280,6 +131,16 @@ jobs:
 
             - name: Upgrade pip
               run: python -m pip install --upgrade pip
+
+            # h5py has no wheels for Python 3.15 yet (h5py 3.16.0, November 2026), so pip builds it from source,
+            # which needs the HDF5 library. Remove this step once h5py publishes cp315 wheels.
+            - name: Install HDF5 (Python 3.15 only)
+              if: matrix.python-version == '3.15'
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y libhdf5-dev
+                  # Where Ubuntu puts the serial HDF5 (h5py's build looks here when HDF5_DIR is set).
+                  echo "HDF5_DIR=/usr/lib/x86_64-linux-gnu/hdf5/serial" >> "$GITHUB_ENV"
 
             # Install with constraints and verify the resolved environment is consistent.
             - name: Install wheel and verify dependencies

@@ -12,7 +12,7 @@ import time
 import traceback
 from abc import ABC
 from math import ceil
-from typing import Any, Optional, Union
+from typing import Any
 
 import networkx as nx
 import numpy as np
@@ -582,7 +582,7 @@ class TrackTests(Track, ABC):
             raise ValueError(f"from_fraction must be in range (0.0, 1.0], got {from_fraction!r}.")
 
         # Metric scaffold
-        parameters: dict[str, Union[bool, str, int, float]] = {
+        parameters: dict[str, bool | str | int | float] = {
             "from_release": from_release,
             "from_assembly": from_assembly,
             "from_database": from_database,
@@ -865,8 +865,8 @@ class TrackTests(Track, ABC):
     def is_final_external_conversion_robust(
         self,
         convert_using_release: bool = False,
-        database: Optional[str] = None,
-        ens_rel: Optional[int] = None,
+        database: str | None = None,
+        ens_rel: int | None = None,
         verbose: bool = True,
         from_fraction: float = 1.0,
         prioritize_to_one_filter: bool = False,
@@ -981,8 +981,8 @@ class TrackTests(Track, ABC):
         include_ensembl: bool,
         for_final_database: bool,
         only_backbone_tests: bool,
-        release_lower_limit: Optional[int] = None,
-        form: Optional[str] = None,
+        release_lower_limit: int | None = None,
+        form: str | None = None,
     ) -> tuple[str, int, int]:
         """Pick a random (<database>, <assembly>, <release>) tuple.
 

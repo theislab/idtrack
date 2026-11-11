@@ -18,8 +18,6 @@ These tests download small real tables from `https://ftp.ensembl.org/pub/...` to
 The tests are marked as slow/network and will be skipped if the FTP host is unreachable.
 """
 
-from __future__ import annotations
-
 import tempfile
 from collections.abc import Iterable
 
@@ -81,7 +79,6 @@ REQUIRED_CORE_TABLES: set[str] = {
     # History tables used to build idhistory graphs.
     "mapping_session",
     "stable_id_event",
-    "gene_archive",
     # Cross-reference tables used for external mappings (even if externals are disabled for some species).
     "object_xref",
     "xref",

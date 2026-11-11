@@ -34,23 +34,23 @@ jobs:
             fail-fast: false
             matrix:
                 include:
-                    # Keep "tooling" sessions on a single Python for speed.
-                    - { python-version: "3.11", session: "pre-commit" }
-                    - { python-version: "3.11", session: "safety" }
-                    - { python-version: "3.11", session: "mypy" }
+                    # Keep "tooling" sessions on a single Python for speed: the oldest supported one, so that type
+                    # checks and doctests catch any use of a newer Python's features (keep in sync with noxfile.py).
+                    - { python-version: "3.12", session: "pre-commit" }
+                    - { python-version: "3.12", session: "safety" }
+                    - { python-version: "3.12", session: "mypy" }
                     # Run the full test suite across the supported Python versions.
-                    - { python-version: "3.9", session: "tests" }
-                    - { python-version: "3.10", session: "tests" }
-                    - { python-version: "3.11", session: "tests" }
                     - { python-version: "3.12", session: "tests" }
                     - { python-version: "3.13", session: "tests" }
-                    - { python-version: "3.11", session: "typeguard" }
-                    - { python-version: "3.11", session: "xdoctest" }
+                    - { python-version: "3.14", session: "tests" }
+                    - { python-version: "3.15", session: "tests" }
+                    - { python-version: "3.12", session: "typeguard" }
+                    - { python-version: "3.12", session: "xdoctest" }
                     # Documentation build (kept as a separate session for clear failures).
-                    - { python-version: "3.11", session: "docs-build" }
+                    - { python-version: "3.12", session: "docs-build" }
                     # Test with optional external-mappers dependencies
                     - {
-                          python-version: "3.11",
+                          python-version: "3.12",
                           session: "tests-external-mappers",
                       }
 
@@ -79,6 +79,16 @@ jobs:
               run: |
                   sudo apt-get update
                   sudo apt-get install -y pandoc
+
+            # h5py has no wheels for Python 3.15 yet (h5py 3.16.0, November 2026), so pip builds it from source,
+            # which needs the HDF5 library. Remove this step once h5py publishes cp315 wheels.
+            - name: Install HDF5 (Python 3.15 only)
+              if: matrix.python-version == '3.15'
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y libhdf5-dev
+                  # Where Ubuntu puts the serial HDF5 (h5py's build looks here when HDF5_DIR is set).
+                  echo "HDF5_DIR=/usr/lib/x86_64-linux-gnu/hdf5/serial" >> "$GITHUB_ENV"
 
             # Install Poetry (used by the nox-poetry plugin and the safety session).
             - name: Install Poetry
@@ -133,11 +143,11 @@ jobs:
                   nox --force-color --python=${{ matrix.python-version }} --session=${{ matrix.session }}
 
             - name: Show coverage files
-              if: always() && matrix.session == 'tests' && matrix.python-version == '3.11'
+              if: always() && matrix.session == 'tests' && matrix.python-version == '3.12'
               run: ls -alh .coverage*
 
             - name: Upload coverage data
-              if: always() && matrix.session == 'tests' && matrix.python-version == '3.11'
+              if: always() && matrix.session == 'tests' && matrix.python-version == '3.12'
               uses: actions/upload-artifact@v4
               with:
                   name: coverage-data
@@ -162,10 +172,10 @@ jobs:
             - name: Check out the repository
               uses: actions/checkout@v4
 
-            - name: Set up Python 3.11
+            - name: Set up Python 3.12
               uses: actions/setup-python@v5
               with:
-                  python-version: "3.11"
+                  python-version: "3.12"
                   cache: pip
                   cache-dependency-path: |
                       pyproject.toml
@@ -192,7 +202,7 @@ jobs:
                   name: coverage-data
 
             # Guard downstream steps so the job stays green when coverage-data was not produced
-            # (e.g. if the py3.11 tests matrix entry was cancelled/failed before uploading).
+            # (e.g. if the py3.12 tests matrix entry was cancelled/failed before uploading).
             - name: Check for coverage inputs
               id: coverage-inputs
               run: |

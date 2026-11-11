@@ -7,7 +7,7 @@
 import copy
 import re
 from collections.abc import Mapping, Sequence
-from typing import Any, Optional
+from typing import Any
 
 import h5py
 
@@ -27,7 +27,14 @@ class DB:
         first_version (int): Default version assumed when an ID lacks an explicit version component.
 
         connection_timeout (int): TCP connect timeout in seconds used by both FTP and REST clients.
-        reading_timeout  (int): Socket read timeout in seconds applied to FTP and REST operations.
+        reading_timeout  (int): Socket read timeout in seconds applied to FTP and REST operations. Raise it (e.g.
+            ``idtrack.DB.reading_timeout = 120``) on a network where Ensembl answers slowly.
+        rest_attempts (int): Attempts of every Ensembl REST request (:py:func:`idtrack._ensembl_access.rest_get_json`):
+            timeouts, connection errors and the HTTP statuses 429, 500, 502, 503 and 504 are retried.
+        rest_retry_wait (float): Seconds before the second attempt; doubled before each further one (an HTTP
+            ``Retry-After`` header is honoured when longer, up to 60 s).
+        rest_species_cache_seconds (float): How long a process keeps the Ensembl species list (and with it the latest
+            release of each species) before asking Ensembl REST again; one day by default.
 
         ensembl_ftp_base (str): Hostname of the Ensembl public FTP mirror.
         rest_server_api (str): Root URL of the Ensembl REST API.
@@ -109,8 +116,11 @@ class DB:
 
     # FTP and REST API Timeouts. It’s a good practice to set connect timeouts to slightly larger than a multiple of 3,
     # which is the default TCP packet retransmission window.
-    connection_timeout = 12
-    reading_timeout = 12
+    connection_timeout = 15
+    reading_timeout = 60
+    rest_attempts = 3
+    rest_retry_wait = 2.0
+    rest_species_cache_seconds = 86400.0
 
     # FTP server from which the above databases will be downloaded.
     ensembl_ftp_base = "ftp.ensembl.org"
@@ -129,12 +139,20 @@ class DB:
         5306: 48,  # mirror of 3306 (redundancy / load balancing; should serve equivalent core schemas)
         3337: 79,
     }
+    # Ports that serve one assembly only: {port: (organism, assembly key)}. 3337 is Ensembl's GRCh37 archive, and
+    # human GRCh37 is the one parallel assembly Ensembl maintains there. The archive also carries other assemblies
+    # forward as frozen copies under its later release numbers (rhesus MMUL_1 as `macaca_mulatta_core_79_10` to
+    # `_99_10`, where the main servers have Mmul_8.0.1 from 86 and Mmul_10 from 98; pig Sscrofa10.2 after its last
+    # release 89; mouse GRCm38 likewise). Those copies are not annotation of the releases their names say and are
+    # not part of a graph: an assembly's releases are those of the main servers and of the HTTPS dumps, which agree.
+    # The validator lets only the owning assembly list such a port, and the MySQL discovery never reads it for another.
+    mysql_port_assembly: dict[int, tuple[str, int]] = {3337: ("homo_sapiens", 37)}
     # Connect timeout for the first (and only) TCP probe of a MySQL port in a process.
     mysql_probe_timeout: float = 5.0
 
     # Access mode: "auto" (MySQL where reachable, HTTPS dumps otherwise) or "https" (never touch MySQL).
     # `None` means: read the environment variable `IDTRACK_ENSEMBL_ACCESS`, else "auto".
-    ensembl_access: Optional[str] = None
+    ensembl_access: str | None = None
     ensembl_access_env_var = "IDTRACK_ENSEMBL_ACCESS"
     ensembl_access_modes = ("auto", "https")
 
@@ -159,13 +177,16 @@ class DB:
         #   and beyond". Both discovery paths (MySQL and HTTPS dumps) only accept releases inside it. Releases before
         #   48 are out of reach regardless (`mysql_port_min_release`).
         # - "Ports" are the MySQL ports to try in preference order; DatabaseManager picks the first port that
-        #   contains the requested release. "Priority" orders the assemblies of an organism (1 = preferred, newest).
+        #   contains the requested release. A port of `mysql_port_assembly` may be listed only by its assembly.
+        #   "Priority" orders the assemblies of an organism (1 = preferred, newest).
         # - "Name" is the assembly name as Ensembl gives it (`assembly.default` in the core database's `meta`
-        #   table); it is informative only.
+        #   table). idtrack does not read it at run time; the live MySQL tests check it against every core database
+        #   the table attributes to the assembly.
         "homo_sapiens": {
             # GRCh38 (Ensembl release 76+; primary assembly since release 76)
             38: {"Name": "GRCh38", "Ports": [3306, 5306], "Priority": 1, "ReleaseRange": [76, None]},
-            # GRCh37 (Ensembl release 55+; archive since release 76)
+            # GRCh37 (Ensembl release 55+; archive since release 76): the one parallel assembly Ensembl maintains,
+            # on its archive port 3337 (`mysql_port_assembly`).
             # - MySQL port 3337 hosts GRCh37 **release 79 onwards** (archive service).
             # - Some GRCh37 schemas can also appear on the main ports (3306/5306) for select releases; keep them
             #   as fallbacks for environments where 3337 is unreachable.
@@ -181,8 +202,7 @@ class DB:
             # GRCm39 (Ensembl release 103+; clean handoff from GRCm38 at release 103)
             39: {"Name": "GRCm39", "Ports": [3306, 5306], "Priority": 1, "ReleaseRange": [103, None]},
             # GRCm38 (Ensembl release 68–102)
-            # - Port 3337 also hosts a subset of GRCm38 releases (archive mirror); keep it as a fallback.
-            38: {"Name": "GRCm38", "Ports": [3306, 5306, 3337], "Priority": 2, "ReleaseRange": [68, 102]},
+            38: {"Name": "GRCm38", "Ports": [3306, 5306], "Priority": 2, "ReleaseRange": [68, 102]},
             # NCBIM37 (Ensembl release 48–67; clean handoff to GRCm38 at release 68)
             # - Early releases can carry a patch-letter suffix (e.g. `..._37a`) and are handled by DatabaseManager.
             37: {"Name": "NCBIM37", "Ports": [3306, 5306], "Priority": 3, "ReleaseRange": [48, 67]},
@@ -191,8 +211,7 @@ class DB:
             # Sscrofa11.1 (Ensembl release 90+; clean handoff from Sscrofa10.2 at release 90)
             111: {"Name": "Sscrofa11.1", "Ports": [3306, 5306], "Priority": 1, "ReleaseRange": [90, None]},
             # Sscrofa10.2 (archive) — Ensembl release 67–89
-            # - Port 3337 hosts later archive releases (79–99); keep it as a fallback when present.
-            102: {"Name": "Sscrofa10.2", "Ports": [3306, 5306, 3337], "Priority": 2, "ReleaseRange": [67, 89]},
+            102: {"Name": "Sscrofa10.2", "Ports": [3306, 5306], "Priority": 2, "ReleaseRange": [67, 89]},
             # Sscrofa9 (historic; clean handoff to Sscrofa10.2 at release 67)
             # - Ensembl FTP contains releases 56–66 under directory names like
             #   `sus_scrofa_core_<release>_9<patch>` (e.g. `sus_scrofa_core_60_9d`).
@@ -201,7 +220,7 @@ class DB:
         },
         "macaca_mulatta": {
             # Rhesus macaque. Clean handoffs: MMUL_1 up to 85, Mmul_8.0.1 86–97, Mmul_10 from 98 (one assembly per
-            # release in the dump listings). Ports 3306/5306 serve releases 48+; 3337 hosts only the GRCh37 archive.
+            # release in the dump listings). Ports 3306/5306 serve releases 48+ (3337: see `mysql_port_assembly`).
             # Mmul_10 (Ensembl release 98+)
             10: {"Name": "Mmul_10", "Ports": [3306, 5306], "Priority": 1, "ReleaseRange": [98, None]},
             # Mmul_8.0.1 (Ensembl release 86–97)
@@ -303,11 +322,11 @@ class DB:
 
         Rules: organism names are lower-case Ensembl production names; every organism has at least one assembly;
         assembly keys are positive integers; each entry carries ``Ports`` (known MySQL ports, see
-        :py:attr:`mysql_port_min_release`), ``Priority`` and ``ReleaseRange``, plus optionally ``Name`` and
-        ``DbSuffix`` and nothing else; priorities are unique per organism and start at 1; release ranges are
-        ``[first, last]`` with ``last`` ``None`` or not smaller than ``first``; entries of one organism that share a
-        ``DbSuffix`` have non-overlapping release ranges; the symbol-database table names exactly the organisms of
-        the organism table.
+        :py:attr:`mysql_port_min_release`, and none that :py:attr:`mysql_port_assembly` reserves for another
+        assembly), ``Priority`` and ``ReleaseRange``, plus optionally ``Name`` and ``DbSuffix`` and nothing else;
+        priorities are unique per organism and start at 1; release ranges are ``[first, last]`` with ``last``
+        ``None`` or not smaller than ``first``; entries of one organism that share a ``DbSuffix`` have
+        non-overlapping release ranges; the symbol-database table names exactly the organisms of the organism table.
 
         Args:
             table: Candidate value of :py:attr:`assembly_mysqlport_priority`.
@@ -354,6 +373,14 @@ class DB:
                 if unknown_ports:
                     raise ValueError(
                         f"{where}: unknown MySQL ports {unknown_ports}; known: {sorted(cls.mysql_port_min_release)}."
+                    )
+                foreign_ports = sorted(
+                    p for p in ports if cls.mysql_port_assembly.get(p, (organism, key)) != (organism, key)
+                )
+                if foreign_ports:
+                    raise ValueError(
+                        f"{where}: MySQL ports {foreign_ports} serve only "
+                        f"{[cls.mysql_port_assembly[p] for p in foreign_ports]} (see `DB.mysql_port_assembly`)."
                     )
 
                 priority = entry["Priority"]
@@ -443,7 +470,7 @@ class DB:
         cls,
         name: str,
         assemblies: Mapping[int, Mapping[str, Any]],
-        symbol_databases: Optional[Sequence[str]] = None,
+        symbol_databases: Sequence[str] | None = None,
     ) -> None:
         """Add an organism to the organism table, or replace its entry, and recompute the derived attributes.
 
@@ -518,13 +545,13 @@ class DB:
         return str(cls._assembly_entry(organism, assembly).get("DbSuffix", str(int(assembly))))
 
     @classmethod
-    def release_range(cls, organism: str, assembly: int) -> tuple[int, Optional[int]]:
+    def release_range(cls, organism: str, assembly: int) -> tuple[int, int | None]:
         """Return the configured ``(first, last)`` release of an assembly; ``last`` is ``None`` when open-ended."""
         first, last = cls._assembly_entry(organism, assembly)["ReleaseRange"]
         return int(first), (None if last is None else int(last))
 
     @classmethod
-    def assembly_name(cls, organism: str, assembly: int) -> Optional[str]:
+    def assembly_name(cls, organism: str, assembly: int) -> str | None:
         """Return Ensembl's name of an assembly (e.g. ``"Mmul_10"``), or ``None`` if the table does not give one."""
         return cls._assembly_entry(organism, assembly).get("Name")
 
@@ -557,7 +584,7 @@ class DB:
         return re.compile(rf"^{re.escape(organism)}_core_(?P<release>[0-9]+)_{suffix}(?P<patch>[a-z]*)$")
 
     @classmethod
-    def assembly_for_core_db(cls, organism: str, db_suffix: str, release: int) -> Optional[int]:
+    def assembly_for_core_db(cls, organism: str, db_suffix: str, release: int) -> int | None:
         """Return the assembly key whose ``DbSuffix`` and ``ReleaseRange`` match a core database, else ``None``.
 
         Args:
@@ -588,180 +615,35 @@ class EmptyConversionMetricsError(ValueError):
     pass
 
 
-MISSING_VALUES = [
-    "na",
-    "NA",
-    "Na",
-    "n/a",
-    "N/A",
-    "n.a.",
-    "N.A.",
-    "na.",
-    "Na.",
-    "NA.",
-    "n-a",
-    "N-A",
-    "Na-",
-    "NA-",
-    "n_a",
-    "N_A",
-    "Na_",
-    "NA_",
-    "none",
-    "None",
-    "NONE",
-    "non",
-    "Non",
-    "NON",
-    "void",
-    "Void",
-    "VOID",
-    "blank",
-    "Blank",
-    "BLANK",
-    "omitted",
-    "Omitted",
-    "OMITTED",
-    "NaN",
-    "nan",
-    "Nan",
-    "NAN",
-    "-",
-    "_",
-    "--",
-    "__",
-    "---",
-    "___",
-    "null",
-    "Null",
-    "NULL",
-    "nil",
-    "Nil",
-    "NIL",
-    "undefined",
-    "Undefined",
-    "UnDefined",
-    "UNDEFINED",
-    "unassigned",
-    "Unassigned",
-    "UnAssigned",
-    "UNASSIGNED",
-    "unspecified",
-    "Unspecified",
-    "UNSPECIFIED",
-    "",
-    " ",
-    "  ",
-    "   ",
-    "    ",
-    ".",
-    "..",
-    "...",
-    "....",
-    "?",
-    "??",
-    "???",
-    "????",
-    "missing",
-    "Missing",
-    "MISSING",
-    "absent",
-    "Absent",
-    "ABSENT",
-    "EMPTY",
-    "empty",
-    "Empty",
-    "not available",
-    "Not Available",
-    "NOT AVAILABLE",
-    "notavailable",
-    "NotAvailable",
-    "NOTAVAILABLE",
-    "unknown",
-    "Unknown",
-    "UnKnown",
-    "UNKNOWN",
-    "not known",
-    "Not Known",
-    "NOT KNOWN",
-    "notknown",
-    "NotKnown",
-    "NOTKNOWN",
-    "undisclosed",
-    "Undisclosed",
-    "UNDISCLOSED",
-    "not disclosed",
-    "Not Disclosed",
-    "NOT DISCLOSED",
-    "notdisclosed",
-    "NotDisclosed",
-    "NOTDISCLOSED",
-    "not applicable",
-    "Not Applicable",
-    "NOT APPLICABLE",
-    "notapplicable",
-    "NotApplicable",
-    "NOTAPPLICABLE",
-    "to be filled",
-    "To Be Filled",
-    "TO BE FILLED",
-    "to be determined",
-    "To Be Determined",
-    "TO BE DETERMINED",
-    "tbd",
-    "TBD",
-    "tba",
-    "TBA",
-    "n.k.",
-    "N.K.",
-    "n.k",
-    "N.K",
-    "n/k",
-    "N/K",
-    "n/k/a",
-    "N/K/A",
-    "n.d.",
-    "N.D.",
-    "n.d",
-    "N.D",
-    "n/d",
-    "N/D",
-    "n/d/a",
-    "N/D/A",
-    "n.a.p.",
-    "N.A.P.",
-    "n.a.p",
-    "N.A.P",
-    "n/a/p",
-    "N/A/P",
-    "n/a/p/a",
-    "N/A/P/A",
-    "xx",
-    "XX",
-    "x",
-    "X",
-    "xxx",
-    "XXX",
-    "xxxx",
-    "XXXX",
-    "N/M",
-    "n/m",
-    "N.M.",
-    "n.m.",
-    "n.m",
-    "N.M",
-    "N/C",
-    "n/c",
-    "N.C.",
-    "n.c.",
-    "n.c",
-    "N.C",
-    "n.s.",
-    "N.S.",
-    "n.s",
-    "N.S",
-    "n/s",
-    "N/S",
-    "n/s/a",
-    "N/S/A",
-]
+class EnsemblRestError(ConnectionError):
+    """Raised when Ensembl REST cannot be reached or does not give a usable answer after every attempt.
+
+    The message names the URL, the attempts, the timeouts in force and how to change them
+    (:py:attr:`DB.connection_timeout`, :py:attr:`DB.reading_timeout`, :py:attr:`DB.rest_attempts`).
+    """
+
+
+class EnsemblSchemaError(LookupError):
+    """Raised when an Ensembl core database has no such table, or the table lacks requested columns.
+
+    It states a fact about the schema of one release (older releases keep stable ids in ``<form>_stable_id``
+    tables, and some columns were renamed), so callers may fall back to the older layout when they catch it. A
+    failed download, a connection error or a failure to cache a table never raises it; those keep their own
+    exception, so that a fallback cannot hide them.
+
+    Attributes:
+        table (str): Name of the table.
+        missing_columns (tuple[str, ...]): Requested columns the table lacks; empty when the table itself is absent.
+    """
+
+    def __init__(self, message: str, table: str, missing_columns: tuple = ()):
+        """Record the table and the missing columns next to the message."""
+        # All arguments go to the base class, so that pickling and copying rebuild the same exception.
+        super().__init__(message, table, tuple(missing_columns))
+        self.message = message
+        self.table = table
+        self.missing_columns = tuple(missing_columns)
+
+    def __str__(self) -> str:
+        """Return the message alone (the base class would show all arguments)."""
+        return self.message

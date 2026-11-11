@@ -16,6 +16,7 @@ unreachable from the test environment.
 
 from __future__ import annotations
 
+import pprint
 import re
 import tempfile
 from collections import defaultdict
@@ -88,8 +89,8 @@ def _fetch_core_schemas(*, organism: str, port: int) -> list[str]:
 def _fetch_assembly_names(*, port: int, schemas: list[str]) -> dict[str, str]:
     """Return ``assembly.default`` from the ``meta`` table of each schema (``"?"`` where it cannot be read).
 
-    Used only to explain a failure: the name tells which assembly a core database really holds, independently of
-    the suffix-and-release rule of the organism table.
+    The name tells which assembly a core database really holds, independently of the suffix-and-release rule of
+    the organism table. The schemas are read in batches of ``UNION ALL`` queries over one connection.
 
     Args:
         port: MySQL port of the Ensembl public service.
@@ -101,6 +102,14 @@ def _fetch_assembly_names(*, port: int, schemas: list[str]) -> dict[str, str]:
     names: dict[str, str] = {}
     if not schemas:
         return names
+
+    def _select(schema: str) -> str:
+        # Identifiers cannot be bound as parameters; the names come from information_schema.
+        return (
+            f"(SELECT {schema!r}, meta_value FROM `{schema}`.meta "  # noqa: S608
+            "WHERE meta_key = 'assembly.default' LIMIT 1)"
+        )
+
     try:
         with pymysql.connect(
             host=DB.mysql_host,
@@ -108,33 +117,34 @@ def _fetch_assembly_names(*, port: int, schemas: list[str]) -> dict[str, str]:
             password=DB.mysql_togo,
             port=int(port),
             connect_timeout=max(DB.connection_timeout, 30),
-            read_timeout=max(DB.reading_timeout, 60),
+            read_timeout=max(DB.reading_timeout, 120),
         ) as conn:
             with conn.cursor() as cur:
-                for schema in schemas:
+                for start in range(0, len(schemas), 50):
+                    batch = schemas[start : start + 50]
+                    rows: list[tuple[Any, ...]] = []
                     try:
-                        # Identifiers cannot be bound as parameters; the names come from information_schema.
-                        cur.execute(
-                            f"SELECT meta_value FROM `{schema}`.meta "  # noqa: S608
-                            "WHERE meta_key = 'assembly.default' LIMIT 1"
-                        )
-                        row = cur.fetchone()
-                        value = row[0] if row else "?"
-                        names[schema] = value.decode("utf-8") if isinstance(value, bytes) else str(value)
+                        cur.execute(" UNION ALL ".join(_select(schema) for schema in batch))
+                        rows.extend(cur.fetchall())
                     except Exception:
-                        names[schema] = "?"
+                        rows = []
+                        for schema in batch:  # one unreadable schema must not hide the others
+                            try:
+                                cur.execute(_select(schema))
+                                rows.extend(cur.fetchall())
+                            except Exception:
+                                names[schema] = "?"
+                    for schema, value in rows:
+                        schema = schema.decode("utf-8") if isinstance(schema, bytes) else str(schema)
+                        names[schema] = value.decode("utf-8") if isinstance(value, bytes) else str(value)
     except Exception as exc:
         return {schema: f"? ({exc.__class__.__name__}: {exc})" for schema in schemas}
     return {schema: names.get(schema, "?") for schema in schemas}
 
 
-def _describe(schemas_by_port: dict[int, list[str]]) -> dict[int, list[tuple[str, str]]]:
-    """Pair each schema with the assembly name its ``meta`` table declares, per port."""
-    return {
-        port: sorted(_fetch_assembly_names(port=port, schemas=sorted(set(schemas))).items())
-        for port, schemas in sorted(schemas_by_port.items())
-        if schemas
-    }
+def _fail(title: str, problems: Any) -> None:
+    """Fail with the whole of *problems* (pytest shortens an assertion's object, never a failure message)."""
+    pytest.fail(f"{title}\n{pprint.pformat(problems, width=120)}", pytrace=False)
 
 
 @pytest.fixture(scope="session")
@@ -147,11 +157,16 @@ def live_mysql_core_catalog() -> dict[str, dict[int, dict[str, Any]]]:
             "by_assembly": {assembly key: {release: schema_name}},
             "releases_by_assembly": {assembly key: {release, ...}},
             "unconfigured": [schema_name, ...],
+            "archive_copies": [schema_name, ...],
+            "assembly_names": {schema_name: assembly.default of its meta table},
         }
 
     Schema names carry the core-database suffix, not the assembly key; a name is assigned to the assembly whose
     ``DbSuffix`` and ``ReleaseRange`` match (:py:meth:`idtrack.DB.assembly_for_core_db`), so rhesus
     ``macaca_mulatta_core_<r>_10`` is MMUL_1 (key 1) up to release 85 and Mmul_10 (key 10) from release 98.
+    On a port that :py:attr:`idtrack.DB.mysql_port_assembly` reserves for one assembly (3337: human GRCh37), every
+    other core database is an archive copy (an older assembly carried forward under a later release number): it
+    is listed under ``archive_copies`` and attributed to no assembly, as idtrack's discovery does.
 
     Returns:
         Nested dictionary mapping organism -> port -> schema metadata.
@@ -177,6 +192,7 @@ def live_mysql_core_catalog() -> dict[str, dict[int, dict[str, Any]]]:
         catalog[organism] = {}
         for port in ports:
             schemas = _fetch_core_schemas(organism=organism, port=port)
+            owner = DB.mysql_port_assembly.get(port)
             pattern = re.compile(
                 rf"^{re.escape(organism)}_core_(?P<release>[0-9]+)_(?P<suffix>[0-9]+)(?P<patch>[a-z]*)$"
             )
@@ -185,6 +201,7 @@ def live_mysql_core_catalog() -> dict[str, dict[int, dict[str, Any]]]:
             releases_by_assembly: dict[int, set[int]] = defaultdict(set)
             mismatched: list[str] = []
             unconfigured: list[str] = []
+            archive_copies: list[str] = []
             for schema in schemas:
                 m = pattern.match(schema)
                 if not m:
@@ -192,6 +209,9 @@ def live_mysql_core_catalog() -> dict[str, dict[int, dict[str, Any]]]:
                     continue
                 rel = int(m.group("release"))
                 asm = DB.assembly_for_core_db(organism, m.group("suffix"), rel)
+                if owner is not None and (asm is None or owner != (organism, asm)):
+                    archive_copies.append(schema)
+                    continue
                 if asm is None:
                     unconfigured.append(schema)
                     continue
@@ -212,6 +232,8 @@ def live_mysql_core_catalog() -> dict[str, dict[int, dict[str, Any]]]:
                 "by_assembly": dict(by_assembly),
                 "releases_by_assembly": {asm: set(rels) for asm, rels in releases_by_assembly.items()},
                 "unconfigured": unconfigured,
+                "archive_copies": archive_copies,
+                "assembly_names": _fetch_assembly_names(port=port, schemas=sorted(schemas)),
             }
     return catalog
 
@@ -231,8 +253,12 @@ def test_live_mysql_config_covers_all_discovered_assemblies(live_mysql_core_cata
             if port_info["unconfigured"]
         }
         if unconfigured:
-            problems[organism] = _describe(unconfigured)
-    assert not problems, problems
+            problems[organism] = {
+                port: [(schema, live_mysql_core_catalog[organism][port]["assembly_names"][schema]) for schema in names]
+                for port, names in unconfigured.items()
+            }
+    if problems:
+        _fail("Core databases that no configured assembly claims (schema, meta assembly.default):", problems)
 
 
 @pytest.mark.integration
@@ -259,7 +285,12 @@ def test_live_mysql_config_ports_match_discovered_ports(live_mysql_core_catalog)
             configured_ports = set(map(int, cfg["Ports"]))
             if discovered_ports != configured_ports:
                 extra = {
-                    port: list(live_mysql_core_catalog[organism][port]["by_assembly"][int(assembly)].values())
+                    port: [
+                        (schema, live_mysql_core_catalog[organism][port]["assembly_names"][schema])
+                        for schema in sorted(
+                            live_mysql_core_catalog[organism][port]["by_assembly"][int(assembly)].values()
+                        )
+                    ]
                     for port in sorted(discovered_ports - configured_ports)
                 }
                 problems.append(
@@ -268,10 +299,90 @@ def test_live_mysql_config_ports_match_discovered_ports(live_mysql_core_catalog)
                         "assembly": int(assembly),
                         "discovered_ports": sorted(discovered_ports),
                         "configured_ports": list(cfg["Ports"]),
-                        "on_unconfigured_ports": _describe(extra),
+                        "on_unconfigured_ports": extra,
                     }
                 )
-    assert not problems, problems
+    if problems:
+        _fail("Assemblies whose configured ports differ from the ports that hold them:", problems)
+
+
+@pytest.mark.integration
+@pytest.mark.network
+@pytest.mark.database
+def test_live_core_databases_hold_the_assembly_the_table_names(live_mysql_core_catalog):
+    """Ensure every core database the table attributes to an assembly declares that assembly in its `meta` table."""
+    # The suffix-and-release rule (`DB.assembly_for_core_db`) is checked against the truth, `assembly.default`, for
+    # every database on every port idtrack may read for the organism.
+    problems: list[tuple[str, int, int, str, str, str | None]] = []
+    for organism in DB.supported_organisms:
+        for port, port_info in sorted(live_mysql_core_catalog[organism].items()):
+            for assembly, by_release in sorted(port_info["by_assembly"].items()):
+                expected = DB.assembly_name(organism, int(assembly))
+                for release, schema in sorted(by_release.items()):
+                    declared = port_info["assembly_names"].get(schema, "?")
+                    if declared != expected:
+                        problems.append((organism, int(port), int(release), schema, declared, expected))
+    if problems:
+        _fail("(organism, port, release, schema, meta assembly.default, table Name) that disagree:", problems)
+
+
+@pytest.mark.integration
+@pytest.mark.network
+@pytest.mark.database
+def test_live_archive_copies_are_older_assemblies_carried_forward(live_mysql_core_catalog):
+    """Ensure every archive copy on a reserved port is a configured assembly carried forward, never a new one."""
+    # An archive copy declares, in its `meta` table, the name of one of the organism's configured assemblies, and its
+    # release is not before that assembly's first release (copies are carried forward, never backward). Such copies
+    # are expected (rhesus MMUL_1 as `_79_10` to `_99_10`, pig Sscrofa10.2 after 89, mouse GRCm38) and attributed
+    # to no assembly; anything else on a reserved port fails, with the whole listing.
+    listing: dict[str, dict[int, list[tuple[str, str]]]] = {}
+    problems: list[tuple[str, int, str, str]] = []
+    for organism in DB.supported_organisms:
+        first_release_by_name = {
+            DB.assembly_name(organism, key): DB.release_range(organism, key)[0]
+            for key in DB.assembly_mysqlport_priority[organism]
+        }
+        for port, port_info in sorted(live_mysql_core_catalog[organism].items()):
+            for schema in sorted(port_info["archive_copies"]):
+                name = port_info["assembly_names"].get(schema, "?")
+                listing.setdefault(organism, {}).setdefault(int(port), []).append((schema, name))
+                release = int(schema.split("_core_", 1)[1].split("_", 1)[0])
+                first = first_release_by_name.get(name)
+                if first is None or release < first:
+                    problems.append((organism, int(port), schema, name))
+    if problems:
+        _fail(
+            "Databases on reserved ports that are no configured assembly carried forward; full listing follows:",
+            {"problems": problems, "archive_copies": listing},
+        )
+
+
+@pytest.mark.integration
+@pytest.mark.network
+@pytest.mark.database
+def test_live_mysql_releases_are_releases_of_the_https_dumps(live_mysql_core_catalog):
+    """Ensure each assembly's MySQL releases (archive copies excluded) are among the releases of its HTTPS dumps."""
+    # In mode "auto" an assembly's releases are the union of both listings and in mode "https" those of the dumps,
+    # so the two modes give the same releases exactly when nothing is on MySQL that the dumps lack. The dumps have no
+    # archive copies, which is why those are attributed to no assembly.
+    problems: list[tuple[str, int, list[int]]] = []
+    for organism in DB.supported_organisms:
+        for assembly, cfg in DB.assembly_mysqlport_priority[organism].items():
+            on_mysql = {
+                int(rel)
+                for port_info in live_mysql_core_catalog[organism].values()
+                for rel in port_info["releases_by_assembly"].get(int(assembly), set())
+            }
+            if not on_mysql:
+                continue
+            https = DatabaseManager._get_core_db_index_from_ftp(
+                organism=organism, genome_assembly=int(assembly), ports=[int(p) for p in cfg["Ports"]]
+            )
+            missing = sorted(on_mysql - {int(r) for r in https["releases"]})
+            if missing:
+                problems.append((organism, int(assembly), missing))
+    if problems:
+        _fail("(organism, assembly, releases on MySQL that the HTTPS dumps lack):", problems)
 
 
 @pytest.mark.integration

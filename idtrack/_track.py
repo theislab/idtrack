@@ -9,9 +9,9 @@ import itertools
 import logging
 import warnings
 from collections import Counter
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from functools import cached_property
-from typing import Any, Callable, Optional, Union
+from typing import Any
 
 import networkx as nx
 import numpy as np
@@ -136,10 +136,10 @@ class Track:
         synonymous_ones: list,
         synonymous_ones_db: list,
         filter_node_type: set[str],
-        the_path: Optional[list] = None,
-        the_path_db: Optional[list] = None,
+        the_path: list | None = None,
+        the_path_db: list | None = None,
         depth_max: int = 0,
-        from_release: Optional[int] = None,
+        from_release: int | None = None,
         ensembl_backbone_shallow_search: bool = False,
         account_for_hyperconnected_nodes: bool = True,
     ):
@@ -290,7 +290,7 @@ class Track:
         the_id: str,
         depth_max: int,
         filter_node_type: set[str],
-        from_release: Optional[int] = None,
+        from_release: int | None = None,
         ensembl_backbone_shallow_search: bool = False,
         account_for_hyperconnected_nodes: bool = True,
     ):
@@ -459,7 +459,7 @@ class Track:
         return result
 
     def _choose_relevant_synonym_helper(
-        self, from_id, synonym_ids, to_release: int, from_release: Optional[int], mode: str
+        self, from_id, synonym_ids, to_release: int, from_release: int | None, mode: str
     ):
         """Select the **most temporally relevant** synonym(s) for an Ensembl gene-ID family.
 
@@ -585,7 +585,7 @@ class Track:
         # given from release
 
     def choose_relevant_synonym(
-        self, the_id: str, depth_max: int, to_release: int, filter_node_type: set[str], from_release: Optional[int]
+        self, the_id: str, depth_max: int, to_release: int, filter_node_type: set[str], from_release: int | None
     ):
         """Wrapper that **discovers, clusters, and ranks** synonymous Ensembl candidates for a given identifier.
 
@@ -797,7 +797,7 @@ class Track:
         to_release: int,
         reverse: bool,
         external_settings: dict,
-        external_jump: Optional[float] = None,
+        external_jump: float | None = None,
         multiple_ensembl_transition: bool = False,
     ) -> set:
         """Enumerate every admissible **history path** from *from_id* at *from_release* to *to_release*.
@@ -851,9 +851,9 @@ class Track:
             __from_release: int,
             __reverse: bool,
             __beamed_up: bool,
-            __external_jump: Optional[float],
-            __edge_hist: Optional[list],
-            __edge_hist_non_backbone: Optional[set],
+            __external_jump: float | None,
+            __edge_hist: list | None,
+            __edge_hist_non_backbone: set | None,
         ) -> None:
             def _external_path_maker(a_from_id, a_ens_rel, a_syn_pth, free_from_release: bool, reverse: bool):
                 a_edge_hist_alt = list()
@@ -1730,9 +1730,9 @@ class Track:
     def convert(
         self,
         from_id: str,
-        from_release: Optional[int] = None,
-        to_release: Optional[int] = None,
-        final_database: Optional[str] = None,
+        from_release: int | None = None,
+        to_release: int | None = None,
+        final_database: str | None = None,
         reduction: Callable = np.mean,
         remove_na="omit",
         score_of_the_queried_item: float = np.nan,
@@ -1936,9 +1936,9 @@ class Track:
 
     @staticmethod
     def _final_conversion_dict_prepare(
-        confidence: Union[int, float],
+        confidence: int | float,
         sysns: list,
-        paths: Optional[list[list]],
+        paths: list[list] | None,
         min_priority_list: list,
         len_priority_list: list,
         add_ass_jump_list: list,
@@ -2075,7 +2075,7 @@ class Track:
                     - `confidence`   - 0 for strict, 1 for fallback search.
             """
 
-            def _final_conversion_path_helper(res_syn_mth, er: Optional[int]):
+            def _final_conversion_path_helper(res_syn_mth, er: int | None):
                 add_to_step = [0] if er is None else [0, er]
                 return [[list(i) + add_to_step for i in zip(m1, m1[1:])] for m1, _ in res_syn_mth]
 
@@ -2087,7 +2087,7 @@ class Track:
                     result.append(ens_rels_avail)
                 return result
 
-            def _contains_assembly(lst, asyml: int, er_for_jumps: Optional[int], er_for_last_node: Optional[int]):
+            def _contains_assembly(lst, asyml: int, er_for_jumps: int | None, er_for_last_node: int | None):
 
                 # prevent assembly jumps {some ensembl-gene's are also shared, and they are not called as assembly_37..}
                 # just for each returned synonymous, check whether the connection is only possible on assembly 38,

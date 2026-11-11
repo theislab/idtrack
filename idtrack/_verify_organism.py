@@ -5,12 +5,12 @@
 
 import logging
 import re
-from typing import Union
+import time
 
 import pandas as pd
-import requests
 
 from idtrack._db import DB
+from idtrack._ensembl_access import rest_get_json
 
 
 class VerifyOrganism:
@@ -22,9 +22,13 @@ class VerifyOrganism:
     case-insensitive on both sides. A query equal to a formal name (also written with spaces, e.g.
     ``"Macaca mulatta"``) or to a taxon ID is never ambiguous: a taxon ID that Ensembl also gives to strains or
     breeds resolves to the species-level entry (``9823`` → ``sus_scrofa``). Any other synonym that several species
-    share (``"pig"`` is the common name of every pig breed) raises an error that lists the candidates.  Because the mapping is
-    refreshed on every instantiation through a live call to the Ensembl REST API, downstream workflows in *idtrack*
-    always rely on up-to-date metadata rather than a possibly stale local cache.
+    share (``"pig"`` is the common name of every pig breed) raises an error that lists the candidates.
+
+    The species list comes from one call to the Ensembl REST API per process and day (``/info/species``, see
+    :py:func:`idtrack._ensembl_access.rest_get_json` and :py:attr:`idtrack.DB.rest_species_cache_seconds`), made
+    only when it is needed: the formal name of an organism
+    configured in idtrack (:py:attr:`idtrack.DB.supported_organisms`, also written with spaces) resolves without the
+    network; synonyms, taxon IDs and the latest release need it.
 
     After construction the instance offers two high-level helpers::
 
@@ -32,7 +36,7 @@ class VerifyOrganism:
         >>> resolver.get_formal_name()      # 'homo_sapiens'
         >>> resolver.get_latest_release()   # 117  (example)
 
-    Both helpers are backed by two public dataframes created during initialisation:
+    Both helpers are backed by two public dataframes, loaded on first use:
 
     * :py:attr:`~VerifyOrganism.name_synonyms_dataframe` — maps every synonym returned by the REST service to the chosen
       formal name and flags synonyms that are ambiguous across species.
@@ -40,13 +44,11 @@ class VerifyOrganism:
       Ensembl release number.
     """
 
-    def __init__(self, organism_query: Union[str, int]):
-        """Initialise the resolver and pre-fetch synonym/release tables from the Ensembl REST API.
+    # Species tables per REST URL with the time they were fetched; shared by the instances of a process.
+    _species_cache: dict[str, tuple[float, tuple[pd.DataFrame, pd.DataFrame]]] = {}
 
-        The constructor immediately invokes :py:meth:`~VerifyOrganism.fetch_organism_and_latest_release`, downloading
-        the complete species list from ``{DB.rest_server_api}{DB.rest_server_ext}`` so that all subsequent look-ups run
-        entirely in-memory.  Any exceptions raised during that fetch are allowed to propagate unchanged so that callers
-        can handle network or data-quality issues explicitly.
+    def __init__(self, organism_query: str | int):
+        """Initialise the resolver; nothing is fetched until a look-up needs the Ensembl species list.
 
         Args:
             organism_query (str | int): Organism identifier supplied by the user—common name (``"human"``),
@@ -56,12 +58,40 @@ class VerifyOrganism:
         """
         # Instance attributes
         self.log = logging.getLogger("verify_organism")
-
-        # Fetch the latest information from the Ensembl resources regarding
         self.organism_query = self.normalize(organism_query)
-        self.name_synonyms_dataframe, self.ensembl_release_dataframe = self.fetch_organism_and_latest_release(
-            connect_timeout=DB.connection_timeout, read_timeout=DB.reading_timeout
-        )
+
+    @property
+    def name_synonyms_dataframe(self) -> pd.DataFrame:
+        """Synonym table of every Ensembl species (see :py:meth:`fetch_organism_and_latest_release`)."""
+        return self._species_tables()[0]
+
+    @property
+    def ensembl_release_dataframe(self) -> pd.DataFrame:
+        """Latest Ensembl release of every species, indexed by formal name."""
+        return self._species_tables()[1]
+
+    def _species_tables(self) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """Return the species tables of this process.
+
+        They are fetched at the first need and again once they are older than
+        :py:attr:`idtrack.DB.rest_species_cache_seconds`, so that a long-running process learns of a new release.
+
+        Returns:
+            tuple[pandas.DataFrame, pandas.DataFrame]: See :py:meth:`fetch_organism_and_latest_release`.
+        """
+        url = DB.rest_server_api + DB.rest_server_ext
+        cached = VerifyOrganism._species_cache.get(url)
+        if cached is None or time.monotonic() - cached[0] > float(DB.rest_species_cache_seconds):
+            cached = (time.monotonic(), self.fetch_organism_and_latest_release())
+            VerifyOrganism._species_cache[url] = cached
+        return cached[1]
+
+    def _configured_formal_name(self) -> str | None:
+        """Return the query as the formal name of a configured organism (no network), else ``None``."""
+        for candidate in (self.organism_query, re.sub(r"[\s\-]+", "_", self.organism_query)):
+            if candidate in DB.supported_organisms:
+                return str(candidate)
+        return None
 
     def get_latest_release(self) -> int:
         """Return the latest Ensembl release number associated with the queried organism.
@@ -79,7 +109,7 @@ class VerifyOrganism:
         return int(self.ensembl_release_dataframe.loc[formal_name]["ensembl_release"])
 
     @staticmethod
-    def normalize(value: Union[str, int]) -> str:
+    def normalize(value: str | int) -> str:
         """Return the matching key of a query or synonym: ``str(value)``, stripped and lower-cased."""
         return str(value).strip().lower()
 
@@ -89,7 +119,7 @@ class VerifyOrganism:
         Resolution, in this order (all comparisons on normalised, lower-case strings):
 
         1. the query is a formal name (``"homo_sapiens"``), also with spaces or hyphens for underscores
-           (``"Macaca mulatta"``);
+           (``"Macaca mulatta"``); for an organism configured in idtrack this needs no network;
         2. the query is a taxon ID: the organism with that ID, or—when Ensembl gives the ID to several strains or
            breeds—the species-level entry (the formal name of two words, ``sus_scrofa`` for ``9823``);
         3. any other synonym of :py:data:`~VerifyOrganism.name_synonyms_dataframe` (common names, display names,
@@ -103,6 +133,10 @@ class VerifyOrganism:
             ValueError: If the query matches more than one organism (an ambiguous synonym); the message lists the
                 candidates.
         """
+        configured = self._configured_formal_name()
+        if configured is not None:
+            return configured
+
         query = self.organism_query
         cm = "Please inspect 'name_synonyms_dataframe' variable of this instance for troubleshooting."
         formal_names = self.ensembl_release_dataframe.index
@@ -131,9 +165,7 @@ class VerifyOrganism:
             f"Candidates: {shown}. Use the Ensembl species name (e.g. `{candidates[0]}`) or the taxon ID instead."
         )
 
-    def fetch_organism_and_latest_release(
-        self, connect_timeout: int, read_timeout: int
-    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def fetch_organism_and_latest_release(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Query the Ensembl REST API once and build lookup tables for species synonyms and latest releases.
 
         This internal utility performs a single call to ``/info/species`` on the Ensembl REST server, parses the
@@ -145,40 +177,24 @@ class VerifyOrganism:
         * ``latest_ensembl_releases_df`` - indexed by ``formal_name`` and holding a single ``ensembl_release``
             integer column.
 
-        Consolidating the REST query in one place avoids repeated network traffic and provides a cache-friendly
-        structure for subsequent lookups.
-
-        Args:
-            connect_timeout (int): Seconds to wait while establishing the TCP connection to the Ensembl server.
-            read_timeout (int): Seconds to wait for the server to send the full response after the connection
-                has been established.
+        The request uses the timeouts and retries of :py:func:`idtrack._ensembl_access.rest_get_json`, whose
+        :py:class:`idtrack._db.EnsemblRestError` propagates when Ensembl does not answer
+        (:py:attr:`idtrack.DB.connection_timeout`, :py:attr:`idtrack.DB.reading_timeout`,
+        :py:attr:`idtrack.DB.rest_attempts`). :py:meth:`_species_tables` keeps the result for the process.
 
         Returns:
             tuple[pandas.DataFrame, pandas.DataFrame]:
                 ``(name_synonyms_df, latest_ensembl_releases_df)`` as described above.
 
         Raises:
-            TimeoutError: If the combined *(connect_timeout, read_timeout)* limit is exceeded.
             ValueError: If the JSON schema differs from the expected ``{"species": [...]}`` structure or required
                 keys are missing.
         """
         self.log.info("Ensembl Rest API query to get the organism names and associated releases.")
-
-        try:
-            with requests.Session() as session:  # Create a session
-                with session.get(
-                    DB.rest_server_api + DB.rest_server_ext,
-                    headers={"Content-Type": "application/json"},
-                    timeout=(connect_timeout, read_timeout),
-                ) as r:  # Connect to the REST API.
-                    if not r.ok:
-                        # If everything is not fine regarding the response, raise an error.
-                        r.raise_for_status()
-                    decoded_results = r.json()["species"]  # Otherwise decode the json into a dictionary.
-
-        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout) as esc:
-            # Raise an exception if it takes too long to get the data from Ensembl REST API.
-            raise TimeoutError("Internet connection is slow or server does not respond!") from esc
+        payload = rest_get_json(DB.rest_server_ext, what="the list of species")
+        if not isinstance(payload, dict) or not isinstance(payload.get("species"), list):
+            raise ValueError(f"Unexpected Ensembl REST payload for {DB.rest_server_ext!r}: no 'species' list.")
+        decoded_results = payload["species"]
 
         # Process the resulting response.
         name_synonyms: list = []

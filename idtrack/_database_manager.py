@@ -7,16 +7,16 @@ import bz2
 import copy
 import gzip
 import io
+import json
 import logging
 import os
 import re
 import time
-import warnings
 from collections import Counter
 from contextlib import contextmanager
 from functools import cached_property
 from itertools import repeat
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -24,8 +24,8 @@ import pymysql
 import requests
 
 import idtrack._utils_hdf5 as hs
-from idtrack._db import DB
-from idtrack._ensembl_access import ensembl_access_mode, reachability
+from idtrack._db import DB, EnsemblSchemaError
+from idtrack._ensembl_access import ensembl_access_mode, reachability, rest_get_json
 from idtrack._external_databases import ExternalDatabases
 from idtrack._mysql_dump import read_mysql_dump
 
@@ -67,7 +67,7 @@ class DatabaseManager:
     # Keyed by (organism, assembly key, DB.organism_table_version) so that `DB.register_organism` invalidates it.
     _core_db_index_cache: dict[tuple[str, int, int], dict[str, Any]] = {}
     _ftp_schema_cache: dict[str, dict[str, list[str]]] = {}
-    _ensembl_latest_release_cache: Optional[int] = None
+    _ensembl_latest_release_cache: int | None = None
 
     # pymysql error codes that mean the server or the route to it failed (not the query): can't connect,
     # server has gone away, lost connection during query, lost connection at handshake.
@@ -88,7 +88,7 @@ class DatabaseManager:
         return False
 
     @staticmethod
-    def _release_window(organism: str, genome_assembly: int) -> tuple[int, Optional[int]]:
+    def _release_window(organism: str, genome_assembly: int) -> tuple[int, int | None]:
         """Return the releases an assembly may have: its ``ReleaseRange`` clipped to idtrack's floor (48).
 
         Both discovery paths (the MySQL probe and the HTTPS scan) accept only releases inside this window, so they
@@ -108,16 +108,8 @@ class DatabaseManager:
             return int(cached)
 
         url = f"{DB.rest_server_api}/info/data"
-        try:
-            r = requests.get(
-                url, headers={"Content-Type": "application/json"}, timeout=(DB.connection_timeout, DB.reading_timeout)
-            )
-            r.raise_for_status()
-            payload = r.json()
-        except Exception as exc:  # pragma: no cover - network dependent
-            raise RuntimeError(f"Unable to query Ensembl REST for latest release via {url!r}.") from exc
-
-        releases = payload.get("releases")
+        payload = rest_get_json("/info/data", what="the latest Ensembl release")
+        releases = payload.get("releases") if isinstance(payload, dict) else None
         if not isinstance(releases, list) or not releases:
             raise ValueError(f"Unexpected Ensembl REST payload at {url!r}: expected non-empty 'releases' list.")
 
@@ -154,7 +146,7 @@ class DatabaseManager:
         """Return the exception chain (`__cause__`/`__context__`) as a list."""
         chain: list[BaseException] = []
         seen: set[int] = set()
-        current: Optional[BaseException] = exc
+        current: BaseException | None = exc
         while current is not None and id(current) not in seen:
             chain.append(current)
             seen.add(id(current))
@@ -201,7 +193,7 @@ class DatabaseManager:
     @classmethod
     def _ftp_find_core_db_dir(
         cls, *, organism: str, genome_assembly: int, release: int
-    ) -> tuple[Optional[str], Optional[str]]:
+    ) -> tuple[str | None, str | None]:
         """Locate the core DB directory name (may include patch letters) and its HTTPS directory URL."""
         release = int(release)
         genome_assembly = int(genome_assembly)
@@ -224,7 +216,7 @@ class DatabaseManager:
                 log.debug("Failed to probe Ensembl dump directory %r: %s", f"{root}{expected}/", exc)
 
             # Slow path: list and look for patch-letter variants (e.g. `_36p`).
-            listing: Optional[str] = None
+            listing: str | None = None
             try:
                 listing = requests.get(root, timeout=(DB.connection_timeout, DB.reading_timeout)).text
             except requests.RequestException as exc:
@@ -313,7 +305,7 @@ class DatabaseManager:
         db_by_port_release: dict[int, dict[int, str]] = {int(p): {} for p in ports}
         port_for_release: dict[int, int] = {}
         for rel in releases_union:
-            chosen: Optional[int] = None
+            chosen: int | None = None
             for p in ports:
                 min_rel = DB.mysql_port_min_release.get(int(p))
                 if min_rel is None or int(rel) >= int(min_rel):
@@ -336,7 +328,184 @@ class DatabaseManager:
             "db_for_release": db_for_release,
             "db_dir_url_by_release": db_dir_url_by_release,
             "source": "ftp",
+            "scanned_up_to": int(max_release),
         }
+
+    @staticmethod
+    def _https_index_path(local_repository: str, organism: str, genome_assembly: int) -> str:
+        """Return the file in *local_repository* that keeps the HTTPS-dump index of one organism and assembly."""
+        return os.path.join(local_repository, f"ensembl_https_index_{organism}_assembly-{int(genome_assembly)}.json")
+
+    @classmethod
+    def _index_covers(
+        cls, index: dict[str, Any], organism: str, genome_assembly: int, needed_up_to: int | None
+    ) -> bool:
+        """Return whether a core-DB index answers for every release up to *needed_up_to*.
+
+        An index built from the network in this process always does. An index read from disk does when its scan
+        reached *needed_up_to* (``None``: the latest Ensembl release, which only the network knows), or the end of
+        the assembly's release range: releases that existed at the scan cannot disappear, and releases after it are
+        not needed.
+
+        Args:
+            index: A core-DB index (see :py:meth:`_get_core_db_index`).
+            organism: Ensembl species name.
+            genome_assembly: Assembly key of the organism table.
+            needed_up_to: Last release needed; ``None`` for the latest Ensembl release.
+
+        Returns:
+            bool: ``True`` if *index* can be used without scanning again.
+        """
+        if index.get("scanned_live"):
+            return True
+        scanned_up_to = index.get("scanned_up_to")
+        if scanned_up_to is None:
+            return False
+        _, range_max = cls._release_window(organism, int(genome_assembly))
+        if needed_up_to is None:
+            need = range_max
+        else:
+            need = int(needed_up_to) if range_max is None else min(int(needed_up_to), int(range_max))
+        return need is not None and int(scanned_up_to) >= int(need)
+
+    @classmethod
+    def _https_index_signature(cls, organism: str, genome_assembly: int, ports: list[int]) -> dict[str, Any]:
+        """Return the organism-table fields an HTTPS-dump index depends on (a saved index must match them).
+
+        Args:
+            organism: Ensembl species name.
+            genome_assembly: Assembly key of the organism table.
+            ports: Configured MySQL ports of the assembly (releases are assigned to them).
+
+        Returns:
+            dict[str, Any]: Organism, assembly, core-database suffix, release window and ports.
+        """
+        first, last = cls._release_window(organism, int(genome_assembly))
+        return {
+            "organism": organism,
+            "genome_assembly": int(genome_assembly),
+            "db_suffix": DB.db_suffix(organism, int(genome_assembly)),
+            "release_window": [int(first), None if last is None else int(last)],
+            "ports": [int(p) for p in ports],
+        }
+
+    @classmethod
+    def _read_https_index(
+        cls, path: str, organism: str, genome_assembly: int, ports: list[int]
+    ) -> dict[str, Any] | None:
+        """Read an index saved by :py:meth:`_write_https_index`.
+
+        Args:
+            path: The saved file.
+            organism: Ensembl species name.
+            genome_assembly: Assembly key of the organism table.
+            ports: Configured MySQL ports of the assembly.
+
+        Returns:
+            Optional[dict[str, Any]]: The index, or ``None`` if the file is absent, unreadable, or was written for
+            other organism-table settings.
+        """
+        try:
+            with open(path, encoding="utf-8") as handle:
+                saved = json.load(handle)
+        except (OSError, ValueError):
+            return None
+        if not isinstance(saved, dict) or saved.get("signature") != cls._https_index_signature(
+            organism, genome_assembly, ports
+        ):
+            return None
+        try:
+            return {
+                "organism": organism,
+                "genome_assembly": int(genome_assembly),
+                "ports": tuple(int(p) for p in ports),
+                "releases_by_port": {int(p): {int(r) for r in rs} for p, rs in saved["releases_by_port"].items()},
+                "db_by_port_release": {
+                    int(p): {int(r): str(n) for r, n in d.items()} for p, d in saved["db_by_port_release"].items()
+                },
+                "releases": sorted(int(r) for r in saved["releases"]),
+                "port_for_release": {int(r): int(p) for r, p in saved["port_for_release"].items()},
+                "db_for_release": {int(r): str(n) for r, n in saved["db_for_release"].items()},
+                "db_dir_url_by_release": {int(r): str(u) for r, u in saved["db_dir_url_by_release"].items()},
+                "source": "ftp",
+                "scanned_up_to": int(saved["scanned_up_to"]),
+            }
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    @classmethod
+    def _write_https_index(cls, path: str, index: dict[str, Any], ports: list[int]) -> None:
+        """Save an HTTPS-dump index next to the cached tables (written to a temporary file, then renamed).
+
+        Args:
+            path: Destination file.
+            index: Index returned by :py:meth:`_get_core_db_index_from_ftp`.
+            ports: Configured MySQL ports of the assembly.
+        """
+        payload = {
+            "signature": cls._https_index_signature(index["organism"], int(index["genome_assembly"]), ports),
+            "scanned_up_to": int(index["scanned_up_to"]),
+            "releases": sorted(int(r) for r in index["releases"]),
+            "releases_by_port": {str(p): sorted(int(r) for r in rs) for p, rs in index["releases_by_port"].items()},
+            "db_by_port_release": {
+                str(p): {str(r): n for r, n in d.items()} for p, d in index["db_by_port_release"].items()
+            },
+            "port_for_release": {str(r): int(p) for r, p in index["port_for_release"].items()},
+            "db_for_release": {str(r): n for r, n in index["db_for_release"].items()},
+            "db_dir_url_by_release": {str(r): u for r, u in index["db_dir_url_by_release"].items()},
+        }
+        tmp_path = f"{path}.tmp-{os.getpid()}"
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as handle:
+                json.dump(payload, handle, indent=1, sort_keys=True)
+            os.replace(tmp_path, path)
+        except OSError as exc:
+            logging.getLogger("database_manager").warning("Could not save the HTTPS-dump index %r: %s", path, exc)
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+    @classmethod
+    def _https_index(
+        cls,
+        *,
+        organism: str,
+        genome_assembly: int,
+        ports: list[int],
+        local_repository: str | None,
+        needed_up_to: int | None,
+    ) -> dict[str, Any]:
+        """Return the HTTPS-dump index, from *local_repository* when a saved one covers the need, else scanned.
+
+        The scan asks Ensembl REST for the latest release and probes the dump directory of every release, so a saved
+        index is what lets a manager whose window ends at a known release (every graph built or loaded through
+        :py:meth:`idtrack.API.build_graph`) work without the network once its tables and graph are on disk.
+
+        Args:
+            organism: Ensembl species name.
+            genome_assembly: Assembly key of the organism table.
+            ports: Configured MySQL ports of the assembly.
+            local_repository: Folder where the index is saved; ``None`` neither reads nor saves one.
+            needed_up_to: Last release needed; ``None`` for the latest Ensembl release.
+
+        Returns:
+            dict[str, Any]: The HTTPS-dump index; ``scanned_live`` is ``True`` when it was scanned in this call.
+        """
+        path = cls._https_index_path(local_repository, organism, genome_assembly) if local_repository else None
+        if path is not None:
+            saved = cls._read_https_index(path, organism, genome_assembly, ports)
+            if saved is not None and cls._index_covers(saved, organism, genome_assembly, needed_up_to):
+                logging.getLogger("database_manager").info(
+                    "Ensembl releases of %s assembly %s read from %r (scanned up to release %s).",
+                    organism,
+                    genome_assembly,
+                    path,
+                    saved["scanned_up_to"],
+                )
+                return saved
+        index = cls._get_core_db_index_from_ftp(organism=organism, genome_assembly=int(genome_assembly), ports=ports)
+        if path is not None:
+            cls._write_https_index(path, index, ports)
+        return {**index, "scanned_live": True}
 
     @classmethod
     def _probe_mysql_core_schemas_by_port(
@@ -345,7 +514,8 @@ class DatabaseManager:
         """Return per-port core DB releases and schema names from the live Ensembl MySQL service.
 
         Only names of the assembly's core databases (``DbSuffix``, optional patch letters) whose release lies in the
-        assembly's release window (:py:meth:`_release_window`) are kept, exactly as on the HTTPS path. Ports that the
+        assembly's release window (:py:meth:`_release_window`) are kept, exactly as on the HTTPS path. Ports that
+        :py:attr:`idtrack.DB.mysql_port_assembly` reserves for another assembly are never queried. Ports that the
         process-wide :py:data:`idtrack._ensembl_access.reachability` reports unusable (blocked, or ``"https"``
         access mode) are skipped without a connection attempt.
         """
@@ -364,6 +534,13 @@ class DatabaseManager:
         connection_errors: dict[int, Exception] = {}
 
         for port in ports:
+            owner = DB.mysql_port_assembly.get(int(port))
+            if owner is not None and owner != (organism, int(genome_assembly)):
+                # A port reserved for another assembly (3337, the GRCh37 archive) holds frozen copies of older
+                # assemblies under later release numbers (e.g. MMUL_1 as `..._98_10`), which the suffix and release
+                # range would attribute to the wrong assembly. The organism table cannot list such a port for another
+                # assembly; this guards tables assigned without validation.
+                continue
             # Avoid long hangs when outbound MySQL ports are blocked (common on managed networks): the port is
             # probed at most once per process.
             if not reachability.mysql_port_usable(int(port)):
@@ -373,7 +550,7 @@ class DatabaseManager:
                 continue
 
             results_query = None
-            last_exc: Optional[Exception] = None
+            last_exc: Exception | None = None
             for attempt in range(2):
                 try:
                     with pymysql.connect(
@@ -487,7 +664,14 @@ class DatabaseManager:
         return updated
 
     @classmethod
-    def _get_core_db_index(cls, *, organism: str, genome_assembly: int) -> dict[str, Any]:
+    def _get_core_db_index(
+        cls,
+        *,
+        organism: str,
+        genome_assembly: int,
+        local_repository: str | None = None,
+        needed_up_to: int | None = None,
+    ) -> dict[str, Any]:
         """Return cached core-DB availability for an (organism, assembly) pair across all configured ports.
 
         The Ensembl public MySQL service can host the same assembly on multiple ports depending on release
@@ -503,11 +687,17 @@ class DatabaseManager:
         Both sources (the MySQL probe and the HTTPS scan) look for core databases named with the assembly's
         ``DbSuffix`` and accept only releases inside its ``ReleaseRange`` (see :py:meth:`_release_window`), so
         they return the same releases for an assembly. The index is cached per process and per version of the
-        organism table.
+        organism table. The HTTPS part is also saved in *local_repository* (see :py:meth:`_https_index`) and read
+        from there when it covers the releases up to *needed_up_to*, so that no Ensembl REST call and no dump scan
+        is needed for a window that ends at a release the saved scan already reached.
 
         Args:
             organism: Canonical Ensembl organism name (e.g. ``"homo_sapiens"``).
             genome_assembly: Assembly key of the organism table (e.g. ``38`` for GRCh38).
+            local_repository: Folder of the caller's cached tables, where the HTTPS index is saved; ``None`` keeps it
+                in memory only.
+            needed_up_to: Last release the caller needs (its ``ignore_after``); ``None`` means the latest Ensembl
+                release.
 
         Returns:
             dict[str, Any]: Mapping describing reachable releases/ports for this organism/assembly.
@@ -517,6 +707,8 @@ class DatabaseManager:
         """
         key = (organism, int(genome_assembly), int(DB.organism_table_version))
         cached = cls._core_db_index_cache.get(key)
+        if cached is not None and not cls._index_covers(cached, organism, int(genome_assembly), needed_up_to):
+            cached = None
         if cached is not None:
             errors = cached.get("mysql_connection_errors") or {}
             if errors:
@@ -548,11 +740,15 @@ class DatabaseManager:
                     mysql_db_for_release[int(rel)] = db_by_port_release[int(port)][int(rel)]
                     break
 
-        ftp_index: Optional[dict[str, Any]] = None
-        ftp_exc: Optional[Exception] = None
+        ftp_index: dict[str, Any] | None = None
+        ftp_exc: Exception | None = None
         try:
-            ftp_index = cls._get_core_db_index_from_ftp(
-                organism=organism, genome_assembly=int(genome_assembly), ports=ports
+            ftp_index = cls._https_index(
+                organism=organism,
+                genome_assembly=int(genome_assembly),
+                ports=[int(p) for p in ports],
+                local_repository=local_repository,
+                needed_up_to=needed_up_to,
             )
         except Exception as exc:
             ftp_index = None
@@ -579,6 +775,7 @@ class DatabaseManager:
                     int(port): f"{exc.__class__.__name__}: {exc}" for port, exc in sorted(connection_errors.items())
                 },
                 "source": "mysql",
+                "scanned_live": True,
             }
             cls._core_db_index_cache[key] = index
             return index
@@ -621,6 +818,8 @@ class DatabaseManager:
                 int(port): f"{exc.__class__.__name__}: {exc}" for port, exc in sorted(connection_errors.items())
             },
             "source": "merged" if mysql_releases else "ftp",
+            "scanned_up_to": ftp_index.get("scanned_up_to"),
+            "scanned_live": bool(ftp_index.get("scanned_live")),
         }
         cls._core_db_index_cache[key] = index
         return index
@@ -630,11 +829,11 @@ class DatabaseManager:
         organism: str,
         form: str,
         local_repository: str,
-        ensembl_release: Optional[int] = None,
-        ignore_before: Optional[int] = None,
-        ignore_after: Optional[Union[int, float]] = None,
+        ensembl_release: int | None = None,
+        ignore_before: int | None = None,
+        ignore_after: int | float | None = None,
         store_raw_always: bool = True,
-        genome_assembly: Optional[int] = None,
+        genome_assembly: int | None = None,
     ):
         """Initialize a :py:class:`DatabaseManager` for a specific organism, release, and assembly.
 
@@ -690,7 +889,7 @@ class DatabaseManager:
         if form not in DB.forms_in_order:
             raise ValueError(f"Form {form!r} is not supported. Supported forms: {DB.forms_in_order}")
 
-        ignore_before_effective: Optional[int]
+        ignore_before_effective: int | None
         if ignore_before is None:
             ignore_before_effective = None
         else:
@@ -704,7 +903,7 @@ class DatabaseManager:
             ignore_before_effective = ignore_before_int
 
         if ignore_after is None:
-            ignore_after_effective: Union[int, float] = np.inf
+            ignore_after_effective: int | float = np.inf
         else:
             try:
                 ignore_after_float = float(ignore_after)
@@ -726,6 +925,11 @@ class DatabaseManager:
                 )
 
         configured_assemblies = DB.assembly_mysqlport_priority[organism]
+        # The window's end decides whether a saved HTTPS-dump index can answer without the network.
+        index_kwargs: dict[str, Any] = {
+            "local_repository": local_repository,
+            "needed_up_to": None if np.isinf(ignore_after_effective) else int(ignore_after_effective),
+        }
         if ensembl_release is not None and float(ensembl_release) != int(ensembl_release):
             raise ValueError("Floating-point Ensembl releases (e.g. 18.2) are not supported; pass an integer release.")
 
@@ -746,11 +950,13 @@ class DatabaseManager:
             assemblies_by_priority = DB.assemblies_by_priority(organism)
 
             candidate_indexes: dict[int, dict[str, Any]] = {}
-            last_exc: Optional[Exception] = None
+            last_exc: Exception | None = None
 
             for asm in assemblies_by_priority:
                 try:
-                    candidate_indexes[int(asm)] = self._get_core_db_index(organism=organism, genome_assembly=int(asm))
+                    candidate_indexes[int(asm)] = self._get_core_db_index(
+                        organism=organism, genome_assembly=int(asm), **index_kwargs
+                    )
                 except Exception as exc:
                     last_exc = exc
                     continue
@@ -787,7 +993,7 @@ class DatabaseManager:
 
         # MYSQL Settings
         self.genome_assembly = genome_assembly
-        core_index = self._get_core_db_index(organism=organism, genome_assembly=self.genome_assembly)
+        core_index = self._get_core_db_index(organism=organism, genome_assembly=self.genome_assembly, **index_kwargs)
 
         if ensembl_release is None:
             if not core_index["releases"]:
@@ -836,7 +1042,7 @@ class DatabaseManager:
             ignore_before_effective = int(core_index["releases"][0])
         self.ignore_before = int(ignore_before_effective)
         # If ignore_after is not specified, then set it to infinite.
-        self.ignore_after: Union[int, float] = ignore_after_effective
+        self.ignore_after: int | float = ignore_after_effective
 
         # Protected attributes
         self.available_form_of_interests = copy.deepcopy(DB.forms_in_order)  # Warning: the order is important.
@@ -901,6 +1107,15 @@ class DatabaseManager:
             f"    Store Raw Always: {self.store_raw_always}{os.linesep}"
         )
 
+    @property
+    def _core_index_kwargs(self) -> dict[str, Any]:
+        """Keyword arguments of :py:meth:`_get_core_db_index` for this manager (its repository and window end)."""
+        ignore_after = getattr(self, "ignore_after", np.inf)
+        return {
+            "local_repository": getattr(self, "local_repository", None),
+            "needed_up_to": None if np.isinf(ignore_after) else int(ignore_after),
+        }
+
     @cached_property
     def external_inst(self) -> ExternalDatabases:
         """Instantiate and cache an :py:class:`ExternalDatabases` helper for this manager.
@@ -958,7 +1173,9 @@ class DatabaseManager:
         assemblies_failed: list[int] = []
         for asm in cfg:
             try:
-                core_index = self._get_core_db_index(organism=self.organism, genome_assembly=int(asm))
+                core_index = self._get_core_db_index(
+                    organism=self.organism, genome_assembly=int(asm), **self._core_index_kwargs
+                )
                 releases.update(r for r in core_index["releases"] if self.ignore_after >= r >= self.ignore_before)
             except Exception as exc:
                 assemblies_failed.append(int(asm))
@@ -1008,7 +1225,9 @@ class DatabaseManager:
             list[int]: Sorted list of release numbers that exist on the mirror and comply with the ignore window.
         """
         # Use the pre-built core-DB index (union across ports) so multi-port assemblies work correctly.
-        core_index = self._get_core_db_index(organism=self.organism, genome_assembly=self.genome_assembly)
+        core_index = self._get_core_db_index(
+            organism=self.organism, genome_assembly=self.genome_assembly, **self._core_index_kwargs
+        )
         releases_final = sorted(r for r in core_index["releases"] if self.ignore_after >= r >= self.ignore_before)
         return releases_final
 
@@ -1033,7 +1252,9 @@ class DatabaseManager:
         Raises:
             ValueError: If the current release is not available for this (organism, assembly) pair.
         """
-        core_index = self._get_core_db_index(organism=self.organism, genome_assembly=self.genome_assembly)
+        core_index = self._get_core_db_index(
+            organism=self.organism, genome_assembly=self.genome_assembly, **self._core_index_kwargs
+        )
         if int(self.ensembl_release) not in core_index["port_for_release"]:
             raise ValueError(
                 f"No Ensembl core database found for {self.organism!r} release {int(self.ensembl_release)} "
@@ -1169,7 +1390,9 @@ class DatabaseManager:
         names: set[str] = set()
         for assembly in DB.assemblies_by_priority(self.organism):
             try:
-                core_index = self._get_core_db_index(organism=self.organism, genome_assembly=int(assembly))
+                core_index = self._get_core_db_index(
+                    organism=self.organism, genome_assembly=int(assembly), **self._core_index_kwargs
+                )
             except ValueError as exc:
                 self.log.warning("No core databases found for %s assembly %s: %s", self.organism, assembly, exc)
                 continue
@@ -1179,7 +1402,7 @@ class DatabaseManager:
     def get_table(
         self,
         table_key: str,
-        usecols: Optional[list] = None,
+        usecols: list | None = None,
         create_even_if_exist: bool = False,
         save_after_calculation: bool = True,
         overwrite_even_if_exist: bool = False,
@@ -1248,7 +1471,9 @@ class DatabaseManager:
 
     def _ftp_db_dir_url(self) -> str:
         """Return the HTTPS directory URL for the current core database dump."""
-        core_index = self._get_core_db_index(organism=self.organism, genome_assembly=self.genome_assembly)
+        core_index = self._get_core_db_index(
+            organism=self.organism, genome_assembly=self.genome_assembly, **self._core_index_kwargs
+        )
         db_dir = core_index.get("db_dir_url_by_release", {}).get(int(self.ensembl_release))
         if isinstance(db_dir, str) and db_dir:
             return db_dir
@@ -1416,26 +1641,30 @@ class DatabaseManager:
         finally:
             resp.close()
 
-    def _download_table_from_ftp(self, table_key: str, usecols: Optional[list[str]] = None) -> pd.DataFrame:
+    def _download_table_from_ftp(self, table_key: str, usecols: list[str] | None = None) -> pd.DataFrame:
         """Download a table from Ensembl's HTTPS MySQL dumps (no direct MySQL connection)."""
         db_dir_url = self._ftp_db_dir_url()
         sql_url = self._ftp_schema_url()
 
         schema = self._ftp_schema_for_sql_url(sql_url)
         if table_key not in schema:
-            raise pymysql.err.OperationalError(f"Table {table_key!r} not found in Ensembl schema dump {sql_url!r}.")
+            raise EnsemblSchemaError(
+                f"Table {table_key!r} not found in Ensembl schema dump {sql_url!r}.", table=table_key
+            )
         columns = schema[table_key]
 
         if usecols is not None:
             missing = [c for c in usecols if not isinstance(c, str) or c not in columns]
             if missing:
-                raise ValueError(f"Missing columns in {table_key!r}: {missing}")
+                raise EnsemblSchemaError(
+                    f"Missing columns in {table_key!r}: {missing}", table=table_key, missing_columns=tuple(missing)
+                )
 
         table_url_candidates = (
             f"{db_dir_url}{table_key}.txt.gz",
             f"{db_dir_url}{table_key}.txt.gz.bz2",
         )
-        table_url: Optional[str] = None
+        table_url: str | None = None
         for candidate in table_url_candidates:
             try:
                 with requests.get(candidate, timeout=(DB.connection_timeout, DB.reading_timeout), stream=True) as resp:
@@ -1451,7 +1680,7 @@ class DatabaseManager:
             )
 
         max_attempts = 3
-        last_exc: Optional[Exception] = None
+        last_exc: Exception | None = None
         for attempt in range(max_attempts):
             try:
                 with self._open_decompressed_http_text(table_url) as fh:
@@ -1489,7 +1718,7 @@ class DatabaseManager:
         )
         return df
 
-    def download_table(self, table_key: str, usecols: Optional[list] = None) -> pd.DataFrame:
+    def download_table(self, table_key: str, usecols: list | None = None) -> pd.DataFrame:
         """Download a raw Ensembl MySQL table and return it as a DataFrame.
 
         The method forms the low-level backbone of all table acquisition in *IDTrack*.  When the release is on the
@@ -1517,8 +1746,9 @@ class DatabaseManager:
                 *usecols* (or all columns if *usecols* is *None*).  Index is monotonic and zero-based.
 
         Raises:
-            ValueError: If any element of *usecols* is missing from *table_key*, or if the query returns
-                binary payloads that cannot be coerced into native Python types.
+            EnsemblSchemaError: If the release has no table *table_key*, or the table lacks an element of
+                *usecols* (:py:class:`idtrack._db.EnsemblSchemaError`).
+            ValueError: If the query returns binary payloads that cannot be coerced into native Python types.
         """
         if usecols == []:
             usecols = None
@@ -1530,7 +1760,9 @@ class DatabaseManager:
                 raise ValueError(f"Unsafe SQL identifier: {identifier!r}")
             return f"`{identifier}`"
 
-        core_index = self._get_core_db_index(organism=self.organism, genome_assembly=self.genome_assembly)
+        core_index = self._get_core_db_index(
+            organism=self.organism, genome_assembly=self.genome_assembly, **self._core_index_kwargs
+        )
         mysql_releases = set(core_index.get("releases_on_mysql", []) or [])
         # If the requested release is not present on the live MySQL service, go straight to HTTPS dumps.
         if int(self.ensembl_release) not in mysql_releases:
@@ -1576,7 +1808,11 @@ class DatabaseManager:
                         col_set = {str(c) for c in column_names.tolist()}
                         missing = [c for c in usecols if not isinstance(c, str) or c not in col_set]
                         if missing:
-                            raise ValueError(f"Missing columns in {table_key!r}: {missing}")
+                            raise EnsemblSchemaError(
+                                f"Missing columns in {table_key!r}: {missing}",
+                                table=table_key,
+                                missing_columns=tuple(missing),
+                            )
                         select_sql = ", ".join(_quote_identifier(col) for col in usecols)
 
                     cur2.execute(f"SELECT {select_sql} FROM {table_sql}")  # noqa: S608
@@ -1587,7 +1823,7 @@ class DatabaseManager:
                 df = pd.DataFrame(results_content, columns=column_names if usecols is None else usecols)
                 # Align MySQL NULL semantics with the HTTPS/FTP dumps: in dumps missing values are encoded as `\N`
                 # which we map to pandas NA. MySQL returns NULL as `None`; normalise to `np.nan` for consistency.
-                df.replace({None: np.nan}, inplace=True)
+                df = df.replace({None: np.nan})
                 # Make sure the content does not contain any bytes object.
                 if np.any(df.map(lambda x: isinstance(x, bytes))):
                     raise ValueError(
@@ -1601,6 +1837,9 @@ class DatabaseManager:
                 )
 
                 return df
+        except EnsemblSchemaError:
+            # The live schema answered: the dumps have the same schema, so asking them cannot help.
+            raise
         except Exception as exc:
             if self._is_mysql_connection_failure(exc):
                 # A connection that worked before and fails now: do not try this port again in this process.
@@ -1689,10 +1928,10 @@ class DatabaseManager:
             # Earlier versions has different table for stable_id.
             # When there is no associated column for a given table, the following error will be raised.
 
-        except (pymysql.err.OperationalError, ValueError) as exc:
-            # OperationalError: MySQL table doesn't exist or connection error
-            # ValueError: FTP download found the table but columns stable_id/version don't exist
-            # In older Ensembl releases, these columns are in separate *_stable_id tables.
+        except EnsemblSchemaError as exc:
+            # The table has no stable_id/version columns: in older Ensembl releases they are in separate
+            # `<form>_stable_id` tables. Only this schema fact leads to the fallback; a failed download or a failure to
+            # cache the table keeps its own error instead of being reported as a missing `<form>_stable_id` table.
             self.log.debug(
                 "Columns stable_id/version not found in %r table for release %s; "
                 "trying separate %s_stable_id table (older Ensembl schema). Original error: %s",
@@ -1717,9 +1956,9 @@ class DatabaseManager:
         df["stable_id"] = df["stable_id"].astype(str)  # Convert stable_ids to string
 
         # Rename to prevent any conflicts in the package
-        df.rename(columns={"stable_id": f"{form}_stable_id", "version": f"{form}_version"}, inplace=True)
-        df.drop_duplicates(inplace=True, ignore_index=True)  # Remove duplicates if exists
-        df.reset_index(inplace=True, drop=True)
+        df = df.rename(columns={"stable_id": f"{form}_stable_id", "version": f"{form}_version"})
+        df = df.drop_duplicates(ignore_index=True)  # Remove duplicates if exists
+        df = df.reset_index(drop=True)
 
         return self.version_uniformize(df, version_str=f"{form}_version")
 
@@ -1754,42 +1993,15 @@ class DatabaseManager:
             on="gene_id",
             validate="many_to_one",
         ).merge(p, how="left", on="transcript_id", validate="one_to_one")
-        tgp.drop(columns=["gene_id", "transcript_id", "translation_id"], inplace=True, errors="raise")
+        tgp = tgp.drop(columns=["gene_id", "transcript_id", "translation_id"], errors="raise")
 
         return self._create_relation_helper(tgp)
-
-    def create_relation_archive(self) -> pd.DataFrame:
-        """Retrieve a cross-release gene-transcript-translation mapping table.
-
-        This legacy helper pulls the Ensembl ``gene_archive`` table—spanning *all*
-        releases for the current organism—via
-        :py:meth:`DatabaseManager.get_table`, drops columns unrelated to identifier
-        mapping, and passes the result to
-        :py:meth:`DatabaseManager._create_relation_helper`.  **Because the archive
-        contains known gaps, the preferred workflow is to call**
-        :py:meth:`DatabaseManager.create_relation_current` **once per release and
-        concatenate the outputs.**
-
-        Returns:
-            pandas.DataFrame: Same schema as
-                :py:meth:`DatabaseManager.create_relation_current`—``gene``,
-                ``transcript``, ``translation``—but potentially with missing rows
-                because Ensembl did not always back-populate older releases.
-        """
-        self.log.warning("Not recommended method: Use 'create_relation_current' instead.")
-        # Get the table from the server
-        df = self.get_table("gene_archive", usecols=None, save_after_calculation=self.store_raw_always)
-        # Remove unnecessary columns and return.
-        df.drop(columns=["peptide_archive_id", "mapping_session_id"], inplace=True, errors="raise")
-
-        return self._create_relation_helper(df)
 
     def _create_relation_helper(self, df: pd.DataFrame) -> pd.DataFrame:
         """Convert an ID/version matrix into the canonical three-column relationship table.
 
-        The helper is shared by :py:meth:`DatabaseManager.create_relation_current`
-        and :py:meth:`DatabaseManager.create_relation_archive` and is not intended
-        for direct use.  It validates the incoming frame, fixes inconsistent
+        The helper is used by :py:meth:`DatabaseManager.create_relation_current`
+        and is not intended for direct use.  It validates the incoming frame, fixes inconsistent
         version numbers (via :py:meth:`DatabaseManager.version_fix` and
         :py:meth:`DatabaseManager.version_fix_incomplete`), converts missing
         translations to ``NaN``-compatible floats, casts all stable-ID columns to
@@ -1843,8 +2055,8 @@ class DatabaseManager:
             res[col] = dm.id_ver_from_df(df[[f"{col}_stable_id", f"{col}_version"]])
 
         # Drop duplicates if exists and return.
-        res.drop_duplicates(inplace=True, ignore_index=True)
-        res.reset_index(inplace=True, drop=True)
+        res = res.drop_duplicates(ignore_index=True)
+        res = res.reset_index(drop=True)
         return res
 
     def create_id_history(self, narrow: bool) -> pd.DataFrame:
@@ -1887,7 +2099,7 @@ class DatabaseManager:
 
         if narrow:
             # Remove some unnecessary columns if prompt so.
-            sm.drop(
+            sm = sm.drop(
                 columns=[
                     "mapping_session_id",
                     "type",
@@ -1897,7 +2109,6 @@ class DatabaseManager:
                     "new_assembly",
                     "created",
                 ],
-                inplace=True,
             )
 
         # Correct the version based on version_info for each old_stable_id and new_stable_id columns.
@@ -1920,93 +2131,9 @@ class DatabaseManager:
         # No need to check for version as it can be already float or int by fix_stable_events
 
         sm = sm[(self.ignore_after >= sm["old_release"]) & (sm["old_release"] >= self.ignore_before)]
-        sm.drop_duplicates(inplace=True, ignore_index=True)  # Remove duplicates if exists
-        sm.reset_index(inplace=True, drop=True)
+        sm = sm.drop_duplicates(ignore_index=True)  # Remove duplicates if exists
+        sm = sm.reset_index(drop=True)
         return sm
-
-    def create_id_history_fixed(self, narrow: bool, inspect: bool) -> pd.DataFrame:
-        """Create a corrected ID-history table that repairs cyclic or duplicated version transitions (deprecated).
-
-        Certain edge cases in the raw ``idhistory`` extraction—e.g. *Homo sapiens* ``ENSG00000232423`` at release 105—
-        produce sequences like ``1 → 2, 2 → 3, 1 → 2`` where an already retired version resurfaces later on.
-        Such cycles violate the monotonic version semantics assumed by graph algorithms.  This helper rewrites the
-        offending rows so that once a version is superseded it never reappears, transforming the above sequence into
-        the logically consistent ``3 → 2``.  The routine is retained for reproducibility but superseded by
-        :py:meth:`DatabaseManager.create_id_history`.
-
-        Args:
-            narrow (bool): Propagated to the underlying data fetch—when ``True`` start from the column-reduced
-                ``idhistory_narrow`` view instead of the full table.
-            inspect (bool): When ``True`` add diagnostic columns (e.g. ``changed_old`` and ``changed_new``) to aid
-                manual auditing of the corrections; when ``False`` return only the cleaned canonical schema.
-
-        Returns:
-            pandas.DataFrame: Corrected seven-column table ``old_stable_id``, ``old_version``, ``new_stable_id``,
-                ``new_version``, ``score``, ``old_release``, ``new_release``—ready for serialization and downstream use.
-
-        Note:
-            This function is deprecated and will be removed in a future major release once the core extractor fully
-            addresses the ordering anomaly.
-        """
-        warnings.warn(
-            "create_id_history_fixed() is deprecated and will be removed in a future release. "
-            "Use create_id_history() instead, which now handles cyclic/duplicated transitions automatically.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        # Get the raw version of idhistory first, and sort.
-        df = self.get_db("idhistory" if not narrow else "idhistory_narrow")
-        df.sort_values(by=["new_release"], inplace=True)
-
-        # Initialize some temp variables
-        extinct_version: dict[str, set] = dict()
-        last_active_version: dict[str, Any] = dict()
-        corrected_entries = list()
-
-        for ind, row in df.iterrows():
-            changed_old, changed_new = np.nan, np.nan
-            # If old_stable_id and new_stable_id is different, then we are not interested in those; because extinction
-            # of specific version does not have to exist. For example, it can basically branch.
-            if row["old_stable_id"] != row["new_stable_id"]:  # not of interested
-                continue
-
-            # Self-loops are also not of interest, because it does not cause a specific version of an ID to be extinct.
-            elif row["old_version"] == row["new_version"]:
-                continue
-
-            else:
-                row_key = row["old_stable_id"]
-                # If old_stable_id not seen before in the temp dictionaries, then basically add.
-                if row_key not in extinct_version:
-                    extinct_version[row_key] = set()
-                    last_active_version[row_key] = None
-
-                # Add the version into the set.
-                if row["old_version"] not in extinct_version[row_key]:
-                    extinct_version[row_key].add(row["old_version"])
-                    # Save the last active version
-                    last_active_version[row_key] = row
-                else:  # If old_version is already seen before.
-                    # Replace the value in the database with the last_active_version's associated rows.
-                    df.at[ind, "old_version"] = last_active_version[row_key]["new_version"]
-                    changed_old, changed_new = row["old_version"], row["new_version"]
-
-                # If new_version is seen, then basically remove it.
-                if row["new_version"] in extinct_version[row_key]:
-                    extinct_version[row_key] -= {row["new_version"]}
-
-            # If inspect is on, then add the changed parameters.
-            if inspect:
-                corrected_entries.append(
-                    (changed_old, changed_new),
-                )
-        # If inspect is on, then add these columns as new ones into the existing one.
-        if inspect:
-            ce = pd.DataFrame(corrected_entries, columns=["unfixed_old_version", "unfixed_new_version"])
-            df = pd.concat([df, ce], axis=1)
-
-        df.reset_index(inplace=True, drop=True)
-        return df
 
     def create_external_db(self, filter_mode: str) -> pd.DataFrame:
         """Retrieve Ensembl-external-ID relationships and/or database statistics.
@@ -2075,6 +2202,7 @@ class DatabaseManager:
             ValueError: If *filter_mode* is not one of the accepted literals **or** if the YAML allow-list claims a
                 database that is absent from the retrieved mappings—indicating the configuration and MySQL data are
                 out of sync.
+            EnsemblSchemaError: If ``identity_xref`` lacks columns other than its identity columns.
 
         Notes:
             *Synonym handling* - any synonym brought in from ``external_synonym`` is prefixed with
@@ -2097,8 +2225,8 @@ class DatabaseManager:
         # New releases use: ensembl_identity, xref_identity
         try:
             ix = self.get_table("identity_xref", usecols=["ensembl_identity", "xref_identity", "object_xref_id"], **m)
-        except ValueError as e:
-            if "Missing columns" in str(e) and ("ensembl_identity" in str(e) or "xref_identity" in str(e)):
+        except EnsemblSchemaError as e:
+            if {"ensembl_identity", "xref_identity"} & set(e.missing_columns):
                 self.log.info(
                     "Using legacy column names (target_identity, query_identity) for identity_xref table "
                     f"in Ensembl release {self.ensembl_release}."
@@ -2108,11 +2236,10 @@ class DatabaseManager:
                         "identity_xref", usecols=["target_identity", "query_identity", "object_xref_id"], **m
                     )
                     # Rename legacy columns to current naming convention
-                    ix.rename(
+                    ix = ix.rename(
                         columns={"target_identity": "ensembl_identity", "query_identity": "xref_identity"},
-                        inplace=True,
                     )
-                except ValueError:
+                except EnsemblSchemaError:
                     # If neither column naming scheme works, create empty identity columns
                     self.log.warning(
                         f"identity_xref table missing identity columns for Ensembl release {self.ensembl_release}. "
@@ -2127,8 +2254,8 @@ class DatabaseManager:
 
         # Make entities in synonyms table appended to the xref file as additional lines
         es = es.merge(x, how="inner", on="xref_id", validate="many_to_one")
-        es.drop(columns=["display_label"], inplace=True)
-        es.rename(columns={"synonym": "display_label"}, inplace=True)
+        es = es.drop(columns=["display_label"])
+        es = es.rename(columns={"synonym": "display_label"})
         es["display_label"] = DB.synonym_id_nodes_prefix + es["display_label"]
         x = pd.concat([x, es], ignore_index=True)
 
@@ -2175,11 +2302,10 @@ class DatabaseManager:
         # Remove unnecessary columns and reset the index.
         stable_id_version, usecols_core, usecols_asso = DatabaseManager._determine_usecols_ids(self.form)
         ids_only = list(set(usecols_asso + usecols_core) - set(stable_id_version))
-        comb.drop(
+        comb = comb.drop(
             columns=["ensembl_id", "object_xref_id", "ensembl_object_type", "xref_id", "external_db_id"] + ids_only,
-            inplace=True,
         )
-        comb.reset_index(inplace=True, drop=True)
+        comb = comb.reset_index(drop=True)
 
         # Processing the merged dataframe
 
@@ -2203,14 +2329,14 @@ class DatabaseManager:
         comb_3[id_graph], comb_4[id_graph] = comb_temp, comb_temp
         comb_3[comb_3_columns + identities] = comb[comb_3_columns + identities]
         comb_4[comb_4_columns + identities] = comb[comb_4_columns + identities]
-        comb_3.rename(columns=comb_renamer(comb_3_columns), inplace=True, errors="raise")
-        comb_4.rename(columns=comb_renamer(comb_4_columns), inplace=True, errors="raise")
-        comb_3.reset_index(inplace=True, drop=True)
-        comb_4.reset_index(inplace=True, drop=True)
+        comb_3 = comb_3.rename(columns=comb_renamer(comb_3_columns), errors="raise")
+        comb_4 = comb_4.rename(columns=comb_renamer(comb_4_columns), errors="raise")
+        comb_3 = comb_3.reset_index(drop=True)
+        comb_4 = comb_4.reset_index(drop=True)
         res = pd.concat([comb_3, comb_4], axis=0, ignore_index=True)
         res = res[~(res[id_graph].isna() | res[db_name].isna() | res[db_id].isna())]
-        res.sort_values(by=[db_name, id_graph, db_id], inplace=True)
-        res.reset_index(inplace=True, drop=True)
+        res = res.sort_values(by=[db_name, id_graph, db_id])
+        res = res.reset_index(drop=True)
         # Add the release information at the leftmost place
         res.insert(0, "release", pd.Series(repeat(self.ensembl_release, len(res))))
 
@@ -2221,7 +2347,7 @@ class DatabaseManager:
 
         # Drop duplicates if exists. Note that it is not trivial, there are many duplicated lines after adding
         # these columns as rows. Because, for some of them, comb_X_columns are actually the same.
-        res.drop_duplicates(inplace=True, ignore_index=True)
+        res = res.drop_duplicates(ignore_index=True)
 
         # Change the synonym IDs' database name
         to_add = np.array(
@@ -2240,7 +2366,7 @@ class DatabaseManager:
                 raise ValueError("Inconsistency between external yaml file and current state of DatabaseManager.")
             res = res[res[db_name].isin(isin_list)]
 
-        res.reset_index(inplace=True, drop=True)
+        res = res.reset_index(drop=True)
 
         if filter_mode in ["all", "relevant"]:
             return res
@@ -2325,7 +2451,7 @@ class DatabaseManager:
 
         if not just_download:
             df["organism"] = self.organism
-            df.reset_index(inplace=True, drop=True)
+            df = df.reset_index(drop=True)
             return df
         else:
             return df
@@ -2354,12 +2480,12 @@ class DatabaseManager:
         if not np.all(dbm_the_ids[f"{self.form}_stable_id"].str.find(DB.id_ver_delimiter) == -1):
             raise ValueError("The delimiter is in Ensembl IDs.")
 
-        dbm_the_ids.drop_duplicates(keep="first", inplace=True)
+        dbm_the_ids = dbm_the_ids.drop_duplicates(keep="first")
         if not dbm_the_ids[f"{self.form}_stable_id"].is_unique:
             raise ValueError("The stable IDs are not unique")
 
-        dbm_the_ids.reset_index(inplace=True, drop=True)
-        dbm_the_ids.drop_duplicates(inplace=True)
+        dbm_the_ids = dbm_the_ids.reset_index(drop=True)
+        dbm_the_ids = dbm_the_ids.drop_duplicates()
         return dbm_the_ids
 
     def check_if_change_assembly_works(self, db_manager: "DatabaseManager", target_assembly: int) -> bool:
@@ -2386,7 +2512,7 @@ class DatabaseManager:
 
     def create_external_all(
         self, return_mode: str, narrow_external: bool = True
-    ) -> Union[pd.DataFrame, pd.core.groupby.generic.DataFrameGroupBy]:
+    ) -> pd.DataFrame | pd.core.groupby.generic.DataFrameGroupBy:
         """Download and collate cross-reference mappings from every supported genome assembly.
 
         The manager cycles through every genome assembly recognised for the current organism (ordered by
@@ -2452,7 +2578,7 @@ class DatabaseManager:
             df_temp = dm.get_db(df_indicator)
             df_temp["assembly"] = i
             df = pd.concat([df, df_temp])
-        df.reset_index(drop=True, inplace=True)
+        df = df.reset_index(drop=True)
 
         if assemblies_skipped:
             self.log.warning(
@@ -2471,13 +2597,13 @@ class DatabaseManager:
         if return_mode == "all":
             # Drop duplicate rows that have all the columns the same with another row in the dataframe.
             # This also looks for 'assembly' columns so it is possible to say assemlies are evaluated separately.
-            df.drop_duplicates(keep="first", inplace=True, ignore_index=True, subset=compare_columns_2)
+            df = df.drop_duplicates(keep="first", ignore_index=True, subset=compare_columns_2)
             return df
 
         elif return_mode == "unique":
             # Unlike above, this does not also look for 'assembly' columns, so an entry found in the higher priority
             # assembly will be kept but the others will be removed.
-            df.drop_duplicates(keep="first", inplace=True, ignore_index=True, subset=compare_columns)
+            df = df.drop_duplicates(keep="first", ignore_index=True, subset=compare_columns)
             # Note that: after transition to new assembly. ensembl does not assign new versions etc to the older
             # keep the most priority one.
             return df
@@ -2544,7 +2670,7 @@ class DatabaseManager:
         create_even_if_exist: bool = False,
         save_after_calculation: bool = True,
         overwrite_even_if_exist: bool = False,
-    ) -> Union[pd.DataFrame, pd.Series]:
+    ) -> pd.DataFrame | pd.Series:
         """Retrieve or create a cached data table defined by an indicator string.
 
         This method is the central gateway for *all* tabular resources managed by
@@ -2565,7 +2691,6 @@ class DatabaseManager:
         * ``ids`` — release-specific identifier table (no qualifier).
         * ``externalcontent`` — summary of per-database content.
         * ``relationcurrent`` — current gene/ID relationships.
-        * ``relationarchive`` — historical gene/ID relationships across releases.
         * ``idhistory`` — full ID history; qualifier ``narrow`` restricts to current IDs.
         * ``versioninfo`` — version comparison across releases.
         * ``availabledatabases`` — names of the organism's core databases (all releases and assemblies).
@@ -2674,7 +2799,7 @@ class DatabaseManager:
             remove_redundant_exist("processed", df_indicator, xr1, xr1_a)
             hierarchy, file_path = self.file_name("processed", df_indicator, ensembl_release=xr1)
 
-        elif param1_ind is None and main_ind in ("relationarchive", "relationcurrent"):
+        elif param1_ind is None and main_ind == "relationcurrent":
             hierarchy, file_path = self.file_name("common", df_indicator)
 
         else:
@@ -2707,9 +2832,6 @@ class DatabaseManager:
             elif main_ind == "relationcurrent" and param1_ind is None:
                 df = self.create_relation_current()
 
-            elif main_ind == "relationarchive" and param1_ind is None:
-                df = self.create_relation_archive()
-
             elif main_ind == "idhistory" and param1_ind is None:
                 df = self.create_id_history(narrow=False)
 
@@ -2734,7 +2856,7 @@ class DatabaseManager:
 
         return df
 
-    def file_name(self, df_type: str, *args, ensembl_release: Optional[int] = None, **kwargs) -> tuple[str, str]:
+    def file_name(self, df_type: str, *args, ensembl_release: int | None = None, **kwargs) -> tuple[str, str]:
         """Resolve HDF5 hierarchy key and absolute file path for a dataframe request.
 
         This internal helper centralises every rule that :py:class:`DatabaseManager` uses to build HDF5
@@ -2783,7 +2905,7 @@ class DatabaseManager:
         def file_name_processed(df_indicator: str):
             return f"ens{ensembl_release}_{df_type}_{df_indicator}_{self.form}"
 
-        def file_name_mysql(table_key: str, usecols: Optional[list] = None):
+        def file_name_mysql(table_key: str, usecols: list | None = None):
             col_suffix = f"{self._column_sep}{self._column_sep.join(sorted(usecols))}" if usecols is not None else ""
             return f"ens{ensembl_release}_{df_type}_{table_key}{col_suffix}"
 
@@ -2964,11 +3086,11 @@ class DatabaseManager:
 
         # Concatenate the results and return.
         df_fx = pd.concat([df_fm1, df_fm2], axis=0)
-        df_fx.reset_index(inplace=True, drop=True)
+        df_fx = df_fx.reset_index(drop=True)
 
         return df_fx
 
-    def version_fix(self, df: pd.DataFrame, version_str: str, version_info: Optional[str] = None) -> pd.DataFrame:
+    def version_fix(self, df: pd.DataFrame, version_str: str, version_info: str | None = None) -> pd.DataFrame:
         """Apply a *global* ID-version policy to a DataFrame.
 
         Depending on the organism and its historical annotation quirks, identifiers may (1) **never**

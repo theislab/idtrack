@@ -6,8 +6,6 @@ avoid multi-GB downloads while still validating important graph-building
 behaviour (time travel edges, births/retirements, external edges, caching).
 """
 
-from __future__ import annotations
-
 import os
 from dataclasses import dataclass
 
@@ -82,7 +80,7 @@ def synthetic_graph_dm(tmp_path, monkeypatch) -> DatabaseManager:
     """Latest-release DatabaseManager backed by synthetic MySQL tables."""
     synthetic = _synthetic_graph_mysql()
 
-    def _fake_core_index(*, organism: str, genome_assembly: int):  # noqa: ARG001
+    def _fake_core_index(*, organism: str, genome_assembly: int, **_):  # noqa: ARG001
         releases = list(synthetic.available_releases)
         db_for_release = {r: f"{organism}_core_{r}_{genome_assembly}" for r in releases}
         return {
@@ -259,7 +257,7 @@ def test_construct_graph_form_handles_clean_handoff_assemblies(tmp_path, monkeyp
         },
     }
 
-    def _fake_core_index(*, organism: str, genome_assembly: int):
+    def _fake_core_index(*, organism: str, genome_assembly: int, **_):
         if organism != "mus_musculus":
             raise ValueError("unexpected organism")
         if int(genome_assembly) == 39:
@@ -487,3 +485,18 @@ class TestGraphMakerIntegrationPoints:
         from idtrack._db import DB
 
         assert DB.node_type_str == "node_type"
+
+
+def test_graph_maker_explains_how_to_build_an_older_snapshot():
+    """A manager anchored before the end of its window is refused with the call that builds that snapshot."""
+    from types import SimpleNamespace
+
+    from idtrack._graph_maker import GraphMaker
+
+    dm = SimpleNamespace(ensembl_release=93, available_releases=[92, 93, 94])
+    with pytest.raises(ValueError, match=r"newest release of the manager's window \(94\).*snapshot_release=93"):
+        GraphMaker(dm)
+    assert (
+        GraphMaker(SimpleNamespace(ensembl_release=94, available_releases=[92, 93, 94])).db_manager.ensembl_release
+        == 94
+    )

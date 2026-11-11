@@ -6,7 +6,7 @@
 import json
 import logging
 import os
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -388,7 +388,7 @@ class ExternalDatabases:
         return y
 
     @staticmethod
-    def _releases_of(read_yaml_file: dict, organism: Optional[str] = None) -> set[int]:
+    def _releases_of(read_yaml_file: dict, organism: str | None = None) -> set[int]:
         """Return every release listed in a parsed externals YAML (for one organism, or for all)."""
         organisms = [organism] if organism is not None else list(read_yaml_file or {})
         return {
@@ -449,7 +449,7 @@ class ExternalDatabases:
             )
 
     def extend_modified_yaml(
-        self, content: pd.DataFrame, output_path: Optional[str] = None, base_path: Optional[str] = None
+        self, content: pd.DataFrame, output_path: str | None = None, base_path: str | None = None
     ) -> dict[str, Any]:
         """Extend the organism's modified externals YAML to the releases of a database-content table.
 

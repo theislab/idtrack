@@ -69,7 +69,10 @@ def _ensure_poetry_export_available() -> None:
 _ensure_poetry_export_available()
 
 package = "idtrack"
-python_versions = ["3.9", "3.10", "3.11", "3.12", "3.13"]
+python_versions = ["3.12", "3.13", "3.14", "3.15"]
+# The interpreter of the single-version sessions in CI: the oldest supported, so that type checks and doctests catch
+# any use of a newer Python's features (see .github/workflows/run_tests.yml).
+default_python = python_versions[0]
 nox.options.sessions = (
     "pre-commit",
     "safety",
@@ -175,20 +178,6 @@ def precommit(session: Session) -> None:
         activate_virtualenv_in_precommit_hooks(session)
 
 
-# Advisories that have no fixed release for Python 3.9. The fixed urllib3 (2.8.0) and requests (2.33.0) need Python
-# 3.10+, so the lock keeps urllib3 2.6.3 and requests 2.32.5 for Python 3.9 only. On Python 3.10+ the dependency
-# floors in pyproject.toml require the fixed releases, so these IDs cannot hide a vulnerable version there. Remove
-# them together with Python 3.9 support.
-safety_ignored_for_python39 = {
-    "SFTY-20260511-47957": "urllib3 <2.7.0 (CVE-2026-44432)",
-    "96886": "urllib3 <2.7.0 (CVE-2026-44431)",
-    "SFTY-20260930-79283": "urllib3 <2.8.0 (CVE-2026-97689)",
-    "SFTY-20260930-11063": "urllib3 <2.8.0 (CVE-2026-97688)",
-    "SFTY-20260930-39688": "urllib3 <2.8.0 (CVE-2026-97687)",
-    "90553": "requests <2.33.0 (CVE-2026-25645)",
-}
-
-
 @nox.session(python=python_versions)
 def safety(session: Session) -> None:
     """Scan dependencies for insecure packages."""
@@ -203,8 +192,7 @@ def safety(session: Session) -> None:
         session.install("safety>=2,<4")
 
         # Run safety check
-        ignores = [f"--ignore={vuln_id}" for vuln_id in sorted(safety_ignored_for_python39)]
-        session.run("safety", "check", "--full-report", f"--file={reqs_path}", *ignores)
+        session.run("safety", "check", "--full-report", f"--file={reqs_path}")
     finally:
         # Clean up the temp file
         if reqs_path.exists():
@@ -242,7 +230,7 @@ def tests(session: Session) -> None:
             session.notify("coverage")
 
 
-@session(name="tests-external-mappers", python=["3.11"])
+@session(name="tests-external-mappers", python=[default_python])
 def tests_external_mappers(session: Session) -> None:
     """Run tests with external mapper dependencies installed.
 
@@ -266,7 +254,7 @@ def tests_external_mappers(session: Session) -> None:
             session.notify("coverage")
 
 
-@session
+@session(python=default_python)
 def coverage(session: Session) -> None:
     """Produce the coverage report."""
     # Do not use session.posargs unless this is the only session.

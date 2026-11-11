@@ -8,8 +8,6 @@ This module provides:
 - Utility fixtures for common test patterns
 """
 
-from __future__ import annotations
-
 import importlib.util
 import os
 import re
@@ -851,3 +849,12 @@ def real_track_tests(real_gene_graph) -> Any:
     tests._external_entrance_placeholders = sorted(tests._external_entrance_placeholder.values())
     tests._ensure_assembly_priority_cache()
     return tests
+
+
+@pytest.fixture(autouse=True)
+def _fresh_species_cache(monkeypatch):
+    """Give every test its own (empty) per-process cache of the Ensembl species list, and no retry waits."""
+    from idtrack._verify_organism import VerifyOrganism
+
+    monkeypatch.setattr(VerifyOrganism, "_species_cache", {})
+    monkeypatch.setattr(DB, "rest_retry_wait", 0.0)

@@ -69,7 +69,7 @@ Typical usage
 - Clean: `python reproducibility/scripts/local_ci.py clean --yes`
 - Build only: `python reproducibility/scripts/local_ci.py build`
 - Compat only: `python reproducibility/scripts/local_ci.py compat --jobs 6`
-- Narrow compat: `python reproducibility/scripts/local_ci.py compat --select 'pandas>=2' --pythons 3.10`
+- Narrow compat: `python reproducibility/scripts/local_ci.py compat --select 'pandas>=2' --pythons 3.12`
 
 Implementation note
 -------------------
@@ -516,8 +516,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         prog="local_ci.py",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=__doc__,
-        epilog=textwrap.dedent(
-            """
+        epilog=textwrap.dedent("""
             Examples:
               # Run both build + dependency compatibility checks
               python reproducibility/scripts/local_ci.py all
@@ -530,8 +529,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
               # Run a single compat case (by regex)
               python reproducibility/scripts/local_ci.py compat --select 'pandas>=2 / numpy>=2'
-            """
-        ),
+            """),
     )
     parser.add_argument(
         "--workdir",
@@ -597,7 +595,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--pythons",
         type=str,
         default="",
-        help="Comma-separated Python versions to run (e.g. 3.10,3.12).",
+        help="Comma-separated Python versions to run (e.g. 3.12,3.13).",
     )
 
     args = parser.parse_args(argv)

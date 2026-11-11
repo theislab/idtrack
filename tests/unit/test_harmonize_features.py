@@ -5,8 +5,6 @@ These tests run the real harmonisation logic on tiny `.h5ad` files while patchin
 the expensive IDTrack mapping step to deterministic synthetic results.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 import anndata as ad
@@ -85,7 +83,7 @@ def _make_harmonizer(
             "cell_type": cell_type,
             "age": ["10", "20"] if handle == "d1" else ["30", "40"],
         }
-        return ad.AnnData(X=x, obs=pd.DataFrame(obs), var=pd.DataFrame(index=var_names))
+        return ad.AnnData(X=x, obs=pd.DataFrame(obs, index=["c0", "c1"]), var=pd.DataFrame(index=var_names))
 
     _adata(d1_var_names, "d1").write_h5ad(d1_path)
     _adata(d2_var_names, "d2").write_h5ad(d2_path)
@@ -186,7 +184,14 @@ def test_unify_multiple_anndatas_union_adds_intersection_flag(harmonizer):
     intersection_ones = set(adata.var.index[adata.var["intersection"] == 1])
     assert {"ENSG00000000001", "ENSG00000141510", "FAIL_ALL", "TP53_ALIAS"}.issubset(intersection_ones)
 
-    assert DB.placeholder_na in set(adata.obs["cell_type"].cat.categories)
+    # Values are kept as they are: the text "nan" is a value, a missing value stays missing.
+    assert adata.obs["cell_type"].astype(object).where(adata.obs["cell_type"].notna(), None).tolist() == [
+        "T",
+        "nan",
+        "B",
+        None,
+    ]
+    assert DB.placeholder_na not in set(adata.obs["cell_type"].cat.categories)
 
 
 def test_unify_multiple_anndatas_intersect_keeps_shared_features(harmonizer):
@@ -298,3 +303,173 @@ def test_result_cache_key_includes_organism_database_and_releases(tmp_path):
     assert path.endswith("idtrack_result_proj_d1_macaca_mulatta_VGNC-Symbol_rel110_graph116.pickle")
     h.final_database = "HGNC Symbol"
     assert h.result_cache_path("d1") != path
+
+
+def _write_rich_datasets(tmp_path):
+    """Two datasets like the ones of the harmonizer fixture, with layers, obsm, obsp, uns, raw and var columns."""
+    from scipy.sparse import identity
+
+    names = {
+        "d1": ["GENE_OK_1", "GENE_OK_2", "FAIL_ALL", "FAIL_ONLY_D1", "TP53", "TP53_ALIAS"],
+        "d2": ["GENE_OK_1", "GENE_OK_3", "FAIL_ALL", "FAIL_ONLY_D2", "TP53", "TP53_ALIAS"],
+    }
+    paths = {}
+    for i, (handle, var_names) in enumerate(names.items()):
+        x = csr_matrix(np.arange(18, dtype=np.float32).reshape(3, 6) + 100 * i)
+        obs = pd.DataFrame(
+            {
+                "disease": ["normal"] * 3 if handle == "d1" else ["disease"] * 3,
+                "study": [f"study_{handle}"] * 3,
+                "n_counts": np.array([1.0, 2.0, np.nan]) + i,
+                "only_in_d1": ["a", "b", "c"],
+                "n_genes_d1": np.array([5, 6, 7], dtype=np.int64),
+                "is_doublet_d1": [True, False, True],
+                "batch_d1": pd.Categorical(["x", "y", "x"]),
+            },
+            index=[f"cell{handle.upper()}_{k}" for k in range(3)],
+        )
+        if handle == "d2":
+            obs = obs.drop(columns=["only_in_d1", "n_genes_d1", "is_doublet_d1", "batch_d1"])
+        var = pd.DataFrame(
+            {
+                "feature_type": ["Gene Expression"] * 6,
+                "chrom": [f"c{k}{handle}" for k in range(6)],
+                "length": np.arange(6, dtype=np.int64) * 10 + 100,
+            },
+            index=var_names,
+        )
+        adata = ad.AnnData(X=x, obs=obs, var=var)
+        adata.layers["counts"] = x.copy() * 2
+        adata.obsm["X_pca"] = np.ones((3, 2), dtype=np.float32) * (i + 1)
+        adata.obsp["connectivities"] = identity(3, format="csr", dtype=np.float32)
+        adata.uns["shared"] = "same"
+        adata.uns["own"] = handle
+        adata.raw = adata.copy()
+        paths[handle] = tmp_path / f"{handle}_rich.h5ad"
+        adata.write_h5ad(paths[handle])
+    return paths
+
+
+@pytest.fixture
+def rich_harmonizer(tmp_path, monkeypatch) -> HarmonizeFeatures:
+    """The harmonizer fixture on datasets with every AnnData element."""
+    h = _make_harmonizer(tmp_path, monkeypatch)
+    h.data_h5ad_dict = {k: str(v) for k, v in _write_rich_datasets(tmp_path).items()}
+    return h
+
+
+def test_unify_keeps_every_obs_column_by_default(rich_harmonizer):
+    """With the default `obs_join="outer"` no obs column is lost; absent ones are missing values of their kind."""
+    adata = rich_harmonizer.unify_multiple_anndatas(mode="union")
+    assert list(adata.obs.columns) == [
+        "disease",
+        "study",
+        "n_counts",
+        "only_in_d1",
+        "n_genes_d1",
+        "is_doublet_d1",
+        "batch_d1",
+        "handle_anndata",
+    ]
+    d2 = adata.obs["handle_anndata"] == "d2"
+    for column in ("only_in_d1", "n_genes_d1", "is_doublet_d1", "batch_d1"):
+        assert adata.obs.loc[d2, column].isna().all() and adata.obs.loc[~d2, column].notna().all()
+    assert DB.placeholder_na not in set(adata.obs["only_in_d1"].astype(str))
+    # Integers and booleans become nullable (pd.NA), not floats or objects; categories stay categories.
+    assert str(adata.obs["n_genes_d1"].dtype) == "Int64" and adata.obs["n_genes_d1"].iloc[:3].tolist() == [5, 6, 7]
+    assert str(adata.obs["is_doublet_d1"].dtype) == "boolean"
+    assert adata.obs["is_doublet_d1"].iloc[:3].tolist() == [True, False, True]
+    assert isinstance(adata.obs["batch_d1"].dtype, pd.CategoricalDtype)
+    assert adata.obs["batch_d1"].iloc[:3].tolist() == ["x", "y", "x"]
+
+
+def test_unify_obs_join_inner_and_selection(rich_harmonizer):
+    """`obs_join="inner"` keeps the common columns; `obs_columns_to_keep` selects and names wrong names."""
+    adata = rich_harmonizer.unify_multiple_anndatas(mode="intersect", obs_join="inner")
+    assert list(adata.obs.columns) == ["disease", "study", "n_counts", "handle_anndata"]
+    assert adata.obs["disease"].tolist() == ["normal"] * 3 + ["disease"] * 3
+    assert adata.obs["n_counts"].dtype.kind == "f"
+    assert np.isnan(adata.obs["n_counts"].iloc[2]) and adata.obs["n_counts"].iloc[3] == 2.0
+    assert adata.obs["handle_anndata"].cat.categories.tolist() == ["d1", "d2"]
+    assert adata.obs_names.tolist()[:2] == ["d1_cellD1_0", "d1_cellD1_1"]
+
+    adata = rich_harmonizer.unify_multiple_anndatas(mode="union", obs_columns_to_keep=["only_in_d1", "disease"])
+    assert list(adata.obs.columns) == ["only_in_d1", "disease", "handle_anndata"]
+    assert adata.obs["only_in_d1"].isna().tolist() == [False] * 3 + [True] * 3
+    with pytest.raises(ValueError, match=r"no dataset has: \['nowhere'\]"):
+        rich_harmonizer.unify_multiple_anndatas(obs_columns_to_keep=["nowhere"])
+    with pytest.raises(ValueError, match=r"not every dataset has: \['only_in_d1'\]"):
+        rich_harmonizer.unify_multiple_anndatas(obs_join="inner", obs_columns_to_keep=["only_in_d1"])
+    with pytest.raises(ValueError, match="`obs_join` must be"):
+        rich_harmonizer.unify_multiple_anndatas(obs_join="left")
+    with pytest.raises(ValueError, match="already an obs column"):
+        rich_harmonizer.unify_multiple_anndatas(handle_anndata_key="disease")
+    with pytest.raises(ValueError, match="`mode` must be"):
+        rich_harmonizer.unify_multiple_anndatas(mode="inner")
+
+
+def test_unify_keeps_layers_obsm_obsp_uns_and_var_columns(rich_harmonizer):
+    """Everything aligned to cells is carried; var columns are merged; raw is dropped; X keeps its dtype."""
+    adata = rich_harmonizer.unify_multiple_anndatas(mode="union")
+    assert adata.X.dtype == np.float32
+    assert [k for k in adata.layers if k is not None] == ["counts"]  # anndata 0.13 also lists X under None
+    np.testing.assert_array_equal(adata.layers["counts"].toarray(), 2 * adata.X.toarray())
+    assert adata.obsm["X_pca"].shape == (6, 2)
+    assert adata.obsp["connectivities"].shape == (6, 6)
+    assert adata.uns["shared"] == "same" and "own" not in adata.uns
+    assert adata.raw is None
+    # feature_type agrees between the datasets: one column; chrom does not: one column per dataset.
+    assert adata.var["feature_type"].astype(str).unique().tolist() == ["Gene Expression"]
+    assert {"chrom_d1", "chrom_d2"} <= set(adata.var.columns) and "chrom" not in adata.var.columns
+    # length agrees where both datasets have a feature: one column; missing (pd.NA, still integers) where none has it.
+    assert str(adata.var["length"].dtype) == "Int64"
+    assert adata.var.loc["ENSG00000000001", "length"] == 100 and adata.var["length"].notna().all()
+    assert adata.var.loc["ENSG00000000002", "chrom_d2"] is np.nan or pd.isna(
+        adata.var.loc["ENSG00000000002", "chrom_d2"]
+    )
+    assert adata.var.loc["ENSG00000000001", "converted_id"] == "G1"
+    assert adata.var.loc["ENSG00000000002", "intersection"] == 0
+    assert adata.var.loc["ENSG00000000001", "intersection"] == 1
+    # A feature only in d2 has zeros for the d1 cells, in X and in the layer.
+    col = adata.var_names.get_loc("ENSG00000000003")
+    assert adata.X[:3, col].toarray().sum() == 0 and adata.layers["counts"][:3, col].toarray().sum() == 0
+
+
+def test_feature_harmonizer_keeps_the_dataset_elements(rich_harmonizer):
+    """feature_harmonizer only re-indexes the features; the input var columns follow the conversion columns."""
+    adata, t0, t1 = rich_harmonizer.feature_harmonizer("d1")
+    assert (t0, t1) == (6, 5)
+    assert list(adata.var.columns) == ["HGNC Symbol", "Query ID", "feature_type", "chrom", "length"]
+    assert adata.var.loc["ENSG00000000001", "chrom"] == "c0d1"
+    assert (
+        [k for k in adata.layers if k is not None] == ["counts"]
+        and "X_pca" in adata.obsm
+        and "connectivities" in adata.obsp
+    )
+    assert adata.uns["own"] == "d1"
+    assert adata.raw is None
+
+
+def test_unify_rejects_unknown_numeric_columns(rich_harmonizer):
+    """A numeric column that the merged object does not have is named in the error."""
+    with pytest.raises(ValueError, match=r"numeric_obs_columns.*\['nowhere'\]"):
+        rich_harmonizer.unify_multiple_anndatas(numeric_obs_columns={"nowhere"})
+    adata = rich_harmonizer.unify_multiple_anndatas(numeric_obs_columns={"n_counts"})
+    assert adata.obs["n_counts"].dtype == float and adata.obs["n_counts"].isna().sum() == 2
+
+
+def test_unify_var_conflicts_are_kept_per_dataset_and_clashes_raise(rich_harmonizer, tmp_path):
+    """Different values for one feature keep the column per dataset; a generated name already used raises."""
+    import anndata as ad
+
+    path = rich_harmonizer.data_h5ad_dict["d2"]
+    d2 = ad.read_h5ad(path)
+    d2.var["length"] = d2.var["length"] + 1  # now d1 and d2 disagree on the shared features
+    d2.var["intersection"] = "x"  # an input column with the name of a generated one
+    d2.write_h5ad(path)
+    with pytest.raises(ValueError, match="'intersection' twice"):
+        rich_harmonizer.unify_multiple_anndatas(mode="union")
+    adata = rich_harmonizer.unify_multiple_anndatas(mode="intersect")
+    assert "length" not in adata.var.columns
+    assert adata.var.loc["ENSG00000000001", "length_d1"] == 100
+    assert adata.var.loc["ENSG00000000001", "length_d2"] == 101

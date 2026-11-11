@@ -21,7 +21,7 @@ input). Records without escapes or quotes, the vast majority, pass through untou
 
 import csv
 import io
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 
@@ -47,9 +47,9 @@ def _only_null_escapes(record: str) -> bool:
     return "\\" not in reduced
 
 
-def _decode_fields(record: str) -> list[Optional[str]]:
+def _decode_fields(record: str) -> list[str | None]:
     """Split one logical record into decoded field values (``None`` for SQL NULL)."""
-    fields: list[Optional[str]] = []
+    fields: list[str | None] = []
     current: list[str] = []
     raw_is_null_token = True  # whether the raw text of the current field is exactly `\N` so far
     raw_length = 0
@@ -169,7 +169,7 @@ class MySQLDumpCSVStream(io.TextIOBase):
         if pieces:
             self._out += "".join(pieces)
 
-    def read(self, size: Optional[int] = -1) -> str:
+    def read(self, size: int | None = -1) -> str:
         """Return up to *size* characters of CSV (everything that is left when *size* is negative or ``None``)."""
         if size is None or size < 0:
             while not self._eof:
@@ -182,7 +182,7 @@ class MySQLDumpCSVStream(io.TextIOBase):
         return out
 
 
-def _parse_csv(stream: "MySQLDumpCSVStream", columns: list[str], usecols: Optional[list[str]]) -> pd.DataFrame:
+def _parse_csv(stream: "MySQLDumpCSVStream", columns: list[str], usecols: list[str] | None) -> pd.DataFrame:
     r"""Parse the CSV produced by :py:class:`MySQLDumpCSVStream` (tab-separated, double-quote quoting, ``\N`` NULL)."""
     return pd.read_csv(
         stream,
@@ -204,7 +204,7 @@ def _parse_csv(stream: "MySQLDumpCSVStream", columns: list[str], usecols: Option
 def read_mysql_dump(
     source: Any,
     columns: list[str],
-    usecols: Optional[list[str]] = None,
+    usecols: list[str] | None = None,
 ) -> pd.DataFrame:
     """Parse a MySQL table dump into a DataFrame with the values MySQL would return.
 

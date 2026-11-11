@@ -4,8 +4,6 @@
 These tests focus on the custom, PyTables-free HDF5 round-trip helpers used by the cache layer.
 """
 
-from __future__ import annotations
-
 import logging
 
 import numpy as np
@@ -54,8 +52,10 @@ class TestHdf5RoundTrip:
         to_hdf(path=str(path), key="/df", df=df, mode="a")
         loaded = read_hdf(path=str(path), key="/df", mode="r")
 
+        # Text of the default kind comes back in the default text dtype of the running pandas with NaN for missing
+        # values (what pandas itself gives for fresh text); `string` stays `string` with pd.NA.
         expected = df.copy()
-        expected.loc[expected["object_col"].isna(), "object_col"] = pd.NA
+        expected["object_col"] = pd.Series(["x", np.nan, "z"], index=index, dtype=pd.Series(["a"]).dtype)
 
         pd.testing.assert_frame_equal(loaded, expected, check_dtype=True)
         assert loaded.columns.name == "cols"
@@ -126,9 +126,111 @@ def test_zero_row_frame_with_string_columns_roundtrips(tmp_path):
     back = read_exported("ens116_processed_idhistory_narrow_gene", str(path))
     assert list(back.columns) == list(df.columns)
     assert len(back) == 0
-    assert back["old_stable_id"].dtype == object
+    assert back["old_stable_id"].dtype == pd.Series(["a"]).dtype  # default text dtype of the running pandas
     assert back["score"].dtype == float
 
     categorical = pd.DataFrame({"c": pd.Categorical([], categories=[])})
     to_hdf(str(tmp_path / "zero_cat.h5"), "k", categorical, mode="w")
     assert len(read_hdf(str(tmp_path / "zero_cat.h5"), "k")) == 0
+
+
+def _default_text_dtype():
+    return pd.Series(["a"]).dtype
+
+
+def _text_dtypes() -> list:
+    """The three pandas text dtypes: `object`, `string` (pd.NA) and `str` (NaN; the default of pandas 3)."""
+    return [
+        pytest.param(object, id="object"),
+        pytest.param("string", id="string"),
+        pytest.param(pd.StringDtype(na_value=np.nan), id="str"),
+    ]
+
+
+@pytest.mark.parametrize("dtype", _text_dtypes())
+def test_every_text_dtype_roundtrips_with_its_missing_values(tmp_path, dtype):
+    """Every pandas text dtype is accepted; `object`/`str` come back as the default text dtype with NaN."""
+    df = pd.DataFrame({"t": pd.Series(["ENSG1", None, "", "ENSG2"], dtype=dtype), "n": [1, 2, 3, 4]})
+    to_hdf(str(tmp_path / "t.h5"), "k", df, mode="w")
+    back = read_hdf(str(tmp_path / "t.h5"), "k")
+    assert back["t"].isna().tolist() == [False, True, False, False]
+    assert back["t"].dropna().tolist() == ["ENSG1", "", "ENSG2"]
+    if isinstance(dtype, str):
+        assert back["t"].dtype == pd.StringDtype()
+        assert back["t"].iloc[1] is pd.NA
+    else:
+        assert back["t"].dtype == _default_text_dtype()
+        assert isinstance(back["t"].iloc[1], float) and np.isnan(back["t"].iloc[1])
+
+
+def test_cached_text_table_equals_the_fresh_table(tmp_path):
+    """A text table as pandas reads it from a dump (here: read_csv) is unchanged by a cache round trip."""
+    import io
+
+    fresh = pd.read_csv(
+        io.StringIO("a\tb\tc\nx\t1\t\\N\ny\t2\tz\n"), sep="\t", na_values=["\\N"], keep_default_na=False
+    )
+    to_hdf(str(tmp_path / "f.h5"), "k", fresh, mode="w")
+    pd.testing.assert_frame_equal(read_hdf(str(tmp_path / "f.h5"), "k"), fresh, check_dtype=True)
+
+
+@pytest.mark.parametrize("dtype", _text_dtypes())
+def test_text_index_roundtrips(tmp_path, dtype):
+    """A text index (object, str or string) is accepted and restored like a text column."""
+    df = pd.DataFrame({"x": [1, 2]}, index=pd.Index(["r1", "r2"], dtype=dtype, name="rows"))
+    to_hdf(str(tmp_path / "i.h5"), "k", df, mode="w")
+    back = read_hdf(str(tmp_path / "i.h5"), "k")
+    assert back.index.tolist() == ["r1", "r2"]
+    assert back.index.name == "rows"
+    expected = pd.StringDtype() if isinstance(dtype, str) else _default_text_dtype()
+    assert back.index.dtype == expected
+
+
+def test_datetime_and_timedelta_with_missing_values_roundtrip(tmp_path):
+    """Missing datetimes (NaT) survive a round trip, and the recorded resolution is restored."""
+    df = pd.DataFrame(
+        {
+            "dt": pd.Series([pd.Timestamp("2020-01-01"), pd.NaT, pd.Timestamp("2021-06-30 12:00:00")]).astype(
+                "datetime64[s]"
+            ),
+            "td": pd.to_timedelta(["1 days", None, "2 hours"]),
+        }
+    )
+    to_hdf(str(tmp_path / "d.h5"), "k", df, mode="w")
+    back = read_hdf(str(tmp_path / "d.h5"), "k")
+    pd.testing.assert_frame_equal(back, df, check_dtype=True)
+
+
+def test_cache_written_by_idtrack_0_0_5_reads_back_unchanged():
+    """A table cached by idtrack 0.0.5 (pandas 2.2, HDF5 1.14) reads back with the same values and missing values.
+
+    The fixture was written with the writer of that version (`tests/data/legacy_cache_v0.0.5.h5`). Text comes back in
+    the default text dtype of the running pandas (`object` under pandas 2, `str` under pandas 3) with NaN for missing
+    values, as pandas itself reads text; every other dtype is the recorded one.
+    """
+    from pathlib import Path
+
+    path = str(Path(__file__).parents[1] / "data" / "legacy_cache_v0.0.5.h5")
+    text = _default_text_dtype()
+    expected = pd.DataFrame(
+        {
+            "old_stable_id": pd.Series(["ENSSSCG00000000001", np.nan, "ENSSSCG00000000003", np.nan], dtype=text),
+            "old_version": [1.0, np.nan, 2.0, 1.0],
+            "new_stable_id": pd.Series(
+                ["ENSSSCG00000000001", "ENSSSCG00000000002", "", "ENSSSCG00000000004"], dtype=text
+            ),
+            "mapping_session_id": np.array([10, 11, 12, 13], dtype=np.int64),
+            "type": pd.Categorical(["gene", "gene", "transcript", "gene"]),
+            "is_current": [True, False, True, True],
+        }
+    )
+    back = read_hdf(path, "ens115_mysql_stable_id_event")
+    pd.testing.assert_frame_equal(back, expected, check_dtype=True, check_categorical=True)
+    assert back["old_stable_id"].isna().tolist() == [False, True, False, True]
+
+
+def test_validate_dataframe_rejects_non_text_object_index():
+    """An object index must hold strings, like an object column."""
+    df = pd.DataFrame({"x": [1, 2]}, index=pd.Index(["a", 1], dtype=object))
+    with pytest.raises(ValueError, match="Object index"):
+        validate_dataframe(df)

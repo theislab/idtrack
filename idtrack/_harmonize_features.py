@@ -5,19 +5,62 @@ import logging
 import os
 import pickle  # noqa: S403
 import re
-import warnings
 from functools import cached_property
-from typing import Literal, Optional, Union
+from typing import Literal
 
 import anndata as ad
 import numpy as np
 import pandas as pd
 import tqdm
-from scipy.sparse import csr_matrix
 
 import idtrack
 from idtrack import DB
-from idtrack._db import MISSING_VALUES
+
+
+def _is_text(series: pd.Series) -> bool:
+    """Return whether *series* holds text (``object`` dtype, or a pandas string dtype).
+
+    Args:
+        series: A column.
+
+    Returns:
+        bool: ``True`` for text.
+    """
+    return pd.api.types.is_object_dtype(series.dtype) or isinstance(series.dtype, pd.StringDtype)
+
+
+def _holding_missing(series: pd.Series) -> pd.Series:
+    """Return *series* in a dtype that can hold missing values of its kind.
+
+    Integers become the nullable ``Int``/``UInt`` dtype of the same width and booleans ``boolean`` (missing value
+    ``pd.NA``); every other dtype (float, text, categorical, datetime, nullable dtypes) already has a missing value
+    and is returned unchanged.
+
+    Args:
+        series: A column.
+
+    Returns:
+        pandas.Series: The column, in a dtype with a missing value.
+    """
+    dtype = series.dtype
+    if isinstance(dtype, np.dtype) and dtype.kind in "iu":
+        return series.astype(pd.api.types.pandas_dtype(f"{'U' if dtype.kind == 'u' else ''}Int{8 * dtype.itemsize}"))
+    if isinstance(dtype, np.dtype) and dtype.kind == "b":
+        return series.astype("boolean")
+    return series
+
+
+def _missing_like(template: pd.Series, index: pd.Index) -> pd.Series:
+    """Return a column of missing values of the kind of *template* (see :py:func:`_holding_missing`).
+
+    Args:
+        template: A column of the same name in another dataset.
+        index: Index of the new column.
+
+    Returns:
+        pandas.Series: All values missing (``NaN``, ``pd.NA``, ``NaT`` or a missing category).
+    """
+    return pd.Series(index=index, dtype=_holding_missing(template.iloc[:0]).dtype)
 
 
 class HarmonizeFeatures:
@@ -113,9 +156,9 @@ class HarmonizeFeatures:
         project_local_repository: str,
         idtrack_local_repository: str,
         target_ensembl_release: int,
-        final_database: Optional[str] = None,
-        organism_name: Optional[str] = None,
-        graph_last_ensembl_release: Optional[int] = None,
+        final_database: str | None = None,
+        organism_name: str | None = None,
+        graph_last_ensembl_release: int | None = None,
         verbose_level: Literal[0, 1, 2] = 2,
         debugging_variables: bool = False,
         converted_id_column: str = "converted_id",
@@ -256,7 +299,7 @@ class HarmonizeFeatures:
                 found[organism] = releases
         return found
 
-    def _resolve_organism_name(self, organism_name: Optional[str]) -> str:
+    def _resolve_organism_name(self, organism_name: str | None) -> str:
         """Return the Ensembl species name to use (see the ``organism_name`` argument)."""
         if organism_name is None:
             organisms = sorted(self._graph_snapshots())
@@ -273,10 +316,8 @@ class HarmonizeFeatures:
                     '`organism_name="homo_sapiens"`, or a taxon ID or name that `API.resolve_organism` accepts.'
                 )
             return organisms[0]
-        if organism_name in DB.supported_organisms:
-            return organism_name
-        formal_name, _ = self.idt.resolve_organism(organism_name)
-        return formal_name
+        # The formal name of a configured organism resolves without the network; other queries need Ensembl REST.
+        return idtrack.VerifyOrganism(organism_name).get_formal_name()
 
     def _default_graph_last_release(self) -> int:
         """Return the newest graph snapshot of the organism, else the organism's latest Ensembl release."""
@@ -509,7 +550,7 @@ class HarmonizeFeatures:
         }
 
     def create_dataset_conversion_dataframe(
-        self, gene_list: Union[list[str], pd.Index], initialization_run: bool
+        self, gene_list: list[str] | pd.Index, initialization_run: bool
     ) -> pd.DataFrame:
         """Build a two-column mapping table for a single dataset's feature identifiers.
 
@@ -596,11 +637,12 @@ class HarmonizeFeatures:
     def feature_harmonizer(self, dataset_name: str) -> tuple[ad.AnnData, int, int]:
         """Convert one dataset's feature space into the unified target namespace.
 
-        This convenience wrapper reads a single ``.h5ad`` file, removes identifiers deemed unusable during
-        :py:meth:`_initialize`, applies the conversion mapping from
-        :py:meth:`create_dataset_conversion_dataframe`, and returns a *new* :py:class:`anndata.AnnData`
-        object with harmonised features.  The function is intentionally side-effect-free: it never alters
-        the source file, and large temporary matrices are deleted immediately to minimise memory usage.
+        The ``.h5ad`` file is read completely, the features removed during :py:meth:`_initialize` are dropped, and
+        the feature axis is renamed with the mapping of :py:meth:`create_dataset_conversion_dataframe`. Everything
+        else of the dataset is kept: ``X``, ``layers``, ``obs``, ``obsm``, ``obsp`` and ``uns`` as they are, and
+        ``varm``/``varp`` subset to the kept features. ``var`` holds the input's own columns (a column whose name is
+        one of the conversion columns gets the suffix ``"_input"``) after the conversion columns. ``raw`` is dropped
+        (with a warning), because its features are not harmonised. The source file is never altered.
 
         Args:
             dataset_name (str): Key from :py:attr:`data_h5ad_dict` identifying which dataset to load and
@@ -608,8 +650,9 @@ class HarmonizeFeatures:
 
         Returns:
             tuple:
-                * **resulting_adata** (:py:class:`anndata.AnnData`) - Dataset whose ``var`` now contains
-                  ``_ENSEMBL_GENE_COLUMN`` (matching Ensembl gene ID) as index and ``self.final_database`` as a column.
+                * **resulting_adata** (:py:class:`anndata.AnnData`) - The dataset whose ``var`` index is the matched
+                  Ensembl gene ID (or the input name for features kept unconverted), with the columns
+                  ``self.final_database`` and ``"Query ID"`` (the input name) before the input's ``var`` columns.
                 * **t0** (int) - Number of features *before* filtering and harmonisation.
                 * **t1** (int) - Number of features *after* the procedure (i.e., retained in
                   *resulting_adata*).
@@ -620,12 +663,18 @@ class HarmonizeFeatures:
         """
         adata = ad.read_h5ad(self.data_h5ad_dict[dataset_name])
         t0 = adata.n_vars
-        remove_bool = ~(
+        keep = ~(
             adata.var.index.isin(self.conversion_failed_identifiers)
             | adata.var.index.isin(self.datataset_conversion_dataframe_issues["gene_names_inconsistency"])
             | adata.var.index.isin(self.datataset_conversion_dataframe_issues["final_database_duplicate_source_ids"])
         )
-        adata = adata[:, remove_bool]
+        if adata.raw is not None:
+            self.log.warning(
+                f"Dataset {dataset_name!r}: `raw` is dropped, because its features are not harmonised; "
+                "keep raw counts in a layer to carry them through."
+            )
+            del adata.raw
+        adata = adata[:, keep].copy()
 
         df = self.create_dataset_conversion_dataframe(gene_list=adata.var.index, initialization_run=False)
 
@@ -633,18 +682,18 @@ class HarmonizeFeatures:
         ensembl_col = self._ENSEMBL_GENE_COLUMN
         ensembl_gene_col = self._get_column_as_series(df, ensembl_col)
         final_db_col = self._get_column_as_series(df, self.final_database)
-        bool_remove = ensembl_gene_col.duplicated(keep=False).any() or final_db_col.duplicated(keep=False).any()
-        if bool_remove:
+        if ensembl_gene_col.duplicated(keep=False).any() or final_db_col.duplicated(keep=False).any():
             raise AssertionError("Unexpected duplicated entry!")
 
-        df = df.set_index(ensembl_col)
-        resulting_adata = ad.AnnData(X=adata.X, obs=adata.obs, var=df)  # dtype=adata.X.dtype,
+        conversion = df.set_index(ensembl_col)
+        conversion.index = conversion.index.astype(str)
+        conversion.index.name = None
+        input_var = adata.var.copy()
+        input_var.columns = [f"{c}_input" if c in conversion.columns else c for c in input_var.columns]
+        input_var.index = conversion.index
+        adata.var = pd.concat([conversion, input_var], axis=1)
 
-        t1 = adata.n_vars
-        del adata
-        gc.collect()
-
-        return resulting_adata, t0, t1
+        return adata, t0, adata.n_vars
 
     @cached_property
     def dict_1_to_not_1(self) -> dict[str, set[str]]:
@@ -981,294 +1030,281 @@ class HarmonizeFeatures:
     def unify_multiple_anndatas(
         self,
         mode: Literal["union", "intersect"] = "union",
-        obs_columns_to_keep: Optional[list[str]] = None,
-        numeric_var_columns: Optional[set[str]] = None,
-        numeric_obs_columns: Optional[set[str]] = None,  # for hdca it is {"age"}
+        obs_join: Literal["outer", "inner"] = "outer",
+        obs_columns_to_keep: list[str] | None = None,
+        numeric_var_columns: set[str] | None = None,
+        numeric_obs_columns: set[str] | None = None,  # for hdca it is {"age"}
         handle_anndata_key: str = "handle_anndata",
     ) -> ad.AnnData:
-        """Merge several study-specific :py:class:`anndata.AnnData` objects into a single, consolidated dataset.
+        """Merge the harmonised datasets of :py:attr:`data_h5ad_dict` into one :py:class:`~anndata.AnnData`.
 
-        This helper finalises the *feature-harmonisation* workflow.  Earlier stages ensure that every source study
-        expresses its features (e.g. genes or proteins) in a consistent identifier namespace and that per-cell
-        metadata follow a shared schema.  *unify_multiple_anndatas* takes those already normalised objects—stored in
-        :py:attr:`~HarmonizeFeatures.data_h5ad_dict`—and fuses them into one coherent :py:class:`~anndata.AnnData`
-        ready for joint analysis (dimensionality reduction, batch correction, integrated clustering, etc.).
+        Each dataset is harmonised with :py:meth:`feature_harmonizer` and all are concatenated along the cells in
+        one :py:func:`anndata.concat`. By default nothing is lost, and values are never rewritten: text stays text,
+        numbers stay numbers, and where a dataset has no value the result holds a missing value of the column's
+        kind (``NaN`` for floats and text, ``pd.NA`` in a nullable integer or boolean column, ``NaT`` for times, a
+        missing category for categoricals), never a placeholder string.
 
-        Two strategies govern how the function reconciles mismatched feature sets:
+        * **Features.** ``"union"`` (default) keeps every feature of any dataset; a dataset that lacks a feature
+          gets zeros for it in ``X`` and in every layer. ``"intersect"`` keeps the features present in every
+          dataset.
 
-        * ``"union"`` (default) preserves the superset of all identifiers.  If a particular study lacks a feature,
-            its expression values are imputed as exact zeros.  This choice maximises information retention at the
-            cost of a sparse matrix with assay-dependent missingness.
+        * **.obs.** ``obs_join="outer"`` (default) keeps every ``obs`` column of any dataset; in the cells of a dataset
+          without the column it is missing (see above; an integer or boolean column becomes the nullable ``Int``/
+          ``boolean`` dtype so that it can hold the missing values). ``obs_join="inner"`` keeps only the columns every
+          dataset has. *obs_columns_to_keep*, if given, selects among the joined columns (in its order); a name that
+          no dataset has, or (with ``"inner"``) that not every dataset has, raises ``ValueError`` naming it. Columns in
+          *numeric_obs_columns* are converted to ``float`` (missing values allowed); other text columns become
+          categorical (values unchanged). The column *handle_anndata_key* records the dataset of each cell
+          (categorical, in the order of :py:attr:`data_h5ad_dict`), and cells are named ``f"{handle}_{cell}"``.
 
-        * ``"intersect"`` retains only the identifiers present in *every* study, implicitly discarding features
-            unique to a subset.  This yields a denser matrix that is easier to factorise but sacrifices potentially
-            informative study-specific biology.
+        * **.var.** ``converted_id_column`` holds the final-database name of each feature. In ``"union"`` mode the
+          per-dataset columns ``f"{converted_id_column}_{handle}"`` (missing where the dataset lacks the feature)
+          and an integer ``"intersection"`` column (1 if the feature is in every dataset) are added. Every ``var``
+          column of the inputs is kept. A column is kept as **one** column when, for every feature, the datasets
+          that have a value for it agree; it then holds that value (missing only where no dataset has one). When
+          two datasets give different values for the same feature, nothing is chosen: the column is kept **per
+          dataset** as ``f"{column}_{handle}"`` for each dataset that has it, and no column ``column`` exists.
+          Missing values follow the same kinds as in ``obs``. Columns in *numeric_var_columns* are converted to
+          ``float``; other text columns become categorical (values unchanged).
 
-        Beyond concatenating the main :py:attr:`~anndata.AnnData.X` matrices, the routine also harmonises associated
-        annotations:
+        * **layers, obsm, obsp, uns.** Handled by :py:func:`anndata.concat`: a layer or ``obsm`` entry present in
+          every dataset is concatenated (``obsp`` block-diagonally), and an ``uns`` entry is kept when it is the same
+          in every dataset. ``varm`` and ``varp`` are not carried into the merged object (they describe one
+          dataset's features), nor is ``raw`` (see :py:meth:`feature_harmonizer`).
 
-        * **.var (feature annotations)**
-            All columns are outer-joined across studies.  Non-shared categorical values are unioned; numeric columns
-            specified in *numeric_var_columns* are cast to floating point and NaNs inserted where data are missing.
-            In *union* mode an additional boolean ``"intersection"`` column flags whether a feature survived the
-            *intersect* filter, enabling fast subsetting later.
-
-        * **.obs (cell annotations)**
-            Each original column is kept if its name appears in *obs_columns_to_keep* **or** if it exists in every
-            study.  Missing columns are created and populated with ``pandas.NA``.  Columns listed in
-            *numeric_obs_columns* are coerced to ``float64``.  A new column named *handle_anndata_key* stores the
-            handle (dictionary key) that identifies the originating study, making it trivial to stratify analyses.
-
-        * **.layers, .obsp, .varp, .uns**
-            This method uses :py:meth:`anndata.AnnData.concat` for this.
-
-        The implementation is mindful of scalability: concatenation leverages SciPy CSR/CSC sparse formats,
-        avoiding densification, and streaming allocation prevents double memory use for extremely large datasets.
+        ``X`` keeps the common dtype of the inputs (e.g. ``float32`` stays ``float32``).
 
         Args:
-            mode (Literal["union", "intersect"]): Strategy for reconciling discordant feature sets.  ``"union"``
-                keeps every identifier observed across studies (padding absent entries with zeros); ``"intersect"``
-                restricts the result to identifiers common to *all* studies.  Defaults to ``"union"``.
-            obs_columns_to_keep (list[str] | None): Names of per-cell metadata columns that must survive the merge
-                even if they appear in only a subset of studies (e.g. *cell_type*, *donor_age*).  When a column is
-                missing from a particular study, it is inserted and filled with ``pandas.NA``.  Provide an empty
-                list to allow the routine to decide purely by intersection; ``None`` means “no user preference”.
-            numeric_var_columns (set[str] | None): Columns in ``.var`` that should retain numeric dtype.  The
-                function validates that each specified column can be losslessly converted to floating point;
-                otherwise it raises :py:class:`ValueError`.  Non-listed columns default to ``category`` dtype to
-                conserve memory.  If ``None`` an empty set is assumed.
-            numeric_obs_columns (set[str] | None): Analogous to *numeric_var_columns* but applied to ``.obs``.
-                Conversions are performed *after* the table has been unioned, ensuring consistent dtype across the
-                final concatenated frame.  If ``None`` an empty set is assumed.
-            handle_anndata_key (str): Name of the column inserted into ``.obs`` that records the dictionary key of
-                the source study.  This provenance tag facilitates stratified visualisation (e.g. UMAP coloured by
-                batch) and downstream batch-correction utilities that expect a “batch” column.  Defaults to
-                ``"handle_anndata"``.
+            mode (Literal["union", "intersect"]): How to combine the feature sets (see above).
+            obs_join (Literal["outer", "inner"]): Which ``obs`` columns to keep: of any dataset (``"outer"``) or
+                of every dataset (``"inner"``).
+            obs_columns_to_keep (list[str] | None): Restrict ``obs`` to these joined columns. ``None`` keeps all.
+            numeric_var_columns (set[str] | None): ``var`` columns to convert to ``float``.
+            numeric_obs_columns (set[str] | None): ``obs`` columns to convert to ``float``.
+            handle_anndata_key (str): Name of the ``obs`` column that records the dataset of each cell. Defaults to
+                ``"handle_anndata"``; it must not be a column of any dataset.
 
         Returns:
-            anndata.AnnData: A fully merged expression matrix whose ``.X`` contains either the union or intersection
-                of all study features.  Index ordering follows the order in which studies were supplied, ensuring
-                deterministic output for reproducible pipelines.  The result inherits sparse/dense representation from
-                the first study unless *mode* forces feature padding, in which case CSR/CSC is chosen automatically to
-                keep memory use in check.
+            anndata.AnnData: The merged object; cells in the order of :py:attr:`data_h5ad_dict`, then of each file.
 
         Raises:
-            ValueError: If *mode* is not ``"union"`` or ``"intersect"``; if any column listed in
-                *numeric_var_columns* or *numeric_obs_columns* fails numeric coercion; or if feature identifiers
-                clash across studies after harmonisation (e.g. two studies mapping different genes to the same ID).
-            AssertionError: If duplicate cell or feature indices are detected post-merge, a condition that would
-                break many Scanpy workflows and indicates upstream validation errors.
-
-        Notes:
-            *Performance considerations*
-            The operation is CPU-bound when aligning large sparse matrices.  For
-            datasets exceeding ~1 million cells, empirical benchmarks show that running on Python 3.11 with MKL
-            yields a 2-3x speed-up over Python 3.8 due to better sparse BLAS threading.  Provide pre-compressed
-            datasets (``hdf5``, ``zarr``) to further lower I/O overhead.
-
-            *Thread safety*
-            The method is re-entrant but **not** thread-safe because it mutates the source
-            :py:class:`~anndata.AnnData` objects in-place to reduce copying.  Invoke one instance per process or
-            deep-copy the inputs beforehand if concurrent harmonisation is required.
-
-            *Extensibility*
-            Sub-classes may override private hooks
-            :py:meth:`_before_concat`, :py:meth:`_after_concat`, and :py:meth:`_merge_uns` to refine behaviour without
-            re-implementing the full algorithm.
+            ValueError: If *mode* or *obs_join* is not one of its values; if there is no dataset; if a name of
+                *obs_columns_to_keep* is not among the joined columns, *handle_anndata_key* is already an ``obs``
+                column, or a numeric column is absent or holds a value that is not a number; if two cells get the
+                same name; if a generated ``var`` column name clashes with an input column; or if a feature gets
+                different final-database names in different datasets.
         """
-        if numeric_obs_columns is None:
-            numeric_obs_columns = set()
-        if numeric_var_columns is None:
-            numeric_var_columns = set()
-        if obs_columns_to_keep is None:
-            obs_columns_to_keep = list()
+        if mode not in ("union", "intersect"):
+            raise ValueError(f"`mode` must be 'union' or 'intersect', got {mode!r}.")
+        if obs_join not in ("outer", "inner"):
+            raise ValueError(f"`obs_join` must be 'outer' or 'inner', got {obs_join!r}.")
+        numeric_obs_columns = set(numeric_obs_columns or set())
+        numeric_var_columns = set(numeric_var_columns or set())
+        handles = list(self.data_h5ad_dict)
+        if not handles:
+            raise ValueError("`data_h5ad_dict` holds no dataset to merge.")
 
-        # numeric_obs_columns: set[str] = numeric_obs_columns if numeric_obs_columns is not None else set()
-        # numeric_var_columns: set[str] = numeric_var_columns if numeric_var_columns is not None else set()
-        # obs_columns_to_keep: list[str] = obs_columns_to_keep if obs_columns_to_keep is not None else list()
-
-        _adata_var = pd.DataFrame()
-        _adata_obs = pd.DataFrame(columns=[handle_anndata_key] + obs_columns_to_keep)
-        _adata_var.index = _adata_var.index.astype(str)  # to prevent ImplicitModificationWarning later on
-        _adata_obs.index = _adata_obs.astype(str)  # to prevent ImplicitModificationWarning later on
-        _adata_x = csr_matrix(np.zeros((0, 0)).astype(np.float32))
-        adata = ad.AnnData(X=_adata_x, obs=_adata_obs, var=_adata_var)
-
-        remove_var_columns = list()
-        pbar = tqdm.tqdm(self.data_h5ad_dict.items(), ncols=140)
-        for ind, (handle, _) in enumerate(pbar):
+        studies: list[ad.AnnData] = []
+        for handle in tqdm.tqdm(handles, ncols=140, disable=self.verbose_level == 0):
             adata_study, t0, t1 = self.feature_harmonizer(dataset_name=handle)
-            adata_study.obs_names = adata_study.obs_names.astype(str)  # to prevent ImplicitModificationWarning later on
-            adata_study.var_names = adata_study.var_names.astype(str)  # to prevent ImplicitModificationWarning later on
-            adata_study.obs = adata_study.obs[obs_columns_to_keep]
+            self.log.info(f"Dataset {handle!r}: {t1} of {t0} features kept after harmonisation.")
+            studies.append(adata_study)
 
-            pbar.set_postfix(
+        obs_columns = self._joined_obs_columns([s.obs for s in studies], obs_join, obs_columns_to_keep)
+        clashing = [h for h, s in zip(handles, studies) if handle_anndata_key in s.obs.columns]
+        if clashing:
+            raise ValueError(
+                f"`handle_anndata_key` {handle_anndata_key!r} is already an obs column of {clashing}; pass another name."
+            )
+
+        templates = {c: next(s.obs[c] for s in studies if c in s.obs.columns) for c in obs_columns}
+        # A column that some dataset lacks must hold missing values: integers and booleans become nullable there.
+        partial = {c for c in obs_columns if not all(c in s.obs.columns for s in studies)}
+        var_frames: dict[str, pd.DataFrame] = {}
+        for handle, study in zip(handles, studies):
+            index = pd.Index(f"{handle}_" + study.obs_names.astype(str))
+            obs = pd.DataFrame(
                 {
-                    "dataset": handle,
-                    "study_var": adata_study.n_vars,
-                    "union_var": adata.n_vars,
-                    "dbh": (t0 - t1),  # deleted by harmonizer
-                }
+                    c: (
+                        (_holding_missing(study.obs[c]) if c in partial else study.obs[c]).set_axis(index)
+                        if c in study.obs.columns
+                        else _missing_like(templates[c], index)
+                    )
+                    for c in obs_columns
+                },
+                index=index,
             )
-            pbar.refresh()
-            # adata_study.obs["sample_ID"] = adata_study.obs["sample_ID"].astype(str)  used in hdca?
-            adata_study.obs[handle_anndata_key] = np.full(adata_study.n_obs, handle)
+            obs[handle_anndata_key] = handle
+            study.obs = obs
+            var_frames[handle] = study.var
+            study.var = pd.DataFrame(index=study.var_names)
 
-            adata_study.obs["unified_index"] = f"{handle}_" + adata_study.obs.index.astype(str)
-            adata_study.obs.set_index("unified_index", drop=True, inplace=True)
+        adata = ad.concat(
+            studies,
+            join="outer" if mode == "union" else "inner",
+            fill_value=0,
+            merge=None,
+            uns_merge="same",
+            pairwise=True,
+        )
+        del studies
 
-            adata_study.var.drop(columns=["Query ID"], inplace=True)
-            new_final_database_var_column = f"{self.converted_id_column}_{handle}"
-            adata_study.var.rename(
-                columns={self.final_database: new_final_database_var_column}, inplace=True, errors="raise"
-            )
+        duplicated_cells = adata.obs_names[adata.obs_names.duplicated()].unique().tolist()
+        if duplicated_cells:
+            raise ValueError(f"Cell names collide after prefixing with the dataset handle: {duplicated_cells[:10]}.")
+        adata.obs[handle_anndata_key] = pd.Categorical(adata.obs[handle_anndata_key], categories=handles)
 
-            if mode == "union" or ind == 0:
-                var_map = pd.merge(
-                    adata.var,
-                    adata_study.var,
-                    how="outer",
-                    left_index=True,
-                    right_index=True,
+        adata.var = self._merge_harmonized_var(var_frames, adata.var_names, mode)
+
+        for frame, columns, where in ((adata.obs, numeric_obs_columns, "obs"), (adata.var, numeric_var_columns, "var")):
+            missing = sorted(set(columns) - set(frame.columns))
+            if missing:
+                raise ValueError(
+                    f"`numeric_{where}_columns` names columns the merged {where} does not have: {missing}."
                 )
-
-                adata = ad.concat(
-                    adatas=[adata, adata_study],
-                    join="outer",
-                    fill_value=0.0,
-                )
-
-                if mode != "union":
-                    remove_var_columns.append(new_final_database_var_column)
-
-            elif mode == "intersect":
-                var_map = pd.merge(
-                    adata.var,
-                    adata_study.var,
-                    how="inner",  # changed from "outer" to "inner"
-                    left_index=True,
-                    right_index=True,
-                )
-
-                adata = ad.concat(
-                    adatas=[adata, adata_study],
-                    join="inner",  # changed from "outer" to "inner"
-                )
-                remove_var_columns.append(new_final_database_var_column)
-
-            else:
-                raise ValueError(f"Unexpected harmonization state for dataset {handle!r}.")
-
-            # create a mask to array and put it in `uns`, to specify which
-            # are added `0`s because of the `idtrack` process.
-            # not needed: look at the adata.var
-
-            if np.any(var_map.index.duplicated()):
-                raise AssertionError("np.any(var_map.index.duplicated())")
-            adata.var = var_map.loc[adata.var_names]
-
-            del adata_study
-            gc.collect()
-
-        # Check unified gene naming
-        if len(set(adata.var.index)) != len(adata.var.index):
-            raise AssertionError("len(set(adata.var.index)) != len(adata.var.index)")
-        gene_name_columns = [i for i in adata.var if i.startswith(f"{self.converted_id_column}_")]
-        gene_name_columns = adata.var[gene_name_columns].values
-        gene_names_unified = list()
-        gene_names_inconsistency = dict()
-        for ind_i, i in enumerate(gene_name_columns):
-            i = i[~pd.isna(i)]
-            if len(set(i)) != 1:
-                gene_names_inconsistency[adata.var.index[ind_i]] = {
-                    adata.var.columns[j].split(f"{self.converted_id_column}_")[1]: i[j] for j in range(len(i))
-                }
-            else:
-                gene_names_unified.append(i[0])
-        if len(gene_names_inconsistency) != 0:
-            raise ValueError("len(gene_names_inconsistency) != 0")
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            adata = adata[:, ~adata.var.index.isin(gene_names_inconsistency.keys())]
-            if self.converted_id_column in adata.var.columns:
-                raise AssertionError("self.converted_id_column in adata.var.columns")
-            adata.var[self.converted_id_column] = gene_names_unified
-            if self.converted_id_column not in adata.var.columns:
-                raise AssertionError("self.converted_id_column not in adata.var.columns")
-
-        # For `intersect` mode, all these columns are gonna be the same, so delete.
-        if len(remove_var_columns) > 0:
-            adata.var = adata.var.drop(columns=remove_var_columns)
-
-        # Return
-        for numeric_obs_column in numeric_obs_columns:
-            if not pd.to_numeric(adata.obs[numeric_obs_column], errors="coerce").notna().all():
-                raise ValueError(f"Non-numeric value in adata.obs at {numeric_obs_column!r}.")
-            adata.obs[numeric_obs_column] = adata.obs[numeric_obs_column].astype(float)
-
-        for column in adata.obs.columns:
-            if column in numeric_obs_columns:
-                continue
-            # Convert to string, remove categories
-            # Replace None or 'nan' values with 'NA'
-            # Convert back to categorical
-            adata.obs[column] = (
-                adata.obs[column]
-                .astype(str)  # ensure string
-                .replace(MISSING_VALUES, DB.placeholder_na)  # no inplace
-                .astype("category")  # recast
-            )
-
-        for numeric_var_column in numeric_var_columns:
-            if not pd.to_numeric(adata.var[numeric_var_column], errors="coerce").notna().all():
-                raise ValueError(f"Non-numeric value in adata.var at {numeric_var_column!r}.")
-            adata.var[numeric_var_column] = adata.var[numeric_var_column].astype(float)
-
-        for column in adata.var.columns:
-            if column in numeric_var_columns:
-                continue
-            adata.var[column] = (
-                adata.var[column]
-                .astype(str)
-                .replace(MISSING_VALUES, DB.placeholder_na)  # no inplace
-                .astype("category")
-            )
-
-        if mode == "union":
-            intersect_column_name = "intersection"
-            adata.var[intersect_column_name] = self.create_intersection_column_values(adata.var.copy())
-            adata.var[intersect_column_name] = adata.var[intersect_column_name].astype(int)
-
+            for column in columns:
+                frame[column] = self._to_float(frame[column], f"adata.{where}[{column!r}]")
+        for frame in (adata.obs, adata.var):
+            for column in frame.columns:
+                if column not in numeric_obs_columns | numeric_var_columns and _is_text(frame[column]):
+                    frame[column] = frame[column].astype("category")
         return adata
 
-    def create_intersection_column_values(self, adata_var: pd.DataFrame) -> np.ndarray:
-        """Flag features present in **every** study after harmonisation.
-
-        The merged ``.var`` table produced by :py:meth:`unify_multiple_anndatas` contains one gene-symbol column per
-        study, each named ``f"{self.converted_id_column}_{handle}"`` where *handle* is the dictionary key that
-        identifies the originating dataset.  A cell in one of those columns holds the *gene symbol* originally
-        reported by the study, or :py:data:`idtrack._db.DB.placeholder_na` if the gene was absent or could not be
-        mapped to the target namespace.
-
-        This helper collapses the per-study presence/absence information into a single boolean *intersection* flag,
-        later exposed to users as ``adata.var["intersection"]``.  A value of ``1`` indicates that the feature
-        survived the *intersect* filter—i.e., it has a valid symbol in **all** studies—whereas ``0`` marks features
-        missing from at least one dataset.  The resulting NumPy vector is inserted by the caller; this routine is
-        intentionally pure and side-effect free.
+    @staticmethod
+    def _joined_obs_columns(
+        frames: list[pd.DataFrame], obs_join: str, obs_columns_to_keep: list[str] | None
+    ) -> list[str]:
+        """Return the ``obs`` columns of the merged object (see :py:meth:`unify_multiple_anndatas`).
 
         Args:
-            adata_var (pandas.DataFrame): The ``.var`` table of the *already concatenated* :py:class:`anndata.AnnData`
-                object.  It must contain one or more columns whose names start with
-                ``f"{self.converted_id_column}_"``; each such column is assumed to encode the gene symbol for a
-                particular study.
+            frames: ``obs`` of each harmonised dataset.
+            obs_join: ``"outer"`` (columns of any dataset) or ``"inner"`` (columns of every dataset).
+            obs_columns_to_keep: Optional selection among the joined columns.
 
         Returns:
-            numpy.ndarray: A 1-D array of ``int`` (values ``0`` or ``1``) with ``len(adata_var)`` elements.  The
-            *i*-th entry equals ``1`` if the *i*-th feature is present (non-
-            :py:data:`idtrack._db.DB.placeholder_na`) in **every** per-study symbol column; otherwise it is ``0``.
+            list[str]: The columns, in order of first appearance (or in the order of *obs_columns_to_keep*).
+
+        Raises:
+            ValueError: If a selected name is not among the joined columns.
         """
-        gene_name_columns = [i for i in adata_var.columns if i.startswith(f"{self.converted_id_column}_")]
-        df = adata_var[gene_name_columns].copy()
-        df = df != DB.placeholder_na
-        return (df.sum(axis=1) == len(gene_name_columns)).astype(int).values
+        seen: list[str] = []
+        for frame in frames:
+            seen += [c for c in frame.columns if c not in seen]
+        joined = seen if obs_join == "outer" else [c for c in seen if all(c in f.columns for f in frames)]
+        if obs_columns_to_keep is None:
+            return joined
+        nowhere = [c for c in obs_columns_to_keep if c not in seen]
+        if nowhere:
+            raise ValueError(f"`obs_columns_to_keep` names columns that no dataset has: {nowhere}.")
+        not_everywhere = [c for c in obs_columns_to_keep if c not in joined]
+        if not_everywhere:
+            raise ValueError(
+                f"`obs_columns_to_keep` names columns that not every dataset has: {not_everywhere}; "
+                "they are kept only with obs_join='outer'."
+            )
+        return list(dict.fromkeys(obs_columns_to_keep))
+
+    @staticmethod
+    def _to_float(series: pd.Series, where: str) -> pd.Series:
+        """Convert *series* to ``float``; missing values stay missing, any other non-number raises.
+
+        Args:
+            series: Values to convert.
+            where: Name of the column, for the error message.
+
+        Returns:
+            pandas.Series: The values as ``float``.
+
+        Raises:
+            ValueError: If a non-missing value is not a number.
+        """
+        converted = pd.to_numeric(series.astype(object), errors="coerce")
+        bad = series[converted.isna() & series.notna()]
+        if len(bad):
+            raise ValueError(f"Non-numeric value in {where}: {bad.unique().tolist()[:10]}.")
+        return converted.astype(float)
+
+    def _merge_harmonized_var(
+        self, var_frames: dict[str, pd.DataFrame], var_names: pd.Index, mode: str
+    ) -> pd.DataFrame:
+        """Build the merged ``var`` of :py:meth:`unify_multiple_anndatas` (see its docstring for the rules).
+
+        Args:
+            var_frames: ``var`` of each harmonised dataset (from :py:meth:`feature_harmonizer`), by handle.
+            var_names: Features of the merged object, in its order.
+            mode: ``"union"`` or ``"intersect"``.
+
+        Returns:
+            pandas.DataFrame: The merged ``var``, indexed by *var_names*.
+
+        Raises:
+            ValueError: If a feature has different final-database names in different datasets, or a generated
+                column name is also an input column.
+        """
+        # Every column of every dataset, aligned to the merged features; where a dataset lacks features, integers and
+        # booleans become nullable first so that those features are missing values of the column's kind.
+        aligned = {
+            h: {
+                c: (v[c] if var_names.isin(v.index).all() else _holding_missing(v[c])).reindex(var_names)
+                for c in v.columns
+            }
+            for h, v in var_frames.items()
+        }
+
+        columns: dict[str, pd.Series] = {}
+
+        def _add(name: str, values: pd.Series) -> None:
+            if name in columns:
+                raise ValueError(f"The merged var would have the column {name!r} twice; rename the input column.")
+            columns[name] = values
+
+        names = {h: a[self.final_database] for h, a in aligned.items()}
+        agreed = self._agreed_values(names, var_names)
+        if agreed is None:
+            frame = pd.DataFrame({h: s.astype(object) for h, s in names.items()}, index=var_names)
+            examples = frame[frame.nunique(axis=1, dropna=True) > 1].head(10).to_dict(orient="index")
+            raise ValueError(f"Features with different {self.final_database} names across datasets: {examples}.")
+        _add(self.converted_id_column, agreed)
+        if mode == "union":
+            for h, s in names.items():
+                _add(f"{self.converted_id_column}_{h}", s)
+            _add("intersection", pd.concat(list(names.values()), axis=1).notna().all(axis=1).astype(int))
+
+        input_columns: list[str] = []
+        for v in var_frames.values():
+            input_columns += [c for c in v.columns if c not in (self.final_database, "Query ID", *input_columns)]
+        for column in input_columns:
+            per_dataset = {h: a[column] for h, a in aligned.items() if column in a}
+            merged = self._agreed_values(per_dataset, var_names)
+            if merged is not None:
+                _add(column, merged)
+            else:
+                for h, s in per_dataset.items():
+                    _add(f"{column}_{h}", s)
+        return pd.DataFrame(columns, index=var_names)
+
+    @staticmethod
+    def _agreed_values(per_dataset: dict[str, pd.Series], index: pd.Index) -> pd.Series | None:
+        """Combine aligned per-dataset values into one column, or return ``None`` when two datasets disagree.
+
+        Args:
+            per_dataset: Values of one column per dataset, aligned to *index* (missing where a dataset has none).
+            index: The merged features.
+
+        Returns:
+            Optional[pandas.Series]: For each feature the value the datasets agree on (missing if none has one), or
+            ``None`` if some feature has two different values.
+        """
+        series = list(per_dataset.values())
+        as_objects = pd.DataFrame({i: s.astype(object) for i, s in enumerate(series)}, index=index)
+        if (as_objects.nunique(axis=1, dropna=True) > 1).any():
+            return None
+        if len({str(s.dtype) for s in series}) > 1:
+            series = [_holding_missing(s) for s in series]
+        merged = series[0]
+        for other in series[1:]:
+            if merged.dtype == other.dtype:
+                merged = merged.combine_first(other)
+            else:  # e.g. categoricals with different categories, or int and float: combine as objects
+                merged = merged.astype(object).combine_first(other.astype(object)).infer_objects()
+        return merged

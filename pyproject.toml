@@ -21,48 +21,39 @@ classifiers = [
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3"
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    # Poetry adds one classifier per Python version from the `python` constraint below.
 ]
 
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.14"
-# dependencies are versioned based on their version on 19 October 2019, when Python 3.8 was released.
-# PyYAML<6 has no manylinux wheels for Python 3.10+ and its sdist build fails under modern setuptools
-# (AttributeError: cython_sources). Keep PyYAML 5.x support only where wheels exist (py3.9).
-PyYAML = [
-    { version = ">=5.2,<7", python = "<3.10" },
-    { version = ">=6,<7", python = ">=3.10" },
-]
-h5py = ">=2.10.0"
-pandas = ">=0.25.3"
-numpy = ">=1.17.4"
-networkx = ">=2.4"
-# requests and urllib3 releases with security fixes after 2.32.5 and 2.6.3 need Python 3.10+; Python 3.9 keeps the
-# earlier floors (no fixed release exists for it).
-requests = [
-    { version = ">=2.32.4", python = "<3.10" },  # fixes CVE-2024-47081
-    { version = ">=2.33.0", python = ">=3.10" },  # also fixes CVE-2026-25645
-]
-urllib3 = [
-    { version = ">=2.5.0", python = "<3.10" },  # fixes CVE-2025-50181/50182 (add this line explicitly)
-    { version = ">=2.8.0", python = ">=3.10" },  # also fixes CVE-2026-44431/44432/97687/97688/97689
-]
-PySocks = ">=1.7.1"
-PyMySQL = ">=0.9.3"
-tqdm = ">=4.37.0"
-anndata = ">=0.7"
-scipy = ">=1.5.3"  # sparse
-sparse = ">0.11.2"
+python = ">=3.12,<3.16"
+# Floors: the oldest release that has Python 3.12 wheels, is at most about three years old (November 2026) and
+# passes the test suite together with the other floors (the "oldest stack" of the dependency-compatibility
+# workflow), unless a reason is given. No floor may name a release that cannot be installed on Python 3.12.
+pandas = ">=2.3"  # supported from 2.3 and on 3.x; anndata 0.13 requires pandas>=2.3
+anndata = ">=0.13"  # July 2026; the first anndata that writes .h5ad files with pandas 3
+numpy = ">=2.1"  # August 2024; anndata 0.13 requires numpy>=2.1
+scipy = ">=1.14"  # June 2024; anndata 0.13 requires scipy>=1.14 (and not 1.17.0)
+h5py = ">=3.11"  # April 2024; anndata 0.13 requires h5py>=3.11
+networkx = ">=3.2"  # October 2023
+sparse = ">=0.15"  # January 2024
+PyYAML = ">=6.0.2,<7"  # August 2024; 6.0.1 (July 2023) is older than three years
+requests = ">=2.33.0"  # fixes CVE-2024-47081 and CVE-2026-25645
+urllib3 = ">=2.8.0"  # fixes CVE-2025-50181/50182 and CVE-2026-44431/44432/97687/97688/97689 (add this line explicitly)
+PyMySQL = ">=1.1.1"  # May 2024; fixes CVE-2024-36039
+PySocks = ">=1.7.1"  # the last release (2019), pure Python; no newer release exists
+tqdm = ">=4.66.3"  # May 2024; fixes CVE-2024-34062
 
 # Optional dependencies for _external_mappers package
 gget = {version = ">=0.28", optional = true}
 pybiomart = {version = ">=0.2", optional = true}
 gprofiler-official = {version = ">=1.0", optional = true}
 mygene = {version = ">=3.2", optional = true}
-biopython = {version = ">=1.79", optional = true}
-torch = {version = ">=1.9", optional = true}
-transformers = {version = ">=4.20", optional = true}
+biopython = {version = ">=1.81", optional = true}  # the oldest with Python 3.12 wheels
+torch = {version = ">=2.2", optional = true}  # the oldest with Python 3.12 wheels
+transformers = {version = ">=4.36", optional = true}  # the oldest checked that installs on Python 3.12
 
 [tool.poetry.extras]
 # External ID mapping backends (gget, pybiomart, gprofiler, mygene)

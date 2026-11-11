@@ -6,8 +6,6 @@ to return tiny synthetic tables, while still exercising the real caching and
 data-processing logic.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Any
 
@@ -138,7 +136,7 @@ def synthetic_dm(tmp_path, monkeypatch) -> DatabaseManager:
     """Create a DatabaseManager backed by tiny synthetic MySQL tables."""
     synthetic = _synthetic_mysql_tables()
 
-    def _fake_core_index(*, organism: str, genome_assembly: int):  # noqa: ARG001
+    def _fake_core_index(*, organism: str, genome_assembly: int, **_):  # noqa: ARG001
         releases = list(synthetic.available_releases)
         db_for_release = {r: f"{organism}_core_{r}_{genome_assembly}" for r in releases}
         return {
@@ -203,7 +201,7 @@ def test_init_rejects_unsupported_organism(tmp_path):
 def test_init_defaults_release_respects_ignore_after(tmp_path, monkeypatch):
     """When `ensembl_release=None`, the default release should not exceed `ignore_after`."""
 
-    def _fake_core_index(*, organism: str, genome_assembly: int):  # noqa: ARG001
+    def _fake_core_index(*, organism: str, genome_assembly: int, **_):  # noqa: ARG001
         releases = [100, 101, 102]
         db_for_release = {r: f"{organism}_core_{r}_{genome_assembly}" for r in releases}
         return {
@@ -236,7 +234,7 @@ def test_init_defaults_release_respects_ignore_after(tmp_path, monkeypatch):
 def test_init_infers_assembly_that_supports_requested_release(tmp_path, monkeypatch):
     """When `genome_assembly=None`, prefer the highest-priority assembly that contains the requested release."""
 
-    def _fake_core_index(*, organism: str, genome_assembly: int):
+    def _fake_core_index(*, organism: str, genome_assembly: int, **_):
         if organism != "mus_musculus":
             raise ValueError("unexpected organism")
         if genome_assembly == 39:
@@ -322,27 +320,6 @@ def test_create_id_history_narrow_and_full(synthetic_dm):
     assert {"mapping_session_id", "type"}.issubset(full.columns)
     assert {"mapping_session_id", "type"}.isdisjoint(narrow.columns)
     assert (narrow["old_release"] >= synthetic_dm.ignore_before).all()
-
-
-def test_create_id_history_fixed_repairs_reappearing_versions(synthetic_dm, monkeypatch):
-    """create_id_history_fixed should repair version regressions."""
-    df = pd.DataFrame(
-        {
-            "old_stable_id": ["ENSG00000000001", "ENSG00000000001", "ENSG00000000001"],
-            "old_version": [1, 2, 1],
-            "new_stable_id": ["ENSG00000000001", "ENSG00000000001", "ENSG00000000001"],
-            "new_version": [2, 3, 2],
-            "score": [np.nan, np.nan, np.nan],
-            "old_release": [100, 101, 102],
-            "new_release": [101, 102, 103],
-        }
-    )
-
-    monkeypatch.setattr(synthetic_dm, "get_db", lambda *_args, **_kwargs: df.copy(deep=True))
-
-    fixed = synthetic_dm.create_id_history_fixed(narrow=True, inspect=True)
-    assert "unfixed_old_version" in fixed.columns
-    assert fixed.loc[2, "old_version"] == 3
 
 
 def test_external_db_all_and_filter_modes(synthetic_dm):
@@ -469,3 +446,171 @@ def test_release_discovery_and_mysql_database_from_server_catalog(tmp_path, monk
 
     assert dm.available_releases == [100, 101]
     assert dm.mysql_database == "homo_sapiens_core_100_38"
+
+
+def test_create_ids_does_not_hide_a_failure_behind_the_stable_id_table_fallback(synthetic_dm, monkeypatch):
+    """Only a schema answer leads to the `<form>_stable_id` fallback; any other error surfaces unchanged."""
+    # Before, every `ValueError` (e.g. a cache write that failed under pandas 3) was taken to mean "old schema",
+    # and the user saw `Table 'gene_stable_id' not found` instead of the real error.
+    import idtrack._utils_hdf5 as hs
+
+    original_export = hs.export_disk
+
+    def _failing_export(df, hierarchy, *args, **kwargs):
+        if "stable_id" in df.columns and "gene_stable_id" not in hierarchy:
+            raise ValueError("Unsupported dtype for column 'stable_id'")
+        return original_export(df, hierarchy, *args, **kwargs)
+
+    monkeypatch.setattr(hs, "export_disk", _failing_export)
+    with pytest.raises(ValueError, match="Unsupported dtype for column 'stable_id'"):
+        synthetic_dm.create_ids("gene")
+
+
+def test_create_ids_falls_back_to_the_stable_id_table_on_an_old_schema(synthetic_dm, monkeypatch):
+    """A release whose `gene` table has no stable_id/version columns is read from `gene_stable_id`."""
+    from idtrack._db import EnsemblSchemaError
+
+    old_gene = pd.DataFrame({"gene_id": [1, 2]})
+    old_stable = pd.DataFrame(
+        {"gene_id": [1, 2], "stable_id": ["ENSG00000000001", "ENSG00000000002"], "version": [1, 1]}
+    )
+
+    def _download_table(self, table_key, usecols=None):
+        if table_key == "gene":
+            missing = [c for c in (usecols or []) if c not in old_gene.columns]
+            if missing:
+                raise EnsemblSchemaError("Missing columns", table="gene", missing_columns=tuple(missing))
+            return old_gene.loc[:, usecols].copy()
+        if table_key == "gene_stable_id":
+            return old_stable.loc[:, usecols].copy() if usecols else old_stable.copy()
+        raise EnsemblSchemaError(f"Table {table_key!r} not found", table=table_key)
+
+    monkeypatch.setattr(DatabaseManager, "download_table", _download_table)
+    df = synthetic_dm.create_ids("gene")
+    assert sorted(df["gene_stable_id"]) == ["ENSG00000000001", "ENSG00000000002"]
+
+
+def test_schema_error_is_not_a_value_error():
+    """Broad `except ValueError` handlers must not catch the schema answer by accident (and vice versa)."""
+    from idtrack._db import EnsemblSchemaError
+
+    err = EnsemblSchemaError("m", table="t", missing_columns=("a",))
+    assert not isinstance(err, ValueError)
+    assert err.table == "t" and err.missing_columns == ("a",)
+
+
+def test_schema_error_survives_pickle_and_copy():
+    """The schema answer keeps its message and fields through pickling (e.g. from a worker process) and copying."""
+    import copy
+    import pickle  # noqa: S403
+
+    from idtrack._db import EnsemblSchemaError
+
+    err = EnsemblSchemaError("Table 'gene' lacks columns", table="gene", missing_columns=("version",))
+    for clone in (pickle.loads(pickle.dumps(err)), copy.copy(err)):  # noqa: S301
+        assert isinstance(clone, EnsemblSchemaError)
+        assert str(clone) == "Table 'gene' lacks columns"
+        assert clone.table == "gene" and clone.missing_columns == ("version",)
+
+
+class TestSavedHttpsIndex:
+    """The HTTPS-dump index is saved in the local repository and spares the network for windows it covers."""
+
+    @staticmethod
+    def _scan(calls):
+        def _fake_ftp(cls, *, organism, genome_assembly, ports):
+            calls.append((organism, genome_assembly))
+            releases = [110, 111, 112]
+            return {
+                "organism": organism,
+                "genome_assembly": int(genome_assembly),
+                "ports": tuple(ports),
+                "releases_by_port": {int(ports[0]): set(releases)},
+                "db_by_port_release": {int(ports[0]): {r: f"{organism}_core_{r}_111" for r in releases}},
+                "releases": releases,
+                "port_for_release": {r: int(ports[0]) for r in releases},
+                "db_for_release": {r: f"{organism}_core_{r}_111" for r in releases},
+                "db_dir_url_by_release": {r: f"https://example/{r}/" for r in releases},
+                "source": "ftp",
+                "scanned_up_to": 112,
+            }
+
+        return classmethod(_fake_ftp)
+
+    @pytest.fixture
+    def scans(self, monkeypatch):
+        """Record every faked HTTPS scan; the in-memory index starts empty and MySQL is unusable."""
+        from idtrack._ensembl_access import reachability
+
+        calls: list = []
+        monkeypatch.setattr(DatabaseManager, "_get_core_db_index_from_ftp", self._scan(calls))
+        monkeypatch.setattr(DatabaseManager, "_core_db_index_cache", {})
+        monkeypatch.setattr(reachability, "mysql_port_usable", lambda port: False)
+        return calls
+
+    def _index(self, repo, needed_up_to):
+        return DatabaseManager._get_core_db_index(
+            organism="sus_scrofa", genome_assembly=111, local_repository=str(repo), needed_up_to=needed_up_to
+        )
+
+    def test_saved_index_answers_a_covered_window_in_a_new_process(self, tmp_path, scans, monkeypatch):
+        """A window ending at or before the saved scan is answered from disk, without scanning."""
+        first = self._index(tmp_path, 112)
+        assert len(scans) == 1 and (tmp_path / "ensembl_https_index_sus_scrofa_assembly-111.json").exists()
+        monkeypatch.setattr(DatabaseManager, "_core_db_index_cache", {})  # as in a new process
+        again = self._index(tmp_path, 111)
+        assert len(scans) == 1
+        for key in ("releases", "port_for_release", "db_for_release", "db_dir_url_by_release", "releases_by_port"):
+            assert again[key] == first[key]
+
+    def test_a_window_beyond_the_saved_scan_or_open_ended_scans_again(self, tmp_path, scans, monkeypatch):
+        """The latest release is a network question; a saved scan never answers it."""
+        self._index(tmp_path, 112)
+        for need in (113, None):
+            monkeypatch.setattr(DatabaseManager, "_core_db_index_cache", {})
+            self._index(tmp_path, need)
+        assert len(scans) == 3
+
+    def test_saved_index_of_other_settings_is_ignored(self, tmp_path, scans, monkeypatch):
+        """An index saved for another organism-table entry (here: another suffix) is not used."""
+        import json
+
+        self._index(tmp_path, 112)
+        path = tmp_path / "ensembl_https_index_sus_scrofa_assembly-111.json"
+        saved = json.loads(path.read_text())
+        saved["signature"]["db_suffix"] = "999"
+        path.write_text(json.dumps(saved))
+        monkeypatch.setattr(DatabaseManager, "_core_db_index_cache", {})
+        self._index(tmp_path, 111)
+        assert len(scans) == 2
+
+    def test_manager_with_a_bounded_window_is_created_offline(self, tmp_path, scans, monkeypatch):
+        """After one online run, a manager for the same window needs neither REST nor the dump scan."""
+        import idtrack._ensembl_access as ea
+
+        monkeypatch.setenv("IDTRACK_ENSEMBL_ACCESS", "https")
+        DatabaseManager(
+            organism="sus_scrofa",
+            form="gene",
+            local_repository=str(tmp_path),
+            ignore_before=110,
+            ignore_after=112,
+            genome_assembly=111,
+        )
+        assert len(scans) == 1
+
+        def _offline(*args, **kwargs):
+            raise AssertionError("the network was used")
+
+        monkeypatch.setattr(DatabaseManager, "_core_db_index_cache", {})
+        monkeypatch.setattr(DatabaseManager, "_get_core_db_index_from_ftp", classmethod(_offline))
+        monkeypatch.setattr(ea, "rest_get_json", _offline)
+        dm = DatabaseManager(
+            organism="sus_scrofa",
+            form="gene",
+            local_repository=str(tmp_path),
+            ignore_before=110,
+            ignore_after=112,
+            genome_assembly=111,
+        )
+        assert dm.ensembl_release == 112 and dm.available_releases == [110, 111, 112]

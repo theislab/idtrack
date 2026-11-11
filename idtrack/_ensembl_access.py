@@ -15,6 +15,9 @@ blocked port costs a full connect timeout every time it is tried. This module ma
 * :py:data:`reachability` (a :py:class:`PortReachability`) probes a ``(host, port)`` once per process with a short
   timeout and remembers the answer. Every code path that would open a MySQL connection asks it first, and a
   connection that fails after a successful probe marks the port unreachable for the rest of the process.
+* :py:func:`rest_get_json` is the one way idtrack asks Ensembl REST: with the timeouts of
+  :py:attr:`idtrack._db.DB.connection_timeout` and :py:attr:`idtrack._db.DB.reading_timeout`, retries, and an
+  :py:class:`idtrack._db.EnsemblRestError` that says what failed and what to change.
 
 The results do not depend on the mode: both paths read the same Ensembl tables.
 """
@@ -23,9 +26,77 @@ import logging
 import os
 import socket
 import threading
-from typing import Optional
+import time
+from typing import Any
 
-from idtrack._db import DB
+import requests
+
+from idtrack._db import DB, EnsemblRestError
+
+# HTTP statuses after which a REST request is tried again (rate limit and transient server errors).
+_REST_RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+
+
+def rest_get_json(path: str, *, what: str) -> Any:
+    """Return the decoded JSON of ``GET {DB.rest_server_api}{path}``, retrying transient failures.
+
+    Every attempt uses the timeouts ``(DB.connection_timeout, DB.reading_timeout)``. Timeouts, connection errors
+    (including SSL and proxy errors) and the HTTP statuses 429, 500, 502, 503 and 504 are retried up to
+    :py:attr:`idtrack._db.DB.rest_attempts` attempts, waiting :py:attr:`idtrack._db.DB.rest_retry_wait` seconds,
+    doubled each time (or the server's ``Retry-After``, at most 60 s). Any other HTTP status is not retried.
+
+    Args:
+        path: Path and query of the REST resource, e.g. ``"/info/species?"``.
+        what: What is asked, for the error message (e.g. ``"the list of species"``).
+
+    Returns:
+        Any: The decoded JSON payload.
+
+    Raises:
+        EnsemblRestError: If no attempt gives a successful answer with valid JSON.
+    """
+    url = f"{DB.rest_server_api}{path}"
+    attempts = max(1, int(DB.rest_attempts))
+    timeout = (DB.connection_timeout, DB.reading_timeout)
+    log = logging.getLogger("ensembl_access")
+    failure = ""
+    last_exc: BaseException | None = None
+    with requests.Session() as session:
+        for attempt in range(1, attempts + 1):
+            wait = float(DB.rest_retry_wait) * 2 ** (attempt - 1)
+            try:
+                with session.get(url, headers={"Content-Type": "application/json"}, timeout=timeout) as response:
+                    if response.ok:
+                        try:
+                            return response.json()
+                        except ValueError as exc:
+                            raise EnsemblRestError(f"Ensembl REST answered {what} at {url} with invalid JSON.") from exc
+                    status = int(response.status_code)
+                    failure = f"HTTP {status} {response.reason}"
+                    if status not in _REST_RETRY_STATUSES:
+                        raise EnsemblRestError(f"Ensembl REST refused {what} at {url}: {failure}.")
+                    retry_after = response.headers.get("Retry-After")
+                    if retry_after is not None and str(retry_after).strip().isdigit():
+                        wait = max(wait, min(float(retry_after), 60.0))
+            except (requests.Timeout, requests.ConnectionError) as exc:
+                last_exc = exc
+                failure = f"{exc.__class__.__name__}: {exc}"
+            if attempt < attempts:
+                log.warning(
+                    "Ensembl REST did not answer %s (attempt %d/%d: %s); retrying in %.1f s.",
+                    what,
+                    attempt,
+                    attempts,
+                    failure,
+                    wait,
+                )
+                time.sleep(wait)
+    raise EnsemblRestError(
+        f"Ensembl REST did not answer {what} at {url} after {attempts} attempt(s) with connect timeout "
+        f"{timeout[0]} s and read timeout {timeout[1]} s; last failure: {failure}. On a slow network raise the "
+        "timeouts, e.g. `idtrack.DB.reading_timeout = 120` (and `idtrack.DB.rest_attempts`); behind a proxy set "
+        "HTTPS_PROXY. Check https://rest.ensembl.org/info/ping from this machine."
+    ) from last_exc
 
 
 def ensembl_access_mode() -> str:
@@ -82,7 +153,7 @@ class PortReachability:
         except OSError:
             return False
 
-    def can_connect(self, host: str, port: int, timeout_s: Optional[float] = None) -> bool:
+    def can_connect(self, host: str, port: int, timeout_s: float | None = None) -> bool:
         """Return whether ``(host, port)`` accepts TCP connections, probing it only the first time.
 
         Args:
@@ -129,7 +200,7 @@ class PortReachability:
             return False
         return self.can_connect(DB.mysql_host, int(port))
 
-    def mark_unreachable(self, host: str, port: int, reason: Optional[str] = None) -> None:
+    def mark_unreachable(self, host: str, port: int, reason: str | None = None) -> None:
         """Record that ``(host, port)`` failed, so that it is not tried again in this process.
 
         The mark lasts until :py:meth:`reset`; a transient failure therefore also sends later tables to the HTTPS

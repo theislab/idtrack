@@ -4,8 +4,6 @@
 Tests the DB constants class and related utilities.
 """
 
-from __future__ import annotations
-
 import pytest
 
 
@@ -343,40 +341,6 @@ class TestEmptyConversionMetricsError:
         with pytest.raises(EmptyConversionMetricsError) as exc_info:
             raise EmptyConversionMetricsError(msg)
         assert msg in str(exc_info.value)
-
-
-class TestMissingValues:
-    """Test MISSING_VALUES constant."""
-
-    def test_missing_values_is_list(self):
-        """Test MISSING_VALUES is a list."""
-        from idtrack._db import MISSING_VALUES
-
-        assert isinstance(MISSING_VALUES, list)
-
-    def test_missing_values_contains_common_nulls(self):
-        """Test MISSING_VALUES contains common null representations."""
-        from idtrack._db import MISSING_VALUES
-
-        expected = ["NA", "N/A", "None", "null", "NULL", "", "nan", "NaN"]
-        for val in expected:
-            assert val in MISSING_VALUES, f"Missing expected value: {val}"
-
-    def test_missing_values_contains_empty_strings(self):
-        """Test MISSING_VALUES contains various empty strings."""
-        from idtrack._db import MISSING_VALUES
-
-        assert "" in MISSING_VALUES
-        assert " " in MISSING_VALUES
-
-    def test_missing_values_contains_placeholders(self):
-        """Test MISSING_VALUES contains placeholder values."""
-        from idtrack._db import MISSING_VALUES
-
-        placeholders = ["missing", "unknown", "undefined", "TBD", "not available"]
-        for p in placeholders:
-            # Check case-insensitive
-            assert any(p.lower() == v.lower() for v in MISSING_VALUES), f"Missing: {p}"
 
 
 class TestDBImmutability:

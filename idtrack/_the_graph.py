@@ -9,7 +9,6 @@ import logging
 import re
 from collections import Counter
 from functools import cached_property
-from typing import Optional, Union
 
 import networkx as nx
 import numpy as np
@@ -294,7 +293,7 @@ class TheGraph(nx.MultiDiGraph):
         return output
 
     @staticmethod
-    def _combined_edges(node_list: Union[nx.classes.reportviews.NodeView, list], the_graph: nx.MultiDiGraph) -> dict:
+    def _combined_edges(node_list: nx.classes.reportviews.NodeView | list, the_graph: nx.MultiDiGraph) -> dict:
         """Aggregate database/assembly/release metadata for the edges of *node_list*.
 
         The routine is the work-horse behind the
@@ -393,7 +392,7 @@ class TheGraph(nx.MultiDiGraph):
 
         return result
 
-    def node_name_alternatives(self, identifier: str) -> tuple[Optional[str], bool]:
+    def node_name_alternatives(self, identifier: str) -> tuple[str | None, bool]:
         """Resolve a raw query identifier to the *exact* graph node label that ID-Track expects.
 
         The routine shields downstream path-finding code from the myriad ways users may spell or format
@@ -421,7 +420,7 @@ class TheGraph(nx.MultiDiGraph):
             individual docstrings for details.
         """
 
-        def _node_name_alternatives(the_id: str) -> tuple[Optional[str], bool]:
+        def _node_name_alternatives(the_id: str) -> tuple[str | None, bool]:
             """Apply the heuristic cascade to *one* identifier candidate.
 
             The helper encapsulates the common logic needed by both the public wrapper and the synonym-prefixed
@@ -441,7 +440,7 @@ class TheGraph(nx.MultiDiGraph):
                 tuple[Optional[str], bool]: Same semantics as the public method.
             """
 
-            def compare_lowers(id_to_find: str) -> tuple[Optional[str], bool]:
+            def compare_lowers(id_to_find: str) -> tuple[str | None, bool]:
                 """Perform a constant-time, case-insensitive lookup via :py:attr:`self.lower_chars_graph`.
 
                 Args:
@@ -459,7 +458,7 @@ class TheGraph(nx.MultiDiGraph):
                 else:
                     return None, False  # If cannot return anything, just return None (unfound).
 
-            def check_variation(id_str: str) -> tuple[Optional[str], bool]:
+            def check_variation(id_str: str) -> tuple[str | None, bool]:
                 r"""Strip terminal *version-like* segments and retry the exact/CI match sequence.
 
                 The regular expression ``r"^(.+)(_|-|\\.)[0-9]+$"`` removes anything that looks like
@@ -943,7 +942,7 @@ class TheGraph(nx.MultiDiGraph):
                 every context in which *the_id* occurs.
         """
 
-        def _non_inf_range(l1: int, l2: Union[float, int]) -> range:
+        def _non_inf_range(l1: int, l2: float | int) -> range:
             """Create an inclusive ``range`` while resolving ``np.inf`` upper bounds.
 
             Args:

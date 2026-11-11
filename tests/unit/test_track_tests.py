@@ -5,8 +5,6 @@ The goal is to exercise the developer-facing test harness on a tiny synthetic
 graph (2 releases) without requiring large MySQL downloads.
 """
 
-from __future__ import annotations
-
 import logging
 import random
 from dataclasses import dataclass
@@ -78,7 +76,7 @@ def synthetic_track_tests(tmp_path, monkeypatch) -> TrackTests:
     """Create a TrackTests instance backed by a tiny synthetic 2-release graph."""
     synthetic = _synthetic_graph_mysql()
 
-    def _fake_core_index(*, organism: str, genome_assembly: int):  # noqa: ARG001
+    def _fake_core_index(*, organism: str, genome_assembly: int, **_):  # noqa: ARG001
         releases = list(synthetic.available_releases)
         db_for_release = {r: f"{organism}_core_{r}_{genome_assembly}" for r in releases}
         return {

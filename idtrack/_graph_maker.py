@@ -42,22 +42,30 @@ class GraphMaker:
                 It contains the temporary directory to save the resultant graph.
 
         Raises:
-            ValueError: ``GraphMaker`` has to be created with the latest release possible in ``db_manager``. If not,
-                the exception is raised.
+            ValueError: If the release of ``db_manager`` is not the newest release of its window. A graph is the
+                snapshot of the releases ``ignore_before`` to ``ignore_after``; it is built from the newest of them.
         """
         # Instance attributes
         self.log = logging.getLogger("graph_maker")
 
-        # Make sure the graph is constructed from the latest release available.
-        if db_manager.ensembl_release != max(db_manager.available_releases):
-            raise ValueError("'Graph' has to be created with the latest release possible defined in 'db_manager'.")
+        # A graph is the snapshot of the manager's window and is built from the newest release in it.
+        newest = max(db_manager.available_releases)
+        if db_manager.ensembl_release != newest:
+            release = db_manager.ensembl_release
+            raise ValueError(
+                f"A graph is built from the newest release of the manager's window ({newest}), but this manager is "
+                f"at release {release}. For a graph whose snapshot is release {release}, end the window there: "
+                f"`API.build_graph(organism_name, snapshot_release={release})` or "
+                f"`DatabaseManager(..., ignore_after={release})`. A graph of a later snapshot also converts to and "
+                f"from release {release} (`to_release`/`from_release` of `API.convert_identifier`)."
+            )
         self.db_manager = db_manager
 
     # flake8: noqa: C901
     def construct_graph(
         self,
         narrow: bool = False,
-        form_list: Optional[list] = None,
+        form_list: list | None = None,
         narrow_external: bool = True,
     ) -> TheGraph:
         """Main method to construct the graph.
@@ -300,7 +308,7 @@ class GraphMaker:
             added_edge = 0
             self.log.info("Different forms of assembly-Ensembl-nodes are being connecting.")
             new_nodes = pd.DataFrame(establish_form_connection, columns=["node", "form", "assembly"])
-            new_nodes.drop_duplicates(keep="first", inplace=True, ignore_index=True)
+            new_nodes = new_nodes.drop_duplicates(keep="first", ignore_index=True)
             avail_assemblies = np.unique(new_nodes["assembly"])
 
             for aa in avail_assemblies:
@@ -719,8 +727,10 @@ class GraphMaker:
         duplicated_dw_w_bool = df_w.duplicated(lookup_columns, keep=False)
         duplicated_dw_w = df_w[duplicated_dw_w_bool]  # ignore those! this is actually a silly mistake by annotators.
         df_w = df_w[~duplicated_dw_w_bool]
-        df_w.set_index(lookup_columns, inplace=True, verify_integrity=True)
-        df_w.sort_index(inplace=True)
+        df_w = df_w.set_index(lookup_columns)
+        if not df_w.index.is_unique:  # unique by construction (duplicates are removed above)
+            raise ValueError(f"Index has duplicate keys: {df_w.index[df_w.index.duplicated()].unique().tolist()[:10]}")
+        df_w = df_w.sort_index()
         if len(duplicated_dw_w) > 0:
             self.log.warning(f"Edge weights ignored due to duplicate entries: {len(duplicated_dw_w)}.")
         # Second dataframe will be directly used to add nodes.
@@ -762,17 +772,19 @@ class GraphMaker:
 
         # As we do not need df dataframe anymore, transform it into a new format to be used for other purpose.
         # It will be used in find_last_loop_release function later in the process.
-        df.sort_values(by="old_release", inplace=True, ascending=False)
+        df = df.sort_values(by="old_release", ascending=False)
         # Sort the df so that the highest old_release is at the top
-        df.drop_duplicates(subset=lookup_columns, keep="first", inplace=True, ignore_index=True)
+        df = df.drop_duplicates(subset=lookup_columns, keep="first", ignore_index=True)
         # Remove everything except the highest old release.
-        df.set_index(lookup_columns, inplace=True, verify_integrity=True)
-        df.sort_index(inplace=True)  # Convert the df into multiindex
+        df = df.set_index(lookup_columns)
+        if not df.index.is_unique:  # unique by construction (duplicates are removed above)
+            raise ValueError(f"Index has duplicate keys: {df.index[df.index.duplicated()].unique().tolist()[:10]}")
+        df = df.sort_index()  # Convert the df into multiindex
 
         self.log.info("Edges between the same IDs are being added.")
         # Initialize some temporary variables
         re_d_prev: dict = dict()
-        re_prev_rel: Optional[int] = None
+        re_prev_rel: int | None = None
         ll_re: zip = zip(set(), itertools.repeat(True))
         # Get the latest release IDs to create following variables and also to label some nodes as latest at the end.
         latest_rel_ids_df = db_manager.get_db("ids", save_after_calculation=False)
@@ -924,7 +936,7 @@ class GraphMaker:
         # Main aim of this loop is to add Retired information to the nodes.
         self.log.info("Edges showing the retirement of IDs are being added.")
         fo_d_prev: dict = dict()  # Initialize some variables
-        fo_prev_rel: Optional[int] = None
+        fo_prev_rel: int | None = None
         for _, rel_fo in enumerate(available_releases):
             # Create a DatabaseManager object with the release of interest.
             rel_db_fo = db_manager.change_release_auto_assembly(rel_fo)
@@ -1008,7 +1020,7 @@ class GraphMaker:
         return g
 
     @staticmethod
-    def split_id(id_to_split: str, which_part: str) -> Union[str, float]:
+    def split_id(id_to_split: str, which_part: str) -> str | float:
         """Simpler method to retrieve ID or Version part of a node name.
 
         Args:
@@ -1034,7 +1046,7 @@ class GraphMaker:
             raise ValueError(f"which_part must be 'ID' or 'Version', got {which_part!r}.")
 
     @staticmethod
-    def remove_non_gene_trees(graph: TheGraph, forms_remove: Optional[list] = None) -> TheGraph:
+    def remove_non_gene_trees(graph: TheGraph, forms_remove: list | None = None) -> TheGraph:
         """Removes the edges between the nodes with the same `node type` and removes abstract nodes (Void and Retired).
 
         The nodes between two the same :py:attr:`DB.node_type_str` will be removed. Also, the nodes with versions
@@ -1069,7 +1081,7 @@ class GraphMaker:
                     for m in graph.neighbors(n):
                         mt = graph.nodes[m][DB.node_type_str]
                         if nt == mt:
-                            kmn = [k for k in graph[n][m]]
+                            kmn = [*graph[n][m]]
                             for k in kmn:
                                 edge_to_remove.append((n, m, k))
 
@@ -1088,7 +1100,7 @@ class GraphMaker:
         save_after_calculation: bool = True,
         overwrite_even_if_exist: bool = False,
         *,
-        form_list: Optional[list[str]] = None,
+        form_list: list[str] | None = None,
         narrow_external: bool = True,
     ) -> TheGraph:
         """Simplifies the graph construction process.
@@ -1140,9 +1152,7 @@ class GraphMaker:
         with open(file_path, "rb") as handle:
             return pickle.load(handle)
 
-    def create_file_name(
-        self, narrow: bool, form_list: Optional[list[str]] = None, narrow_external: bool = True
-    ) -> str:
+    def create_file_name(self, narrow: bool, form_list: list[str] | None = None, narrow_external: bool = True) -> str:
         """File name creator which includes some information regarding the construction process.
 
         Facilitates to recognize the graph based on file name.

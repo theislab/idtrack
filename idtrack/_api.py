@@ -6,7 +6,7 @@
 
 import copy
 import logging
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
 
 import numpy as np
 from tqdm import tqdm
@@ -52,9 +52,9 @@ class API:
         self.log = logging.getLogger("api")
         self.logger_configured = False
         self.local_repository = local_repository
-        self.track: Optional[Union[Track, TrackTests]] = None
+        self.track: Track | TrackTests | None = None
 
-    def _require_track(self) -> Union[Track, TrackTests]:
+    def _require_track(self) -> Track | TrackTests:
         """Return the active tracker or raise a clear error if the graph is not built yet."""
         track = getattr(self, "track", None)
         if track is None:
@@ -105,7 +105,7 @@ class API:
         """
         self._require_track().graph.calculate_caches(for_test=for_test)
 
-    def resolve_organism(self, tentative_organism_name: Union[str, int]) -> tuple[str, int]:
+    def resolve_organism(self, tentative_organism_name: str | int) -> tuple[str, int]:
         """Normalize a tentative organism name and fetch the latest supported Ensembl release.
 
         This shields callers from Ensembl naming quirks by resolving a user-provided synonym (e.g. common name,
@@ -134,8 +134,8 @@ class API:
         self,
         organism_name: str,
         snapshot_release: int,
-        genome_assembly: Optional[int] = None,
-        ignore_before: Optional[int] = None,
+        genome_assembly: int | None = None,
+        ignore_before: int | None = None,
     ) -> "DatabaseManager":
         """Create a database manager configured for an organism and a release-bounded snapshot.
 
@@ -186,7 +186,7 @@ class API:
         self,
         organism_name: str,
         snapshot_release: int,
-        genome_assembly: Optional[int] = None,
+        genome_assembly: int | None = None,
         return_test: bool = False,
         calculate_caches: bool = True,
     ) -> None:
@@ -237,9 +237,9 @@ class API:
     def convert_identifier(
         self,
         identifier: str,
-        from_release: Optional[int] = None,
-        to_release: Optional[int] = None,
-        final_database: Optional[str] = None,
+        from_release: int | None = None,
+        to_release: int | None = None,
+        final_database: str | None = None,
         strategy: Literal["all", "best"] = "best",
         explain: bool = False,
     ) -> dict[str, Any]:
@@ -351,7 +351,7 @@ class API:
         )
         target_ids = list({i[1] for i in final_ids_together})
 
-        final_database_conv_: set[Optional[str]] = (
+        final_database_conv_: set[str | None] = (
             {cnt[i]["final_conversion"]["final_database"] for i in cnt}
             if not no_corresponding and not no_conversion
             else {None}
@@ -360,7 +360,7 @@ class API:
             raise ValueError(f"Expected exactly one final database, got: {final_database_conv_}")
         final_database_conv = next(iter(final_database_conv_))
 
-        final_conf_: set[Optional[Union[int, float]]] = (
+        final_conf_: set[int | float | None] = (
             {cnt[i]["final_conversion"]["final_conversion_confidence"] for i in cnt}
             if not no_corresponding and not no_conversion
             else {None}
@@ -593,7 +593,7 @@ class API:
 
     def infer_identifier_source(
         self, id_list: list[str], mode: str = "assembly_ensembl_release", report_only_winner: bool = True
-    ) -> Union[tuple[str, int, int], tuple[int, int], int, list[tuple[Any, int]]]:
+    ) -> tuple[str, int, int] | tuple[int, int] | int | list[tuple[Any, int]]:
         """Infer the most likely source (database/assembly/release) for a heterogeneous identifier list.
 
         This helper estimates which origin best explains the given IDs so users can pick a sensible graph configuration

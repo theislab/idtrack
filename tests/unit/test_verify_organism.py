@@ -4,8 +4,6 @@
 Tests the VerifyOrganism class for organism name resolution.
 """
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -159,10 +157,13 @@ class TestFetchOrganismAndLatestRelease:
 
             session_instance.get.return_value.__enter__.side_effect = requests.exceptions.ConnectTimeout()
 
+            from idtrack._db import DB, EnsemblRestError
             from idtrack._verify_organism import VerifyOrganism
 
-            with pytest.raises(TimeoutError):
-                VerifyOrganism("homo_sapiens")
+            # Every attempt is made, and the message says what to change.
+            with pytest.raises(EnsemblRestError, match="reading_timeout"):
+                VerifyOrganism("homo_sapiens").ensembl_release_dataframe
+            assert session_instance.get.call_count == DB.rest_attempts
 
     def test_validates_core_group(self, mock_requests_session):
         """Test ValueError when organism lacks 'core' group."""
@@ -196,7 +197,7 @@ class TestFetchOrganismAndLatestRelease:
             from idtrack._verify_organism import VerifyOrganism
 
             with pytest.raises(ValueError, match="core"):
-                VerifyOrganism("test_organism")
+                VerifyOrganism("test_organism").ensembl_release_dataframe
 
     def test_validates_duplicate_organism(self, mock_requests_session):
         """Test ValueError for duplicate organism entries."""
@@ -241,7 +242,7 @@ class TestFetchOrganismAndLatestRelease:
             from idtrack._verify_organism import VerifyOrganism
 
             with pytest.raises(ValueError, match="more than one"):
-                VerifyOrganism("homo_sapiens")
+                VerifyOrganism("homo_sapiens").ensembl_release_dataframe
 
 
 class TestSynonymDataframe:
@@ -454,7 +455,9 @@ def _resolver_for(species: list[dict], query):
 
         from idtrack._verify_organism import VerifyOrganism
 
-        return VerifyOrganism(query)
+        resolver = VerifyOrganism(query)
+        resolver.ensembl_release_dataframe  # fetch while the REST service is mocked
+        return resolver
 
 
 def _species(name, common, taxon, assembly, aliases=(), display=None):
@@ -536,3 +539,122 @@ class TestResolution:
         resolver = _resolver_for(SPECIES, 9544)
         assert resolver.organism_query == "9544"
         assert resolver.get_latest_release() == 116
+
+
+class TestNetworkUse:
+    """The Ensembl species list is fetched once per process, and only when a look-up needs it."""
+
+    def test_configured_formal_name_needs_no_network(self, monkeypatch):
+        """A configured organism's formal name (also with spaces) resolves without any request."""
+        import idtrack._verify_organism as vo
+
+        def _no_network(*args, **kwargs):
+            raise AssertionError("the network was used")
+
+        monkeypatch.setattr(vo, "rest_get_json", _no_network)
+        assert vo.VerifyOrganism("homo_sapiens").get_formal_name() == "homo_sapiens"
+        assert vo.VerifyOrganism("Macaca mulatta").get_formal_name() == "macaca_mulatta"
+        assert vo.VerifyOrganism(" Sus scrofa ").get_formal_name() == "sus_scrofa"
+
+    def test_species_list_is_fetched_once(self, monkeypatch):
+        """Several resolvers in one process share one request."""
+        import idtrack._verify_organism as vo
+
+        calls = []
+
+        def _fake(path, *, what):
+            calls.append(path)
+            return {"species": [_species("homo_sapiens", "human", "9606", "GRCh38")]}
+
+        monkeypatch.setattr(vo, "rest_get_json", _fake)
+        assert vo.VerifyOrganism("human").get_formal_name() == "homo_sapiens"
+        assert vo.VerifyOrganism("9606").get_latest_release() == 116
+        assert len(calls) == 1
+
+        from idtrack._db import DB
+
+        # A list older than `DB.rest_species_cache_seconds` is fetched again (once).
+        for url, (fetched, tables) in list(vo.VerifyOrganism._species_cache.items()):
+            vo.VerifyOrganism._species_cache[url] = (fetched - 2 * DB.rest_species_cache_seconds, tables)
+        vo.VerifyOrganism("human").get_formal_name()
+        assert len(calls) == 2
+
+
+class TestRestGetJson:
+    """`rest_get_json` retries what is transient and explains what is not."""
+
+    def _session(self, monkeypatch, outcomes):
+        import requests
+
+        import idtrack._ensembl_access as ea
+
+        calls = []
+
+        class _Response:
+            def __init__(self, status, payload=None, headers=None):
+                self.status_code, self._payload, self.headers = status, payload, headers or {}
+                self.ok, self.reason = status == 200, "reason"
+
+            def json(self):
+                return self._payload
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        class _Session:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+            def get(self, url, **kwargs):
+                calls.append(kwargs["timeout"])
+                outcome = outcomes[len(calls) - 1]
+                if isinstance(outcome, Exception):
+                    raise outcome
+                return _Response(*outcome)
+
+        monkeypatch.setattr(requests, "Session", _Session)
+        monkeypatch.setattr(ea.time, "sleep", lambda s: None)
+        return ea, calls, requests
+
+    def test_retries_transient_failures(self, monkeypatch):
+        """A timeout and a 503 are retried; the third attempt's payload is returned."""
+        import requests
+
+        ea, calls, _ = self._session(monkeypatch, [requests.ReadTimeout("slow"), (503, None), (200, {"ok": 1})])
+        assert ea.rest_get_json("/info/ping", what="a ping") == {"ok": 1}
+        assert len(calls) == 3
+
+    def test_uses_the_configured_timeouts(self, monkeypatch):
+        """`DB.connection_timeout` and `DB.reading_timeout` are what each request uses (set them to wait longer)."""
+        from idtrack._db import DB
+
+        monkeypatch.setattr(DB, "reading_timeout", 120)
+        ea, calls, _ = self._session(monkeypatch, [(200, {})])
+        ea.rest_get_json("/info/ping", what="a ping")
+        assert calls == [(DB.connection_timeout, 120)]
+
+    def test_connection_and_ssl_errors_become_one_clear_error(self, monkeypatch):
+        """Connection and SSL errors are retried and end in `EnsemblRestError` naming the URL."""
+        import requests
+
+        from idtrack._db import DB, EnsemblRestError
+
+        ea, calls, _ = self._session(monkeypatch, [requests.exceptions.SSLError("cert")] * DB.rest_attempts)
+        with pytest.raises(EnsemblRestError, match="rest.ensembl.org/info/ping.*SSLError"):
+            ea.rest_get_json("/info/ping", what="a ping")
+        assert len(calls) == DB.rest_attempts
+
+    def test_client_errors_are_not_retried(self, monkeypatch):
+        """A 400 is an answer: no retry."""
+        from idtrack._db import EnsemblRestError
+
+        ea, calls, _ = self._session(monkeypatch, [(400, None), (200, {})])
+        with pytest.raises(EnsemblRestError, match="HTTP 400"):
+            ea.rest_get_json("/info/ping", what="a ping")
+        assert len(calls) == 1

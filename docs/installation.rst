@@ -25,7 +25,7 @@ Before installing IDTrack, ensure your system meets these requirements:
     * - Requirement
       - Details
     * - **Python**
-      - 3.9 or later (3.11 recommended)
+      - 3.12 to 3.15
     * - **Operating Systems**
       - Linux, macOS (Intel and Apple Silicon), Windows
     * - **Memory**
@@ -70,7 +70,7 @@ faster dependency resolution.
 .. code-block:: console
 
     # Option 1 (recommended): create an isolated environment in one command
-    $ mamba create -n idtrack-env -c conda-forge python=3.11 idtrack
+    $ mamba create -n idtrack-env -c conda-forge python=3.13 idtrack
     $ conda activate idtrack-env
 
     # Option 2: install into your currently active conda environment
@@ -163,8 +163,8 @@ Using Mamba (fastest)
 
 .. code-block:: console
 
-    # Create a new environment with Python 3.11
-    $ mamba create -n idtrack-env python=3.11
+    # Create a new environment with Python 3.13
+    $ mamba create -n idtrack-env python=3.13
 
     # Activate the environment
     $ conda activate idtrack-env
@@ -177,8 +177,8 @@ Using conda
 
 .. code-block:: console
 
-    # Create a new environment with Python 3.11
-    $ conda create -n idtrack-env python=3.11
+    # Create a new environment with Python 3.13
+    $ conda create -n idtrack-env python=3.13
 
     # Activate the environment
     $ conda activate idtrack-env
@@ -350,6 +350,25 @@ process (the tables then come over HTTPS; this costs only speed).
 If you route IDTrack through an SSH tunnel with :py:class:`idtrack.ConnectionBridge`, starting and stopping
 the bridge forgets the probe results, so the ports are probed again through the new route.
 
+**Slow networks, timeouts and retries.** Every request to Ensembl REST (organism names and the latest release)
+waits ``idtrack.DB.connection_timeout`` seconds to connect (default 15) and ``idtrack.DB.reading_timeout``
+seconds for the answer (default 60; it also applies to the HTTPS dumps), and is tried
+``idtrack.DB.rest_attempts`` times (default 3) when it times out, the connection fails, or Ensembl answers 429
+or 5xx. When every attempt fails, :py:class:`idtrack._db.EnsemblRestError` names the URL, the timeouts and what
+to change. On a network where Ensembl answers slowly, raise the timeouts before the first call:
+
+.. code-block:: python
+
+    import idtrack
+
+    idtrack.DB.reading_timeout = 120
+    idtrack.DB.rest_attempts = 5
+
+The network is needed only to download, and to learn which release is the latest: the formal name of a
+supported organism (``"homo_sapiens"``, also ``"Homo sapiens"``) resolves without it, and a graph or harmonization
+run whose tables and graph are on disk runs offline (see :ref:`reusing-built-graphs`). An HTTPS proxy is honoured
+through ``HTTPS_PROXY``.
+
 
 Optional Dependencies
 ---------------------
@@ -402,7 +421,7 @@ use conda-forge (Mamba or conda):
 .. code-block:: console
 
     # Create a fresh environment with Mamba
-    $ mamba create -n idtrack-env python=3.11 idtrack -c conda-forge
+    $ mamba create -n idtrack-env python=3.13 idtrack -c conda-forge
     $ conda activate idtrack-env
 
 If you must use pip, install HDF5 dependencies first:

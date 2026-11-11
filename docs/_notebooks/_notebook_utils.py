@@ -22,8 +22,8 @@ import time
 import traceback
 import uuid
 import warnings
+from collections.abc import Callable
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
-from typing import Callable
 
 from IPython.core.magic import Magics, cell_magic, magics_class
 from IPython.display import HTML, display

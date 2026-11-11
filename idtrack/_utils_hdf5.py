@@ -10,7 +10,7 @@ import os
 import tempfile
 import types
 from collections.abc import Iterator, Sequence
-from typing import Optional, Union
+from typing import cast
 
 import h5py
 import numpy as np
@@ -19,7 +19,110 @@ import pandas as pd
 from idtrack._db import DB
 
 
-def to_hdf(path: str, key: str, df: pd.DataFrame, mode: str = "a", compression: Optional[Union[str, int]] = 9):
+def _is_missing_scalar(value) -> bool:
+    """Return whether *value* is a missing scalar (``None``, ``NaN``, ``pd.NA`` or ``NaT``).
+
+    Args:
+        value: Any object.
+
+    Returns:
+        bool: ``True`` for a missing scalar.
+    """
+    return bool(pd.api.types.is_scalar(value) and pd.isna(value))
+
+
+def _text_kind(dtype) -> str | None:
+    """Classify a dtype as stored text, independently of the pandas version.
+
+    Text is stored under one of two tags, which are also the tags older versions of this module wrote:
+
+    * ``"object"``: the default text dtype of pandas, i.e. ``object`` (pandas 2) or ``str``
+      (``StringDtype(na_value=nan)``, the default of pandas 3); missing values are ``NaN``.
+    * ``"string"``: the opt-in ``StringDtype`` with ``pd.NA`` as missing value.
+
+    Args:
+        dtype: A column or index dtype.
+
+    Returns:
+        Optional[str]: ``"object"``, ``"string"``, or ``None`` when *dtype* is not a text dtype.
+    """
+    if isinstance(dtype, pd.StringDtype):
+        return "string" if dtype.na_value is pd.NA else "object"
+    if pd.api.types.is_object_dtype(dtype):
+        return "object"
+    return None
+
+
+def _default_text_dtype():
+    """Return the dtype the running pandas infers for text (``object`` in pandas 2, ``str`` in pandas 3).
+
+    Returns:
+        The dtype of ``pd.Series(["a"])``.
+    """
+    return pd.Series(["a"]).dtype
+
+
+def _encode_text(values) -> np.ndarray:
+    """Encode text values (strings or missing values) for a UTF-8 dataset, missing values as the placeholder.
+
+    Args:
+        values: Strings or missing values.
+
+    Returns:
+        numpy.ndarray: The values as UTF-8 strings, :py:data:`DB.placeholder_na` for missing values.
+    """
+    arr = np.asarray(values, dtype=object)
+    encoded = arr.copy()
+    encoded[pd.isna(arr)] = DB.placeholder_na
+    return np.asarray(encoded, dtype=DB.UTF8_STR)
+
+
+def _decode_text(dataset: h5py.Dataset, kind: str):
+    """Decode a UTF-8 dataset written by :py:func:`_encode_text` into text of the given kind (see :py:func:`_text_kind`).
+
+    ``"object"`` text is returned in the default text dtype of the running pandas with ``NaN`` for missing values,
+    which is what pandas itself produces for freshly read text (e.g. by :py:func:`pandas.read_csv`), so a table read
+    back from the cache equals the table computed afresh under the same pandas. ``"string"`` text is returned as
+    ``StringDtype`` with ``pd.NA``.
+
+    Args:
+        dataset: The UTF-8 dataset.
+        kind: ``"object"`` or ``"string"``.
+
+    Returns:
+        numpy.ndarray | pandas.api.extensions.ExtensionArray: The decoded values.
+    """
+    arr = np.asarray(dataset.asstr()[()], dtype=object)
+    missing = arr == DB.placeholder_na
+    if kind == "string":
+        arr[missing] = pd.NA
+        return pd.array(cast(Sequence[object], arr), dtype="string")
+    arr[missing] = np.nan
+    text_dtype = _default_text_dtype()
+    if pd.api.types.is_object_dtype(text_dtype):
+        return arr
+    return pd.array(cast(Sequence[object], arr), dtype=text_dtype)
+
+
+def _temporal_as_text(values: pd.Series | pd.Index) -> np.ndarray:
+    """Render datetime or timedelta values as text for a UTF-8 dataset; missing values become ``"NaT"``.
+
+    ``astype(str)`` keeps missing values missing under pandas 3 (and turns them into ``"NaT"`` under pandas 2), so
+    they are filled explicitly; :py:func:`pandas.to_datetime` and :py:func:`pandas.to_timedelta` read ``"NaT"`` back
+    as missing.
+
+    Args:
+        values: Datetime or timedelta values.
+
+    Returns:
+        numpy.ndarray: The values as UTF-8 strings.
+    """
+    text = pd.Series(values).astype(str).to_numpy(dtype=object)
+    text[pd.isna(text)] = "NaT"
+    return np.asarray(text, dtype=DB.UTF8_STR)
+
+
+def to_hdf(path: str, key: str, df: pd.DataFrame, mode: str = "a", compression: str | int | None = 9):
     """Persist a :py:class:`pandas.DataFrame` to an HDF5 file while retaining rich pandas metadata.
 
     This helper exists because :py:meth:`pandas.DataFrame.to_hdf` loses information for complex dtypes
@@ -67,8 +170,11 @@ def read_hdf(path: str, key: str, mode: str = "r") -> pd.DataFrame:
 
     The function reverses the layered serialisation scheme used by :py:func:`to_hdf`.  It reconstructs
     column labels, dtypes (including categoricals), index names, and the original ``columns.name`` so that
-    the returned DataFrame is bit-for-bit equivalent to the object that was saved—modulo unavoidable
-    floating-point representation differences.
+    the returned DataFrame is equivalent to the object that was saved—modulo unavoidable floating-point
+    representation differences. Text columns (and a text index) are the exception by design: ``object`` and
+    pandas 3's default ``str`` text both come back in the default text dtype of the *running* pandas, with ``NaN``
+    for missing values (``string`` text comes back as ``string`` with ``pd.NA``), so that a cached table equals the
+    table computed afresh under the same pandas, whichever pandas wrote the file.
 
     Args:
         path (str): HDF5 file that contains the stored DataFrame.
@@ -115,12 +221,11 @@ def validate_dataframe(df: pd.DataFrame):
     companion :py:func:`idtrack._utils_hdf5.read_hdf`.  It checks every column
     and index for:
 
-    * allowable dtypes (numeric, boolean, string, various ``datetime64`` /
+    * allowable dtypes (numeric, boolean, text — ``object``, ``str`` or ``string`` —, various ``datetime64`` /
       ``timedelta64`` resolutions, or properly formed categoricals);
-    * object columns containing only strings or missing values;
+    * object columns and an object index containing only strings or missing values;
     * categorical columns whose *categories* are exclusively strings or NA;
-    * index dtype restricted to integer, unsigned integer, float, datetime, or
-      string back-end;
+    * index dtype restricted to integer, unsigned integer, float, datetime, or text;
     * valid column and index *names* (‶str‶, ‶int‶, ‶float‶, or ``None`` only).
 
     Any deviation raises a descriptive :py:class:`ValueError`, preventing silent
@@ -143,7 +248,7 @@ def validate_dataframe(df: pd.DataFrame):
             * ``df.columns.name`` or ``df.index.name`` is not ``None``, ``str``,
               ``int``, or ``float``.
     """
-    # Define exactly supported dtypes (full matching; no 'object' here)
+    # Exactly supported non-text, non-categorical dtypes (full matching).
     supported_dtypes = {
         "int8",
         "int16",
@@ -158,7 +263,6 @@ def validate_dataframe(df: pd.DataFrame):
         "float64",
         "float128",
         "bool",
-        "string",
         "datetime64[ns]",
         "datetime64[us]",
         "datetime64[ms]",
@@ -170,34 +274,33 @@ def validate_dataframe(df: pd.DataFrame):
     }
 
     for col, dtype in df.dtypes.items():
-        dtype_str = str(dtype)
-        # Strict match for numeric, datetime, string, or category (non-categorical handled below)
-        if dtype_str in supported_dtypes and not isinstance(dtype, pd.CategoricalDtype):
-            # Non-categorical allowed types pass
-            pass
-
-        # For categorical dtype, ensure all categories are strings
-        elif isinstance(dtype, pd.CategoricalDtype):
+        if isinstance(dtype, pd.CategoricalDtype):
+            # Values in categorical are backed by codes, so checking the categories is sufficient.
             categories = df[col].cat.categories
             bad = [cat for cat in categories if not (pd.isna(cat) or isinstance(cat, str))]
             if bad:
                 raise ValueError(f"Categorical column {col!r} has non-string categories: {bad}")
-            # Values in categorical are backed by codes, categories check is sufficient
 
-        # Special handling for object dtype: only allow strings or NA
-        elif dtype_str == "object":
-            col_series = df[col]
-            mask = col_series.apply(lambda x: pd.isna(x) or isinstance(x, str))
-            if not mask.all():
-                bad = col_series[~mask].unique()
-                raise ValueError(f"Object column {col!r} contains non-string non-NA values: {bad}")
-        else:
+        elif _text_kind(dtype) is not None:
+            # pandas' string dtypes hold only strings or missing values by construction; object columns are text
+            # columns and must hold only strings or missing values.
+            if pd.api.types.is_object_dtype(dtype):
+                col_series = df[col]
+                mask = col_series.map(lambda x: isinstance(x, str) or _is_missing_scalar(x)).to_numpy(dtype=bool)
+                if not mask.all():
+                    bad_values = col_series[~mask].unique()
+                    raise ValueError(f"Object column {col!r} contains non-string non-NA values: {bad_values}")
+
+        elif str(dtype) not in supported_dtypes:
             raise ValueError(f"Unsupported dtype {dtype!r} for column {col!r}")
 
     # Check index dtype
-    index_dtype = str(df.index.dtype)
-    if not (df.index.dtype.kind in ["i", "u", "f", "M"] or index_dtype == "string"):
+    if not (df.index.dtype.kind in ["i", "u", "f", "M"] or _text_kind(df.index.dtype) is not None):
         raise ValueError(f"Unsupported index dtype {df.index.dtype!r}")
+    if pd.api.types.is_object_dtype(df.index.dtype):
+        bad_index = [x for x in df.index if not (isinstance(x, str) or _is_missing_scalar(x))]
+        if bad_index:
+            raise ValueError(f"Object index contains non-string non-NA values: {bad_index[:10]}")
 
     # Check column names
     for col_name in df.columns:
@@ -242,6 +345,8 @@ def _save_column_metadata(grp: h5py.Group, df: pd.DataFrame):
             categories = dtype.categories.tolist()
             ordered = dtype.ordered
             dtypes_info.append(f"category|{categories}|{ordered}")
+        elif _text_kind(dtype) is not None:
+            dtypes_info.append(str(_text_kind(dtype)))
         else:
             dtypes_info.append(str(dtype))
 
@@ -279,11 +384,8 @@ def _save_index_data(grp: h5py.Group, df: pd.DataFrame, compression):
     # Save index data
     if pd.api.types.is_datetime64_any_dtype(df.index):
         # Convert datetime to string for reliable storage
-        idx_data = df.index.astype(str).values
-        grp.create_dataset(
-            "index_data", data=np.array(idx_data, dtype=DB.UTF8_STR), dtype=DB.UTF8_STR, compression=compression
-        )
-        grp.attrs["index_dtype"] = "datetime64[ns]"
+        grp.create_dataset("index_data", data=_temporal_as_text(df.index), dtype=DB.UTF8_STR, compression=compression)
+        grp.attrs["index_dtype"] = str(df.index.dtype)
     elif isinstance(df.index.dtype, pd.CategoricalDtype):
         # Store categorical index
         codes = df.index.codes
@@ -291,23 +393,21 @@ def _save_index_data(grp: h5py.Group, df: pd.DataFrame, compression):
         grp.create_dataset("index_data", data=codes, compression=compression)
         grp.create_dataset("index_categories", data=cats, dtype=DB.UTF8_STR)
         grp.attrs["index_dtype"] = f"category|{df.index.ordered}"
+    elif _text_kind(df.index.dtype) is not None:
+        # Text index (object, pandas 3's default ``str`` or ``string``), tagged like text columns.
+        grp.create_dataset(
+            "index_data",
+            data=_encode_text(df.index.to_numpy(dtype=object)),
+            dtype=DB.UTF8_STR,
+            compression=compression,
+        )
+        grp.attrs["index_dtype"] = str(_text_kind(df.index.dtype))
     else:
-        # Regular index (including pandas' StringDtype, which exposes an object-typed `.values`).
-        index_dtype = str(df.index.dtype)
-        if pd.api.types.is_string_dtype(df.index) or index_dtype in {"object", "string"}:
-            values = df.index.to_numpy(dtype=object)
-            na_mask = pd.isna(values)
-            encoded = [DB.placeholder_na if is_na else str(v) for v, is_na in zip(values, na_mask)]
-            grp.create_dataset(
-                "index_data", data=np.array(encoded, dtype=DB.UTF8_STR), dtype=DB.UTF8_STR, compression=compression
-            )
-            grp.attrs["index_dtype"] = index_dtype
-        else:
-            grp.create_dataset("index_data", data=df.index.values, compression=compression)
-            grp.attrs["index_dtype"] = index_dtype
+        grp.create_dataset("index_data", data=df.index.values, compression=compression)
+        grp.attrs["index_dtype"] = str(df.index.dtype)
 
 
-def _save_column_data(grp: h5py.Group, df: pd.DataFrame, compression: Optional[Union[str, int]]):
+def _save_column_data(grp: h5py.Group, df: pd.DataFrame, compression: str | int | None):
     """Serialise each column's actual values to an HDF5 sub-group while preserving logical dtypes.
 
     A child group named ``"data"`` is created beneath *grp*, and one or more datasets are generated per column
@@ -344,27 +444,20 @@ def _save_column_data(grp: h5py.Group, df: pd.DataFrame, compression: Optional[U
 
         elif pd.api.types.is_datetime64_any_dtype(col_data):
             # Convert datetime to string for reliable storage
-            dt_strings = col_data.astype(str).values
             data_grp.create_dataset(
-                col_key, data=np.array(dt_strings, dtype=DB.UTF8_STR), dtype=DB.UTF8_STR, compression=compression
+                col_key, data=_temporal_as_text(col_data), dtype=DB.UTF8_STR, compression=compression
             )
 
         elif pd.api.types.is_timedelta64_dtype(col_data):
             # Convert timedeltas to string for reliable storage (HDF5 has no native timedelta dtype)
-            td_strings = col_data.astype(str).values
             data_grp.create_dataset(
-                col_key, data=np.array(td_strings, dtype=DB.UTF8_STR), dtype=DB.UTF8_STR, compression=compression
+                col_key, data=_temporal_as_text(col_data), dtype=DB.UTF8_STR, compression=compression
             )
 
-        elif pd.api.types.is_string_dtype(col_data) or col_data.dtype == "object":
-            # Handle string/object data, replacing NA with a placeholder
-            series = col_data.copy()
-            na_mask = series.isna()
-            series = series.astype(str)
-            series[na_mask] = DB.placeholder_na
-            str_data = series.values
+        elif _text_kind(col_data.dtype) is not None:
+            # Text (object, pandas 3's default ``str``, or ``string``): missing values become the placeholder.
             data_grp.create_dataset(
-                col_key, data=np.array(str_data, dtype=DB.UTF8_STR), dtype=DB.UTF8_STR, compression=compression
+                col_key, data=_encode_text(col_data.to_numpy(dtype=object)), dtype=DB.UTF8_STR, compression=compression
             )
 
         else:
@@ -372,7 +465,7 @@ def _save_column_data(grp: h5py.Group, df: pd.DataFrame, compression: Optional[U
             data_grp.create_dataset(col_key, data=col_data.values, compression=compression)
 
 
-def _load_column_metadata(grp: h5py.Group) -> tuple[list[str], list[Union[str, pd.CategoricalDtype]], Optional[str]]:
+def _load_column_metadata(grp: h5py.Group) -> tuple[list[str], list[str | pd.CategoricalDtype], str | None]:
     """Load column names, logical dtypes, and `DataFrame.columns.name` from an HDF5 group.
 
     This is the inverse of :py:meth:`_save_column_metadata`.  It reconstructs high-level dtype objects—
@@ -414,7 +507,7 @@ def _load_column_metadata(grp: h5py.Group) -> tuple[list[str], list[Union[str, p
     return col_names, dtypes, columns_name
 
 
-def _load_index_data(grp: h5py.Group) -> tuple[pd.Index, list[Optional[str]]]:
+def _load_index_data(grp: h5py.Group) -> tuple[pd.Index, list[str | None]]:
     """Reconstruct a pandas Index (and its names) from HDF5-serialised form.
 
     The routine reads the artefacts created by :py:meth:`_save_index_data`, automatically selecting the correct
@@ -435,31 +528,28 @@ def _load_index_data(grp: h5py.Group) -> tuple[pd.Index, list[Optional[str]]]:
 
     # Load index data based on dtype
     index_dtype = grp.attrs.get("index_dtype", "object")
-    index_data = grp["index_data"][()]
+    index_ds = grp["index_data"]
 
     if index_dtype.startswith("datetime64"):
-        # Convert string back to datetime
-        index_strs = [x.decode(DB.UTF8) if isinstance(x, bytes) else str(x) for x in index_data]
-        index = pd.to_datetime(index_strs)
+        # Convert string back to datetime, with the recorded unit.
+        index = pd.DatetimeIndex(pd.to_datetime(list(index_ds.asstr()[()]), format="ISO8601")).astype(index_dtype)
     elif index_dtype.startswith("category"):
         # Reconstruct categorical index
         ordered = index_dtype.split("|")[1] == "True"
-        categories = [cat.decode(DB.UTF8) for cat in grp["index_categories"][()]]
-        index = pd.CategoricalIndex.from_codes(index_data, categories=categories, ordered=ordered)
+        categories = list(grp["index_categories"].asstr()[()])
+        index = pd.CategoricalIndex.from_codes(index_ds[()], categories=categories, ordered=ordered)
+    elif index_dtype in {"object", "string"}:
+        # Text index (see `_text_kind`).
+        values = _decode_text(index_ds, index_dtype)
+        index = pd.Index(values, dtype=values.dtype)
     else:
-        # Regular index
-        values = index_data.tolist() if hasattr(index_data, "tolist") else list(index_data)
-        if values and isinstance(values[0], bytes):
-            values = [x.decode(DB.UTF8) for x in values]
-        if index_dtype in {"object", "string"}:
-            values = [pd.NA if x == DB.placeholder_na else x for x in values]
-        index = pd.Index(values, dtype=index_dtype)
+        index = pd.Index(index_ds[()], dtype=index_dtype)
 
     return index, index_names
 
 
 def _load_column_data(
-    grp: h5py.Group, columns: Sequence[str], dtypes: Sequence[Union[str, pd.CategoricalDtype]]
+    grp: h5py.Group, columns: Sequence[str], dtypes: Sequence[str | pd.CategoricalDtype]
 ) -> pd.DataFrame:
     """Load column datasets and rebuild a DataFrame, honouring the original logical dtypes.
 
@@ -470,7 +560,8 @@ def _load_column_data(
 
     * **Categorical** - combines stored codes and categories.
     * **Datetime64** - parses ISO-8601 strings back into pandas nanosecond-resolution timestamps.
-    * **String / object** - replaces :py:data:`DB.placeholder_na` tokens with genuine ``pd.NA`` values.
+    * **Text** - restores the dtype as described in :py:func:`_decode_text`; :py:data:`DB.placeholder_na` tokens
+      become missing values (``NaN``, or ``pd.NA`` for ``string``).
 
     Args:
         grp (h5py.Group): Parent group whose ``"data"`` subgroup contains the column datasets.
@@ -481,7 +572,7 @@ def _load_column_data(
         pandas.DataFrame: Reconstructed data frame with all logical dtypes restored.
     """
     data_grp = grp["data"]
-    data_dict = {}
+    data_dict: dict[str, pd.Series] = {}
 
     for col, dtype in zip(columns, dtypes):
         col_key = f"col_{col}"
@@ -489,38 +580,30 @@ def _load_column_data(
         if isinstance(dtype, pd.CategoricalDtype):
             # Reconstruct categorical data
             codes = data_grp[f"{col_key}_codes"][()]
-            categories = [cat.decode(DB.UTF8) for cat in data_grp[f"{col_key}_categories"][()]]
-            data_dict[col] = pd.Categorical.from_codes(codes, categories=categories, ordered=dtype.ordered)
+            categories = list(data_grp[f"{col_key}_categories"].asstr()[()])
+            data_dict[col] = pd.Series(pd.Categorical.from_codes(codes, categories=categories, ordered=dtype.ordered))
 
         elif str(dtype).startswith("datetime64"):
-            # Convert string back to datetime
-            dt_strs = [x.decode(DB.UTF8) if isinstance(x, bytes) else str(x) for x in data_grp[col_key][()]]
-            data_dict[col] = pd.to_datetime(dt_strs)
+            # Convert string back to datetime, with the recorded unit.
+            values = pd.to_datetime(list(data_grp[col_key].asstr()[()]), format="ISO8601")
+            data_dict[col] = pd.Series(values).astype(np.dtype(str(dtype)))
 
         elif str(dtype).startswith("timedelta64"):
-            # Convert string back to timedelta
-            td_strs = [x.decode(DB.UTF8) if isinstance(x, bytes) else str(x) for x in data_grp[col_key][()]]
-            data_dict[col] = pd.to_timedelta(td_strs)
+            # Convert string back to timedelta, with the recorded unit.
+            values = pd.to_timedelta(list(data_grp[col_key].asstr()[()]))
+            data_dict[col] = pd.Series(values).astype(np.dtype(str(dtype)))
 
-        elif str(dtype) in ["object", "string"]:
-            # Handle string/object data, restoring placeholder back to NA
-            raw = data_grp[col_key][()]
-            if len(raw) and isinstance(raw[0], bytes):
-                raw = [x.decode(DB.UTF8) for x in raw]
-            restored = [pd.NA if x == DB.placeholder_na else x for x in raw]
-            data_dict[col] = restored
+        elif str(dtype) in ("object", "string"):
+            # Text (see `_text_kind`): the placeholder becomes the missing value of the restored dtype.
+            values = _decode_text(data_grp[col_key], str(dtype))
+            data_dict[col] = pd.Series(values, dtype=values.dtype)
 
         else:
             # Numeric, boolean, or other simple types
-            data_dict[col] = data_grp[col_key][()]
+            data_dict[col] = pd.Series(data_grp[col_key][()], dtype=dtype)
 
-    # Create DataFrame and restore dtypes
-    df = pd.DataFrame(data_dict)
-    for col, dtype in zip(columns, dtypes):
-        if not isinstance(dtype, pd.CategoricalDtype):
-            df[col] = df[col].astype(dtype)
-
-    return df
+    # Every column already has its final dtype; building the frame from Series keeps them.
+    return pd.DataFrame(data_dict)
 
 
 class HDFStore:
@@ -560,7 +643,7 @@ class HDFStore:
         """
         self.path = path
         self.mode = mode
-        self.f: Optional[h5py.File] = None
+        self.f: h5py.File | None = None
 
     def __enter__(self) -> "HDFStore":
         """Open the file and return *self* for use inside a ``with`` block.
@@ -569,14 +652,16 @@ class HDFStore:
             HDFStore: The identical instance, now carrying an open :py:class:`h5py.File`
                 in :py:attr:`~HDFStore.f`.
         """
-        self.f = h5py.File(self.path, self.mode, libver="latest")
+        # Default format bounds (no `libver="latest"`): files stay readable by older HDF5 libraries (HDF5 2.x with
+        # "latest" writes layout messages HDF5 1.14 cannot read), so a cache moves between environments.
+        self.f = h5py.File(self.path, self.mode)
         return self
 
     def __exit__(
         self,
-        exc_type: Optional[type],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[types.TracebackType],
+        exc_type: type | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None,
     ) -> None:
         """Flush and close :py:attr:`~HDFStore.f`, guaranteeing resource release.
 
@@ -684,7 +769,7 @@ def repack_hdf5(path: str) -> None:
     os.close(fd)
 
     try:
-        with h5py.File(path, "r") as src, h5py.File(tmp_path, "w", libver="latest") as dst:
+        with h5py.File(path, "r") as src, h5py.File(tmp_path, "w") as dst:
             # Copy all root-level attributes
             for attr_name, attr_val in src.attrs.items():
                 dst.attrs[attr_name] = attr_val
@@ -712,9 +797,7 @@ def repack_hdf5(path: str) -> None:
             os.remove(tmp_path)
 
 
-def export_disk(
-    df: Union[pd.DataFrame, pd.Series], hierarchy: str, file_path: str, overwrite: bool, logger: logging.Logger
-):
+def export_disk(df: pd.DataFrame | pd.Series, hierarchy: str, file_path: str, overwrite: bool, logger: logging.Logger):
     """Persist a pandas object to an HDF5 store under a hierarchical key.
 
     The helper centralises all on-disk writes so that every table goes through the same “check → optionally
@@ -752,7 +835,7 @@ def export_disk(
         to_hdf(df=df, path=file_path, key=hierarchy, mode="a")
 
 
-def read_exported(hierarchy: str, file_path: str) -> Union[pd.DataFrame, pd.Series]:
+def read_exported(hierarchy: str, file_path: str) -> pd.DataFrame | pd.Series:
     """Load a previously exported pandas object from an HDF5 store.
 
     This read side-kick to :py:func:`export_disk` hides the repetitive boilerplate of access checks and
