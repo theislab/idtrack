@@ -8,7 +8,7 @@
   <title>idtrack._external_mappers._backend_gget &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=6a604523" />
       <link rel="stylesheet" type="text/css" href="../../../_static/custom_settings.css?v=04d1a194" />
       <link rel="stylesheet" type="text/css" href="../../../_static/tutorials.css?v=0e72a3a5" />
 
@@ -18,7 +18,7 @@
       <script src="../../../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
-      <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../../_static/design-tabs.js?v=fcb327ea"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
@@ -66,6 +66,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../authors.html">Credits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
@@ -97,11 +98,11 @@
              
   <h1>Source code for idtrack._external_mappers._backend_gget</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;gget backend for ID mapping.</span>
+<span class="sd">"""gget backend for ID mapping.</span>
 
 <span class="sd">This module provides the map_with_gget() function for querying</span>
 <span class="sd">the gget.info API (Ensembl REST-backed) to convert biological identifiers.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="c1"># Kemal Inecik</span>
 <span class="c1"># k.inecik@gmail.com</span>
@@ -116,7 +117,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers._constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">_ENSEMBL_INPUT_DB</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers._constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">_ENSEMBL_INPUT_DB</span><span class="p">,</span> <span class="n">_SPECIES_CANONICAL_TO_ENSEMBL</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers._utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">_chunker</span><span class="p">,</span>
     <span class="n">_empty_result</span><span class="p">,</span>
@@ -135,7 +136,7 @@
 <div class="viewcode-block" id="_gget_extract">
 <a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._backend_gget._gget_extract">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">_gget_extract</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">outp</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize gget.info() output into standardized (input_id, output_id) format.</span>
+<span class="w">    </span><span class="sd">"""Normalize gget.info() output into standardized (input_id, output_id) format.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        df: Raw DataFrame from gget.info().</span>
@@ -143,25 +144,25 @@
 
 <span class="sd">    Returns:</span>
 <span class="sd">        DataFrame with ``input_id`` and ``output_id`` columns.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">rename</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;gene_id&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;gene&quot;</span><span class="p">:</span> <span class="s2">&quot;gene_id&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;ensembl_id&quot;</span><span class="p">:</span> <span class="s2">&quot;gene_id&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;gene_name&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;display_name&quot;</span><span class="p">:</span> <span class="s2">&quot;gene_name&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;symbol&quot;</span><span class="p">:</span> <span class="s2">&quot;gene_name&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;gene_symbol&quot;</span><span class="p">:</span> <span class="s2">&quot;gene_name&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;primary_gene_name&quot;</span><span class="p">:</span> <span class="s2">&quot;gene_name&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;entrez&quot;</span><span class="p">:</span> <span class="s2">&quot;entrez_id&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;entrezgene&quot;</span><span class="p">:</span> <span class="s2">&quot;entrez_id&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;entrez_gene&quot;</span><span class="p">:</span> <span class="s2">&quot;entrez_id&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;ncbi_gene_id&quot;</span><span class="p">:</span> <span class="s2">&quot;entrez_id&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;uniprot&quot;</span><span class="p">:</span> <span class="s2">&quot;uniprot_id&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;uniprot_acc&quot;</span><span class="p">:</span> <span class="s2">&quot;uniprot_id&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;uniprot_id&quot;</span><span class="p">:</span> <span class="s2">&quot;uniprot_id&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;protein_id&quot;</span><span class="p">:</span> <span class="s2">&quot;protein_id&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;transcript_id&quot;</span><span class="p">:</span> <span class="s2">&quot;transcript_id&quot;</span><span class="p">,</span>
+        <span class="s2">"id"</span><span class="p">:</span> <span class="s2">"gene_id"</span><span class="p">,</span>
+        <span class="s2">"gene"</span><span class="p">:</span> <span class="s2">"gene_id"</span><span class="p">,</span>
+        <span class="s2">"ensembl_id"</span><span class="p">:</span> <span class="s2">"gene_id"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"gene_name"</span><span class="p">,</span>
+        <span class="s2">"display_name"</span><span class="p">:</span> <span class="s2">"gene_name"</span><span class="p">,</span>
+        <span class="s2">"symbol"</span><span class="p">:</span> <span class="s2">"gene_name"</span><span class="p">,</span>
+        <span class="s2">"gene_symbol"</span><span class="p">:</span> <span class="s2">"gene_name"</span><span class="p">,</span>
+        <span class="s2">"primary_gene_name"</span><span class="p">:</span> <span class="s2">"gene_name"</span><span class="p">,</span>
+        <span class="s2">"entrez"</span><span class="p">:</span> <span class="s2">"entrez_id"</span><span class="p">,</span>
+        <span class="s2">"entrezgene"</span><span class="p">:</span> <span class="s2">"entrez_id"</span><span class="p">,</span>
+        <span class="s2">"entrez_gene"</span><span class="p">:</span> <span class="s2">"entrez_id"</span><span class="p">,</span>
+        <span class="s2">"ncbi_gene_id"</span><span class="p">:</span> <span class="s2">"entrez_id"</span><span class="p">,</span>
+        <span class="s2">"uniprot"</span><span class="p">:</span> <span class="s2">"uniprot_id"</span><span class="p">,</span>
+        <span class="s2">"uniprot_acc"</span><span class="p">:</span> <span class="s2">"uniprot_id"</span><span class="p">,</span>
+        <span class="s2">"uniprot_id"</span><span class="p">:</span> <span class="s2">"uniprot_id"</span><span class="p">,</span>
+        <span class="s2">"protein_id"</span><span class="p">:</span> <span class="s2">"protein_id"</span><span class="p">,</span>
+        <span class="s2">"transcript_id"</span><span class="p">:</span> <span class="s2">"transcript_id"</span><span class="p">,</span>
     <span class="p">}</span>
     <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">rename</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="ow">and</span> <span class="n">v</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
@@ -169,21 +170,21 @@
 
     <span class="n">outp</span> <span class="o">=</span> <span class="n">canonical_db</span><span class="p">(</span><span class="n">outp</span><span class="p">)</span>
     <span class="n">col_map</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">&quot;hgnc_symbol&quot;</span><span class="p">:</span> <span class="s2">&quot;gene_name&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;ensembl_gene&quot;</span><span class="p">:</span> <span class="s2">&quot;gene_id&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;ensembl_transcript&quot;</span><span class="p">:</span> <span class="s2">&quot;canonical_transcript&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;ensembl_protein&quot;</span><span class="p">:</span> <span class="s2">&quot;protein_id&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;entrez_gene&quot;</span><span class="p">:</span> <span class="s2">&quot;entrez_id&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;uniprot&quot;</span><span class="p">:</span> <span class="s2">&quot;uniprot_id&quot;</span><span class="p">,</span>
+        <span class="s2">"hgnc_symbol"</span><span class="p">:</span> <span class="s2">"gene_name"</span><span class="p">,</span>
+        <span class="s2">"ensembl_gene"</span><span class="p">:</span> <span class="s2">"gene_id"</span><span class="p">,</span>
+        <span class="s2">"ensembl_transcript"</span><span class="p">:</span> <span class="s2">"canonical_transcript"</span><span class="p">,</span>
+        <span class="s2">"ensembl_protein"</span><span class="p">:</span> <span class="s2">"protein_id"</span><span class="p">,</span>
+        <span class="s2">"entrez_gene"</span><span class="p">:</span> <span class="s2">"entrez_id"</span><span class="p">,</span>
+        <span class="s2">"uniprot"</span><span class="p">:</span> <span class="s2">"uniprot_id"</span><span class="p">,</span>
     <span class="p">}</span>
     <span class="n">out_col</span> <span class="o">=</span> <span class="n">col_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">outp</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">out_col</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;input_id&quot;</span><span class="p">,</span> <span class="s2">&quot;output_id&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"input_id"</span><span class="p">,</span> <span class="s2">"output_id"</span><span class="p">])</span>
 
-    <span class="k">if</span> <span class="s2">&quot;query&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-        <span class="n">src</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;query&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
-    <span class="k">elif</span> <span class="s2">&quot;gene_id&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-        <span class="n">src</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;gene_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="k">if</span> <span class="s2">"query"</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">src</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">"query"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="s2">"gene_id"</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">src</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">"gene_id"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">src</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
 
@@ -195,14 +196,14 @@
                 <span class="n">outs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
                 <span class="k">continue</span>
             <span class="n">raw_s</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">raw_s</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;nan&quot;</span><span class="p">,</span> <span class="s2">&quot;none&quot;</span><span class="p">,</span> <span class="s2">&quot;null&quot;</span><span class="p">}:</span>
+            <span class="k">if</span> <span class="n">raw_s</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">"nan"</span><span class="p">,</span> <span class="s2">"none"</span><span class="p">,</span> <span class="s2">"null"</span><span class="p">}:</span>
                 <span class="n">outs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">outs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">strip_version</span><span class="p">(</span><span class="n">raw_s</span><span class="p">))</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">outs</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;input_id&quot;</span><span class="p">:</span> <span class="n">src</span><span class="p">,</span> <span class="s2">&quot;output_id&quot;</span><span class="p">:</span> <span class="n">outs</span><span class="p">})</span></div>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"input_id"</span><span class="p">:</span> <span class="n">src</span><span class="p">,</span> <span class="s2">"output_id"</span><span class="p">:</span> <span class="n">outs</span><span class="p">})</span></div>
 
 
 
@@ -213,7 +214,7 @@
     <span class="n">input_db</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">output_db</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
-    <span class="n">species</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;hsapiens&quot;</span><span class="p">,</span>
+    <span class="n">species</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"hsapiens"</span><span class="p">,</span>
     <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span>
     <span class="n">pause</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span>
     <span class="n">max_retries</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
@@ -221,17 +222,18 @@
     <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">suppress_method_verbosity</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Map identifiers using gget.info (Ensembl REST API-backed).</span>
+<span class="w">    </span><span class="sd">"""Map identifiers using gget.info (Ensembl REST API-backed).</span>
 
 <span class="sd">    Note: gget is Ensembl-centric, so input_db must be an Ensembl ID type.</span>
-<span class="sd">    For non-Ensembl inputs, use &#39;mygene&#39; or &#39;gprofiler&#39; methods.</span>
+<span class="sd">    For non-Ensembl inputs, use 'mygene' or 'gprofiler' methods.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        ids: Input Ensembl identifiers to map.</span>
-<span class="sd">        input_db: Source database type. Must be one of ``&quot;ensembl_gene&quot;``, ``&quot;ensembl_transcript&quot;``,</span>
-<span class="sd">            or ``&quot;ensembl_protein&quot;``.</span>
-<span class="sd">        output_db: Target database type (e.g. ``&quot;hgnc_symbol&quot;``, ``&quot;uniprot&quot;``, ``&quot;entrez_gene&quot;``).</span>
-<span class="sd">        species: Species code (e.g. ``&quot;hsapiens&quot;``, ``&quot;mmusculus&quot;``, ``&quot;sscrofa&quot;``).</span>
+<span class="sd">        input_db: Source database type. Must be one of ``"ensembl_gene"``, ``"ensembl_transcript"``,</span>
+<span class="sd">            or ``"ensembl_protein"``.</span>
+<span class="sd">        output_db: Target database type (e.g. ``"hgnc_symbol"``, ``"uniprot"``, ``"entrez_gene"``).</span>
+<span class="sd">        species: Species code (e.g. ``"hsapiens"``, ``"mmusculus"``, ``"sscrofa"``, ``"mmulatta"``,</span>
+<span class="sd">            ``"mfascicularis"``).</span>
 <span class="sd">        chunk_size: Number of IDs per API request.</span>
 <span class="sd">        pause: Pause in seconds between requests.</span>
 <span class="sd">        max_retries: Maximum retry attempts per chunk on failure.</span>
@@ -244,11 +246,11 @@
 
 <span class="sd">    Raises:</span>
 <span class="sd">        ValueError: If ``input_db`` is not an Ensembl type.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">gget</span><span class="w"> </span><span class="kn">import</span> <span class="n">info</span> <span class="k">as</span> <span class="n">gget_info</span>  <span class="c1"># type: ignore</span>
     <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">raise_missing_dependency</span><span class="p">(</span><span class="s2">&quot;gget&quot;</span><span class="p">,</span> <span class="n">feature</span><span class="o">=</span><span class="s2">&quot;gget ID mapping backend&quot;</span><span class="p">,</span> <span class="n">original_error</span><span class="o">=</span><span class="n">e</span><span class="p">)</span>
+        <span class="n">raise_missing_dependency</span><span class="p">(</span><span class="s2">"gget"</span><span class="p">,</span> <span class="n">feature</span><span class="o">=</span><span class="s2">"gget ID mapping backend"</span><span class="p">,</span> <span class="n">original_error</span><span class="o">=</span><span class="n">e</span><span class="p">)</span>
 
     <span class="n">inp</span> <span class="o">=</span> <span class="n">canonical_db</span><span class="p">(</span><span class="n">input_db</span><span class="p">)</span>
     <span class="n">outp</span> <span class="o">=</span> <span class="n">canonical_db</span><span class="p">(</span><span class="n">output_db</span><span class="p">)</span>
@@ -256,16 +258,16 @@
     <span class="c1"># Accept multiple input ID types (Ensembl gene/transcript/protein) and</span>
     <span class="c1"># common gene-centric IDs that gget can resolve (HGNC symbol, UniProt, Entrez).</span>
     <span class="k">if</span> <span class="n">inp</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_ENSEMBL_INPUT_DB</span><span class="p">:</span>
-        <span class="n">allowed_str</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">_ENSEMBL_INPUT_DB</span><span class="p">))</span>
+        <span class="n">allowed_str</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">_ENSEMBL_INPUT_DB</span><span class="p">))</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;gget input_db must be one of </span><span class="se">{{</span><span class="si">{</span><span class="n">allowed_str</span><span class="si">}</span><span class="se">}}</span><span class="s2">, got </span><span class="si">{</span><span class="n">inp</span><span class="si">!r}</span><span class="s2">. &quot;</span>
-            <span class="s2">&quot;Tip: gget is Ensembl-centric; for other inputs try method=&#39;mygene&#39; or &#39;gprofiler&#39;.&quot;</span>
+            <span class="sa">f</span><span class="s2">"gget input_db must be one of </span><span class="se">{{</span><span class="si">{</span><span class="n">allowed_str</span><span class="si">}</span><span class="se">}}</span><span class="s2">, got </span><span class="si">{</span><span class="n">inp</span><span class="si">!r}</span><span class="s2">. "</span>
+            <span class="s2">"Tip: gget is Ensembl-centric; for other inputs try method='mygene' or 'gprofiler'."</span>
         <span class="p">)</span>
 
     <span class="n">clean_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">strip_version</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">if</span> <span class="n">strip_versions</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ids</span><span class="p">]</span>
     <span class="n">uniq_ids</span> <span class="o">=</span> <span class="n">_unique_not_null</span><span class="p">(</span><span class="n">clean_ids</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">uniq_ids</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">_ensure_all_inputs</span><span class="p">(</span><span class="n">_empty_result</span><span class="p">(),</span> <span class="n">clean_ids</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">,</span> <span class="s2">&quot;gget&quot;</span><span class="p">,</span> <span class="n">release_used</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_ensure_all_inputs</span><span class="p">(</span><span class="n">_empty_result</span><span class="p">(),</span> <span class="n">clean_ids</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">,</span> <span class="s2">"gget"</span><span class="p">,</span> <span class="n">release_used</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">inspect</span><span class="w"> </span><span class="kn">import</span> <span class="n">signature</span>
@@ -276,42 +278,38 @@
         <span class="n">sig_params</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
 
     <span class="n">kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">_t</span><span class="o">.</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">if</span> <span class="s2">&quot;wrap_text&quot;</span> <span class="ow">in</span> <span class="n">sig_params</span><span class="p">:</span>
-        <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;wrap_text&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="k">if</span> <span class="s2">&quot;pdb&quot;</span> <span class="ow">in</span> <span class="n">sig_params</span><span class="p">:</span>
-        <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;pdb&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="k">if</span> <span class="s2">&quot;ensembl_only&quot;</span> <span class="ow">in</span> <span class="n">sig_params</span><span class="p">:</span>
-        <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;ensembl_only&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="k">if</span> <span class="s2">&quot;json&quot;</span> <span class="ow">in</span> <span class="n">sig_params</span><span class="p">:</span>
-        <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;json&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="k">if</span> <span class="s2">&quot;verbose&quot;</span> <span class="ow">in</span> <span class="n">sig_params</span><span class="p">:</span>
-        <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;verbose&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="k">if</span> <span class="s2">&quot;save&quot;</span> <span class="ow">in</span> <span class="n">sig_params</span><span class="p">:</span>
-        <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;save&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="k">if</span> <span class="s2">&quot;expand&quot;</span> <span class="ow">in</span> <span class="n">sig_params</span><span class="p">:</span>
-        <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;expand&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="s2">"wrap_text"</span> <span class="ow">in</span> <span class="n">sig_params</span><span class="p">:</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">"wrap_text"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="s2">"pdb"</span> <span class="ow">in</span> <span class="n">sig_params</span><span class="p">:</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">"pdb"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="s2">"ensembl_only"</span> <span class="ow">in</span> <span class="n">sig_params</span><span class="p">:</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">"ensembl_only"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="s2">"json"</span> <span class="ow">in</span> <span class="n">sig_params</span><span class="p">:</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">"json"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="s2">"verbose"</span> <span class="ow">in</span> <span class="n">sig_params</span><span class="p">:</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">"verbose"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="s2">"save"</span> <span class="ow">in</span> <span class="n">sig_params</span><span class="p">:</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">"save"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="s2">"expand"</span> <span class="ow">in</span> <span class="n">sig_params</span><span class="p">:</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">"expand"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="n">species_code</span> <span class="o">=</span> <span class="n">canonical_species</span><span class="p">(</span><span class="n">species</span><span class="p">)</span>
-    <span class="n">gget_species</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">&quot;hsapiens&quot;</span><span class="p">:</span> <span class="s2">&quot;homo_sapiens&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;mmusculus&quot;</span><span class="p">:</span> <span class="s2">&quot;mus_musculus&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;sscrofa&quot;</span><span class="p">:</span> <span class="s2">&quot;sus_scrofa&quot;</span><span class="p">,</span>
-    <span class="p">}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">species_code</span><span class="p">,</span> <span class="n">species_code</span><span class="p">)</span>
-    <span class="k">if</span> <span class="s2">&quot;species&quot;</span> <span class="ow">in</span> <span class="n">sig_params</span><span class="p">:</span>
-        <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;species&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gget_species</span>
+    <span class="n">gget_species</span> <span class="o">=</span> <span class="n">_SPECIES_CANONICAL_TO_ENSEMBL</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">species_code</span><span class="p">,</span> <span class="n">species_code</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">"species"</span> <span class="ow">in</span> <span class="n">sig_params</span><span class="p">:</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">"species"</span><span class="p">]</span> <span class="o">=</span> <span class="n">gget_species</span>
 
     <span class="n">frames</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">n_chunks</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">uniq_ids</span><span class="p">)</span> <span class="o">/</span> <span class="n">chunk_size</span><span class="p">)</span>
     <span class="k">with</span> <span class="n">tqdm</span><span class="p">(</span>
         <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">uniq_ids</span><span class="p">),</span>
-        <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;gget&quot;</span><span class="p">,</span>
+        <span class="n">desc</span><span class="o">=</span><span class="s2">"gget"</span><span class="p">,</span>
         <span class="n">mininterval</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
         <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">show_progress</span><span class="p">,</span>
         <span class="n">ncols</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
-        <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;ids&quot;</span><span class="p">,</span>
+        <span class="n">unit</span><span class="o">=</span><span class="s2">"ids"</span><span class="p">,</span>
     <span class="p">)</span> <span class="k">as</span> <span class="n">progress</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">_chunker</span><span class="p">(</span><span class="n">uniq_ids</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">),</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;gget: querying chunk </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">n_chunks</span><span class="si">}</span><span class="s2"> (n=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"gget: querying chunk </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">n_chunks</span><span class="si">}</span><span class="s2"> (n=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
             <span class="n">attempt</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
                 <span class="n">attempt</span> <span class="o">+=</span> <span class="mi">1</span>
@@ -324,13 +322,13 @@
                     <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">part</span><span class="p">)</span>
                     <span class="k">break</span>
                 <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;gget batch failed (attempt </span><span class="si">{</span><span class="n">attempt</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"gget batch failed (attempt </span><span class="si">{</span><span class="n">attempt</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
                     <span class="k">if</span> <span class="n">attempt</span> <span class="o">&gt;=</span> <span class="n">max_retries</span><span class="p">:</span>
                         <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                             <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
                                 <span class="p">{</span>
-                                    <span class="s2">&quot;input_id&quot;</span><span class="p">:</span> <span class="n">chunk</span><span class="p">,</span>
-                                    <span class="s2">&quot;output_id&quot;</span><span class="p">:</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">),</span>
+                                    <span class="s2">"input_id"</span><span class="p">:</span> <span class="n">chunk</span><span class="p">,</span>
+                                    <span class="s2">"output_id"</span><span class="p">:</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">),</span>
                                 <span class="p">}</span>
                             <span class="p">)</span>
                         <span class="p">)</span>
@@ -340,35 +338,35 @@
             <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">pause</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">frames</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">_ensure_all_inputs</span><span class="p">(</span><span class="n">_empty_result</span><span class="p">(),</span> <span class="n">clean_ids</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">,</span> <span class="s2">&quot;gget&quot;</span><span class="p">,</span> <span class="n">release_used</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_ensure_all_inputs</span><span class="p">(</span><span class="n">_empty_result</span><span class="p">(),</span> <span class="n">clean_ids</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">,</span> <span class="s2">"gget"</span><span class="p">,</span> <span class="n">release_used</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 
     <span class="n">out</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="s2">&quot;input_id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">out</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;input_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;input_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">&quot;input_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">"input_id"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">out</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"input_id"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">"input_id"</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">"input_id"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">strip_versions</span><span class="p">:</span>
-        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;input_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">&quot;input_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">strip_version</span><span class="p">)</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"input_id"</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">"input_id"</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">strip_version</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;input_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">&quot;input_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"input_id"</span><span class="p">]</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="s2">"input_id"</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 
-    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;input_db&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">inp</span>
-    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;output_db&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">outp</span>
-    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;gget&quot;</span>
-    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;release_used&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;metadata_json&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_json</span><span class="p">({})</span>
-    <span class="n">out</span> <span class="o">=</span> <span class="n">_ensure_all_inputs</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">clean_ids</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">,</span> <span class="s2">&quot;gget&quot;</span><span class="p">,</span> <span class="n">release_used</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-    <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">([</span><span class="s2">&quot;input_id&quot;</span><span class="p">,</span> <span class="s2">&quot;output_id&quot;</span><span class="p">,</span> <span class="s2">&quot;input_db&quot;</span><span class="p">,</span> <span class="s2">&quot;output_db&quot;</span><span class="p">,</span> <span class="s2">&quot;method&quot;</span><span class="p">,</span> <span class="s2">&quot;release_used&quot;</span><span class="p">])</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">"input_db"</span><span class="p">]</span> <span class="o">=</span> <span class="n">inp</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">"output_db"</span><span class="p">]</span> <span class="o">=</span> <span class="n">outp</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">"method"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"gget"</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">"release_used"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">"metadata_json"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_json</span><span class="p">({})</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">_ensure_all_inputs</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">clean_ids</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">,</span> <span class="s2">"gget"</span><span class="p">,</span> <span class="n">release_used</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">([</span><span class="s2">"input_id"</span><span class="p">,</span> <span class="s2">"output_id"</span><span class="p">,</span> <span class="s2">"input_db"</span><span class="p">,</span> <span class="s2">"output_db"</span><span class="p">,</span> <span class="s2">"method"</span><span class="p">,</span> <span class="s2">"release_used"</span><span class="p">])</span>
     <span class="k">return</span> <span class="n">out</span><span class="p">[</span>
         <span class="p">[</span>
-            <span class="s2">&quot;input_id&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;input_db&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;mapping&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;output_id&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;output_db&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;method&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;release_used&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;metadata_json&quot;</span><span class="p">,</span>
+            <span class="s2">"input_id"</span><span class="p">,</span>
+            <span class="s2">"input_db"</span><span class="p">,</span>
+            <span class="s2">"mapping"</span><span class="p">,</span>
+            <span class="s2">"output_id"</span><span class="p">,</span>
+            <span class="s2">"output_db"</span><span class="p">,</span>
+            <span class="s2">"method"</span><span class="p">,</span>
+            <span class="s2">"release_used"</span><span class="p">,</span>
+            <span class="s2">"metadata_json"</span><span class="p">,</span>
         <span class="p">]</span>
     <span class="p">]</span></div>
 

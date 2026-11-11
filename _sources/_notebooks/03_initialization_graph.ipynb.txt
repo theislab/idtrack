@@ -7,16 +7,17 @@
    "source": [
     "# Part 3 — Graph Initialization & Management\n",
     "\n",
-    "*Last updated:* 2026-01-08\n",
+    "*Last updated:* 2026-11-11\n",
     "\n",
     "This notebook shows how to **build and cache** an IDTrack graph snapshot for:\n",
     "- `homo_sapiens` (human)\n",
     "- `mus_musculus` (mouse)\n",
     "- `sus_scrofa` (pig)\n",
+    "- `macaca_mulatta` (rhesus macaque) and `macaca_fascicularis` (cynomolgus macaque)\n",
     "\n",
     "A graph build is the most expensive step. The good news:\n",
     "- you usually do it **once per organism + snapshot boundary + external YAML configuration**\n",
-    "- the snapshot can be **multi-assembly** (human has overlapping GRCh38/GRCh37; mouse/pig are clean-handoff by release but legacy builds are supported)\n",
+    "- the snapshot can be **multi-assembly** (human has overlapping GRCh38/GRCh37; mouse, pig and the macaques are clean-handoff by release but legacy builds are supported)\n",
     "- then you reuse the cached graph for fast conversions\n",
     "\n",
     "**Learning objectives**\n",
@@ -24,7 +25,8 @@
     "- Verify that the snapshot exists on disk.\n",
     "- Learn practical graph-management habits (reload vs rebuild, cache hygiene).\n",
     "\n",
-    "> **Prerequisite:** run `02_prepare_new_external_yaml.ipynb` first (especially important for mouse and pig).\n"
+    "> **Prerequisite:** every supported organism ships a default external YAML; run `02_prepare_new_external_yaml.ipynb` first only if\n",
+    "> you want your own selection of external databases.\n"
    ]
   },
   {
@@ -89,9 +91,10 @@
    "id": "ebfc85d3",
    "metadata": {},
    "source": [
-    "## 3.0.1 — Sanity check: do your external YAML files exist?\n",
+    "## 3.0.1 — Sanity check: which external YAML files will be used?\n",
     "\n",
-    "Human has a packaged default, but for mouse and pig you should have local `*_externals_modified.yml` files.\n"
+    "Every supported organism ships a packaged default (`idtrack/default_config/<organism>_externals_modified.yml`); a file of the same\n",
+    "name in your local repository (created in Part 2) takes precedence."
    ]
   },
   {
@@ -111,18 +114,26 @@
     }
    ],
    "source": [
-    "# External YAML presence (created in Part 2)\n",
-    "human_yaml = LOCAL_REPOSITORY / 'homo_sapiens_externals_modified.yml'\n",
-    "mouse_yaml = LOCAL_REPOSITORY / 'mus_musculus_externals_modified.yml'\n",
-    "pig_yaml = LOCAL_REPOSITORY / 'sus_scrofa_externals_modified.yml'\n",
+    "# External YAML presence: local repository first (created in Part 2), else the packaged default\n",
+    "DEFAULT_CONFIG = Path(idtrack.__file__).parent / 'default_config'\n",
     "\n",
-    "HAS_HUMAN_YAML = human_yaml.exists()\n",
-    "HAS_MOUSE_YAML = mouse_yaml.exists()\n",
-    "HAS_PIG_YAML = pig_yaml.exists()\n",
     "\n",
-    "print((\"OK\" if HAS_HUMAN_YAML else \"NOTE: missing (human can fall back to packaged default)\").ljust(55), human_yaml.name)\n",
-    "print((\"OK\" if HAS_MOUSE_YAML else \"MISSING (create in Part 2 for mouse)\").ljust(55), mouse_yaml.name)\n",
-    "print((\"OK\" if HAS_PIG_YAML else \"MISSING (create in Part 2 for pig)\").ljust(55), pig_yaml.name)\n"
+    "def _yaml_status(organism):\n",
+    "    local = LOCAL_REPOSITORY / f'{organism}_externals_modified.yml'\n",
+    "    shipped = DEFAULT_CONFIG / local.name\n",
+    "    if local.exists():\n",
+    "        return True, 'OK', local.name\n",
+    "    if shipped.exists():\n",
+    "        return True, 'OK (packaged default)', local.name\n",
+    "    return False, 'MISSING (create it in Part 2)', local.name\n",
+    "\n",
+    "\n",
+    "HAS_HUMAN_YAML, *_human = _yaml_status('homo_sapiens')\n",
+    "HAS_MOUSE_YAML, *_mouse = _yaml_status('mus_musculus')\n",
+    "HAS_PIG_YAML, *_pig = _yaml_status('sus_scrofa')\n",
+    "\n",
+    "for status, name in (_human, _mouse, _pig):\n",
+    "    print(status.ljust(55), name)"
    ]
   },
   {
@@ -481,7 +492,7 @@
    "source": [
     "### 3.2 — Mouse graph initialization (clean handoff)\n",
     "\n",
-    "Mouse is a clean-handoff species (one maintained assembly per release: GRCm37 → GRCm38 → GRCm39). Older assemblies mainly matter for\n",
+    "Mouse is a clean-handoff species (one maintained assembly per release: NCBIM37 → GRCm38 → GRCm39). Older assemblies mainly matter for\n",
     "legacy datasets and archive releases; you typically do not have overlapping assemblies within the same release.\n"
    ]
   },
@@ -1116,7 +1127,7 @@
    "source": [
     "### 3.3 — Pig graph initialization (clean handoff)\n",
     "\n",
-    "Pig is a clean-handoff species (one maintained assembly per release: Sscrofa9.2 → Sscrofa10.2 → Sscrofa11.1). Older assemblies mainly\n",
+    "Pig is a clean-handoff species (one maintained assembly per release: Sscrofa9 → Sscrofa10.2 → Sscrofa11.1). Older assemblies mainly\n",
     "matter for legacy datasets and archive releases; you typically do not have overlapping assemblies within the same release.\n"
    ]
   },
@@ -1779,10 +1790,79 @@
   },
   {
    "cell_type": "markdown",
+   "id": "3a2e612a",
+   "metadata": {},
+   "source": [
+    "### 3.4 — Rhesus and cynomolgus macaque graph initialization (clean handoff)\n",
+    "\n",
+    "Both macaques are clean-handoff species:\n",
+    "- rhesus (`macaca_mulatta`): MMUL_1 (key `1`, releases 48–85) → Mmul_8.0.1 (`801`, 86–97) → Mmul_10 (`10`, 98+)\n",
+    "- cynomolgus (`macaca_fascicularis`): Macaca_fascicularis_5.0 (`5`, 91–102) → 6.0 (`6`, 103+)\n",
+    "\n",
+    "The snapshot graph links the assemblies through Ensembl's own history (e.g. rhesus 85 → 86 and 97 → 98), so identifiers from an\n",
+    "older genome build convert to the current one. Gene symbols are VGNC symbols on the current assemblies and HGNC symbols on the older\n",
+    "ones; both are enabled in the shipped YAML files. Rhesus and cynomolgus are two organisms and two graphs.\n",
+    "\n",
+    "The full builds read every release since 48 (rhesus) or 91 (cynomolgus); they work over HTTPS alone (`IDTRACK_ENSEMBL_ACCESS=https`)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "dc531070",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "HAS_MMUL_YAML, *_mmul = _yaml_status('macaca_mulatta')\n",
+    "HAS_MFAS_YAML, *_mfas = _yaml_status('macaca_fascicularis')\n",
+    "for status, name in (_mmul, _mfas):\n",
+    "    print(status.ljust(55), name)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "f415adb4",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%%collapse Click to show build logs\n",
+    "# Included for tutorial purposes only.\n",
+    "\n",
+    "# Build (or load) the rhesus macaque graph snapshot\n",
+    "organism, latest_release = api.resolve_organism('macaca_mulatta')\n",
+    "if HAS_MMUL_YAML:\n",
+    "    api.build_graph(organism_name=organism, snapshot_release=latest_release, calculate_caches=False)\n",
+    "    print('Assemblies in this graph:', sorted(api.list_genome_assemblies()))\n",
+    "else:\n",
+    "    print('Skipping rhesus build: macaca_mulatta_externals_modified.yml is missing (run Part 2 first).')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "3407e182",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%%collapse Click to show build logs\n",
+    "# Included for tutorial purposes only.\n",
+    "\n",
+    "# Build (or load) the cynomolgus macaque graph snapshot\n",
+    "organism, latest_release = api.resolve_organism('macaca_fascicularis')\n",
+    "if HAS_MFAS_YAML:\n",
+    "    api.build_graph(organism_name=organism, snapshot_release=latest_release, calculate_caches=False)\n",
+    "    print('Assemblies in this graph:', sorted(api.list_genome_assemblies()))\n",
+    "else:\n",
+    "    print('Skipping cynomolgus build: macaca_fascicularis_externals_modified.yml is missing (run Part 2 first).')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
    "id": "52d4dbd4",
    "metadata": {},
    "source": [
-    "## 3.4 — Graph management (all species)\n",
+    "## 3.5 — Graph management (all species)\n",
     "\n",
     "### Reloading vs rebuilding\n",
     "\n",

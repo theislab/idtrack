@@ -31,7 +31,7 @@ There are many ways to contribute to IDTrack, regardless of your experience leve
     * - **Submit Code**
       - Fix bugs or implement new features
     * - **Add Organism Support**
-      - Configure external databases for new species
+      - Declare a new species and configure its external databases (see `Adding Organism Support`_)
     * - **Answer Questions**
       - Help other users in discussions and issues
 
@@ -251,7 +251,8 @@ List available sessions:
 
     $ nox --list-sessions
 
-Run only unit tests:
+Run the default test suite (everything except tests marked ``slow``; network-backed integration tests skip
+themselves when Ensembl is not reachable):
 
 .. code-block:: console
 
@@ -277,7 +278,10 @@ For faster iteration during development:
     $ poetry run pytest --runslow
 
     # Run a specific test file
-    $ poetry run pytest tests/test_api.py
+    $ poetry run pytest tests/unit/test_api.py
+
+    # Run the HTTPS-dump integration tests (they need only HTTPS access to Ensembl)
+    $ poetry run pytest --runslow tests/integration/test_ensembl_ftp_fallback.py
 
     # Run tests matching a pattern
     $ poetry run pytest -k "test_convert"
@@ -299,11 +303,18 @@ Tests are located in the ``tests/`` directory:
 .. code-block:: text
 
     tests/
-    ├── test_api.py           # Public API tests
-    ├── test_graph.py         # Graph engine tests
-    ├── test_harmonize.py     # Harmonization tests
-    ├── conftest.py           # Shared fixtures
-    └── ...
+    ├── conftest.py               # Shared fixtures, markers and the per-organism real-graph settings
+    ├── _real_graph_builder.py    # Builds the tiny real graphs of the end-to-end tests (MySQL or HTTPS)
+    ├── test_main.py              # Command-line entry point
+    ├── test_external_mappers.py  # External mapping backends (slow classes query live services)
+    ├── unit/                     # Offline tests, one file per module (test_api.py, test_db.py, ...)
+    └── integration/              # Network-backed tests against Ensembl (MySQL and HTTPS dumps, end to end)
+
+Markers: ``slow`` (skipped unless ``--runslow`` or ``IDTRACK_SKIP_SLOW=0``), ``network``, ``integration`` and
+``database``. The end-to-end tests run for every organism that ships a default externals YAML
+(``IDTRACK_TEST_ORGANISMS=a,b`` selects others); their small real graphs are cached in
+``IDTRACK_TEST_CACHE_DIR``. Where the Ensembl MySQL ports are closed, the graphs are built from the HTTPS dumps,
+which happens only with ``--runslow``.
 
 
 Building Documentation
@@ -534,17 +545,55 @@ Example Function
 Adding Organism Support
 -----------------------
 
-Want to add support for a new organism? This involves configuring external databases
-for the species.
+An organism is declared in one place, the organism table ``DB.assembly_mysqlport_priority`` in
+``idtrack/_db.py``; everything else (supported organisms, assembly node types, assembly priorities) is derived
+from it. Rhesus and cynomolgus macaque were added this way. The recipe:
 
-See the detailed tutorial: :doc:`_notebooks/02_prepare_new_external_yaml`
+1. **Establish the assemblies.** List the organism's core databases in Ensembl's dump listings
+   (``https://ftp.ensembl.org/pub/release-<n>/mysql/``): each is named
+   ``<organism>_core_<release>_<code>[patch letter]``. Read each assembly's name from the ``meta`` table
+   (``assembly.default``) and note the first and last release of each code. Check that every release has one
+   assembly (a clean handoff) or note where two overlap (as human GRCh37 and GRCh38 do).
 
-The general process is:
+2. **Write the table entry.** One entry per assembly, keyed by an integer that is unique within the organism:
 
-1. **Create a YAML configuration** for external databases
-2. **Test the configuration** with graph builds
-3. **Validate conversion accuracy** against known mappings
-4. **Submit a pull request** with the new configuration
+   .. code-block:: python
+
+       "macaca_mulatta": {
+           10: {"Name": "Mmul_10", "Ports": [3306, 5306], "Priority": 1, "ReleaseRange": [98, None]},
+           801: {"Name": "Mmul_8.0.1", "Ports": [3306, 5306], "Priority": 2, "ReleaseRange": [86, 97]},
+           1: {"Name": "MMUL_1", "DbSuffix": "10", "Ports": [3306, 5306], "Priority": 3, "ReleaseRange": [48, 85]},
+       },
+
+   The key equals Ensembl's code where that is unambiguous. Where Ensembl reuses a code for two assemblies of
+   the organism (rhesus ``_10`` is MMUL_1 up to 85 and Mmul_10 from 98), the earlier assembly gets its own key
+   and names the shared code in ``DbSuffix``; their ``ReleaseRange`` values must not overlap. ``Ports`` are the
+   public MySQL ports in preference order (3306 and 5306 serve release 48 onwards; 3337 hosts the GRCh37
+   archive); ``Priority`` 1 is the preferred, newest assembly. Add the organism's symbol databases to
+   ``DB.symbol_databases`` (e.g. ``("VGNC Symbol", "HGNC Symbol")``). The table is validated at import.
+
+3. **Try it without editing the package.** ``idtrack.DB.register_organism(name, assemblies,
+   symbol_databases)`` adds the same entry for the running Python session, validates it, and recomputes
+   everything derived from the table.
+
+4. **Make the externals file.** Generate the template over every release and form
+   (``DatabaseManager.create_database_content()`` and ``ExternalDatabases.create_template_yaml()``), switch on the
+   allowlisted databases with ``idtrack._default_externals.apply_allowlist`` (add the organism's allowlist to
+   ``DEFAULT_EXTERNALS`` there and to tutorial 02), and ship ``<organism>_externals_template.yml`` and
+   ``<organism>_externals_modified.yml`` in ``idtrack/default_config/``. See
+   :doc:`_notebooks/02_prepare_new_external_yaml`. When Ensembl publishes a new release, extend the shipped files
+   with ``ExternalDatabases.extend_modified_yaml`` instead of regenerating them.
+
+5. **Teach the tests.** Add a row per assembly to ``EXPECTED_RANGES`` in
+   ``tests/integration/test_ensembl_ftp_fallback.py`` and the organism's defaults (assembly, release window, seed
+   genes) to ``REAL_GRAPH_DEFAULTS`` in ``tests/conftest.py``. The unit tests check the table, the allowlist and
+   the shipped files; the live MySQL tests check ports and releases where MySQL is reachable.
+
+6. **Document it.** Add the organism to the Supported Organisms table in :doc:`usage` and to the tutorials that
+   list organisms.
+
+7. **Validate and submit.** Build a small graph across each assembly handoff, convert known identifiers, and
+   open a pull request with the table entry, the externals files, the tests and the docs.
 
 
 Getting Help

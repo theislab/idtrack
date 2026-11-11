@@ -9,7 +9,7 @@
   <title>Part 0 — Conceptual Foundation &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
-      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
       <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
       <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
       <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=0e72a3a5" />
@@ -20,7 +20,7 @@
       <script src="../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
-      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
       <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
       <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
@@ -100,6 +100,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
@@ -263,6 +264,8 @@
 <li><p>human: <strong>GRCh38</strong> and <strong>GRCh37</strong></p></li>
 <li><p>mouse: <strong>GRCm39</strong> and <strong>GRCm38</strong></p></li>
 <li><p>pig: <strong>Sscrofa11.1</strong> and <strong>Sscrofa10.2</strong></p></li>
+<li><p>rhesus macaque: <strong>Mmul_10</strong>, <strong>Mmul_8.0.1</strong> and <strong>MMUL_1</strong></p></li>
+<li><p>cynomolgus macaque: <strong>Macaca_fascicularis_6.0</strong> and <strong>5.0</strong></p></li>
 </ul>
 <p>Why this matters in practice: two datasets can use the “same kind of identifiers” but still be anchored to different builds because they were annotated with different GTFs or reference packages. That is a very common atlas-building situation.</p>
 <p>IDTrack treats assemblies as a first-class part of the graph. A snapshot is not only “release-bounded in time” — it can also be <strong>multi-assembly</strong>:</p>
@@ -272,7 +275,7 @@
 <li><p>some external databases are only present (or only reliable) on specific assembly/release combinations, so having multiple assemblies available can increase connectivity</p></li>
 </ul>
 <p>In most projects you choose a single <strong>target</strong> (a snapshot boundary + a primary assembly for output), and use IDTrack to bring mixed inputs into that target in a reproducible way.</p>
-<p>Human is the main case where two assemblies are actively supported in parallel (GRCh38 + GRCh37). Mouse and pig are generally <em>clean-handoff</em> species (one maintained assembly per release), but older assemblies still matter for legacy datasets.</p>
+<p>Human is the main case where two assemblies are actively supported in parallel (GRCh38 + GRCh37). Mouse, pig and the two macaques are <em>clean-handoff</em> species (one maintained assembly per release), but older assemblies still matter for legacy datasets.</p>
 </section>
 <section id="0.2.5-—-Key-Abstractions-You-Will-Use">
 <h3>0.2.5 — Key Abstractions You Will Use<a class="headerlink" href="#0.2.5-—-Key-Abstractions-You-Will-Use" title="Link to this heading"></a></h3>
@@ -347,14 +350,14 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 
-<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;IDTRACK_LOCAL_REPO&#39;</span><span class="p">,</span> <span class="s1">&#39;./idtrack_cache&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'./idtrack_cache'</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
 <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
 <span class="n">api</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;IDTrack version:&#39;</span><span class="p">,</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Local repository:&#39;</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'IDTrack version:'</span><span class="p">,</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Local repository:'</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -378,11 +381,11 @@ Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_not
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 2) Resolve organism names the way IDTrack expects</span>
-<span class="c1"># You can use common names (&#39;human&#39;), scientific names, taxon IDs, or Ensembl-style names.</span>
+<span class="c1"># You can use common names ('human'), scientific names, taxon IDs, or Ensembl-style names.</span>
 
-<span class="k">for</span> <span class="n">query</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;human&#39;</span><span class="p">,</span> <span class="s1">&#39;mus musculus&#39;</span><span class="p">,</span> <span class="s1">&#39;sus scrofa&#39;</span><span class="p">]:</span>
+<span class="k">for</span> <span class="n">query</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">'human'</span><span class="p">,</span> <span class="s1">'mus musculus'</span><span class="p">,</span> <span class="s1">'sus scrofa'</span><span class="p">]:</span>
     <span class="n">formal_name</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">query</span><span class="si">!r}</span><span class="s1"> -&gt; </span><span class="si">{</span><span class="n">formal_name</span><span class="si">!r}</span><span class="s1"> (latest Ensembl release: </span><span class="si">{</span><span class="n">latest_release</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">query</span><span class="si">!r}</span><span class="s1"> -&gt; </span><span class="si">{</span><span class="n">formal_name</span><span class="si">!r}</span><span class="s1"> (latest Ensembl release: </span><span class="si">{</span><span class="n">latest_release</span><span class="si">}</span><span class="s1">)'</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -425,7 +428,9 @@ Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_not
 <li><p><code class="docutils literal notranslate"><span class="pre">'human'</span> <span class="pre">-&gt;</span> <span class="pre">'homo_sapiens'</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">'mus</span> <span class="pre">musculus'</span> <span class="pre">-&gt;</span> <span class="pre">'mus_musculus'</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">'sus</span> <span class="pre">scrofa'</span> <span class="pre">-&gt;</span> <span class="pre">'sus_scrofa'</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'Macaca</span> <span class="pre">mulatta'</span></code> or <code class="docutils literal notranslate"><span class="pre">9544</span></code> -&gt; <code class="docutils literal notranslate"><span class="pre">'macaca_mulatta'</span></code></p></li>
 </ul>
+<p>Matching is case-insensitive. Species names and taxon IDs always resolve; a common name shared by several Ensembl species (e.g. <code class="docutils literal notranslate"><span class="pre">'pig'</span></code>, which every pig breed in Ensembl carries) raises an error that lists the candidates.</p>
 <p>From now on, the tutorials use the <strong>formal Ensembl names</strong> (snake_case).</p>
 </section>
 <section id="0.4-—-Tutorial-Roadmap-(Recommended-Order)">
@@ -450,7 +455,8 @@ Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_not
 <li><p><strong>Network</strong>: first-time runs need to reach Ensembl services (REST + HTTPS/FTP dumps; MySQL is optional).</p></li>
 <li><p><strong>Disk space</strong>: building graphs can use multiple GB.</p></li>
 <li><p><strong>Snapshot boundary + assemblies</strong>: the snapshot release must exist for the organism and the chosen primary assembly. Older assemblies have different release coverage; a multi-assembly snapshot can still include them when they exist within the release window.</p></li>
-<li><p><strong>External YAML</strong>: for mouse/pig you must create a <code class="docutils literal notranslate"><span class="pre">*_externals_modified.yml</span></code> in your local repository.</p></li>
+<li><p><strong>External YAML</strong>: every supported organism ships a default; a <code class="docutils literal notranslate"><span class="pre">*_externals_modified.yml</span></code> in your local repository overrides it. If a graph build warns that releases have no entry in the YAML, extend the file (Part 2, section 2.6).</p></li>
+<li><p><strong>Blocked MySQL ports</strong>: set <code class="docutils literal notranslate"><span class="pre">IDTRACK_ENSEMBL_ACCESS=https</span></code> to skip MySQL entirely (same rows and values; over HTTPS a text column holding only digit strings is read as numbers).</p></li>
 </ol>
 <blockquote>
 <div><p><strong>Tip:</strong> For a deeper checklist (including diagnostics helpers), see Part 7.3 in <code class="docutils literal notranslate"><span class="pre">07_advanced_topics.ipynb</span></code>.</p>

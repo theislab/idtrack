@@ -1,0 +1,395 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack._default_externals &mdash; idtrack 0.0.5 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=282f96c0"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />  
+<!-- Google tag (gtag.js) -->
+<script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"
+></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-FYKLWNJBVK");
+</script>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changes.html">Changes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack._default_externals</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack._default_externals</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+
+<span class="c1"># Kemal Inecik</span>
+<span class="c1"># k.inecik@gmail.com</span>
+
+<span class="sd">"""Allowlists of the externals YAML files shipped in ``idtrack/default_config``.</span>
+
+<span class="sd">A shipped ``&lt;organism&gt;_externals_modified.yml`` is the organism's template (made by</span>
+<span class="sd">:py:meth:`idtrack._database_manager.DatabaseManager.create_database_content` and</span>
+<span class="sd">:py:meth:`idtrack._external_databases.ExternalDatabases.create_template_yaml` over every release and form) with</span>
+<span class="sd">``Include: true`` set for the ``(form, database, assembly)`` entries of the organism's allowlist below, by</span>
+<span class="sd">:py:func:`apply_allowlist`. Nothing else differs between template and modified file. The lists follow one</span>
+<span class="sd">conceptual set for every organism, with the species' own symbol databases:</span>
+
+<span class="sd">* **gene**: clone-based, Havana and Vega names, EntrezGene / NCBI gene, RFAM, UniProtKB gene names, the species'</span>
+<span class="sd">  symbol source(s), and the ``synonym_id::`` forms of the identifier and symbol databases;</span>
+<span class="sd">* **transcript**: CCDS, Havana transcripts and RefSeq mRNA / ncRNA (curated and predicted);</span>
+<span class="sd">* **translation**: Havana translations, RefSeq peptides (curated and predicted) and UniProt (Swiss-Prot, TrEMBL).</span>
+
+<span class="sd">Names that an organism's template does not contain are skipped. Tutorial 02</span>
+<span class="sd">(``docs/_notebooks/02_prepare_new_external_yaml.ipynb``) shows the same lists as editable dictionaries.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="c1"># Allowlist type: {form: {database name: [assembly keys]}}</span>
+<span class="n">Allowlist</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span>
+
+
+<div class="viewcode-block" id="_allowlist">
+<a class="viewcode-back" href="../../reference.html#idtrack._default_externals._allowlist">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_allowlist</span><span class="p">(</span><span class="n">assemblies</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="o">**</span><span class="n">forms</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Allowlist</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Build ``{form: {database: assemblies}}`` with the same assemblies for every database."""</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">form</span><span class="p">:</span> <span class="p">{</span><span class="n">db</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">assemblies</span><span class="p">)</span> <span class="k">for</span> <span class="n">db</span> <span class="ow">in</span> <span class="n">databases</span><span class="p">}</span> <span class="k">for</span> <span class="n">form</span><span class="p">,</span> <span class="n">databases</span> <span class="ow">in</span> <span class="n">forms</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span></div>
+
+
+
+<span class="n">DEFAULT_EXTERNALS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Allowlist</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># Human: HGNC symbols.</span>
+    <span class="s2">"homo_sapiens"</span><span class="p">:</span> <span class="n">_allowlist</span><span class="p">(</span>
+        <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="n">gene</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Clone_based_ensembl_gene"</span><span class="p">,</span>
+            <span class="s2">"Clone_based_vega_gene"</span><span class="p">,</span>
+            <span class="s2">"EntrezGene"</span><span class="p">,</span>
+            <span class="s2">"HGNC Symbol"</span><span class="p">,</span>
+            <span class="s2">"Havana gene"</span><span class="p">,</span>
+            <span class="s2">"NCBI gene"</span><span class="p">,</span>
+            <span class="s2">"NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
+            <span class="s2">"RFAM"</span><span class="p">,</span>
+            <span class="s2">"UniProtKB Gene Name"</span><span class="p">,</span>
+            <span class="s2">"Vega gene"</span><span class="p">,</span>
+            <span class="s2">"Vega_gene"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::EntrezGene"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::HGNC Symbol"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::NCBI gene"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::UniProtKB Gene Name"</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">transcript</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"CCDS"</span><span class="p">,</span>
+            <span class="s2">"Havana transcript"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_mRNA"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_mRNA_predicted"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_ncRNA"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_ncRNA_predicted"</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">translation</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Havana translation"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_peptide"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_peptide_predicted"</span><span class="p">,</span>
+            <span class="s2">"Uniprot/SPTREMBL"</span><span class="p">,</span>
+            <span class="s2">"Uniprot/SWISSPROT"</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">),</span>
+    <span class="c1"># Mouse: MGI symbols.</span>
+    <span class="s2">"mus_musculus"</span><span class="p">:</span> <span class="n">_allowlist</span><span class="p">(</span>
+        <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="n">gene</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Clone_based_ensembl_gene"</span><span class="p">,</span>
+            <span class="s2">"Clone_based_vega_gene"</span><span class="p">,</span>
+            <span class="s2">"EntrezGene"</span><span class="p">,</span>
+            <span class="s2">"MGI Symbol"</span><span class="p">,</span>
+            <span class="s2">"Havana gene"</span><span class="p">,</span>
+            <span class="s2">"NCBI gene"</span><span class="p">,</span>
+            <span class="s2">"NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
+            <span class="s2">"RFAM"</span><span class="p">,</span>
+            <span class="s2">"UniProtKB Gene Name"</span><span class="p">,</span>
+            <span class="s2">"Vega gene"</span><span class="p">,</span>
+            <span class="s2">"Vega_gene"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::EntrezGene"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::MGI Symbol"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::NCBI gene"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::UniProtKB Gene Name"</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">transcript</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"CCDS"</span><span class="p">,</span>
+            <span class="s2">"Havana transcript"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_mRNA"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_mRNA_predicted"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_ncRNA"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_ncRNA_predicted"</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">translation</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Havana translation"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_peptide"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_peptide_predicted"</span><span class="p">,</span>
+            <span class="s2">"Uniprot/SPTREMBL"</span><span class="p">,</span>
+            <span class="s2">"Uniprot/SWISSPROT"</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">),</span>
+    <span class="c1"># Pig: HGNC symbols on Sscrofa10.2, VGNC symbols on Sscrofa11.1.</span>
+    <span class="s2">"sus_scrofa"</span><span class="p">:</span> <span class="n">_allowlist</span><span class="p">(</span>
+        <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="n">gene</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Clone_based_ensembl_gene"</span><span class="p">,</span>
+            <span class="s2">"Clone_based_vega_gene"</span><span class="p">,</span>
+            <span class="s2">"EntrezGene"</span><span class="p">,</span>
+            <span class="s2">"HGNC Symbol"</span><span class="p">,</span>
+            <span class="s2">"VGNC Symbol"</span><span class="p">,</span>
+            <span class="s2">"Havana gene"</span><span class="p">,</span>
+            <span class="s2">"NCBI gene"</span><span class="p">,</span>
+            <span class="s2">"NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
+            <span class="s2">"RFAM"</span><span class="p">,</span>
+            <span class="s2">"UniProtKB Gene Name"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::EntrezGene"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::HGNC Symbol"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::NCBI gene"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::UniProtKB Gene Name"</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">transcript</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Havana transcript"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_mRNA"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_mRNA_predicted"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_ncRNA"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_ncRNA_predicted"</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">translation</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"RefSeq_peptide"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_peptide_predicted"</span><span class="p">,</span>
+            <span class="s2">"Uniprot/SPTREMBL"</span><span class="p">,</span>
+            <span class="s2">"Uniprot/SWISSPROT"</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">),</span>
+    <span class="c1"># Rhesus macaque: HGNC symbols on MMUL_1 and Mmul_8.0.1, VGNC symbols on Mmul_10. Names a release does not</span>
+    <span class="c1"># have (e.g. CCDS, Vega) are skipped when the allowlist is applied.</span>
+    <span class="s2">"macaca_mulatta"</span><span class="p">:</span> <span class="n">_allowlist</span><span class="p">(</span>
+        <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="n">gene</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Clone_based_ensembl_gene"</span><span class="p">,</span>
+            <span class="s2">"Clone_based_vega_gene"</span><span class="p">,</span>
+            <span class="s2">"EntrezGene"</span><span class="p">,</span>
+            <span class="s2">"HGNC Symbol"</span><span class="p">,</span>
+            <span class="s2">"VGNC Symbol"</span><span class="p">,</span>
+            <span class="s2">"Havana gene"</span><span class="p">,</span>
+            <span class="s2">"NCBI gene"</span><span class="p">,</span>
+            <span class="s2">"NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
+            <span class="s2">"RFAM"</span><span class="p">,</span>
+            <span class="s2">"UniProtKB Gene Name"</span><span class="p">,</span>
+            <span class="s2">"Vega gene"</span><span class="p">,</span>
+            <span class="s2">"Vega_gene"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::EntrezGene"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::HGNC Symbol"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::VGNC Symbol"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::NCBI gene"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::UniProtKB Gene Name"</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">transcript</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"CCDS"</span><span class="p">,</span>
+            <span class="s2">"Havana transcript"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_mRNA"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_mRNA_predicted"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_ncRNA"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_ncRNA_predicted"</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">translation</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Havana translation"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_peptide"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_peptide_predicted"</span><span class="p">,</span>
+            <span class="s2">"Uniprot/SPTREMBL"</span><span class="p">,</span>
+            <span class="s2">"Uniprot/SWISSPROT"</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">),</span>
+    <span class="c1"># Cynomolgus macaque: HGNC symbols on 5.0, VGNC (and few HGNC) symbols on 6.0.</span>
+    <span class="s2">"macaca_fascicularis"</span><span class="p">:</span> <span class="n">_allowlist</span><span class="p">(</span>
+        <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="n">gene</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Clone_based_ensembl_gene"</span><span class="p">,</span>
+            <span class="s2">"Clone_based_vega_gene"</span><span class="p">,</span>
+            <span class="s2">"EntrezGene"</span><span class="p">,</span>
+            <span class="s2">"HGNC Symbol"</span><span class="p">,</span>
+            <span class="s2">"VGNC Symbol"</span><span class="p">,</span>
+            <span class="s2">"Havana gene"</span><span class="p">,</span>
+            <span class="s2">"NCBI gene"</span><span class="p">,</span>
+            <span class="s2">"NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
+            <span class="s2">"RFAM"</span><span class="p">,</span>
+            <span class="s2">"UniProtKB Gene Name"</span><span class="p">,</span>
+            <span class="s2">"Vega gene"</span><span class="p">,</span>
+            <span class="s2">"Vega_gene"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::EntrezGene"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::HGNC Symbol"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::VGNC Symbol"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::NCBI gene"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::NCBI gene (formerly Entrezgene)"</span><span class="p">,</span>
+            <span class="s2">"synonym_id::UniProtKB Gene Name"</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">transcript</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"CCDS"</span><span class="p">,</span>
+            <span class="s2">"Havana transcript"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_mRNA"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_mRNA_predicted"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_ncRNA"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_ncRNA_predicted"</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">translation</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Havana translation"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_peptide"</span><span class="p">,</span>
+            <span class="s2">"RefSeq_peptide_predicted"</span><span class="p">,</span>
+            <span class="s2">"Uniprot/SPTREMBL"</span><span class="p">,</span>
+            <span class="s2">"Uniprot/SWISSPROT"</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">),</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="apply_allowlist">
+<a class="viewcode-back" href="../../reference.html#idtrack._default_externals.apply_allowlist">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">apply_allowlist</span><span class="p">(</span>
+    <span class="n">template</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">allowlist</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]:</span>
+<span class="w">    </span><span class="sd">"""Return a copy of an externals template with ``Include: true`` for the allowlisted entries.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        template: Parsed ``&lt;organism&gt;_externals_template.yml`` (``{organism: {form: {database: {...}}}}``).</span>
+<span class="sd">        organism: Organism whose section is edited.</span>
+<span class="sd">        allowlist: ``{form: {database: [assembly keys]}}`` (e.g. ``DEFAULT_EXTERNALS[organism]``).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple[dict, int, list[tuple[str, str]]]: The modified copy, the number of ``(form, database, assembly)``</span>
+<span class="sd">        entries switched on, and the allowlisted ``(form, database)`` pairs that the template does not contain.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        KeyError: If the template has no section for *organism*.</span>
+<span class="sd">    """</span>
+    <span class="n">modified</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">template</span><span class="p">))</span>
+    <span class="n">section</span> <span class="o">=</span> <span class="n">modified</span><span class="p">[</span><span class="n">organism</span><span class="p">]</span>
+    <span class="n">enabled</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">absent</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">form</span><span class="p">,</span> <span class="n">databases</span> <span class="ow">in</span> <span class="n">allowlist</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">db_name</span><span class="p">,</span> <span class="n">assemblies</span> <span class="ow">in</span> <span class="n">databases</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">entry</span> <span class="o">=</span> <span class="p">(</span><span class="n">section</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">form</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">db_name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">entry</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">absent</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">form</span><span class="p">,</span> <span class="n">db_name</span><span class="p">))</span>
+                <span class="k">continue</span>
+            <span class="k">for</span> <span class="n">assembly</span> <span class="ow">in</span> <span class="n">assemblies</span><span class="p">:</span>
+                <span class="n">item</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"Assembly"</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">assembly</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">item</span><span class="p">[</span><span class="s2">"Include"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="n">enabled</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">modified</span><span class="p">,</span> <span class="n">enabled</span><span class="p">,</span> <span class="n">absent</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

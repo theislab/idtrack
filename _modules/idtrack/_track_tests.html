@@ -8,7 +8,7 @@
   <title>idtrack._track_tests &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
-      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
       <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
 
@@ -18,7 +18,7 @@
       <script src="../../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
-      <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -66,6 +66,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
@@ -123,7 +124,7 @@
 <div class="viewcode-block" id="TrackTests">
 <a class="viewcode-back" href="../../reference.html#idtrack._track_tests.TrackTests">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">TrackTests</span><span class="p">(</span><span class="n">Track</span><span class="p">,</span> <span class="n">ABC</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Developer-facing integrity-test harness for :py:class:`~idtrack.Track`.</span>
+<span class="w">    </span><span class="sd">"""Developer-facing integrity-test harness for :py:class:`~idtrack.Track`.</span>
 
 <span class="sd">    This module defines :py:class:`TrackTests`, a mix-in that adds an extensive</span>
 <span class="sd">    white-box test suite to a populated :py:class:`idtrack.Track` instance.  The</span>
@@ -153,30 +154,30 @@
 <span class="sd">    Note:</span>
 <span class="sd">        The class is *not* designed for production; instantiate it only in test</span>
 <span class="sd">        suites or interactive debugging sessions.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the test harness.</span>
+<span class="w">        </span><span class="sd">"""Initialize the test harness.</span>
 
 <span class="sd">        All positional and keyword arguments are forwarded verbatim to</span>
 <span class="sd">        :py:class:`~idtrack.Track.__init__`.  Besides constructing the underlying</span>
 <span class="sd">        graph, the initializer sets up a dedicated :py:data:`logging.Logger`</span>
-<span class="sd">        named ``&quot;track_tests&quot;`` so individual test routines can emit structured</span>
+<span class="sd">        named ``"track_tests"`` so individual test routines can emit structured</span>
 <span class="sd">        diagnostics without polluting the main application log.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            args: Positional arguments accepted by :py:class:`~idtrack.Track.__init__`.</span>
 <span class="sd">            kwargs: Keyword arguments accepted by :py:class:`~idtrack.Track.__init__`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>  <span class="c1"># Sub-class initialization</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;track_tests&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"track_tests"</span><span class="p">)</span>
 
 <div class="viewcode-block" id="TrackTests.is_id_functions_consistent_ensembl">
 <a class="viewcode-back" href="../../reference.html#idtrack._track_tests.TrackTests.is_id_functions_consistent_ensembl">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">is_id_functions_consistent_ensembl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Ensure Ensembl ID-list helpers agree with the SQL back-end.</span>
+<span class="w">        </span><span class="sd">"""Ensure Ensembl ID-list helpers agree with the SQL back-end.</span>
 
-<span class="sd">        For every release listed in ``graph.graph[&quot;confident_for_release&quot;]``</span>
+<span class="sd">        For every release listed in ``graph.graph["confident_for_release"]``</span>
 <span class="sd">        the test compares two independent sources of Ensembl-gene IDs for the</span>
 <span class="sd">        *current genome assembly*:</span>
 
@@ -194,23 +195,23 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            bool: ``True`` when **all** releases produce identical sets; else</span>
 <span class="sd">            ``False`` (a descriptive warning is logged).</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">assembly</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;genome_assembly&quot;</span><span class="p">]</span>
+<span class="sd">        """</span>
+        <span class="n">assembly</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">"genome_assembly"</span><span class="p">]</span>
         <span class="c1"># Others should not have consistent as only the main assembly is added fully.</span>
         <span class="c1"># In other assemblies, the Ensembl IDs are added if there is an external connection.</span>
         <span class="n">switch</span> <span class="o">=</span> <span class="kc">True</span>
 
         <span class="k">with</span> <span class="n">tqdm</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;confident_for_release&quot;</span><span class="p">],</span> <span class="n">mininterval</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">ncols</span><span class="o">=</span><span class="mi">100</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">"confident_for_release"</span><span class="p">],</span> <span class="n">mininterval</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">ncols</span><span class="o">=</span><span class="mi">100</span>
         <span class="p">)</span> <span class="k">as</span> <span class="n">loop_obj</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">ens_rel</span> <span class="ow">in</span> <span class="n">loop_obj</span><span class="p">:</span>
-                <span class="n">loop_obj</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Item:</span><span class="si">{</span><span class="n">ens_rel</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="n">loop_obj</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Item:</span><span class="si">{</span><span class="n">ens_rel</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">check_if_change_assembly_works</span><span class="p">(</span>
                     <span class="n">db_manager</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">ens_rel</span><span class="p">),</span> <span class="n">target_assembly</span><span class="o">=</span><span class="n">assembly</span>
                 <span class="p">):</span>
                     <span class="n">db_from</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">ens_rel</span><span class="p">)</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">assembly</span><span class="p">)</span>
-                    <span class="n">ids_from</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">db_from</span><span class="o">.</span><span class="n">id_ver_from_df</span><span class="p">(</span><span class="n">db_from</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;ids&quot;</span><span class="p">,</span> <span class="n">save_after_calculation</span><span class="o">=</span><span class="kc">False</span><span class="p">)))</span>
+                    <span class="n">ids_from</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">db_from</span><span class="o">.</span><span class="n">id_ver_from_df</span><span class="p">(</span><span class="n">db_from</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">"ids"</span><span class="p">,</span> <span class="n">save_after_calculation</span><span class="o">=</span><span class="kc">False</span><span class="p">)))</span>
 
                     <span class="n">ids_from_graph</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get_id_list</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">nts_assembly</span><span class="p">[</span><span class="n">assembly</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">],</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">ens_rel</span><span class="p">)</span>
@@ -218,7 +219,7 @@
                     <span class="k">if</span> <span class="n">ids_from</span> <span class="o">!=</span> <span class="n">ids_from_graph</span><span class="p">:</span>
                         <span class="n">switch</span> <span class="o">=</span> <span class="kc">False</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                            <span class="sa">f</span><span class="s2">&quot;Inconsistent results for ID list functions (ensembl), at release `</span><span class="si">{</span><span class="n">ens_rel</span><span class="si">}</span><span class="s2">`.&quot;</span>
+                            <span class="sa">f</span><span class="s2">"Inconsistent results for ID list functions (ensembl), at release `</span><span class="si">{</span><span class="n">ens_rel</span><span class="si">}</span><span class="s2">`."</span>
                         <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">switch</span></div>
@@ -227,7 +228,7 @@
 <div class="viewcode-block" id="TrackTests.is_id_functions_consistent_ensembl_2">
 <a class="viewcode-back" href="../../reference.html#idtrack._track_tests.TrackTests.is_id_functions_consistent_ensembl_2">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">is_id_functions_consistent_ensembl_2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Cross-check Ensembl ID *range* helpers against raw edge data.</span>
+<span class="w">        </span><span class="sd">"""Cross-check Ensembl ID *range* helpers against raw edge data.</span>
 
 <span class="sd">        For every **backbone** Ensembl-gene node the routine computes the list</span>
 <span class="sd">        of active release ranges in two distinct ways:</span>
@@ -248,31 +249,31 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            bool: ``True`` if *all* gene nodes pass; ``False`` after the first</span>
 <span class="sd">            failure (a warning is emitted).</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">the_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
             <span class="k">if</span> <span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;node_type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">]</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;Version&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">alternative_versions</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"node_type"</span><span class="p">]</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">]</span>
+                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"Version"</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">alternative_versions</span>
             <span class="p">):</span>
                 <span class="n">the_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
 
-        <span class="n">assembly</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;genome_assembly&quot;</span><span class="p">]</span>
+        <span class="n">assembly</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">"genome_assembly"</span><span class="p">]</span>
         <span class="k">with</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">the_ids</span><span class="p">,</span> <span class="n">mininterval</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">ncols</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span> <span class="k">as</span> <span class="n">loop_obj</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">ti</span> <span class="ow">in</span> <span class="n">loop_obj</span><span class="p">:</span>
-                <span class="n">loop_obj</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Item:</span><span class="si">{</span><span class="n">ti</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="n">loop_obj</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Item:</span><span class="si">{</span><span class="n">ti</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
                 <span class="c1"># (1) raw recomputation</span>
                 <span class="n">data1_raw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">combined_edges_genes</span><span class="p">[</span><span class="n">ti</span><span class="p">]</span>
                 <span class="n">data1_</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">({</span><span class="n">k</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">data1_raw</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">data1_raw</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">data1_raw</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="n">assembly</span><span class="p">})</span>
                 <span class="n">data1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">list_to_ranges</span><span class="p">(</span><span class="n">data1_</span><span class="p">)</span>
                 <span class="c1"># (2) cached view</span>
                 <span class="n">data2</span> <span class="o">=</span> <span class="p">[</span>
-                    <span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="k">else</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;confident_for_release&quot;</span><span class="p">])]</span>
+                    <span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="k">else</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">"confident_for_release"</span><span class="p">])]</span>
                     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get_active_ranges_of_id</span><span class="p">[</span><span class="n">ti</span><span class="p">]</span>
                 <span class="p">]</span>
 
                 <span class="k">if</span> <span class="n">data1</span> <span class="o">!=</span> <span class="n">data2</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Inconsistency between ID range functions: `</span><span class="si">{</span><span class="n">ti</span><span class="p">,</span><span class="w"> </span><span class="n">data1</span><span class="p">,</span><span class="w"> </span><span class="n">data2</span><span class="p">,</span><span class="w"> </span><span class="n">data1_raw</span><span class="si">}</span><span class="s2">`.&quot;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Inconsistency between ID range functions: `</span><span class="si">{</span><span class="n">ti</span><span class="p">,</span><span class="w"> </span><span class="n">data1</span><span class="p">,</span><span class="w"> </span><span class="n">data2</span><span class="p">,</span><span class="w"> </span><span class="n">data1_raw</span><span class="si">}</span><span class="s2">`."</span><span class="p">)</span>
                     <span class="k">return</span> <span class="kc">False</span>
 
         <span class="k">return</span> <span class="kc">True</span></div>
@@ -281,7 +282,7 @@
 <div class="viewcode-block" id="TrackTests.is_range_functions_robust">
 <a class="viewcode-back" href="../../reference.html#idtrack._track_tests.TrackTests.is_range_functions_robust">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">is_range_functions_robust</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Detect overlapping release ranges among sibling Ensembl IDs.</span>
+<span class="w">        </span><span class="sd">"""Detect overlapping release ranges among sibling Ensembl IDs.</span>
 
 <span class="sd">        A *base* Ensembl-gene ID is the stable identifier that groups multiple</span>
 <span class="sd">        versioned Ensembl-gene records (siblings).  The gene-history model</span>
@@ -297,23 +298,23 @@
 <span class="sd">            bool: ``True`` when no overlaps are found; ``False`` otherwise.</span>
 <span class="sd">            Each offending base ID triggers a warning with the conflicting</span>
 <span class="sd">            ranges.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">base_ids</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;node_type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_base_ensembl</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"node_type"</span><span class="p">]</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_base_ensembl</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">]:</span>
                 <span class="n">base_ids</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
 
         <span class="n">switch</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">with</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">base_ids</span><span class="p">,</span> <span class="n">mininterval</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">ncols</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span> <span class="k">as</span> <span class="n">loop_obj</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">loop_obj</span><span class="p">:</span>
-                <span class="n">loop_obj</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Item:</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="n">loop_obj</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Item:</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
                 <span class="n">id_family</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
                 <span class="n">id_ranges</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get_active_ranges_of_id</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">id_family</span><span class="p">]</span>
 
                 <span class="k">for</span> <span class="n">r1</span><span class="p">,</span> <span class="n">r2</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span><span class="n">id_ranges</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
                     <span class="n">r12</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get_intersecting_ranges</span><span class="p">(</span><span class="n">r1</span><span class="p">,</span> <span class="n">r2</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
                     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">r12</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;For Base Ensembl ID </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">: Two associated Ensembl IDs cover the same area&quot;</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"For Base Ensembl ID </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">: Two associated Ensembl IDs cover the same area"</span><span class="p">)</span>
                         <span class="n">switch</span> <span class="o">=</span> <span class="kc">False</span>
 
         <span class="k">return</span> <span class="n">switch</span></div>
@@ -322,9 +323,9 @@
 <div class="viewcode-block" id="TrackTests.is_base_is_range_correct">
 <a class="viewcode-back" href="../../reference.html#idtrack._track_tests.TrackTests.is_base_is_range_correct">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">is_base_is_range_correct</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Verify consistency of *base-gene* active-range calculations.</span>
+<span class="w">        </span><span class="sd">"""Verify consistency of *base-gene* active-range calculations.</span>
 
-<span class="sd">        Each &quot;base Ensembl gene&quot; node (``node_type == &#39;base_ensembl_gene&#39;``)</span>
+<span class="sd">        Each "base Ensembl gene" node (``node_type == 'base_ensembl_gene'``)</span>
 <span class="sd">        has an *active release range*—the list of Ensembl releases during</span>
 <span class="sd">        which descendants of the gene were present.  There are two</span>
 <span class="sd">        independent ways to obtain this information:</span>
@@ -346,28 +347,28 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            bool: ``True`` if *every* base-gene has matching ranges; ``False``</span>
 <span class="sd">            as soon as a single mismatch is encountered.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">base_ids</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="c1"># Gather all base-gene identifiers up-front to avoid repeated lookups.</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;node_type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;base_ensembl_gene&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"node_type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"base_ensembl_gene"</span><span class="p">:</span>
                 <span class="n">base_ids</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
 
         <span class="n">switch</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">with</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">base_ids</span><span class="p">,</span> <span class="n">mininterval</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">ncols</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span> <span class="k">as</span> <span class="n">loop_obj</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">bi</span> <span class="ow">in</span> <span class="n">loop_obj</span><span class="p">:</span>
-                <span class="n">loop_obj</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Item:</span><span class="si">{</span><span class="n">bi</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="n">loop_obj</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Item:</span><span class="si">{</span><span class="n">bi</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
                 <span class="c1"># 1. High-level cached helper. get_base_id_range form function</span>
                 <span class="n">bi_fun</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get_active_ranges_of_base_id_alternative</span><span class="p">(</span><span class="n">bi</span><span class="p">)</span>
                 <span class="c1"># 2. Low-level reconstruction from edge metadata. get range directly from graph</span>
                 <span class="n">rd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">combined_edges</span><span class="p">[</span><span class="n">bi</span><span class="p">]</span>
                 <span class="n">bi_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">list_to_ranges</span><span class="p">(</span><span class="nb">sorted</span><span class="p">({</span><span class="n">s</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">rd</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rd</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">rd</span><span class="p">[</span><span class="n">p</span><span class="p">][</span><span class="n">r</span><span class="p">]}))</span>
-                <span class="c1"># Replace &quot;inf&quot; sentinel with highest known release.  The</span>
+                <span class="c1"># Replace "inf" sentinel with highest known release.  The</span>
                 <span class="c1"># helper already performs this normalisation so we mimic it</span>
                 <span class="c1"># here for a fair comparison.</span>
                 <span class="n">bi_fun</span> <span class="o">=</span> <span class="p">[</span>
-                    <span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="k">else</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;confident_for_release&quot;</span><span class="p">])]</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">bi_fun</span>
+                    <span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="k">else</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">"confident_for_release"</span><span class="p">])]</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">bi_fun</span>
                 <span class="p">]</span>
 
                 <span class="k">if</span> <span class="n">bi_dir</span> <span class="o">!=</span> <span class="n">bi_fun</span><span class="p">:</span>
@@ -379,7 +380,7 @@
 <div class="viewcode-block" id="TrackTests.is_combined_edges_dicts_overlapping_and_complete">
 <a class="viewcode-back" href="../../reference.html#idtrack._track_tests.TrackTests.is_combined_edges_dicts_overlapping_and_complete">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">is_combined_edges_dicts_overlapping_and_complete</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check edge-dictionary partitioning invariants.</span>
+<span class="w">        </span><span class="sd">"""Check edge-dictionary partitioning invariants.</span>
 
 <span class="sd">        The Track graph materialises three *edge caches*—``combined_edges``</span>
 <span class="sd">        and its two specialised siblings—each storing adjacency and release</span>
@@ -396,7 +397,7 @@
 <span class="sd">           dictionary.</span>
 <span class="sd">        2. **Completeness** - The *union* of the dictionaries must cover all</span>
 <span class="sd">           graph nodes **except** those that represent *alternative database</span>
-<span class="sd">           versions* (e.g. &quot;EnsemblMetazoa&quot;) which are intentionally kept</span>
+<span class="sd">           versions* (e.g. "EnsemblMetazoa") which are intentionally kept</span>
 <span class="sd">           separate.</span>
 
 <span class="sd">        This routine enforces both rules.</span>
@@ -404,7 +405,7 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            bool: ``True`` if the dictionaries are pair-wise disjoint **and**</span>
 <span class="sd">            collectively cover every eligible node; ``False`` otherwise.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">the_dicts</span> <span class="o">=</span> <span class="p">[</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">combined_edges</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">combined_edges_genes</span><span class="p">,</span>
@@ -420,7 +421,7 @@
         <span class="n">uncovered_nodes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span> <span class="o">-</span> <span class="n">covered_nodes</span>
         <span class="k">for</span> <span class="n">un</span> <span class="ow">in</span> <span class="n">uncovered_nodes</span><span class="p">:</span>
             <span class="n">node_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">un</span><span class="p">]</span>
-            <span class="k">if</span> <span class="s2">&quot;Version&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">node_data</span> <span class="ow">or</span> <span class="n">node_data</span><span class="p">[</span><span class="s2">&quot;Version&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">alternative_versions</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">"Version"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">node_data</span> <span class="ow">or</span> <span class="n">node_data</span><span class="p">[</span><span class="s2">"Version"</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">alternative_versions</span><span class="p">:</span>
                 <span class="k">return</span> <span class="kc">False</span>  <span class="c1"># There are identifiers that is not covered with these dicts.</span>
 
         <span class="k">return</span> <span class="kc">True</span></div>
@@ -429,7 +430,7 @@
 <div class="viewcode-block" id="TrackTests.is_edge_with_same_nts_only_at_backbone_nodes">
 <a class="viewcode-back" href="../../reference.html#idtrack._track_tests.TrackTests.is_edge_with_same_nts_only_at_backbone_nodes">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">is_edge_with_same_nts_only_at_backbone_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Assert *same-node-type* edges exist **only** between backbone genes.</span>
+<span class="w">        </span><span class="sd">"""Assert *same-node-type* edges exist **only** between backbone genes.</span>
 
 <span class="sd">        The graph is a *multilayer* network where nodes of different</span>
 
@@ -439,14 +440,14 @@
 <span class="sd">            bool: ``True`` when no overlaps are found; ``False`` otherwise.</span>
 <span class="sd">            Each offending base ID triggers a warning with the conflicting</span>
 <span class="sd">            ranges.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">for</span> <span class="n">n1</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
             <span class="n">nts1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span>
 
             <span class="k">for</span> <span class="n">n2</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">n1</span><span class="p">):</span>
                 <span class="n">nts2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">n2</span><span class="p">][</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">]</span>
 
-                <span class="k">if</span> <span class="n">nts1</span> <span class="o">==</span> <span class="n">nts2</span> <span class="ow">and</span> <span class="n">nts1</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">external_search_settings</span><span class="p">[</span><span class="s2">&quot;nts_backbone&quot;</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">nts1</span> <span class="o">==</span> <span class="n">nts2</span> <span class="ow">and</span> <span class="n">nts1</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">external_search_settings</span><span class="p">[</span><span class="s2">"nts_backbone"</span><span class="p">]:</span>
                     <span class="k">return</span> <span class="kc">False</span>
 
         <span class="k">return</span> <span class="kc">True</span></div>
@@ -455,10 +456,10 @@
 <div class="viewcode-block" id="TrackTests.is_id_functions_consistent_external">
 <a class="viewcode-back" href="../../reference.html#idtrack._track_tests.TrackTests.is_id_functions_consistent_external">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">is_id_functions_consistent_external</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check external-ID list helpers against the raw MySQL tables.</span>
+<span class="w">        </span><span class="sd">"""Check external-ID list helpers against the raw MySQL tables.</span>
 
 <span class="sd">        For **every** combination of *assembly*, *Ensembl release* (limited to</span>
-<span class="sd">        :py:attr:`graph.graph[&quot;confident_for_release&quot;]`) and *external</span>
+<span class="sd">        :py:attr:`graph.graph["confident_for_release"]`) and *external</span>
 <span class="sd">        database* this test performs the following steps:</span>
 
 <span class="sd">        1. Query the authoritative list of external IDs directly from the</span>
@@ -483,27 +484,27 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            bool: *True* when every single comparison matched, *False* as soon</span>
 <span class="sd">            as an inconsistency is encountered.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">narrow_external</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;narrow_external&quot;</span><span class="p">]</span>
-        <span class="n">misplace_entries</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;misplaced_external_entry&quot;</span><span class="p">]</span>
+<span class="sd">        """</span>
+        <span class="n">narrow_external</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">"narrow_external"</span><span class="p">]</span>
+        <span class="n">misplace_entries</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">"misplaced_external_entry"</span><span class="p">]</span>
 
         <span class="k">for</span> <span class="n">assembly</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">available_genome_assemblies</span><span class="p">:</span>
             <span class="k">with</span> <span class="n">tqdm</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;confident_for_release&quot;</span><span class="p">],</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">"confident_for_release"</span><span class="p">],</span>
                 <span class="n">mininterval</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
-                <span class="n">desc</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Assembly </span><span class="si">{</span><span class="n">assembly</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">desc</span><span class="o">=</span><span class="sa">f</span><span class="s2">"Assembly </span><span class="si">{</span><span class="n">assembly</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
                 <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">verbose</span><span class="p">,</span>
                 <span class="n">ncols</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
             <span class="p">)</span> <span class="k">as</span> <span class="n">loop_obj</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">release</span> <span class="ow">in</span> <span class="n">loop_obj</span><span class="p">:</span>
-                    <span class="n">loop_obj</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Item:</span><span class="si">{</span><span class="n">release</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                    <span class="n">loop_obj</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Item:</span><span class="si">{</span><span class="n">release</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">check_if_change_assembly_works</span><span class="p">(</span>
                         <span class="n">db_manager</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">release</span><span class="p">),</span> <span class="n">target_assembly</span><span class="o">=</span><span class="n">assembly</span>
                     <span class="p">):</span>
                         <span class="n">dm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">release</span><span class="p">)</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">assembly</span><span class="p">)</span>
                         <span class="n">ex_rel_d</span> <span class="o">=</span> <span class="p">{</span>
-                            <span class="n">f</span><span class="p">:</span> <span class="n">dm</span><span class="o">.</span><span class="n">change_form</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;external_relevant&quot;</span> <span class="k">if</span> <span class="n">narrow_external</span> <span class="k">else</span> <span class="s2">&quot;external&quot;</span><span class="p">)</span>
+                            <span class="n">f</span><span class="p">:</span> <span class="n">dm</span><span class="o">.</span><span class="n">change_form</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">"external_relevant"</span> <span class="k">if</span> <span class="n">narrow_external</span> <span class="k">else</span> <span class="s2">"external"</span><span class="p">)</span>
                             <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">available_forms</span>
                         <span class="p">}</span>
 
@@ -511,7 +512,7 @@
                             <span class="n">form</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">external_database_connection_form</span><span class="p">[</span><span class="n">database</span><span class="p">]</span>
                             <span class="n">ex_rel</span> <span class="o">=</span> <span class="n">ex_rel_d</span><span class="p">[</span><span class="n">form</span><span class="p">]</span>
 
-                            <span class="n">from_dm_</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">ex_rel</span><span class="p">[</span><span class="s2">&quot;id_db&quot;</span><span class="p">][</span><span class="n">ex_rel</span><span class="p">[</span><span class="s2">&quot;name_db&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">database</span><span class="p">])</span>
+                            <span class="n">from_dm_</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">ex_rel</span><span class="p">[</span><span class="s2">"id_db"</span><span class="p">][</span><span class="n">ex_rel</span><span class="p">[</span><span class="s2">"name_db"</span><span class="p">]</span> <span class="o">==</span> <span class="n">database</span><span class="p">])</span>
                             <span class="n">from_dm</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
                             <span class="k">for</span> <span class="n">nd</span> <span class="ow">in</span> <span class="n">from_dm_</span><span class="p">:</span>
                                 <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">node_name_alternatives</span><span class="p">(</span><span class="n">nd</span><span class="p">)</span>
@@ -520,8 +521,8 @@
 
                             <span class="k">if</span> <span class="n">from_gr</span> <span class="o">!=</span> <span class="n">from_dm</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="n">i</span> <span class="ow">in</span> <span class="n">misplace_entries</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="n">from_dm</span> <span class="o">-</span> <span class="n">from_gr</span><span class="p">)]):</span>
                                 <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                                    <span class="sa">f</span><span class="s2">&quot;Inconsistent results for ID list functions (external) &quot;</span>
-                                    <span class="sa">f</span><span class="s2">&quot;for: database, assembl, ensembl release: </span><span class="si">{</span><span class="p">(</span><span class="n">database</span><span class="p">,</span><span class="w"> </span><span class="n">assembly</span><span class="p">,</span><span class="w"> </span><span class="n">release</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                                    <span class="sa">f</span><span class="s2">"Inconsistent results for ID list functions (external) "</span>
+                                    <span class="sa">f</span><span class="s2">"for: database, assembl, ensembl release: </span><span class="si">{</span><span class="p">(</span><span class="n">database</span><span class="p">,</span><span class="w"> </span><span class="n">assembly</span><span class="p">,</span><span class="w"> </span><span class="n">release</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
                                 <span class="p">)</span>
                                 <span class="k">return</span> <span class="kc">False</span>
 
@@ -533,7 +534,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">how_many_corresponding_path_ensembl</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">from_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">from_assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">to_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">go_external</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Count history paths between two Ensembl releases.</span>
+<span class="w">        </span><span class="sd">"""Count history paths between two Ensembl releases.</span>
 
 <span class="sd">        The method iterates over **all** Ensembl-gene stable IDs that exist in</span>
 <span class="sd">        *from_release*/*from_assembly*.  For every ID that is present in the</span>
@@ -558,15 +559,15 @@
 
 <span class="sd">                *   an *int* ≥ 0 when the ID was in the graph, or</span>
 <span class="sd">                *   *None* when the source ID was absent.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">db_from</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">from_release</span><span class="p">)</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">from_assembly</span><span class="p">)</span>
-        <span class="n">ids_from</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">db_from</span><span class="o">.</span><span class="n">id_ver_from_df</span><span class="p">(</span><span class="n">db_from</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;ids&quot;</span><span class="p">,</span> <span class="n">save_after_calculation</span><span class="o">=</span><span class="kc">False</span><span class="p">))))</span>
+        <span class="n">ids_from</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">db_from</span><span class="o">.</span><span class="n">id_ver_from_df</span><span class="p">(</span><span class="n">db_from</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">"ids"</span><span class="p">,</span> <span class="n">save_after_calculation</span><span class="o">=</span><span class="kc">False</span><span class="p">))))</span>
         <span class="n">to_reverse</span> <span class="o">=</span> <span class="n">from_release</span> <span class="o">&gt;</span> <span class="n">to_release</span>
 
         <span class="n">result</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
         <span class="k">with</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">ids_from</span><span class="p">,</span> <span class="n">mininterval</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">ncols</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span> <span class="k">as</span> <span class="n">loop_obj</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">from_id</span> <span class="ow">in</span> <span class="n">loop_obj</span><span class="p">:</span>
-                <span class="n">loop_obj</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Item:</span><span class="si">{</span><span class="n">from_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="n">loop_obj</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Item:</span><span class="si">{</span><span class="n">from_id</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
                 <span class="k">if</span> <span class="n">from_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
                     <span class="n">lfr</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span>
@@ -598,7 +599,7 @@
         <span class="n">verbose_detailed</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">return_ensembl_alternative</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run an end-to-end Ensembl-history conversion and collect granular QA metrics.</span>
+<span class="w">        </span><span class="sd">"""Run an end-to-end Ensembl-history conversion and collect granular QA metrics.</span>
 
 <span class="sd">        The routine samples identifiers from *from_database*/*from_release*</span>
 <span class="sd">        (optionally down-sampling via *from_fraction*) and converts each one to</span>
@@ -681,22 +682,22 @@
 
 <span class="sd">        Notes:</span>
 <span class="sd">            * All counters are **absolute counts** - divide by</span>
-<span class="sd">              ``len(metrics[&#39;ids&#39;][&#39;from&#39;])`` to obtain rates.</span>
+<span class="sd">              ``len(metrics['ids']['from'])`` to obtain rates.</span>
 <span class="sd">            * The collision analysis is inspired by the *clash statistics*</span>
 <span class="sd">              logic implemented at the end of the function and helps spot</span>
 <span class="sd">              discrepant “unique” IDs that suddenly become ambiguous. Keeping</span>
 <span class="sd">              all three clash counters at zero is the gold standard for a</span>
 <span class="sd">              healthy build.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="n">from_database</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span> <span class="ow">or</span> <span class="n">to_database</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Cannot use Ensembl node types directly. &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;from_database=</span><span class="si">{</span><span class="n">from_database</span><span class="si">!r}</span><span class="s2">, to_database=</span><span class="si">{</span><span class="n">to_database</span><span class="si">!r}</span><span class="s2"> must not be in </span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="sa">f</span><span class="s2">"Cannot use Ensembl node types directly. "</span>
+                <span class="sa">f</span><span class="s2">"from_database=</span><span class="si">{</span><span class="n">from_database</span><span class="si">!r}</span><span class="s2">, to_database=</span><span class="si">{</span><span class="n">to_database</span><span class="si">!r}</span><span class="s2"> must not be in </span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="si">}</span><span class="s2">."</span>
             <span class="p">)</span>
 
         <span class="n">ids_from</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get_id_list</span><span class="p">(</span><span class="n">from_database</span><span class="p">,</span> <span class="n">from_assembly</span><span class="p">,</span> <span class="n">from_release</span><span class="p">))</span>
-        <span class="n">ids_to</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get_id_list</span><span class="p">(</span><span class="n">to_database</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;genome_assembly&quot;</span><span class="p">],</span> <span class="n">to_release</span><span class="p">))</span>
-        <span class="n">ids_to_s</span> <span class="o">=</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;ID&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ids_to</span><span class="p">}</span> <span class="k">if</span> <span class="n">to_database</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_assembly_reverse</span> <span class="k">else</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">ids_to</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get_id_list</span><span class="p">(</span><span class="n">to_database</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">"genome_assembly"</span><span class="p">],</span> <span class="n">to_release</span><span class="p">))</span>
+        <span class="n">ids_to_s</span> <span class="o">=</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"ID"</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ids_to</span><span class="p">}</span> <span class="k">if</span> <span class="n">to_database</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_assembly_reverse</span> <span class="k">else</span> <span class="nb">set</span><span class="p">()</span>
 
         <span class="c1"># Input sampling</span>
         <span class="k">if</span> <span class="n">from_fraction</span> <span class="o">==</span> <span class="mf">1.0</span><span class="p">:</span>
@@ -705,51 +706,51 @@
             <span class="n">from_faction_count</span> <span class="o">=</span> <span class="n">ceil</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ids_from</span><span class="p">)</span> <span class="o">*</span> <span class="n">from_fraction</span><span class="p">)</span>
             <span class="n">ids_from</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">ids_from</span><span class="p">,</span> <span class="n">from_faction_count</span><span class="p">))</span>  <span class="c1"># noqa: S311</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;from_fraction must be in range (0.0, 1.0], got </span><span class="si">{</span><span class="n">from_fraction</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"from_fraction must be in range (0.0, 1.0], got </span><span class="si">{</span><span class="n">from_fraction</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
 
         <span class="c1"># Metric scaffold</span>
         <span class="n">parameters</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;from_release&quot;</span><span class="p">:</span> <span class="n">from_release</span><span class="p">,</span>
-            <span class="s2">&quot;from_assembly&quot;</span><span class="p">:</span> <span class="n">from_assembly</span><span class="p">,</span>
-            <span class="s2">&quot;from_database&quot;</span><span class="p">:</span> <span class="n">from_database</span><span class="p">,</span>
-            <span class="s2">&quot;to_release&quot;</span><span class="p">:</span> <span class="n">to_release</span><span class="p">,</span>
-            <span class="s2">&quot;to_database&quot;</span><span class="p">:</span> <span class="n">to_database</span><span class="p">,</span>
-            <span class="s2">&quot;go_external&quot;</span><span class="p">:</span> <span class="n">go_external</span><span class="p">,</span>
-            <span class="s2">&quot;from_fraction&quot;</span><span class="p">:</span> <span class="n">from_fraction</span><span class="p">,</span>
-            <span class="s2">&quot;prioritize_to_one_filter&quot;</span><span class="p">:</span> <span class="n">prioritize_to_one_filter</span><span class="p">,</span>
+            <span class="s2">"from_release"</span><span class="p">:</span> <span class="n">from_release</span><span class="p">,</span>
+            <span class="s2">"from_assembly"</span><span class="p">:</span> <span class="n">from_assembly</span><span class="p">,</span>
+            <span class="s2">"from_database"</span><span class="p">:</span> <span class="n">from_database</span><span class="p">,</span>
+            <span class="s2">"to_release"</span><span class="p">:</span> <span class="n">to_release</span><span class="p">,</span>
+            <span class="s2">"to_database"</span><span class="p">:</span> <span class="n">to_database</span><span class="p">,</span>
+            <span class="s2">"go_external"</span><span class="p">:</span> <span class="n">go_external</span><span class="p">,</span>
+            <span class="s2">"from_fraction"</span><span class="p">:</span> <span class="n">from_fraction</span><span class="p">,</span>
+            <span class="s2">"prioritize_to_one_filter"</span><span class="p">:</span> <span class="n">prioritize_to_one_filter</span><span class="p">,</span>
         <span class="p">}</span>
 
         <span class="n">metrics</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;parameters&quot;</span><span class="p">:</span> <span class="n">parameters</span><span class="p">,</span>
-            <span class="s2">&quot;ids&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;from&quot;</span><span class="p">:</span> <span class="n">ids_from</span><span class="p">,</span> <span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="n">ids_to</span><span class="p">},</span>
-            <span class="s2">&quot;lost_item&quot;</span><span class="p">:</span> <span class="p">[],</span>
-            <span class="s2">&quot;one_to_one_ids&quot;</span><span class="p">:</span> <span class="p">{},</span>
-            <span class="s2">&quot;query_not_in_the_graph&quot;</span><span class="p">:</span> <span class="p">[],</span>
-            <span class="s2">&quot;history_voyage_failed_gracefully&quot;</span><span class="p">:</span> <span class="p">[],</span>
-            <span class="s2">&quot;history_voyage_failed_unknown&quot;</span><span class="p">:</span> <span class="p">[],</span>
-            <span class="s2">&quot;lost_item_but_the_same_id_exists&quot;</span><span class="p">:</span> <span class="p">[],</span>
-            <span class="s2">&quot;found_ids_not_accurate&quot;</span><span class="p">:</span> <span class="p">{},</span>
-            <span class="s2">&quot;conversion&quot;</span><span class="p">:</span> <span class="p">{},</span>
-            <span class="s2">&quot;one_to_multiple_ids&quot;</span><span class="p">:</span> <span class="p">{},</span>
-            <span class="s2">&quot;one_to_multiple_final_conversion&quot;</span><span class="p">:</span> <span class="p">[],</span>
-            <span class="s2">&quot;converted_item_dict&quot;</span><span class="p">:</span> <span class="p">{},</span>
-            <span class="s2">&quot;converted_item_dict_reversed&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s2">"parameters"</span><span class="p">:</span> <span class="n">parameters</span><span class="p">,</span>
+            <span class="s2">"ids"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"from"</span><span class="p">:</span> <span class="n">ids_from</span><span class="p">,</span> <span class="s2">"to"</span><span class="p">:</span> <span class="n">ids_to</span><span class="p">},</span>
+            <span class="s2">"lost_item"</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">"one_to_one_ids"</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s2">"query_not_in_the_graph"</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">"history_voyage_failed_gracefully"</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">"history_voyage_failed_unknown"</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">"lost_item_but_the_same_id_exists"</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">"found_ids_not_accurate"</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s2">"conversion"</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s2">"one_to_multiple_ids"</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s2">"one_to_multiple_final_conversion"</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">"converted_item_dict"</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s2">"converted_item_dict_reversed"</span><span class="p">:</span> <span class="p">{},</span>
         <span class="p">}</span>
 
         <span class="n">t1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 
-        <span class="k">with</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">ids_from</span><span class="p">,</span> <span class="n">mininterval</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Mapping&quot;</span><span class="p">,</span> <span class="n">ncols</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span> <span class="k">as</span> <span class="n">loop_obj</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">ids_from</span><span class="p">,</span> <span class="n">mininterval</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">"Mapping"</span><span class="p">,</span> <span class="n">ncols</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span> <span class="k">as</span> <span class="n">loop_obj</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">the_id</span> <span class="ow">in</span> <span class="n">loop_obj</span><span class="p">:</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">verbose_detailed</span><span class="p">:</span>
-                    <span class="n">loop_obj</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Item:</span><span class="si">{</span><span class="n">the_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                    <span class="n">loop_obj</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Item:</span><span class="si">{</span><span class="n">the_id</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">suffix</span> <span class="o">=</span> <span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;Item:</span><span class="si">{</span><span class="n">the_id</span><span class="si">}</span><span class="s2">, &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;one_to_one_ids&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2">,&quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;one_to_multiple_ids&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2">,&quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;lost_item&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2">,&quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;found_ids_not_accurate&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2">,&quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;query_not_in_the_graph&#39;</span><span class="p">])</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;history_voyage_failed_unknown&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="sa">f</span><span class="s2">"Item:</span><span class="si">{</span><span class="n">the_id</span><span class="si">}</span><span class="s2">, "</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">metrics</span><span class="p">[</span><span class="s1">'one_to_one_ids'</span><span class="p">])</span><span class="si">}</span><span class="s2">,"</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">metrics</span><span class="p">[</span><span class="s1">'one_to_multiple_ids'</span><span class="p">])</span><span class="si">}</span><span class="s2">,"</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">metrics</span><span class="p">[</span><span class="s1">'lost_item'</span><span class="p">])</span><span class="si">}</span><span class="s2">,"</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">metrics</span><span class="p">[</span><span class="s1">'found_ids_not_accurate'</span><span class="p">])</span><span class="si">}</span><span class="s2">,"</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">metrics</span><span class="p">[</span><span class="s1">'query_not_in_the_graph'</span><span class="p">])</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">metrics</span><span class="p">[</span><span class="s1">'history_voyage_failed_unknown'</span><span class="p">])</span><span class="si">}</span><span class="s2">"</span>
                     <span class="p">)</span>
                     <span class="n">loop_obj</span><span class="o">.</span><span class="n">set_postfix_str</span><span class="p">(</span><span class="n">suffix</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
@@ -775,49 +776,49 @@
                             <span class="n">prioritize_to_one_filter</span><span class="o">=</span><span class="n">prioritize_to_one_filter</span><span class="p">,</span>
                             <span class="n">return_ensembl_alternative</span><span class="o">=</span><span class="n">return_ensembl_alternative</span><span class="p">,</span>
                         <span class="p">)</span>
-                    <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;converted_item_dict&quot;</span><span class="p">][</span><span class="n">the_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">converted_item</span>
+                    <span class="n">metrics</span><span class="p">[</span><span class="s2">"converted_item_dict"</span><span class="p">][</span><span class="n">the_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">converted_item</span>
 
                 <span class="k">except</span> <span class="n">nx</span><span class="o">.</span><span class="n">exception</span><span class="o">.</span><span class="n">NetworkXError</span><span class="p">:</span>
-                    <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;query_not_in_the_graph&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">the_id</span><span class="p">)</span>
+                    <span class="n">metrics</span><span class="p">[</span><span class="s2">"query_not_in_the_graph"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">the_id</span><span class="p">)</span>
                     <span class="k">continue</span>
                 <span class="k">except</span> <span class="n">EmptyConversionMetricsError</span><span class="p">:</span>
                     <span class="n">full_tb</span> <span class="o">=</span> <span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">()</span>
-                    <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;history_voyage_failed_gracefully&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">the_id</span><span class="p">,</span> <span class="n">full_tb</span><span class="p">))</span>
+                    <span class="n">metrics</span><span class="p">[</span><span class="s2">"history_voyage_failed_gracefully"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">the_id</span><span class="p">,</span> <span class="n">full_tb</span><span class="p">))</span>
                     <span class="k">continue</span>
                 <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
                     <span class="n">full_tb</span> <span class="o">=</span> <span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">()</span>
-                    <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;history_voyage_failed_unknown&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">the_id</span><span class="p">,</span> <span class="n">full_tb</span><span class="p">))</span>
+                    <span class="n">metrics</span><span class="p">[</span><span class="s2">"history_voyage_failed_unknown"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">the_id</span><span class="p">,</span> <span class="n">full_tb</span><span class="p">))</span>
                     <span class="k">continue</span>
 
                 <span class="c1"># Metrics aggregation</span>
                 <span class="k">if</span> <span class="n">converted_item</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="n">to_database</span> <span class="o">==</span> <span class="n">from_database</span> <span class="o">==</span> <span class="s2">&quot;ensembl_gene&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">the_id</span><span class="p">][</span><span class="s2">&quot;ID&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">ids_to_s</span><span class="p">:</span>
-                        <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;lost_item_but_the_same_id_exists&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">the_id</span><span class="p">)</span>
-                    <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;lost_item&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">the_id</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">to_database</span> <span class="o">==</span> <span class="n">from_database</span> <span class="o">==</span> <span class="s2">"ensembl_gene"</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">the_id</span><span class="p">][</span><span class="s2">"ID"</span><span class="p">]</span> <span class="ow">in</span> <span class="n">ids_to_s</span><span class="p">:</span>
+                        <span class="n">metrics</span><span class="p">[</span><span class="s2">"lost_item_but_the_same_id_exists"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">the_id</span><span class="p">)</span>
+                    <span class="n">metrics</span><span class="p">[</span><span class="s2">"lost_item"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">the_id</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">covr</span> <span class="o">=</span> <span class="p">{</span><span class="n">j</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">converted_item</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">converted_item</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;final_conversion&quot;</span><span class="p">][</span><span class="s2">&quot;final_elements&quot;</span><span class="p">]}</span>
-                    <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;conversion&quot;</span><span class="p">][</span><span class="n">the_id</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">covr</span><span class="p">)</span>
+                    <span class="n">covr</span> <span class="o">=</span> <span class="p">{</span><span class="n">j</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">converted_item</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">converted_item</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"final_conversion"</span><span class="p">][</span><span class="s2">"final_elements"</span><span class="p">]}</span>
+                    <span class="n">metrics</span><span class="p">[</span><span class="s2">"conversion"</span><span class="p">][</span><span class="n">the_id</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">covr</span><span class="p">)</span>
                     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">covr</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                        <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;one_to_one_ids&quot;</span><span class="p">][</span><span class="n">the_id</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">covr</span><span class="p">)</span>
+                        <span class="n">metrics</span><span class="p">[</span><span class="s2">"one_to_one_ids"</span><span class="p">][</span><span class="n">the_id</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">covr</span><span class="p">)</span>
                     <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">covr</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-                        <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;one_to_multiple_ids&quot;</span><span class="p">][</span><span class="n">the_id</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">covr</span><span class="p">)</span>
+                        <span class="n">metrics</span><span class="p">[</span><span class="s2">"one_to_multiple_ids"</span><span class="p">][</span><span class="n">the_id</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">covr</span><span class="p">)</span>
                         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">converted_item</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                            <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;one_to_multiple_final_conversion&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">the_id</span><span class="p">)</span>
+                            <span class="n">metrics</span><span class="p">[</span><span class="s2">"one_to_multiple_final_conversion"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">the_id</span><span class="p">)</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected empty conversion result for ID </span><span class="si">{</span><span class="n">the_id</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unexpected empty conversion result for ID </span><span class="si">{</span><span class="n">the_id</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
 
                     <span class="c1"># How much of the converted IDs show the same ID</span>
                     <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">covr</span><span class="p">:</span>
-                        <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;converted_item_dict_reversed&quot;</span><span class="p">]:</span>
-                            <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;converted_item_dict_reversed&quot;</span><span class="p">][</span><span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">the_id</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">[</span><span class="s2">"converted_item_dict_reversed"</span><span class="p">]:</span>
+                            <span class="n">metrics</span><span class="p">[</span><span class="s2">"converted_item_dict_reversed"</span><span class="p">][</span><span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">the_id</span><span class="p">)</span>
                         <span class="k">else</span><span class="p">:</span>
-                            <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;converted_item_dict_reversed&quot;</span><span class="p">][</span><span class="n">c</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">the_id</span><span class="p">]</span>
+                            <span class="n">metrics</span><span class="p">[</span><span class="s2">"converted_item_dict_reversed"</span><span class="p">][</span><span class="n">c</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">the_id</span><span class="p">]</span>
 
                     <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">covr</span><span class="p">:</span>
                         <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ids_to</span><span class="p">:</span>
-                            <span class="k">if</span> <span class="n">the_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;found_ids_not_accurate&quot;</span><span class="p">]:</span>
-                                <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;found_ids_not_accurate&quot;</span><span class="p">][</span><span class="n">the_id</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
-                            <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;found_ids_not_accurate&quot;</span><span class="p">][</span><span class="n">the_id</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="n">the_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">[</span><span class="s2">"found_ids_not_accurate"</span><span class="p">]:</span>
+                                <span class="n">metrics</span><span class="p">[</span><span class="s2">"found_ids_not_accurate"</span><span class="p">][</span><span class="n">the_id</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+                            <span class="n">metrics</span><span class="p">[</span><span class="s2">"found_ids_not_accurate"</span><span class="p">][</span><span class="n">the_id</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
 
         <span class="c1"># ── Clash statistics:</span>
         <span class="c1"># Each counter tracks how many *target* IDs were reached by more than</span>
@@ -830,14 +831,14 @@
         <span class="c1"># `converted_item_dict_reversed` maps every target ID to the list of</span>
         <span class="c1"># source IDs that converted to it (built earlier inside the big mapping</span>
         <span class="c1"># loop).  We inspect only those targets hit by ≥ 2 sources - a “clash”.</span>
-        <span class="k">for</span> <span class="n">target_id</span><span class="p">,</span> <span class="n">cidr_val</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;converted_item_dict_reversed&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">target_id</span><span class="p">,</span> <span class="n">cidr_val</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">[</span><span class="s2">"converted_item_dict_reversed"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
 
             <span class="c1"># Skip non-clashing targets (exactly one source mapped here).</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cidr_val</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="c1"># Does *any* of the sources belong to the 1→many bucket?</span>
-                <span class="n">s1</span> <span class="o">=</span> <span class="nb">any</span><span class="p">([</span><span class="n">cv</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;one_to_multiple_ids&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="n">cidr_val</span><span class="p">])</span>
+                <span class="n">s1</span> <span class="o">=</span> <span class="nb">any</span><span class="p">([</span><span class="n">cv</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">[</span><span class="s2">"one_to_multiple_ids"</span><span class="p">]</span> <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="n">cidr_val</span><span class="p">])</span>
                 <span class="c1"># Does *any* of the sources belong to the 1→1 bucket?</span>
-                <span class="n">s2</span> <span class="o">=</span> <span class="nb">any</span><span class="p">([</span><span class="n">cv</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;one_to_one_ids&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="n">cidr_val</span><span class="p">])</span>
+                <span class="n">s2</span> <span class="o">=</span> <span class="nb">any</span><span class="p">([</span><span class="n">cv</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">[</span><span class="s2">"one_to_one_ids"</span><span class="p">]</span> <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="n">cidr_val</span><span class="p">])</span>
                 <span class="c1"># Categorise clash by the mixture of mapping types.</span>
                 <span class="k">if</span> <span class="n">s1</span> <span class="ow">and</span> <span class="n">s2</span><span class="p">:</span>  <span class="c1"># at least one 1→many **and** one 1→1</span>
                     <span class="n">clash_multi_one</span> <span class="o">+=</span> <span class="mi">1</span>
@@ -846,18 +847,18 @@
                 <span class="k">elif</span> <span class="n">s2</span><span class="p">:</span>  <span class="c1"># only 1→1 sources present</span>
                     <span class="n">clash_one_one</span> <span class="o">+=</span> <span class="mi">1</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected state: no sources found for clashing ID </span><span class="si">{</span><span class="n">target_id</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
-        <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;clashing_id_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">clash_one_one</span><span class="p">,</span> <span class="n">clash_multi_multi</span><span class="p">,</span> <span class="n">clash_multi_one</span><span class="p">]</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unexpected state: no sources found for clashing ID </span><span class="si">{</span><span class="n">target_id</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
+        <span class="n">metrics</span><span class="p">[</span><span class="s2">"clashing_id_type"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">clash_one_one</span><span class="p">,</span> <span class="n">clash_multi_multi</span><span class="p">,</span> <span class="n">clash_multi_one</span><span class="p">]</span>
 
         <span class="n">t2</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-        <span class="n">metrics</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">t2</span> <span class="o">-</span> <span class="n">t1</span>
+        <span class="n">metrics</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span> <span class="o">=</span> <span class="n">t2</span> <span class="o">-</span> <span class="n">t1</span>
         <span class="k">return</span> <span class="n">metrics</span></div>
 
 
 <div class="viewcode-block" id="TrackTests.history_travel_testing_random_arguments_generator">
 <a class="viewcode-back" href="../../reference.html#idtrack._track_tests.TrackTests.history_travel_testing_random_arguments_generator">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">history_travel_testing_random_arguments_generator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">strict_forward</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">include_exclude_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">bool</span><span class="p">]):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generate a plausible random parameter set for :py:meth:`history_travel_testing`.</span>
+<span class="w">        </span><span class="sd">"""Generate a plausible random parameter set for :py:meth:`history_travel_testing`.</span>
 
 <span class="sd">        The helper picks **compatible** source/target assemblies, releases and</span>
 <span class="sd">        databases so the subsequent conversion test has a realistic chance to</span>
@@ -874,18 +875,18 @@
 <span class="sd">            dict: Keys ``from_assembly``, ``from_release``, ``to_release``,</span>
 <span class="sd">            ``from_database``, ``to_database`` ready to be splatted into</span>
 <span class="sd">            :py:meth:`history_travel_testing`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">include_ensembl_1</span><span class="p">,</span> <span class="n">include_external_1</span><span class="p">,</span> <span class="n">include_ensembl_2</span><span class="p">,</span> <span class="n">include_external_2</span> <span class="o">=</span> <span class="n">include_exclude_list</span>
         <span class="n">only_backbone_tests_1</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">([</span><span class="n">include_ensembl_1</span><span class="p">,</span> <span class="n">include_external_1</span><span class="p">])</span> <span class="k">else</span> <span class="kc">False</span>
         <span class="n">only_backbone_tests_2</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">([</span><span class="n">include_ensembl_2</span><span class="p">,</span> <span class="n">include_external_2</span><span class="p">])</span> <span class="k">else</span> <span class="kc">False</span>
 
-        <span class="n">main_assembly</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;genome_assembly&quot;</span><span class="p">])</span>
+        <span class="n">main_assembly</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">"genome_assembly"</span><span class="p">])</span>
         <span class="n">from_assembly</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">available_genome_assemblies</span><span class="p">))</span>  <span class="c1"># noqa: S311</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">only_backbone_tests_1</span>
             <span class="k">else</span> <span class="n">main_assembly</span>
         <span class="p">)</span>
-        <span class="c1"># Final conversions are always evaluated on the graph&#39;s primary assembly.</span>
+        <span class="c1"># Final conversions are always evaluated on the graph's primary assembly.</span>
         <span class="n">to_assembly</span> <span class="o">=</span> <span class="n">main_assembly</span>
         <span class="n">the_key1</span><span class="p">,</span> <span class="n">the_key2</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
         <span class="k">while</span> <span class="n">the_key1</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">the_key2</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -896,7 +897,7 @@
                 <span class="n">only_backbone_tests</span><span class="o">=</span><span class="n">only_backbone_tests_1</span><span class="p">,</span>
                 <span class="n">for_final_database</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
             <span class="p">)</span>
-            <span class="k">if</span> <span class="n">the_key1</span> <span class="o">!=</span> <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">the_key1</span> <span class="o">!=</span> <span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
                 <span class="n">the_key2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">random_dataset_source_generator</span><span class="p">(</span>
                     <span class="n">to_assembly</span><span class="p">,</span>
                     <span class="n">include_ensembl</span><span class="o">=</span><span class="n">include_ensembl_2</span><span class="p">,</span>
@@ -905,15 +906,15 @@
                     <span class="n">only_backbone_tests</span><span class="o">=</span><span class="n">only_backbone_tests_2</span><span class="p">,</span>
                     <span class="n">release_lower_limit</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">strict_forward</span> <span class="k">else</span> <span class="n">the_key1</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
                 <span class="p">)</span>
-            <span class="k">if</span> <span class="n">the_key1</span> <span class="o">==</span> <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="ow">or</span> <span class="n">the_key2</span> <span class="o">==</span> <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Recalculating parameters.&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">the_key1</span> <span class="o">==</span> <span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="ow">or</span> <span class="n">the_key2</span> <span class="o">==</span> <span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Recalculating parameters."</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="p">{</span>
-            <span class="s2">&quot;from_assembly&quot;</span><span class="p">:</span> <span class="n">from_assembly</span><span class="p">,</span>
-            <span class="s2">&quot;from_release&quot;</span><span class="p">:</span> <span class="n">the_key1</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
-            <span class="s2">&quot;to_release&quot;</span><span class="p">:</span> <span class="n">the_key2</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
-            <span class="s2">&quot;from_database&quot;</span><span class="p">:</span> <span class="n">the_key1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-            <span class="s2">&quot;to_database&quot;</span><span class="p">:</span> <span class="n">the_key2</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="s2">"from_assembly"</span><span class="p">:</span> <span class="n">from_assembly</span><span class="p">,</span>
+            <span class="s2">"from_release"</span><span class="p">:</span> <span class="n">the_key1</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+            <span class="s2">"to_release"</span><span class="p">:</span> <span class="n">the_key2</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+            <span class="s2">"from_database"</span><span class="p">:</span> <span class="n">the_key1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="s2">"to_database"</span><span class="p">:</span> <span class="n">the_key2</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
         <span class="p">}</span></div>
 
 
@@ -933,7 +934,7 @@
         <span class="n">prioritize_to_one_filter</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">return_result</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convenience wrapper around :py:meth:`history_travel_testing`.</span>
+<span class="w">        </span><span class="sd">"""Convenience wrapper around :py:meth:`history_travel_testing`.</span>
 
 <span class="sd">        The routine generates a *random* but internally consistent test case</span>
 <span class="sd">        via :py:meth:`history_travel_testing_random_arguments_generator`, logs</span>
@@ -958,7 +959,7 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            dict: The *metrics* dictionary returned by</span>
 <span class="sd">            :py:meth:`history_travel_testing`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">include_exclude_list</span> <span class="o">=</span> <span class="p">[</span>
             <span class="n">include_ensembl_source</span><span class="p">,</span>
             <span class="n">include_external_source</span><span class="p">,</span>
@@ -1006,7 +1007,7 @@
         <span class="n">from_fraction</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
         <span class="n">prioritize_to_one_filter</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate Ensembl→external conversion against MySQL ground truth.</span>
+<span class="w">        </span><span class="sd">"""Validate Ensembl→external conversion against MySQL ground truth.</span>
 
 <span class="sd">        A random external database is chosen for **every** genome assembly. For</span>
 <span class="sd">        the selected combination the method grabs the authoritative mapping</span>
@@ -1033,14 +1034,14 @@
 
 <span class="sd">        Raises:</span>
 <span class="sd">            ValueError: Raised when test parameters are invalid or incompatible.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">issues_t1</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">issues_t2</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">issues_t3</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">assembly</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;genome_assembly&quot;</span><span class="p">])</span>
+        <span class="n">assembly</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">"genome_assembly"</span><span class="p">])</span>
 
         <span class="k">if</span> <span class="n">database</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">ens_rel</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Random database and Ensembl release.&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Random database and Ensembl release."</span><span class="p">)</span>
             <span class="n">database</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">ens_rel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">random_dataset_source_generator</span><span class="p">(</span>
                 <span class="n">include_ensembl</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                 <span class="n">include_external</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
@@ -1054,22 +1055,22 @@
             <span class="n">db_manager</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">ens_rel</span><span class="p">),</span> <span class="n">target_assembly</span><span class="o">=</span><span class="n">assembly</span>
         <span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Cannot change to assembly </span><span class="si">{</span><span class="n">assembly</span><span class="si">}</span><span class="s2"> at release </span><span class="si">{</span><span class="n">ens_rel</span><span class="si">}</span><span class="s2">. &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;The target assembly is not available for this release.&quot;</span>
+                <span class="sa">f</span><span class="s2">"Cannot change to assembly </span><span class="si">{</span><span class="n">assembly</span><span class="si">}</span><span class="s2"> at release </span><span class="si">{</span><span class="n">ens_rel</span><span class="si">}</span><span class="s2">. "</span>
+                <span class="sa">f</span><span class="s2">"The target assembly is not available for this release."</span>
             <span class="p">)</span>
 
         <span class="n">dm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_manager</span><span class="o">.</span><span class="n">change_release</span><span class="p">(</span><span class="n">ens_rel</span><span class="p">)</span><span class="o">.</span><span class="n">change_assembly</span><span class="p">(</span><span class="n">assembly</span><span class="p">)</span>
 
-        <span class="n">df</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">&quot;external_relevant&quot;</span><span class="p">)</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;name_db&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">database</span><span class="p">]</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">get_db</span><span class="p">(</span><span class="s2">"external_relevant"</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">"name_db"</span><span class="p">]</span> <span class="o">==</span> <span class="n">database</span><span class="p">]</span>
         <span class="n">base_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;graph_id&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">base_dict</span><span class="p">:</span>
-                <span class="n">base_dict</span><span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;graph_id&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-            <span class="n">base_dict</span><span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;graph_id&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;id_db&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="s2">"graph_id"</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">base_dict</span><span class="p">:</span>
+                <span class="n">base_dict</span><span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s2">"graph_id"</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="n">base_dict</span><span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s2">"graph_id"</span><span class="p">]]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"id_db"</span><span class="p">])</span>
 
         <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Assembly: </span><span class="si">{</span><span class="n">assembly</span><span class="si">}</span><span class="s2">, Database: </span><span class="si">{</span><span class="n">database</span><span class="si">}</span><span class="s2">, Release: </span><span class="si">{</span><span class="n">ens_rel</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Assembly: </span><span class="si">{</span><span class="n">assembly</span><span class="si">}</span><span class="s2">, Database: </span><span class="si">{</span><span class="n">database</span><span class="si">}</span><span class="s2">, Release: </span><span class="si">{</span><span class="n">ens_rel</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">history_travel_testing</span><span class="p">(</span>
             <span class="n">from_fraction</span><span class="o">=</span><span class="n">from_fraction</span><span class="p">,</span>
@@ -1085,21 +1086,21 @@
             <span class="n">verbose_detailed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
         <span class="p">)</span>
 
-        <span class="k">for</span> <span class="n">from_id</span> <span class="ow">in</span> <span class="n">res</span><span class="p">[</span><span class="s2">&quot;ids&quot;</span><span class="p">][</span><span class="s2">&quot;from&quot;</span><span class="p">]:</span>
-            <span class="k">if</span> <span class="n">from_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">res</span><span class="p">[</span><span class="s2">&quot;conversion&quot;</span><span class="p">]:</span>
+        <span class="k">for</span> <span class="n">from_id</span> <span class="ow">in</span> <span class="n">res</span><span class="p">[</span><span class="s2">"ids"</span><span class="p">][</span><span class="s2">"from"</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">from_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">res</span><span class="p">[</span><span class="s2">"conversion"</span><span class="p">]:</span>
                 <span class="n">issues_t3</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">from_id</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">issue_dict</span> <span class="o">=</span> <span class="p">{</span>
-                    <span class="s2">&quot;database&quot;</span><span class="p">:</span> <span class="n">database</span><span class="p">,</span>
-                    <span class="s2">&quot;asym&quot;</span><span class="p">:</span> <span class="n">assembly</span><span class="p">,</span>
-                    <span class="s2">&quot;ens_rel&quot;</span><span class="p">:</span> <span class="n">ens_rel</span><span class="p">,</span>
-                    <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">from_id</span><span class="p">,</span>
-                    <span class="s2">&quot;converted&quot;</span><span class="p">:</span> <span class="n">res</span><span class="p">[</span><span class="s2">&quot;conversion&quot;</span><span class="p">][</span><span class="n">from_id</span><span class="p">],</span>
+                    <span class="s2">"database"</span><span class="p">:</span> <span class="n">database</span><span class="p">,</span>
+                    <span class="s2">"asym"</span><span class="p">:</span> <span class="n">assembly</span><span class="p">,</span>
+                    <span class="s2">"ens_rel"</span><span class="p">:</span> <span class="n">ens_rel</span><span class="p">,</span>
+                    <span class="s2">"id"</span><span class="p">:</span> <span class="n">from_id</span><span class="p">,</span>
+                    <span class="s2">"converted"</span><span class="p">:</span> <span class="n">res</span><span class="p">[</span><span class="s2">"conversion"</span><span class="p">][</span><span class="n">from_id</span><span class="p">],</span>
                 <span class="p">}</span>
                 <span class="k">if</span> <span class="n">from_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">base_dict</span><span class="p">:</span>
                     <span class="n">issues_t2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">issue_dict</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="p">{</span><span class="n">i</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">res</span><span class="p">[</span><span class="s2">&quot;conversion&quot;</span><span class="p">][</span><span class="n">from_id</span><span class="p">]}</span> <span class="o">!=</span> <span class="p">{</span><span class="n">i</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">base_dict</span><span class="p">[</span><span class="n">from_id</span><span class="p">]}:</span>
-                    <span class="n">issue_dict</span><span class="p">[</span><span class="s2">&quot;base_expectation&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">base_dict</span><span class="p">[</span><span class="n">from_id</span><span class="p">]</span>
+                <span class="k">elif</span> <span class="p">{</span><span class="n">i</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">res</span><span class="p">[</span><span class="s2">"conversion"</span><span class="p">][</span><span class="n">from_id</span><span class="p">]}</span> <span class="o">!=</span> <span class="p">{</span><span class="n">i</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">base_dict</span><span class="p">[</span><span class="n">from_id</span><span class="p">]}:</span>
+                    <span class="n">issue_dict</span><span class="p">[</span><span class="s2">"base_expectation"</span><span class="p">]</span> <span class="o">=</span> <span class="n">base_dict</span><span class="p">[</span><span class="n">from_id</span><span class="p">]</span>
                     <span class="n">issues_t1</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">issue_dict</span><span class="p">)</span>
 
         <span class="c1"># make sure issues_t3 is not found in base_dict_from_id</span>
@@ -1122,7 +1123,7 @@
         <span class="n">release_lower_limit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">form</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Pick a random (&lt;database&gt;, &lt;assembly&gt;, &lt;release&gt;) tuple.</span>
+<span class="w">        </span><span class="sd">"""Pick a random (&lt;database&gt;, &lt;assembly&gt;, &lt;release&gt;) tuple.</span>
 
 <span class="sd">        The function guarantees that the triple actually exists in the graph</span>
 <span class="sd">        and - if *release_lower_limit* is provided - honours the minimum</span>
@@ -1150,11 +1151,11 @@
 
 <span class="sd">        Raises:</span>
 <span class="sd">            ValueError: Raised when no valid database/release combination can be found.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">only_backbone_tests</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">include_external</span><span class="p">:</span>
                 <span class="n">all_possible_sources</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">available_external_databases_assembly</span><span class="p">[</span><span class="n">assembly</span><span class="p">]))</span>
-                <span class="n">all_possible_sources</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">all_possible_sources</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">i</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;synonym_id&quot;</span><span class="p">)]</span>
+                <span class="n">all_possible_sources</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">all_possible_sources</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">i</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"synonym_id"</span><span class="p">)]</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">all_possible_sources</span> <span class="o">=</span> <span class="p">[]</span>
 
@@ -1174,7 +1175,7 @@
                 <span class="n">all_possible_sources</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">nts_base_ensembl</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">])</span>
 
             <span class="k">if</span> <span class="ow">not</span> <span class="n">all_possible_sources</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;There is nothing as possible sources.&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"There is nothing as possible sources."</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">all_possible_sources</span> <span class="o">=</span> <span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">]]</span>
 
@@ -1188,13 +1189,13 @@
             <span class="n">the_key</span> <span class="o">=</span> <span class="p">(</span><span class="n">selected_database</span><span class="p">,</span> <span class="n">assembly</span><span class="p">,</span> <span class="n">selected_release</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">the_key</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span></div>
+            <span class="k">return</span> <span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="TrackTests.is_node_consistency_robust">
 <a class="viewcode-back" href="../../reference.html#idtrack._track_tests.TrackTests.is_node_consistency_robust">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">is_node_consistency_robust</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check for illegal neighbour relationships and multi-edges.</span>
+<span class="w">        </span><span class="sd">"""Check for illegal neighbour relationships and multi-edges.</span>
 
 <span class="sd">        The graph may contain **exactly one** edge between nodes of *different*</span>
 <span class="sd">        node-types.  Nodes of the *same* node-type are only allowed when that</span>
@@ -1208,7 +1209,7 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            bool: *True* when the graph satisfies the topology rules, *False*</span>
 <span class="sd">            otherwise.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">with</span> <span class="n">tqdm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">,</span> <span class="n">mininterval</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">ncols</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span> <span class="k">as</span> <span class="n">loop_obj</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">loop_obj</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">neighbors</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
@@ -1217,12 +1218,12 @@
 
                     <span class="k">if</span> <span class="n">ni</span> <span class="o">==</span> <span class="n">nj</span> <span class="ow">and</span> <span class="n">ni</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_ensembl</span><span class="p">[</span><span class="n">DB</span><span class="o">.</span><span class="n">backbone_form</span><span class="p">]:</span>
                         <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Neighbor nodes (not backbone) has similar node type: `</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">`, `</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s2">`&quot;</span><span class="p">)</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Neighbor nodes (not backbone) has similar node type: `</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">`, `</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s2">`"</span><span class="p">)</span>
                         <span class="k">return</span> <span class="kc">False</span>
 
                     <span class="k">elif</span> <span class="n">ni</span> <span class="o">!=</span> <span class="n">nj</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">])</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
                         <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Multiple edges between `</span><span class="si">{</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">ni</span><span class="si">}</span><span class="s2">` and `</span><span class="si">{</span><span class="n">j</span><span class="p">,</span><span class="w"> </span><span class="n">nj</span><span class="si">}</span><span class="s2">`&quot;</span><span class="p">)</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Multiple edges between `</span><span class="si">{</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">ni</span><span class="si">}</span><span class="s2">` and `</span><span class="si">{</span><span class="n">j</span><span class="p">,</span><span class="w"> </span><span class="n">nj</span><span class="si">}</span><span class="s2">`"</span><span class="p">)</span>
                         <span class="k">return</span> <span class="kc">False</span>
 
         <span class="k">return</span> <span class="kc">True</span></div>
@@ -1231,7 +1232,7 @@
 <div class="viewcode-block" id="TrackTests._format_history_travel_testing_report_header">
 <a class="viewcode-back" href="../../reference.html#idtrack._track_tests.TrackTests._format_history_travel_testing_report_header">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">_format_history_travel_testing_report_header</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format the header section for a history travel testing report.</span>
+<span class="w">        </span><span class="sd">"""Format the header section for a history travel testing report.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            p (dict[str, Any]): Parameters dictionary containing ``from_database``,</span>
@@ -1239,12 +1240,12 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            list[str]: Lines of formatted text for the report header.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">header</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="s2">&quot;╔═ History-Travel-Testing Report ═╗&quot;</span><span class="p">,</span>
-            <span class="sa">f</span><span class="s2">&quot;Source  : </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;from_database&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;(Assembly </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;from_assembly&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">, Release </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;from_release&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">,</span>
-            <span class="sa">f</span><span class="s2">&quot;Target  : </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;to_database&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span> <span class="sa">f</span><span class="s2">&quot;(Release </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;to_release&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="s2">"╔═ History-Travel-Testing Report ═╗"</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">"Source  : </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'from_database'</span><span class="p">)</span><span class="si">}</span><span class="s2"> "</span>
+            <span class="sa">f</span><span class="s2">"(Assembly </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'from_assembly'</span><span class="p">)</span><span class="si">}</span><span class="s2">, Release </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'from_release'</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">"Target  : </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'to_database'</span><span class="p">)</span><span class="si">}</span><span class="s2"> "</span> <span class="sa">f</span><span class="s2">"(Release </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'to_release'</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span><span class="p">,</span>
         <span class="p">]</span>
 
         <span class="k">return</span> <span class="n">header</span></div>
@@ -1255,7 +1256,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_format_history_travel_testing_report</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">res</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">include_header</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">line_separation_at_end</span><span class="o">=</span><span class="kc">True</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format a complete history travel testing report with metrics.</span>
+<span class="w">        </span><span class="sd">"""Format a complete history travel testing report with metrics.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            res (dict[str, Any]): Results dictionary from history_travel_testing</span>
@@ -1267,56 +1268,56 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            list[str]: Lines of formatted text for the complete report.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">cnt</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">            </span><span class="sd">&quot;&quot;&quot;Return length of list/dict at res[key] or zero if absent.&quot;&quot;&quot;</span>
+<span class="w">            </span><span class="sd">"""Return length of list/dict at res[key] or zero if absent."""</span>
             <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="p">[]))</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">block</span><span class="p">(</span><span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">rows</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
             <span class="n">pad</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">)</span>
-            <span class="k">return</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2">:&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">k</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="n">pad</span><span class="p">)</span><span class="si">}</span><span class="s2"> : </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
+            <span class="k">return</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2">:"</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"  - </span><span class="si">{</span><span class="n">k</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="n">pad</span><span class="p">)</span><span class="si">}</span><span class="s2"> : </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
 
         <span class="k">if</span> <span class="n">include_header</span><span class="p">:</span>
-            <span class="n">p</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;parameters&quot;</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"parameters"</span><span class="p">,</span> <span class="p">{})</span>
             <span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format_history_travel_testing_report_header</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
             <span class="n">header_extension</span> <span class="o">=</span> <span class="p">[</span>
-                <span class="sa">f</span><span class="s2">&quot;External: </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;go_external&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">   &quot;</span> <span class="sa">f</span><span class="s2">&quot;1→1-pref.: </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;prioritize_to_one_filter&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-                <span class="sa">f</span><span class="s2">&quot;Sample  : </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;from_fraction&#39;</span><span class="p">)</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> of source IDs&quot;</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"External: </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'go_external'</span><span class="p">)</span><span class="si">}</span><span class="s2">   "</span> <span class="sa">f</span><span class="s2">"1→1-pref.: </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'prioritize_to_one_filter'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">"Sample  : </span><span class="si">{</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'from_fraction'</span><span class="p">)</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> of source IDs"</span><span class="p">,</span>
             <span class="p">]</span>
             <span class="n">header</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">header_extension</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">header</span> <span class="o">=</span> <span class="p">[]</span>
 
         <span class="n">failure_rows</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="p">(</span><span class="s2">&quot;Voyage failed (graceful)      &quot;</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">&quot;history_voyage_failed_gracefully&quot;</span><span class="p">)),</span>
-            <span class="p">(</span><span class="s2">&quot;Voyage failed (unknown)       &quot;</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">&quot;history_voyage_failed_unknown&quot;</span><span class="p">)),</span>
-            <span class="p">(</span><span class="s2">&quot;Query not in graph            &quot;</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">&quot;query_not_in_the_graph&quot;</span><span class="p">)),</span>
-            <span class="p">(</span><span class="s2">&quot;Lost item                     &quot;</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">&quot;lost_item&quot;</span><span class="p">)),</span>
-            <span class="p">(</span><span class="s2">&quot;Lost item, but ID exists      &quot;</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">&quot;lost_item_but_the_same_id_exists&quot;</span><span class="p">)),</span>
-            <span class="p">(</span><span class="s2">&quot;Found IDs not accurate        &quot;</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">&quot;found_ids_not_accurate&quot;</span><span class="p">)),</span>
+            <span class="p">(</span><span class="s2">"Voyage failed (graceful)      "</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">"history_voyage_failed_gracefully"</span><span class="p">)),</span>
+            <span class="p">(</span><span class="s2">"Voyage failed (unknown)       "</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">"history_voyage_failed_unknown"</span><span class="p">)),</span>
+            <span class="p">(</span><span class="s2">"Query not in graph            "</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">"query_not_in_the_graph"</span><span class="p">)),</span>
+            <span class="p">(</span><span class="s2">"Lost item                     "</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">"lost_item"</span><span class="p">)),</span>
+            <span class="p">(</span><span class="s2">"Lost item, but ID exists      "</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">"lost_item_but_the_same_id_exists"</span><span class="p">)),</span>
+            <span class="p">(</span><span class="s2">"Found IDs not accurate        "</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">"found_ids_not_accurate"</span><span class="p">)),</span>
         <span class="p">]</span>
 
-        <span class="n">clashes</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;clashing_id_type&quot;</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">clashes</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"clashing_id_type"</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
         <span class="n">mapping_rows</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="p">(</span><span class="s2">&quot;One→one IDs                   &quot;</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">&quot;one_to_one_ids&quot;</span><span class="p">)),</span>
-            <span class="p">(</span><span class="s2">&quot;One→many IDs                  &quot;</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">&quot;one_to_multiple_ids&quot;</span><span class="p">)),</span>
-            <span class="p">(</span><span class="s2">&quot;One→many (single conv.)       &quot;</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">&quot;one_to_multiple_final_conversion&quot;</span><span class="p">)),</span>
-            <span class="p">(</span><span class="s2">&quot;Successfully converted IDs    &quot;</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">&quot;conversion&quot;</span><span class="p">)),</span>
-            <span class="p">(</span><span class="s2">&quot;Clash one→one                 &quot;</span><span class="p">,</span> <span class="n">clashes</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
-            <span class="p">(</span><span class="s2">&quot;Clash many→many               &quot;</span><span class="p">,</span> <span class="n">clashes</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
-            <span class="p">(</span><span class="s2">&quot;Clash mixed                   &quot;</span><span class="p">,</span> <span class="n">clashes</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>
+            <span class="p">(</span><span class="s2">"One→one IDs                   "</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">"one_to_one_ids"</span><span class="p">)),</span>
+            <span class="p">(</span><span class="s2">"One→many IDs                  "</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">"one_to_multiple_ids"</span><span class="p">)),</span>
+            <span class="p">(</span><span class="s2">"One→many (single conv.)       "</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">"one_to_multiple_final_conversion"</span><span class="p">)),</span>
+            <span class="p">(</span><span class="s2">"Successfully converted IDs    "</span><span class="p">,</span> <span class="n">cnt</span><span class="p">(</span><span class="s2">"conversion"</span><span class="p">)),</span>
+            <span class="p">(</span><span class="s2">"Clash one→one                 "</span><span class="p">,</span> <span class="n">clashes</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="p">(</span><span class="s2">"Clash many→many               "</span><span class="p">,</span> <span class="n">clashes</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+            <span class="p">(</span><span class="s2">"Clash mixed                   "</span><span class="p">,</span> <span class="n">clashes</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>
         <span class="p">]</span>
 
         <span class="n">report_lines</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">header</span>
-            <span class="o">+</span> <span class="n">block</span><span class="p">(</span><span class="s2">&quot;Failure / Anomaly Counts&quot;</span><span class="p">,</span> <span class="n">failure_rows</span><span class="p">)</span>
-            <span class="o">+</span> <span class="n">block</span><span class="p">(</span><span class="s2">&quot;Mapping Statistics&quot;</span><span class="p">,</span> <span class="n">mapping_rows</span><span class="p">)</span>
-            <span class="o">+</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;Total runtime: </span><span class="si">{</span><span class="n">res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;time&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s&quot;</span><span class="p">]</span>
+            <span class="o">+</span> <span class="n">block</span><span class="p">(</span><span class="s2">"Failure / Anomaly Counts"</span><span class="p">,</span> <span class="n">failure_rows</span><span class="p">)</span>
+            <span class="o">+</span> <span class="n">block</span><span class="p">(</span><span class="s2">"Mapping Statistics"</span><span class="p">,</span> <span class="n">mapping_rows</span><span class="p">)</span>
+            <span class="o">+</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"Total runtime: </span><span class="si">{</span><span class="n">res</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'time'</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s"</span><span class="p">]</span>
         <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">line_separation_at_end</span><span class="p">:</span>
-            <span class="n">report_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="n">report_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">""</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">report_lines</span></div>
 </div>

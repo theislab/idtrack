@@ -9,7 +9,7 @@
   <title>Part 2 — External Database Configuration &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
-      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
       <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
       <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
       <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=0e72a3a5" />
@@ -20,7 +20,7 @@
       <script src="../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
-      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
       <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
       <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
@@ -83,7 +83,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#3.-Choose-your-snapshot-release-(reproducibility-knob)">3. Choose your snapshot release (reproducibility knob)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#2.1-—-Human-(Homo-sapiens)">2.1 — Human (Homo sapiens)</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#2.1.1-Create-a-DatabaseManager-snapshot">2.1.1 Create a DatabaseManager snapshot</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#2.1.2-Generate-a-template-YAML-(optional-for-human,-required-for-mouse/pig)">2.1.2 Generate a template YAML (optional for human, required for mouse/pig)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#2.1.2-Generate-a-template-YAML-(optional:-every-supported-organism-ships-a-default)">2.1.2 Generate a template YAML (optional: every supported organism ships a default)</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#2.1.3-Edit-the-YAML-(two-options)">2.1.3 Edit the YAML (two options)</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#2.1.4-Validate-+-preview-your-selections">2.1.4 Validate + preview your selections</a></li>
 </ul>
@@ -96,9 +96,12 @@
 <li class="toctree-l4"><a class="reference internal" href="#2.3.1-Programmatic-allowlist-(pig)">2.3.1 Programmatic allowlist (pig)</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#2.4-—-Adding-a-New-Organism-(Advanced)">2.4 — Adding a New Organism (Advanced)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#2.5-—-Final-checklist-(before-you-build-graphs)">2.5 — Final checklist (before you build graphs)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#2.6-—-Best-practices-(once-you-get-comfortable)">2.6 — Best practices (once you get comfortable)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.4-—-Rhesus-macaque-(Macaca-mulatta)">2.4 — Rhesus macaque (Macaca mulatta)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.5-—-Cynomolgus-macaque-(Macaca-fascicularis)">2.5 — Cynomolgus macaque (Macaca fascicularis)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.6-—-Extending-a-YAML-to-a-new-Ensembl-release">2.6 — Extending a YAML to a new Ensembl release</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.7-—-Adding-a-New-Organism-(Advanced)">2.7 — Adding a New Organism (Advanced)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.8-—-Final-checklist-(before-you-build-graphs)">2.8 — Final checklist (before you build graphs)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#2.9-—-Best-practices-(once-you-get-comfortable)">2.9 — Best practices (once you get comfortable)</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="03_initialization_graph.html">Part 3 — Graph Initialization &amp; Management</a></li>
@@ -112,6 +115,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
@@ -146,7 +150,7 @@
   <a class="idtrack-notebook-download" href="../_sources/_notebooks/02_prepare_new_external_yaml.ipynb">Download notebook</a>
 </div><section id="Part-2-—-External-Database-Configuration">
 <h1>Part 2 — External Database Configuration<a class="headerlink" href="#Part-2-—-External-Database-Configuration" title="Link to this heading"></a></h1>
-<p><em>Last updated:</em> 2026-01-08</p>
+<p><em>Last updated:</em> 2026-11-11</p>
 <p>This notebook is the step-by-step guide for creating and validating the <strong>external YAML</strong> files that control which <strong>external databases</strong> (HGNC, MGI, UniProt, RefSeq, …) are included when IDTrack builds the identifier graph.</p>
 <p>By the end, you will:</p>
 <ul class="simple">
@@ -157,10 +161,14 @@
 <p>This notebook covers:</p>
 <ul class="simple">
 <li><p><strong>2.1 Human</strong> (<em>Homo sapiens</em>) — multi-assembly (GRCh38 + GRCh37, and older archives when available)</p></li>
-<li><p><strong>2.2 Mouse</strong> (<em>Mus musculus</em>) — clean handoff (one maintained assembly per release: GRCm37 → GRCm38 → GRCm39)</p></li>
-<li><p><strong>2.3 Pig</strong> (<em>Sus scrofa</em>) — clean handoff (one maintained assembly per release: Sscrofa9.2 → Sscrofa10.2 → Sscrofa11.1)</p></li>
-<li><p><strong>2.4 Adding a new organism</strong> (advanced; may require a small code configuration step)</p></li>
+<li><p><strong>2.2 Mouse</strong> (<em>Mus musculus</em>) — clean handoff (one maintained assembly per release: NCBIM37 → GRCm38 → GRCm39)</p></li>
+<li><p><strong>2.3 Pig</strong> (<em>Sus scrofa</em>) — clean handoff (one maintained assembly per release: Sscrofa9 → Sscrofa10.2 → Sscrofa11.1)</p></li>
+<li><p><strong>2.4 Rhesus macaque</strong> (<em>Macaca mulatta</em>) — clean handoff (MMUL_1 → Mmul_8.0.1 → Mmul_10)</p></li>
+<li><p><strong>2.5 Cynomolgus macaque</strong> (<em>Macaca fascicularis</em>) — clean handoff (Macaca_fascicularis_5.0 → 6.0)</p></li>
+<li><p><strong>2.6 Extending a YAML to a new Ensembl release</strong> (without regenerating it)</p></li>
+<li><p><strong>2.7 Adding a new organism</strong> (advanced; one table entry in <code class="docutils literal notranslate"><span class="pre">idtrack/_db.py</span></code>, or <code class="docutils literal notranslate"><span class="pre">DB.register_organism</span></code> for a session)</p></li>
 </ul>
+<p>IDTrack ships a default <code class="docutils literal notranslate"><span class="pre">&lt;organism&gt;_externals_modified.yml</span></code> for all five organisms (in <code class="docutils literal notranslate"><span class="pre">idtrack/default_config/</span></code>), made exactly as this notebook shows: a template from every release and form, then <code class="docutils literal notranslate"><span class="pre">Include:</span> <span class="pre">true</span></code> for an allowlist. You only need your own file to change the selection (a file in your local repository takes precedence over the shipped one) or for a new organism.</p>
 <p>In IDTrack, assemblies are a first-class dimension (not just “primary vs legacy”): the templates keep all assembly entries that Ensembl exposes for the species. Keeping them is usually the right choice, especially when you integrate datasets annotated with different GTFs or reference packages.</p>
 <blockquote>
 <div><p><strong>Tip:</strong> If you’re new, start with <code class="docutils literal notranslate"><span class="pre">00_idtrack_overview.ipynb</span></code> (concepts) and <code class="docutils literal notranslate"><span class="pre">01_installation_guide.ipynb</span></code> (setup).</p>
@@ -172,13 +180,15 @@
 <li><p>Network access (first-time runs download Ensembl metadata)</p></li>
 <li><p>A writable <strong>local repository</strong> folder (IDTrack cache)</p></li>
 </ul>
-<p><strong>What you get at the end:</strong></p>
+<p><strong>What you get at the end</strong> (one per organism you work through):</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">homo_sapiens_externals_modified.yml</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">mus_musculus_externals_modified.yml</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">sus_scrofa_externals_modified.yml</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">macaca_mulatta_externals_modified.yml</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">macaca_fascicularis_externals_modified.yml</span></code></p></li>
 </ul>
-<p>Each file lives in your local repository and is safe to share with collaborators.</p>
+<p>Each file lives in your local repository and is safe to share with collaborators. Without them, IDTrack uses the shipped defaults.</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>1
 </pre></div>
@@ -201,13 +211,13 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 
-<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;IDTRACK_LOCAL_REPO&#39;</span><span class="p">,</span> <span class="s1">&#39;./idtrack_cache&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'./idtrack_cache'</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
 <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
 <span class="n">api</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Local repository:&#39;</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Local repository:'</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -250,10 +260,10 @@ Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_not
 <span class="w">    </span><span class="nt">&lt;Database Name&gt;</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">Assembly</span><span class="p">:</span>
 <span class="w">        </span><span class="nt">&lt;assembly_code&gt;</span><span class="p">:</span>
-<span class="w">          </span><span class="nt">Ensembl release</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;90,91,92,...&quot;</span>
+<span class="w">          </span><span class="nt">Ensembl release</span><span class="p">:</span><span class="w"> </span><span class="s">"90,91,92,..."</span>
 <span class="w">          </span><span class="nt">Include</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
 <span class="w">      </span><span class="nt">Database Index</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">123</span>
-<span class="w">      </span><span class="nt">Potential Synonymous</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+<span class="w">      </span><span class="nt">Potential Synonymous</span><span class="p">:</span><span class="w"> </span><span class="s">""</span>
 </pre></div>
 </div>
 <p><strong>You mainly edit one thing:</strong> <code class="docutils literal notranslate"><span class="pre">Include:</span> <span class="pre">false</span></code> → <code class="docutils literal notranslate"><span class="pre">Include:</span> <span class="pre">true</span></code>.</p>
@@ -280,7 +290,7 @@ Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_not
 </section>
 <section id="2.1-—-Human-(Homo-sapiens)">
 <h2>2.1 — Human (Homo sapiens)<a class="headerlink" href="#2.1-—-Human-(Homo-sapiens)" title="Link to this heading"></a></h2>
-<p>Human is special in one convenient way: IDTrack ships a <strong>default external YAML</strong> for human.</p>
+<p>IDTrack ships a <strong>default external YAML</strong> for human (as for every supported organism). Human is special in another way: GRCh38 and GRCh37 overlap for many releases, so two assemblies are in play at once.</p>
 <p>An important conceptual point before you start editing:</p>
 <ul class="simple">
 <li><p>Assemblies are not just “primary vs legacy” in IDTrack.</p></li>
@@ -319,7 +329,7 @@ Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_not
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 4.1 Resolve organism name + latest release</span>
-<span class="n">organism_hs</span><span class="p">,</span> <span class="n">latest_release_hs</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;human&#39;</span><span class="p">)</span>
+<span class="n">organism_hs</span><span class="p">,</span> <span class="n">latest_release_hs</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'human'</span><span class="p">)</span>
 <span class="n">SNAPSHOT_RELEASE_HS</span> <span class="o">=</span> <span class="n">latest_release_hs</span>  <span class="c1"># change if you want to pin</span>
 <span class="n">organism_hs</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE_HS</span>
 <br/></pre></div>
@@ -372,8 +382,8 @@ Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_not
 </pre></div></div>
 </div>
 </section>
-<section id="2.1.2-Generate-a-template-YAML-(optional-for-human,-required-for-mouse/pig)">
-<h3>2.1.2 Generate a template YAML (optional for human, required for mouse/pig)<a class="headerlink" href="#2.1.2-Generate-a-template-YAML-(optional-for-human,-required-for-mouse/pig)" title="Link to this heading"></a></h3>
+<section id="2.1.2-Generate-a-template-YAML-(optional:-every-supported-organism-ships-a-default)">
+<h3>2.1.2 Generate a template YAML (optional: every supported organism ships a default)<a class="headerlink" href="#2.1.2-Generate-a-template-YAML-(optional:-every-supported-organism-ships-a-default)" title="Link to this heading"></a></h3>
 <p>This step can take time, because IDTrack enumerates database metadata across releases. You typically do it once per organism (and then keep the YAML).</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
@@ -387,10 +397,10 @@ df_hs = dm_hs.create_database_content(just_download=False)
 dm_hs.external_inst.create_template_yaml(df_hs)
 
 template_hs = Path(dm_hs.external_inst.file_name_template_yaml())
-modified_hs = Path(dm_hs.external_inst.file_name_modified_yaml(mode=&#39;configured&#39;))
+modified_hs = Path(dm_hs.external_inst.file_name_modified_yaml(mode='configured'))
 {
-    &#39;template_yaml&#39;: str(template_hs),
-    &#39;modified_yaml&#39;: str(modified_hs),
+    'template_yaml': str(template_hs),
+    'modified_yaml': str(modified_hs),
 }
 </pre></div>
 </div>
@@ -780,13 +790,13 @@ Please edit the file based on requested external databases and add &#x27;_modifi
 <section id="Option-B-—-programmatic-toggles-(great-for-reproducibility)">
 <h4>Option B — programmatic toggles (great for reproducibility)<a class="headerlink" href="#Option-B-—-programmatic-toggles-(great-for-reproducibility)" title="Link to this heading"></a></h4>
 <p>The next cell applies the <strong>shipped default configuration</strong> used by IDTrack (<code class="docutils literal notranslate"><span class="pre">homo_sapiens_externals_modified.yml</span></code>).</p>
-<p>This default enables <strong>49 form/database/assembly combinations</strong> across three forms:</p>
+<p>This default enables <strong>63 form/database/assembly combinations</strong> across three forms:</p>
 <ul class="simple">
-<li><p><strong>gene</strong> (28 combinations): HGNC Symbol, EntrezGene, NCBI gene, UniProtKB Gene Name, Havana gene, Vega gene, RFAM, Clone-based identifiers, and their synonym variants</p></li>
-<li><p><strong>transcript</strong> (12 combinations): CCDS, Havana transcript, RefSeq mRNA/ncRNA (curated + predicted)</p></li>
-<li><p><strong>translation</strong> (9 combinations): Havana translation, RefSeq peptide (curated + predicted), UniProt (Swiss-Prot + TrEMBL)</p></li>
+<li><p><strong>gene</strong> (35 combinations): HGNC Symbol, EntrezGene, NCBI gene, UniProtKB Gene Name, Havana gene, Vega gene, RFAM, Clone-based identifiers, and their synonym variants</p></li>
+<li><p><strong>transcript</strong> (14 combinations): CCDS, Havana transcript, RefSeq mRNA/ncRNA (curated + predicted)</p></li>
+<li><p><strong>translation</strong> (14 combinations): Havana translation, RefSeq peptide (curated + predicted), UniProt (Swiss-Prot + TrEMBL)</p></li>
 </ul>
-<p>You can modify <code class="docutils literal notranslate"><span class="pre">DEFAULT_HS_EXTERNALS</span></code> in the cell below to customize your allowlist.</p>
+<p>You can modify <code class="docutils literal notranslate"><span class="pre">DEFAULT_HS_EXTERNALS</span></code> in the cell below to customize your allowlist. The allowlists of this notebook are the ones the shipped files were made from; the package keeps the same lists in <code class="docutils literal notranslate"><span class="pre">idtrack._default_externals.DEFAULT_EXTERNALS</span></code> together with <code class="docutils literal notranslate"><span class="pre">apply_allowlist(template,</span> <span class="pre">organism,</span> <span class="pre">allowlist)</span></code>, which does what the loop below does.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
 </pre></div>
@@ -796,43 +806,43 @@ Please edit the file based on requested external databases and add &#x27;_modifi
 <span class="c1"># These 49 combinations are the default used by IDTrack for homo_sapiens.</span>
 
 <span class="n">DEFAULT_HS_EXTERNALS</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s1">&#39;gene&#39;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s1">&#39;Clone_based_ensembl_gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;Clone_based_vega_gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;EntrezGene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;Havana gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;NCBI gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;NCBI gene (formerly Entrezgene)&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;RFAM&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;UniProtKB Gene Name&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;Vega gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;Vega_gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;synonym_id::EntrezGene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;synonym_id::HGNC Symbol&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;synonym_id::NCBI gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;synonym_id::NCBI gene (formerly Entrezgene)&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;synonym_id::UniProtKB Gene Name&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+    <span class="s1">'gene'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'Clone_based_ensembl_gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'Clone_based_vega_gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'EntrezGene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'HGNC Symbol'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'Havana gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'NCBI gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'NCBI gene (formerly Entrezgene)'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'RFAM'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'UniProtKB Gene Name'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'Vega gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'Vega_gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'synonym_id::EntrezGene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'synonym_id::HGNC Symbol'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'synonym_id::NCBI gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'synonym_id::NCBI gene (formerly Entrezgene)'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'synonym_id::UniProtKB Gene Name'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
     <span class="p">},</span>
-    <span class="s1">&#39;transcript&#39;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s1">&#39;CCDS&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;Havana transcript&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;RefSeq_mRNA&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;RefSeq_mRNA_predicted&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;RefSeq_ncRNA&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;RefSeq_ncRNA_predicted&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+    <span class="s1">'transcript'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'CCDS'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'Havana transcript'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'RefSeq_mRNA'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'RefSeq_mRNA_predicted'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'RefSeq_ncRNA'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'RefSeq_ncRNA_predicted'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
     <span class="p">},</span>
-    <span class="s1">&#39;translation&#39;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s1">&#39;Havana translation&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;RefSeq_peptide&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;RefSeq_peptide_predicted&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;Uniprot/SPTREMBL&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
-        <span class="s1">&#39;Uniprot/SWISSPROT&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+    <span class="s1">'translation'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'Havana translation'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'RefSeq_peptide'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'RefSeq_peptide_predicted'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'Uniprot/SPTREMBL'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
+        <span class="s1">'Uniprot/SWISSPROT'</span><span class="p">:</span> <span class="p">[</span><span class="mi">36</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">],</span>
     <span class="p">},</span>
 <span class="p">}</span>
 
 <span class="c1"># Load the template YAML</span>
-<span class="n">y</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">template_hs</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">template_hs</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">))</span>
 
 <span class="c1"># Apply the default configuration: set Include=True for matching form/database/assembly</span>
 <span class="n">enabled_count</span> <span class="o">=</span> <span class="mi">0</span>
@@ -841,18 +851,18 @@ Please edit the file based on requested external databases and add &#x27;_modifi
         <span class="k">continue</span>
     <span class="k">for</span> <span class="n">db_name</span><span class="p">,</span> <span class="n">assemblies</span> <span class="ow">in</span> <span class="n">databases</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="k">if</span> <span class="n">db_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">y</span><span class="p">[</span><span class="n">organism_hs</span><span class="p">][</span><span class="n">form</span><span class="p">]:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;  [SKIP] </span><span class="si">{</span><span class="n">form</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">db_name</span><span class="si">}</span><span class="s1"> not found in template&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'  [SKIP] </span><span class="si">{</span><span class="n">form</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">db_name</span><span class="si">}</span><span class="s1"> not found in template'</span><span class="p">)</span>
             <span class="k">continue</span>
         <span class="k">for</span> <span class="n">asm_code</span> <span class="ow">in</span> <span class="n">assemblies</span><span class="p">:</span>
             <span class="n">asm_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">asm_code</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">asm_str</span> <span class="ow">in</span> <span class="n">y</span><span class="p">[</span><span class="n">organism_hs</span><span class="p">][</span><span class="n">form</span><span class="p">][</span><span class="n">db_name</span><span class="p">][</span><span class="s1">&#39;Assembly&#39;</span><span class="p">]:</span>
-                <span class="n">y</span><span class="p">[</span><span class="n">organism_hs</span><span class="p">][</span><span class="n">form</span><span class="p">][</span><span class="n">db_name</span><span class="p">][</span><span class="s1">&#39;Assembly&#39;</span><span class="p">][</span><span class="n">asm_str</span><span class="p">][</span><span class="s1">&#39;Include&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">if</span> <span class="n">asm_str</span> <span class="ow">in</span> <span class="n">y</span><span class="p">[</span><span class="n">organism_hs</span><span class="p">][</span><span class="n">form</span><span class="p">][</span><span class="n">db_name</span><span class="p">][</span><span class="s1">'Assembly'</span><span class="p">]:</span>
+                <span class="n">y</span><span class="p">[</span><span class="n">organism_hs</span><span class="p">][</span><span class="n">form</span><span class="p">][</span><span class="n">db_name</span><span class="p">][</span><span class="s1">'Assembly'</span><span class="p">][</span><span class="n">asm_str</span><span class="p">][</span><span class="s1">'Include'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">enabled_count</span> <span class="o">+=</span> <span class="mi">1</span>
 
-<span class="n">modified_hs</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+<span class="n">modified_hs</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Enabled </span><span class="si">{</span><span class="n">enabled_count</span><span class="si">}</span><span class="s1"> form/database/assembly combinations (the shipped default).&#39;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Wrote:&#39;</span><span class="p">,</span> <span class="n">modified_hs</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Enabled </span><span class="si">{</span><span class="n">enabled_count</span><span class="si">}</span><span class="s1"> form/database/assembly combinations (the shipped default).'</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Wrote:'</span><span class="p">,</span> <span class="n">modified_hs</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -875,15 +885,15 @@ Wrote: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtr
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_</span> <span class="o">=</span> <span class="n">dm_hs</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">load_modified_yaml</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Enabled DBs:&#39;</span><span class="p">,</span> <span class="n">dm_hs</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">&#39;db&#39;</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assemblies in play:&#39;</span><span class="p">,</span> <span class="n">dm_hs</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">&#39;assembly&#39;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Enabled DBs:'</span><span class="p">,</span> <span class="n">dm_hs</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">'db'</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Assemblies in play:'</span><span class="p">,</span> <span class="n">dm_hs</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">'assembly'</span><span class="p">))</span>
 
 <span class="c1"># Your dm_hs was created with snapshot_release=115, but GRCh36 data in Ensembl only goes up to</span>
 <span class="c1"># around release 54-55 (when it was superseded by GRCh37).</span>
 <span class="n">_dm_hs</span> <span class="o">=</span> <span class="n">dm_hs</span><span class="o">.</span><span class="n">change_release_auto_assembly</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
 <span class="n">_</span> <span class="o">=</span> <span class="n">_dm_hs</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">load_modified_yaml</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Enabled DBs:&#39;</span><span class="p">,</span> <span class="n">_dm_hs</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">&#39;db&#39;</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assemblies in play:&#39;</span><span class="p">,</span> <span class="n">_dm_hs</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">&#39;assembly&#39;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Enabled DBs:'</span><span class="p">,</span> <span class="n">_dm_hs</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">'db'</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Assemblies in play:'</span><span class="p">,</span> <span class="n">_dm_hs</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">'assembly'</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -902,7 +912,7 @@ Assemblies in play: [36]
 </section>
 <section id="2.2-—-Mouse-(Mus-musculus)">
 <h2>2.2 — Mouse (Mus musculus)<a class="headerlink" href="#2.2-—-Mouse-(Mus-musculus)" title="Link to this heading"></a></h2>
-<p>Mouse does not ship with a default external YAML in the package, so the usual workflow is:</p>
+<p>Mouse ships with a default external YAML too; the workflow below regenerates it (or your own variant):</p>
 <ol class="arabic simple">
 <li><p>generate a template YAML (from Ensembl metadata)</p></li>
 <li><p>enable a curated allowlist of databases</p></li>
@@ -912,7 +922,7 @@ Assemblies in play: [36]
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">39</span></code> = GRCm39</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">38</span></code> = GRCm38</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">37</span></code> = GRCm37</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">37</span></code> = NCBIM37</p></li>
 </ul>
 <blockquote>
 <div><p><strong>Tip:</strong> For clean-handoff species, enabling the same database across the listed assemblies is usually fine; the per-assembly release ranges are disjoint, so you typically do not get overlapping assemblies within a single release.</p>
@@ -932,7 +942,7 @@ Assemblies in play: [36]
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 5.1 Resolve organism name + latest release</span>
-<span class="n">organism_mm</span><span class="p">,</span> <span class="n">latest_release_mm</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;mus musculus&#39;</span><span class="p">)</span>
+<span class="n">organism_mm</span><span class="p">,</span> <span class="n">latest_release_mm</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'mus musculus'</span><span class="p">)</span>
 <span class="n">SNAPSHOT_RELEASE_MM</span> <span class="o">=</span> <span class="n">latest_release_mm</span>
 <span class="n">organism_mm</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE_MM</span>
 <br/></pre></div>
@@ -994,10 +1004,10 @@ df_mm = dm_mm.create_database_content(just_download=False)
 dm_mm.external_inst.create_template_yaml(df_mm)
 
 template_mm = Path(dm_mm.external_inst.file_name_template_yaml())
-modified_mm = Path(dm_mm.external_inst.file_name_modified_yaml(mode=&#39;configured&#39;))
+modified_mm = Path(dm_mm.external_inst.file_name_modified_yaml(mode='configured'))
 {
-    &#39;template_yaml&#39;: str(template_mm),
-    &#39;modified_yaml&#39;: str(modified_mm),
+    'template_yaml': str(template_mm),
+    'modified_yaml': str(modified_mm),
 }
 </pre></div>
 </div>
@@ -2837,42 +2847,42 @@ Please edit the file based on requested external databases and add &#x27;_modifi
 <span class="c1"># This dict is structured as: form -&gt; database -&gt; list of assemblies where Include=True</span>
 
 <span class="n">DEFAULT_MM_EXTERNALS</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s1">&#39;gene&#39;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s1">&#39;Clone_based_ensembl_gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;Clone_based_vega_gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;EntrezGene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;MGI Symbol&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;Havana gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;NCBI gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;NCBI gene (formerly Entrezgene)&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;RFAM&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;UniProtKB Gene Name&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;Vega gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;Vega_gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;synonym_id::EntrezGene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;synonym_id::MGI Symbol&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;synonym_id::NCBI gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;synonym_id::NCBI gene (formerly Entrezgene)&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;synonym_id::UniProtKB Gene Name&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+    <span class="s1">'gene'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'Clone_based_ensembl_gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'Clone_based_vega_gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'EntrezGene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'MGI Symbol'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'Havana gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'NCBI gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'NCBI gene (formerly Entrezgene)'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'RFAM'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'UniProtKB Gene Name'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'Vega gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'Vega_gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'synonym_id::EntrezGene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'synonym_id::MGI Symbol'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'synonym_id::NCBI gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'synonym_id::NCBI gene (formerly Entrezgene)'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'synonym_id::UniProtKB Gene Name'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
     <span class="p">},</span>
-    <span class="s1">&#39;transcript&#39;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s1">&#39;CCDS&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;Havana transcript&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;RefSeq_mRNA&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;RefSeq_mRNA_predicted&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;RefSeq_ncRNA&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;RefSeq_ncRNA_predicted&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+    <span class="s1">'transcript'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'CCDS'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'Havana transcript'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'RefSeq_mRNA'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'RefSeq_mRNA_predicted'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'RefSeq_ncRNA'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'RefSeq_ncRNA_predicted'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
     <span class="p">},</span>
-    <span class="s1">&#39;translation&#39;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s1">&#39;Havana translation&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;RefSeq_peptide&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;RefSeq_peptide_predicted&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;Uniprot/SPTREMBL&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
-        <span class="s1">&#39;Uniprot/SWISSPROT&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+    <span class="s1">'translation'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'Havana translation'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'RefSeq_peptide'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'RefSeq_peptide_predicted'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'Uniprot/SPTREMBL'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
+        <span class="s1">'Uniprot/SWISSPROT'</span><span class="p">:</span> <span class="p">[</span><span class="mi">37</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">39</span><span class="p">],</span>
     <span class="p">},</span>
 <span class="p">}</span>
 
-<span class="n">y</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">template_mm</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">template_mm</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">))</span>
 
 <span class="c1"># Apply the default configuration: set Include=True for matching form/database/assembly</span>
 <span class="n">enabled_count</span> <span class="o">=</span> <span class="mi">0</span>
@@ -2881,18 +2891,18 @@ Please edit the file based on requested external databases and add &#x27;_modifi
         <span class="k">continue</span>
     <span class="k">for</span> <span class="n">db_name</span><span class="p">,</span> <span class="n">assemblies</span> <span class="ow">in</span> <span class="n">databases</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="k">if</span> <span class="n">db_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">y</span><span class="p">[</span><span class="n">organism_mm</span><span class="p">][</span><span class="n">form</span><span class="p">]:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;  [SKIP] </span><span class="si">{</span><span class="n">form</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">db_name</span><span class="si">}</span><span class="s1"> not found in template&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'  [SKIP] </span><span class="si">{</span><span class="n">form</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">db_name</span><span class="si">}</span><span class="s1"> not found in template'</span><span class="p">)</span>
             <span class="k">continue</span>
         <span class="k">for</span> <span class="n">asm_code</span> <span class="ow">in</span> <span class="n">assemblies</span><span class="p">:</span>
             <span class="n">asm_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">asm_code</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">asm_str</span> <span class="ow">in</span> <span class="n">y</span><span class="p">[</span><span class="n">organism_mm</span><span class="p">][</span><span class="n">form</span><span class="p">][</span><span class="n">db_name</span><span class="p">][</span><span class="s1">&#39;Assembly&#39;</span><span class="p">]:</span>
-                <span class="n">y</span><span class="p">[</span><span class="n">organism_mm</span><span class="p">][</span><span class="n">form</span><span class="p">][</span><span class="n">db_name</span><span class="p">][</span><span class="s1">&#39;Assembly&#39;</span><span class="p">][</span><span class="n">asm_str</span><span class="p">][</span><span class="s1">&#39;Include&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">if</span> <span class="n">asm_str</span> <span class="ow">in</span> <span class="n">y</span><span class="p">[</span><span class="n">organism_mm</span><span class="p">][</span><span class="n">form</span><span class="p">][</span><span class="n">db_name</span><span class="p">][</span><span class="s1">'Assembly'</span><span class="p">]:</span>
+                <span class="n">y</span><span class="p">[</span><span class="n">organism_mm</span><span class="p">][</span><span class="n">form</span><span class="p">][</span><span class="n">db_name</span><span class="p">][</span><span class="s1">'Assembly'</span><span class="p">][</span><span class="n">asm_str</span><span class="p">][</span><span class="s1">'Include'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">enabled_count</span> <span class="o">+=</span> <span class="mi">1</span>
 
-<span class="n">modified_mm</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+<span class="n">modified_mm</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Enabled </span><span class="si">{</span><span class="n">enabled_count</span><span class="si">}</span><span class="s1"> form/database/assembly combinations.&#39;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Wrote:&#39;</span><span class="p">,</span> <span class="n">modified_mm</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Enabled </span><span class="si">{</span><span class="n">enabled_count</span><span class="si">}</span><span class="s1"> form/database/assembly combinations.'</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Wrote:'</span><span class="p">,</span> <span class="n">modified_mm</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -2910,8 +2920,8 @@ Wrote: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtr
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_</span> <span class="o">=</span> <span class="n">dm_mm</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">load_modified_yaml</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Enabled DBs:&#39;</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dm_mm</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">&#39;db&#39;</span><span class="p">)))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assemblies in play:&#39;</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dm_mm</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">&#39;assembly&#39;</span><span class="p">)))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Enabled DBs:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dm_mm</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">'db'</span><span class="p">)))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Assemblies in play:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dm_mm</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">'assembly'</span><span class="p">)))</span>
 <br/></pre></div>
 </div>
 </div>
@@ -2932,12 +2942,12 @@ Assemblies in play: [39]
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">111</span></code> = Sscrofa11.1</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">102</span></code> = Sscrofa10.2</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">9</span></code> = Sscrofa9.2</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">9</span></code> = Sscrofa9</p></li>
 </ul>
 <blockquote>
 <div><p><strong>Tip:</strong> For clean-handoff species, enabling the same database across the listed assemblies is usually fine; older assemblies mainly matter for legacy datasets and archive releases.</p>
 </div></blockquote>
-<p>Pig also requires generating a template YAML and then enabling a curated allowlist.</p>
+<p>Pig ships with a default external YAML; regenerating it follows the same template-plus-allowlist workflow.</p>
 <p>Pig datasets often mix different naming conventions, so enabling a small set of high-signal externals is especially important.</p>
 <p>Commonly useful databases for pig:</p>
 <ul class="simple">
@@ -2953,7 +2963,7 @@ Assemblies in play: [39]
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 6.1 Resolve organism name + latest release</span>
-<span class="n">organism_ss</span><span class="p">,</span> <span class="n">latest_release_ss</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;sus scrofa&#39;</span><span class="p">)</span>
+<span class="n">organism_ss</span><span class="p">,</span> <span class="n">latest_release_ss</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'sus scrofa'</span><span class="p">)</span>
 <span class="n">SNAPSHOT_RELEASE_SS</span> <span class="o">=</span> <span class="n">latest_release_ss</span>
 <span class="n">organism_ss</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE_SS</span>
 <br/></pre></div>
@@ -3013,10 +3023,10 @@ df_ss = dm_ss.create_database_content(just_download=False)
 dm_ss.external_inst.create_template_yaml(df_ss)
 
 template_ss = Path(dm_ss.external_inst.file_name_template_yaml())
-modified_ss = Path(dm_ss.external_inst.file_name_modified_yaml(mode=&#39;configured&#39;))
+modified_ss = Path(dm_ss.external_inst.file_name_modified_yaml(mode='configured'))
 {
-    &#39;template_yaml&#39;: str(template_ss),
-    &#39;modified_yaml&#39;: str(modified_ss),
+    'template_yaml': str(template_ss),
+    'modified_yaml': str(modified_ss),
 }
 </pre></div>
 </div>
@@ -4850,7 +4860,7 @@ Please edit the file based on requested external databases and add &#x27;_modifi
 </div>
 <section id="2.3.1-Programmatic-allowlist-(pig)">
 <h3>2.3.1 Programmatic allowlist (pig)<a class="headerlink" href="#2.3.1-Programmatic-allowlist-(pig)" title="Link to this heading"></a></h3>
-<p>Pig symbol databases can vary across releases. A safe starter set often includes <code class="docutils literal notranslate"><span class="pre">EntrezGene</span></code> and <code class="docutils literal notranslate"><span class="pre">UniProtKB</span></code>. Use the template to inspect what is available for your snapshot release.</p>
+<p>Pig symbol databases vary across assemblies: Sscrofa10.2 carries HGNC symbols, Sscrofa11.1 VGNC symbols, so the allowlist enables both. Use the template to inspect what is available for your snapshot release.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>16
 </pre></div>
@@ -4859,39 +4869,39 @@ Please edit the file based on requested external databases and add &#x27;_modifi
 <span class="c1"># This dict is structured as: form -&gt; database -&gt; list of assemblies where Include=True</span>
 
 <span class="n">DEFAULT_SS_EXTERNALS</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s1">&#39;gene&#39;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s1">&#39;Clone_based_ensembl_gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;Clone_based_vega_gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;EntrezGene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;VGNC Symbol&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;Havana gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;NCBI gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;NCBI gene (formerly Entrezgene)&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;RFAM&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;UniProtKB Gene Name&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;synonym_id::EntrezGene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;synonym_id::HGNC Symbol&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;synonym_id::NCBI gene&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;synonym_id::NCBI gene (formerly Entrezgene)&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;synonym_id::UniProtKB Gene Name&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+    <span class="s1">'gene'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'Clone_based_ensembl_gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'Clone_based_vega_gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'EntrezGene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'HGNC Symbol'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'VGNC Symbol'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'Havana gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'NCBI gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'NCBI gene (formerly Entrezgene)'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'RFAM'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'UniProtKB Gene Name'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'synonym_id::EntrezGene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'synonym_id::HGNC Symbol'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'synonym_id::NCBI gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'synonym_id::NCBI gene (formerly Entrezgene)'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'synonym_id::UniProtKB Gene Name'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
     <span class="p">},</span>
-    <span class="s1">&#39;transcript&#39;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s1">&#39;Havana transcript&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;RefSeq_mRNA&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;RefSeq_mRNA_predicted&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;RefSeq_ncRNA&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;RefSeq_ncRNA_predicted&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+    <span class="s1">'transcript'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'Havana transcript'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'RefSeq_mRNA'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'RefSeq_mRNA_predicted'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'RefSeq_ncRNA'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'RefSeq_ncRNA_predicted'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
     <span class="p">},</span>
-    <span class="s1">&#39;translation&#39;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s1">&#39;RefSeq_peptide&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;RefSeq_peptide_predicted&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;Uniprot/SPTREMBL&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
-        <span class="s1">&#39;Uniprot/SWISSPROT&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+    <span class="s1">'translation'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'RefSeq_peptide'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'RefSeq_peptide_predicted'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'Uniprot/SPTREMBL'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
+        <span class="s1">'Uniprot/SWISSPROT'</span><span class="p">:</span> <span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="mi">102</span><span class="p">,</span> <span class="mi">111</span><span class="p">],</span>
     <span class="p">},</span>
 <span class="p">}</span>
 
-<span class="n">y</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">template_ss</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">template_ss</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">))</span>
 
 <span class="c1"># Apply the default configuration: set Include=True for matching form/database/assembly</span>
 <span class="n">enabled_count</span> <span class="o">=</span> <span class="mi">0</span>
@@ -4900,18 +4910,18 @@ Please edit the file based on requested external databases and add &#x27;_modifi
         <span class="k">continue</span>
     <span class="k">for</span> <span class="n">db_name</span><span class="p">,</span> <span class="n">assemblies</span> <span class="ow">in</span> <span class="n">databases</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="k">if</span> <span class="n">db_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">y</span><span class="p">[</span><span class="n">organism_ss</span><span class="p">][</span><span class="n">form</span><span class="p">]:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;  [SKIP] </span><span class="si">{</span><span class="n">form</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">db_name</span><span class="si">}</span><span class="s1"> not found in template&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'  [SKIP] </span><span class="si">{</span><span class="n">form</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">db_name</span><span class="si">}</span><span class="s1"> not found in template'</span><span class="p">)</span>
             <span class="k">continue</span>
         <span class="k">for</span> <span class="n">asm_code</span> <span class="ow">in</span> <span class="n">assemblies</span><span class="p">:</span>
             <span class="n">asm_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">asm_code</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">asm_str</span> <span class="ow">in</span> <span class="n">y</span><span class="p">[</span><span class="n">organism_ss</span><span class="p">][</span><span class="n">form</span><span class="p">][</span><span class="n">db_name</span><span class="p">][</span><span class="s1">&#39;Assembly&#39;</span><span class="p">]:</span>
-                <span class="n">y</span><span class="p">[</span><span class="n">organism_ss</span><span class="p">][</span><span class="n">form</span><span class="p">][</span><span class="n">db_name</span><span class="p">][</span><span class="s1">&#39;Assembly&#39;</span><span class="p">][</span><span class="n">asm_str</span><span class="p">][</span><span class="s1">&#39;Include&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">if</span> <span class="n">asm_str</span> <span class="ow">in</span> <span class="n">y</span><span class="p">[</span><span class="n">organism_ss</span><span class="p">][</span><span class="n">form</span><span class="p">][</span><span class="n">db_name</span><span class="p">][</span><span class="s1">'Assembly'</span><span class="p">]:</span>
+                <span class="n">y</span><span class="p">[</span><span class="n">organism_ss</span><span class="p">][</span><span class="n">form</span><span class="p">][</span><span class="n">db_name</span><span class="p">][</span><span class="s1">'Assembly'</span><span class="p">][</span><span class="n">asm_str</span><span class="p">][</span><span class="s1">'Include'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">enabled_count</span> <span class="o">+=</span> <span class="mi">1</span>
 
-<span class="n">modified_ss</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+<span class="n">modified_ss</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Enabled </span><span class="si">{</span><span class="n">enabled_count</span><span class="si">}</span><span class="s1"> form/database/assembly combinations.&#39;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Wrote:&#39;</span><span class="p">,</span> <span class="n">modified_ss</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Enabled </span><span class="si">{</span><span class="n">enabled_count</span><span class="si">}</span><span class="s1"> form/database/assembly combinations.'</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Wrote:'</span><span class="p">,</span> <span class="n">modified_ss</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -4929,8 +4939,8 @@ Wrote: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtr
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_</span> <span class="o">=</span> <span class="n">dm_ss</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">load_modified_yaml</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Enabled DBs:&#39;</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dm_ss</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">&#39;db&#39;</span><span class="p">)))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assemblies in play:&#39;</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dm_ss</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">&#39;assembly&#39;</span><span class="p">)))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Enabled DBs:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dm_ss</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">'db'</span><span class="p">)))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Assemblies in play:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dm_ss</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">'assembly'</span><span class="p">)))</span>
 <br/></pre></div>
 </div>
 </div>
@@ -4945,33 +4955,288 @@ Assemblies in play: [111]
 </div>
 </section>
 </section>
-<section id="2.4-—-Adding-a-New-Organism-(Advanced)">
-<h2>2.4 — Adding a New Organism (Advanced)<a class="headerlink" href="#2.4-—-Adding-a-New-Organism-(Advanced)" title="Link to this heading"></a></h2>
-<p>IDTrack currently ships with built-in support for a small set of organisms (human/mouse/pig). If you want to use a different Ensembl-supported species, there are <strong>two layers</strong> to set up:</p>
+<section id="2.4-—-Rhesus-macaque-(Macaca-mulatta)">
+<h2>2.4 — Rhesus macaque (Macaca mulatta)<a class="headerlink" href="#2.4-—-Rhesus-macaque-(Macaca-mulatta)" title="Link to this heading"></a></h2>
+<p>Rhesus macaque is a clean-handoff species with three assemblies in IDTrack’s window (release 48 onwards):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">10</span></code> = Mmul_10 (releases 98+)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">801</span></code> = Mmul_8.0.1 (releases 86–97)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">1</span></code> = MMUL_1 (releases 48–85)</p></li>
+</ul>
+<blockquote>
+<div><p><strong>Note:</strong> Ensembl names both MMUL_1 and Mmul_10 core databases <code class="docutils literal notranslate"><span class="pre">macaca_mulatta_core_&lt;release&gt;_10</span></code>. IDTrack gives MMUL_1 its own key <code class="docutils literal notranslate"><span class="pre">1</span></code> (its table entry says <code class="docutils literal notranslate"><span class="pre">DbSuffix:</span> <span class="pre">&quot;10&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">ReleaseRange:</span> <span class="pre">[48,</span> <span class="pre">85]</span></code>), so the two genomes are never mixed; the YAML’s assembly keys are therefore <code class="docutils literal notranslate"><span class="pre">1</span></code>, <code class="docutils literal notranslate"><span class="pre">801</span></code> and <code class="docutils literal notranslate"><span class="pre">10</span></code>.</p>
+</div></blockquote>
+<p>The symbol source changes with the assembly: MMUL_1 and Mmul_8.0.1 genes carry <strong>HGNC Symbol</strong>, Mmul_10 genes <strong>VGNC Symbol</strong> (HGNC symbols are rare there). The allowlist therefore enables both, plus the same identifier databases as for the other organisms (EntrezGene / NCBI gene, UniProtKB gene names, RFAM, RefSeq, UniProt).</p>
+<p>The template step reads the external tables of every release (about 70 for rhesus): it is the long step. It works over HTTPS alone; set <code class="docutils literal notranslate"><span class="pre">IDTRACK_ENSEMBL_ACCESS=https</span></code> where the MySQL ports are closed.</p>
+<blockquote>
+<div><p><strong>Expected output:</strong> <code class="docutils literal notranslate"><span class="pre">macaca_mulatta_externals_modified.yml</span></code> in your local repository.</p>
+</div></blockquote>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 2.4.1 Resolve organism name + latest release ('Macaca mulatta' and 9544 work too)</span>
+<span class="n">organism_mmul</span><span class="p">,</span> <span class="n">latest_release_mmul</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'macaca_mulatta'</span><span class="p">)</span>
+<span class="n">SNAPSHOT_RELEASE_MMUL</span> <span class="o">=</span> <span class="n">latest_release_mmul</span>
+<span class="n">organism_mmul</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE_MMUL</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%</span><span class="k">collapse</span> Click to show download logs
+# 2.4.2 Create a DatabaseManager snapshot and generate the template YAML (long: every release and form)
+dm_mmul = api.get_database_manager(organism_name=organism_mmul, snapshot_release=SNAPSHOT_RELEASE_MMUL)
+df_mmul = dm_mmul.create_database_content(just_download=False)
+dm_mmul.external_inst.create_template_yaml(df_mmul)
+
+template_mmul = Path(dm_mmul.external_inst.file_name_template_yaml())
+modified_mmul = Path(dm_mmul.external_inst.file_name_modified_yaml(mode='configured'))
+{
+    'template_yaml': str(template_mmul),
+    'modified_yaml': str(modified_mmul),
+}
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 2.4.3 Default external databases for RHESUS MACAQUE.</span>
+<span class="c1"># This dict is structured as: form -&gt; database -&gt; list of assemblies where Include=True</span>
+<span class="c1"># Names a release does not have (e.g. CCDS, Vega) are skipped.</span>
+
+<span class="n">DEFAULT_MMUL_EXTERNALS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">'gene'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'Clone_based_ensembl_gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'Clone_based_vega_gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'EntrezGene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'HGNC Symbol'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'VGNC Symbol'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'Havana gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'NCBI gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'NCBI gene (formerly Entrezgene)'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'RFAM'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'UniProtKB Gene Name'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'Vega gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'Vega_gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'synonym_id::EntrezGene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'synonym_id::HGNC Symbol'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'synonym_id::VGNC Symbol'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'synonym_id::NCBI gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'synonym_id::NCBI gene (formerly Entrezgene)'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'synonym_id::UniProtKB Gene Name'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+    <span class="p">},</span>
+    <span class="s1">'transcript'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'CCDS'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'Havana transcript'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'RefSeq_mRNA'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'RefSeq_mRNA_predicted'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'RefSeq_ncRNA'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'RefSeq_ncRNA_predicted'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+    <span class="p">},</span>
+    <span class="s1">'translation'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'Havana translation'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'RefSeq_peptide'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'RefSeq_peptide_predicted'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'Uniprot/SPTREMBL'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+        <span class="s1">'Uniprot/SWISSPROT'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">801</span><span class="p">,</span> <span class="mi">10</span><span class="p">],</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._default_externals</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_allowlist</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_databases</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_externals_yaml</span>
+
+<span class="n">y</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">template_mmul</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">))</span>
+<span class="n">y</span><span class="p">,</span> <span class="n">enabled_count</span><span class="p">,</span> <span class="n">absent</span> <span class="o">=</span> <span class="n">apply_allowlist</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">organism_mmul</span><span class="p">,</span> <span class="n">DEFAULT_MMUL_EXTERNALS</span><span class="p">)</span>
+<span class="n">write_externals_yaml</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">modified_mmul</span><span class="p">))</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Enabled </span><span class="si">{</span><span class="n">enabled_count</span><span class="si">}</span><span class="s1"> form/database/assembly combinations; not in the template: </span><span class="si">{</span><span class="n">absent</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Wrote:'</span><span class="p">,</span> <span class="n">modified_mmul</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_</span> <span class="o">=</span> <span class="n">dm_mmul</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">load_modified_yaml</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Enabled DBs:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dm_mmul</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">'db'</span><span class="p">)))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Assemblies in play:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dm_mmul</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">'assembly'</span><span class="p">)))</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="2.5-—-Cynomolgus-macaque-(Macaca-fascicularis)">
+<h2>2.5 — Cynomolgus macaque (Macaca fascicularis)<a class="headerlink" href="#2.5-—-Cynomolgus-macaque-(Macaca-fascicularis)" title="Link to this heading"></a></h2>
+<p>Cynomolgus (crab-eating) macaque has two assemblies, with a clean handoff at release 103:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">6</span></code> = Macaca_fascicularis_6.0 (releases 103+)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">5</span></code> = Macaca_fascicularis_5.0 (releases 91–102)</p></li>
+</ul>
+<p>As for rhesus, 5.0 genes carry <strong>HGNC Symbol</strong> and 6.0 genes <strong>VGNC Symbol</strong>, but symbol coverage of 6.0 in Ensembl is thin (a few hundred genes of each kind); EntrezGene / NCBI gene and UniProtKB gene names cover most genes. Ensembl lists cynomolgus under the common name “Crab-eating macaque”.</p>
+<blockquote>
+<div><p><strong>Expected output:</strong> <code class="docutils literal notranslate"><span class="pre">macaca_fascicularis_externals_modified.yml</span></code> in your local repository.</p>
+</div></blockquote>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 2.5.1 Resolve organism name + latest release ('Crab-eating macaque' and 9541 work too)</span>
+<span class="n">organism_mfas</span><span class="p">,</span> <span class="n">latest_release_mfas</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'macaca_fascicularis'</span><span class="p">)</span>
+<span class="n">SNAPSHOT_RELEASE_MFAS</span> <span class="o">=</span> <span class="n">latest_release_mfas</span>
+<span class="n">organism_mfas</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE_MFAS</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%</span><span class="k">collapse</span> Click to show download logs
+# 2.5.2 Create a DatabaseManager snapshot and generate the template YAML (long: every release and form)
+dm_mfas = api.get_database_manager(organism_name=organism_mfas, snapshot_release=SNAPSHOT_RELEASE_MFAS)
+df_mfas = dm_mfas.create_database_content(just_download=False)
+dm_mfas.external_inst.create_template_yaml(df_mfas)
+
+template_mfas = Path(dm_mfas.external_inst.file_name_template_yaml())
+modified_mfas = Path(dm_mfas.external_inst.file_name_modified_yaml(mode='configured'))
+{
+    'template_yaml': str(template_mfas),
+    'modified_yaml': str(modified_mfas),
+}
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># 2.5.3 Default external databases for CYNOMOLGUS MACAQUE.</span>
+<span class="c1"># This dict is structured as: form -&gt; database -&gt; list of assemblies where Include=True</span>
+
+<span class="n">DEFAULT_MFAS_EXTERNALS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">'gene'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'Clone_based_ensembl_gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'Clone_based_vega_gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'EntrezGene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'HGNC Symbol'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'VGNC Symbol'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'Havana gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'NCBI gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'NCBI gene (formerly Entrezgene)'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'RFAM'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'UniProtKB Gene Name'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'Vega gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'Vega_gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'synonym_id::EntrezGene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'synonym_id::HGNC Symbol'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'synonym_id::VGNC Symbol'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'synonym_id::NCBI gene'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'synonym_id::NCBI gene (formerly Entrezgene)'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'synonym_id::UniProtKB Gene Name'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+    <span class="p">},</span>
+    <span class="s1">'transcript'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'CCDS'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'Havana transcript'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'RefSeq_mRNA'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'RefSeq_mRNA_predicted'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'RefSeq_ncRNA'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'RefSeq_ncRNA_predicted'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+    <span class="p">},</span>
+    <span class="s1">'translation'</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">'Havana translation'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'RefSeq_peptide'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'RefSeq_peptide_predicted'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'Uniprot/SPTREMBL'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+        <span class="s1">'Uniprot/SWISSPROT'</span><span class="p">:</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+
+<span class="n">y</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">template_mfas</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">))</span>
+<span class="n">y</span><span class="p">,</span> <span class="n">enabled_count</span><span class="p">,</span> <span class="n">absent</span> <span class="o">=</span> <span class="n">apply_allowlist</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">organism_mfas</span><span class="p">,</span> <span class="n">DEFAULT_MFAS_EXTERNALS</span><span class="p">)</span>
+<span class="n">write_externals_yaml</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">modified_mfas</span><span class="p">))</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Enabled </span><span class="si">{</span><span class="n">enabled_count</span><span class="si">}</span><span class="s1"> form/database/assembly combinations; not in the template: </span><span class="si">{</span><span class="n">absent</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Wrote:'</span><span class="p">,</span> <span class="n">modified_mfas</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">_</span> <span class="o">=</span> <span class="n">dm_mfas</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">load_modified_yaml</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Enabled DBs:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dm_mfas</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">'db'</span><span class="p">)))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Assemblies in play:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dm_mfas</span><span class="o">.</span><span class="n">external_inst</span><span class="o">.</span><span class="n">give_list_for_case</span><span class="p">(</span><span class="s1">'assembly'</span><span class="p">)))</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="2.6-—-Extending-a-YAML-to-a-new-Ensembl-release">
+<h2>2.6 — Extending a YAML to a new Ensembl release<a class="headerlink" href="#2.6-—-Extending-a-YAML-to-a-new-Ensembl-release" title="Link to this heading"></a></h2>
+<p>Each Ensembl release can add or drop external databases, and a YAML file lists, per database and assembly, the releases it was made from. A graph whose snapshot includes a release that the YAML does not list gets <strong>no external identifiers for that release</strong>; IDTrack warns about it once when it builds the graph.</p>
+<p>You do not need to regenerate and re-curate the whole file. <code class="docutils literal notranslate"><span class="pre">ExternalDatabases.extend_modified_yaml(content)</span></code> takes the database-content table of the new release(s) and:</p>
+<ul class="simple">
+<li><p>adds the new release(s) to every entry the table holds, keeping every <code class="docutils literal notranslate"><span class="pre">Include</span></code> flag as you set it;</p></li>
+<li><p>adds databases the file does not know yet with <code class="docutils literal notranslate"><span class="pre">Include:</span> <span class="pre">false</span></code> and lists them, so you can decide whether to enable them;</p></li>
+<li><p>adds a known database that appears with a new assembly, with the database’s flag when its other assemblies agree.</p></li>
+</ul>
+<p>The content table comes from a manager whose window is just the new release(s), which keeps the download to one release per assembly. The extended file is written to your local repository (or to <code class="docutils literal notranslate"><span class="pre">output_path=</span></code>).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%</span><span class="k">collapse</span> Click to show download logs
+# 2.6.1 Extend the human YAML to a new release (here: the latest one)
+NEW_RELEASE = SNAPSHOT_RELEASE_HS
+
+dm_new = idtrack.DatabaseManager(
+    organism='homo_sapiens',
+    form='gene',
+    local_repository=str(LOCAL_REPOSITORY),
+    ignore_before=NEW_RELEASE,
+    ignore_after=NEW_RELEASE,
+)
+content_new = dm_new.create_database_content()
+report = dm_new.external_inst.extend_modified_yaml(content_new)
+
+print('Written:', report['path'])
+print('Releases added:', report['releases'], '| entries extended:', report['extended_entries'])
+print('New databases (Include: false, review them):', report['new_databases'])
+print('New assembly entries of known databases:', report['new_assembly_entries'])
+</pre></div>
+</div>
+</div>
+</section>
+<section id="2.7-—-Adding-a-New-Organism-(Advanced)">
+<h2>2.7 — Adding a New Organism (Advanced)<a class="headerlink" href="#2.7-—-Adding-a-New-Organism-(Advanced)" title="Link to this heading"></a></h2>
+<p>IDTrack ships with built-in support for human, mouse, pig, rhesus macaque and cynomolgus macaque. Another Ensembl species needs <strong>two things</strong>:</p>
 <ol class="arabic simple">
-<li><p><strong>Core configuration (required):</strong> IDTrack must know the canonical Ensembl species name and which numeric <strong>assembly codes</strong> appear in schema names like <code class="docutils literal notranslate"><span class="pre">&lt;organism&gt;_core_&lt;release&gt;_&lt;assembly&gt;</span></code> (configure <code class="docutils literal notranslate"><span class="pre">idtrack/_db.py</span></code>).</p>
+<li><p><strong>An entry in the organism table</strong> (<code class="docutils literal notranslate"><span class="pre">DB.assembly_mysqlport_priority</span></code> in <code class="docutils literal notranslate"><span class="pre">idtrack/_db.py</span></code>): one entry per assembly, keyed by an integer, with the MySQL <code class="docutils literal notranslate"><span class="pre">Ports</span></code>, a <code class="docutils literal notranslate"><span class="pre">Priority</span></code> (1 = preferred), the <code class="docutils literal notranslate"><span class="pre">ReleaseRange</span></code> of the assembly and, optionally, its Ensembl <code class="docutils literal notranslate"><span class="pre">Name</span></code> and <code class="docutils literal notranslate"><span class="pre">DbSuffix</span></code> (the code in core database names <code class="docutils literal notranslate"><span class="pre">&lt;organism&gt;_core_&lt;release&gt;_&lt;code&gt;</span></code>, when it differs from the key). To try an organism without editing the package, register it for the running session with
+<code class="docutils literal notranslate"><span class="pre">DB.register_organism(name,</span> <span class="pre">assemblies,</span>&#160;&#160;&#160; <span class="pre">symbol_databases)</span></code>; it validates the entry and updates everything derived from the table.</p>
 <ul class="simple">
 <li><p>Direct MySQL connectivity is optional: when ports are blocked, IDTrack downloads the same tables from the HTTPS/FTP MySQL dumps.</p></li>
 </ul>
 </li>
-<li><p><strong>External YAML (required for externals):</strong> once the organism/assemblies are configured, you generate a template YAML and curate an allowlist exactly like mouse/pig above.</p></li>
+<li><p><strong>An externals YAML</strong>: generate a template and apply an allowlist exactly as for the organisms above.</p></li>
 </ol>
 <p>Practical recipe:</p>
 <ul class="simple">
 <li><p>Step A: Resolve the canonical Ensembl species name (snake_case) with <code class="docutils literal notranslate"><span class="pre">api.resolve_organism(...)</span></code>.</p></li>
-<li><p>Step B: Configure the organism and its relevant assemblies in <code class="docutils literal notranslate"><span class="pre">idtrack/_db.py</span></code> by extending <code class="docutils literal notranslate"><span class="pre">DB.assembly_mysqlport_priority</span></code>.</p>
-<ul>
-<li><p>Listing multiple assemblies is what enables cross-assembly mapping and assembly-scoped external databases.</p></li>
-</ul>
-</li>
-<li><p>Step C: Re-run the YAML-template generation workflow (<code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_database_content(...)</span></code> → <code class="docutils literal notranslate"><span class="pre">create_template_yaml(...)</span></code>).</p></li>
+<li><p>Step B: Find its assemblies in the dump listings (<code class="docutils literal notranslate"><span class="pre">https://ftp.ensembl.org/pub/release-&lt;n&gt;/mysql/</span></code>) and register them (example below). Listing all assemblies is what enables cross-assembly mapping and assembly-scoped external databases.</p></li>
+<li><p>Step C: Run the YAML-template generation workflow (<code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_database_content(...)</span></code> → <code class="docutils literal notranslate"><span class="pre">create_template_yaml(...)</span></code>) and apply an allowlist.</p></li>
 <li><p>Step D: Build a graph snapshot (Part 3) and run the sanity checks.</p></li>
 </ul>
+<p>The full recipe (including the tests and docs to update when adding an organism to IDTrack itself) is “Adding Organism Support” in the contributing guide.</p>
 <blockquote>
-<div><p><strong>Warning:</strong> Until Step B is done, <code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code> will raise <code class="docutils literal notranslate"><span class="pre">NotImplementedError</span></code> for that organism.</p>
+<div><p><strong>Warning:</strong> Until Step B is done, <code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code> raises <code class="docutils literal notranslate"><span class="pre">NotImplementedError</span></code> for that organism.</p>
 </div></blockquote>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>18
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Minimal helper cell: check if an organism is supported by *this* IDTrack version.</span>
@@ -4979,55 +5244,50 @@ Assemblies in play: [111]
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Supported organisms in this IDTrack version:&#39;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  &#39;</span> <span class="o">+</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">supported_organisms</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Supported organisms in this IDTrack version:'</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'  '</span> <span class="o">+</span> <span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">supported_organisms</span><span class="p">))</span>
 
-<span class="c1"># Example: resolve an organism name via Ensembl REST (works even if the organism isn&#39;t configured locally)</span>
-<span class="n">organism_query</span> <span class="o">=</span> <span class="s1">&#39;danio rerio&#39;</span>  <span class="c1"># zebrafish (example)</span>
+<span class="c1"># Example: resolve an organism name via Ensembl REST (works even if the organism isn't configured locally)</span>
+<span class="n">organism_query</span> <span class="o">=</span> <span class="s1">'danio rerio'</span>  <span class="c1"># zebrafish (example)</span>
 <span class="n">formal_name</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="n">organism_query</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Resolved via Ensembl REST -&gt;&#39;</span><span class="p">,</span> <span class="n">organism_query</span><span class="p">,</span> <span class="s1">&#39;→&#39;</span><span class="p">,</span> <span class="n">formal_name</span><span class="p">,</span> <span class="s1">&#39;(latest release:&#39;</span><span class="p">,</span> <span class="n">latest_release</span><span class="p">,</span> <span class="s1">&#39;)&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Resolved via Ensembl REST -&gt;'</span><span class="p">,</span> <span class="n">organism_query</span><span class="p">,</span> <span class="s1">'→'</span><span class="p">,</span> <span class="n">formal_name</span><span class="p">,</span> <span class="s1">'(latest release:'</span><span class="p">,</span> <span class="n">latest_release</span><span class="p">,</span> <span class="s1">')'</span><span class="p">)</span>
 
 <span class="k">if</span> <span class="n">formal_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">supported_organisms</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">()</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;This organism is not yet configured in this IDTrack version.&#39;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;To add it: extend DB.assembly_mysqlport_priority in idtrack/_db.py with its assembly code + port list,&#39;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;then regenerate the external YAML using the same workflow as mouse/pig above.&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'This organism is not yet configured in this IDTrack version.'</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'To add it for this session: DB.register_organism(name, {key: {...}}, symbol_databases) (example below);'</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'then generate its external YAML with the same workflow as the organisms above.'</span><span class="p">)</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">()</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;This organism is already configured. You can now generate a template YAML and continue.&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'This organism is already configured. You can now generate a template YAML and continue.'</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
 </div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-2026-01-11 19:15:21 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
-</pre></div></div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Example: register zebrafish (GRCz11 core databases are named danio_rerio_core_&lt;release&gt;_11) for this Python session.</span>
+<span class="c1"># Check the release range against the dump listings before relying on it.</span>
+<span class="n">DB</span><span class="o">.</span><span class="n">register_organism</span><span class="p">(</span>
+    <span class="s1">'danio_rerio'</span><span class="p">,</span>
+    <span class="p">{</span><span class="mi">11</span><span class="p">:</span> <span class="p">{</span><span class="s1">'Name'</span><span class="p">:</span> <span class="s1">'GRCz11'</span><span class="p">,</span> <span class="s1">'Ports'</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s1">'Priority'</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">'ReleaseRange'</span><span class="p">:</span> <span class="p">[</span><span class="mi">92</span><span class="p">,</span> <span class="kc">None</span><span class="p">]}},</span>
+    <span class="n">symbol_databases</span><span class="o">=</span><span class="p">[</span><span class="s1">'ZFIN'</span><span class="p">],</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'danio_rerio'</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">supported_organisms</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="s1">'danio_rerio'</span><span class="p">]))</span>
+</pre></div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Supported organisms in this IDTrack version:
-  homo_sapiens, mus_musculus, sus_scrofa
-Resolved via Ensembl REST -&gt; danio rerio → danio_rerio (latest release: 115 )
-
-This organism is not yet configured in this IDTrack version.
-To add it: extend DB.assembly_mysqlport_priority in idtrack/_db.py with its assembly code + port list,
-then regenerate the external YAML using the same workflow as mouse/pig above.
-</pre></div></div>
 </div>
 </section>
-<section id="2.5-—-Final-checklist-(before-you-build-graphs)">
-<h2>2.5 — Final checklist (before you build graphs)<a class="headerlink" href="#2.5-—-Final-checklist-(before-you-build-graphs)" title="Link to this heading"></a></h2>
-<p>You should now have these three files in your local repository:</p>
+<section id="2.8-—-Final-checklist-(before-you-build-graphs)">
+<h2>2.8 — Final checklist (before you build graphs)<a class="headerlink" href="#2.8-—-Final-checklist-(before-you-build-graphs)" title="Link to this heading"></a></h2>
+<p>You should now have these files in your local repository (or rely on the shipped defaults for the organisms you skipped):</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">homo_sapiens_externals_modified.yml</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">mus_musculus_externals_modified.yml</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">sus_scrofa_externals_modified.yml</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">macaca_mulatta_externals_modified.yml</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">macaca_fascicularis_externals_modified.yml</span></code></p></li>
 </ul>
 <p>The next notebook (<code class="docutils literal notranslate"><span class="pre">03_initialization_graph.ipynb</span></code>) will build graphs using these configs.</p>
 <div class="nbinput docutils container">
@@ -5036,12 +5296,14 @@ then regenerate the external YAML using the same workflow as mouse/pig above.
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Quick existence check</span>
 <span class="n">expected</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;homo_sapiens_externals_modified.yml&#39;</span><span class="p">,</span>
-    <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;mus_musculus_externals_modified.yml&#39;</span><span class="p">,</span>
-    <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;sus_scrofa_externals_modified.yml&#39;</span><span class="p">,</span>
+    <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">'homo_sapiens_externals_modified.yml'</span><span class="p">,</span>
+    <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">'mus_musculus_externals_modified.yml'</span><span class="p">,</span>
+    <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">'sus_scrofa_externals_modified.yml'</span><span class="p">,</span>
+    <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">'macaca_mulatta_externals_modified.yml'</span><span class="p">,</span>
+    <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">'macaca_fascicularis_externals_modified.yml'</span><span class="p">,</span>
 <span class="p">]</span>
 <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">expected</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;OK&#39;</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;MISSING&#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'OK'</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="s1">'MISSING'</span><span class="p">,</span> <span class="s1">'-'</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -5056,19 +5318,19 @@ OK - /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrac
 </pre></div></div>
 </div>
 </section>
-<section id="2.6-—-Best-practices-(once-you-get-comfortable)">
-<h2>2.6 — Best practices (once you get comfortable)<a class="headerlink" href="#2.6-—-Best-practices-(once-you-get-comfortable)" title="Link to this heading"></a></h2>
+<section id="2.9-—-Best-practices-(once-you-get-comfortable)">
+<h2>2.9 — Best practices (once you get comfortable)<a class="headerlink" href="#2.9-—-Best-practices-(once-you-get-comfortable)" title="Link to this heading"></a></h2>
 <ol class="arabic simple">
 <li><p><strong>Keep allowlists small</strong>: enabling many overlapping databases often increases ambiguity.</p></li>
 <li><p><strong>Multiple profiles</strong>: you can maintain different YAMLs per project (e.g. ‘strict’ vs ‘broad’).</p></li>
 <li><p><strong>Assembly awareness</strong>:</p>
 <ul class="simple">
-<li><p>In Ensembl schema names, the last number encodes the genome assembly (e.g. human 38 = GRCh38; mouse 39 = GRCm39; pig 111 = Sscrofa11.1).</p></li>
+<li><p>In Ensembl schema names, the last number encodes the genome assembly (e.g. human 38 = GRCh38; mouse 39 = GRCm39; pig 111 = Sscrofa11.1). IDTrack’s assembly keys are these codes, except rhesus MMUL_1 (key <code class="docutils literal notranslate"><span class="pre">1</span></code>), whose databases share the code <code class="docutils literal notranslate"><span class="pre">10</span></code> with Mmul_10.</p></li>
 <li><p>Assembly codes are species-specific, and external databases can be assembly-scoped.</p></li>
 <li><p>Keeping all assembly blocks in your YAML is usually beneficial when you integrate mixed-build datasets.</p></li>
 </ul>
 </li>
-<li><p><strong>Re-running</strong>: you can regenerate templates after a new Ensembl release and re-apply your allowlist.</p></li>
+<li><p><strong>New Ensembl releases</strong>: extend your YAML with <code class="docutils literal notranslate"><span class="pre">extend_modified_yaml</span></code> (section 2.6) instead of regenerating it; review the databases it reports as new.</p></li>
 </ol>
 </section>
 </section>

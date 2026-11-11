@@ -9,7 +9,7 @@
   <title>External Mappers &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
-      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
       <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
       <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=0e72a3a5" />
 
@@ -19,12 +19,12 @@
       <script src="../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
-      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Contributor Guide" href="../contributing.html" />
+    <link rel="next" title="Changes" href="../changes.html" />
     <link rel="prev" title="Reference" href="../reference.html" />  
 <!-- Google tag (gtag.js) -->
 <script
@@ -74,12 +74,28 @@
 <li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._harmonize_features.HarmonizeFeatures"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._database_manager.DatabaseManager"><code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._external_databases.ExternalDatabases"><code class="docutils literal notranslate"><span class="pre">ExternalDatabases</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._external_databases.ExternalsReleaseNotCoveredError"><code class="docutils literal notranslate"><span class="pre">ExternalsReleaseNotCoveredError</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._external_databases._yaml_key"><code class="docutils literal notranslate"><span class="pre">_yaml_key()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._external_databases._yaml_scalar"><code class="docutils literal notranslate"><span class="pre">_yaml_scalar()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._external_databases.write_externals_yaml"><code class="docutils literal notranslate"><span class="pre">write_externals_yaml()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._the_graph.TheGraph"><code class="docutils literal notranslate"><span class="pre">TheGraph</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._graph_maker.GraphMaker"><code class="docutils literal notranslate"><span class="pre">GraphMaker</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._verify_organism.VerifyOrganism"><code class="docutils literal notranslate"><span class="pre">VerifyOrganism</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._track.Track"><code class="docutils literal notranslate"><span class="pre">Track</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._track_tests.TrackTests"><code class="docutils literal notranslate"><span class="pre">TrackTests</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._db.DB"><code class="docutils literal notranslate"><span class="pre">DB</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._ensembl_access.PortReachability"><code class="docutils literal notranslate"><span class="pre">PortReachability</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._ensembl_access.ensembl_access_mode"><code class="docutils literal notranslate"><span class="pre">ensembl_access_mode()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._ensembl_access.reachability"><code class="docutils literal notranslate"><span class="pre">reachability</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._mysql_dump.MySQLDumpCSVStream"><code class="docutils literal notranslate"><span class="pre">MySQLDumpCSVStream</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._mysql_dump._decode_fields"><code class="docutils literal notranslate"><span class="pre">_decode_fields()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._mysql_dump._ends_with_odd_backslashes"><code class="docutils literal notranslate"><span class="pre">_ends_with_odd_backslashes()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._mysql_dump._only_null_escapes"><code class="docutils literal notranslate"><span class="pre">_only_null_escapes()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._mysql_dump._parse_csv"><code class="docutils literal notranslate"><span class="pre">_parse_csv()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._mysql_dump._quote_csv"><code class="docutils literal notranslate"><span class="pre">_quote_csv()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._mysql_dump.read_mysql_dump"><code class="docutils literal notranslate"><span class="pre">read_mysql_dump()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._default_externals._allowlist"><code class="docutils literal notranslate"><span class="pre">_allowlist()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#idtrack._default_externals.apply_allowlist"><code class="docutils literal notranslate"><span class="pre">apply_allowlist()</span></code></a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">External Mappers</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#module-idtrack._external_mappers">Package API</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#idtrack._external_mappers.check_optional_dependencies"><code class="docutils literal notranslate"><span class="pre">check_optional_dependencies()</span></code></a></li>
@@ -152,6 +168,7 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
@@ -771,7 +788,8 @@ Other ID types can be used as output_db but not input_db.</p>
 <li><p><strong>input_db</strong> (<em>str</em>) – Source database type. Must be one of <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_gene&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_transcript&quot;</span></code>,
 or <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_protein&quot;</span></code>.</p></li>
 <li><p><strong>output_db</strong> (<em>str</em>) – Target database type (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hgnc_symbol&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;uniprot&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;entrez_gene&quot;</span></code>).</p></li>
-<li><p><strong>species</strong> (<em>str</em>) – Species code (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hsapiens&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mmusculus&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;sscrofa&quot;</span></code>).</p></li>
+<li><p><strong>species</strong> (<em>str</em>) – Species code (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hsapiens&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mmusculus&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;sscrofa&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mmulatta&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;mfascicularis&quot;</span></code>).</p></li>
 <li><p><strong>chunk_size</strong> (<em>int</em>) – Number of IDs per BioMart query.</p></li>
 <li><p><strong>pause</strong> (<em>float</em>) – Pause in seconds between queries.</p></li>
 <li><p><strong>strip_versions</strong> (<em>bool</em>) – Strip version suffixes from Ensembl/RefSeq IDs.</p></li>
@@ -829,7 +847,8 @@ the MyGene.info API to convert biological identifiers.</p>
 <li><p><strong>ids</strong> (<em>Iterable</em><em>[</em><em>str</em><em>]</em>) – Input identifiers to map.</p></li>
 <li><p><strong>input_db</strong> (<em>str</em>) – Source database type (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_gene&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;hgnc_symbol&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;entrez_gene&quot;</span></code>).</p></li>
 <li><p><strong>output_db</strong> (<em>str</em>) – Target database type (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;uniprot&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;hgnc_symbol&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;entrez_gene&quot;</span></code>).</p></li>
-<li><p><strong>species</strong> (<em>str</em>) – Species code (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hsapiens&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mmusculus&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;sscrofa&quot;</span></code>).</p></li>
+<li><p><strong>species</strong> (<em>str</em>) – Species code (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hsapiens&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mmusculus&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;sscrofa&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mmulatta&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;mfascicularis&quot;</span></code>).</p></li>
 <li><p><strong>chunk_size</strong> (<em>int</em>) – Number of IDs per API request.</p></li>
 <li><p><strong>pause</strong> (<em>float</em>) – Pause in seconds between API requests.</p></li>
 <li><p><strong>max_retries</strong> (<em>int</em>) – Maximum retry attempts per chunk on failure.</p></li>
@@ -936,7 +955,8 @@ strict input-db behavior.</p></li>
 <li><p><strong>ids</strong> (<em>Iterable</em><em>[</em><em>str</em><em>]</em>) – Input identifiers to map.</p></li>
 <li><p><strong>input_db</strong> (<em>str</em>) – Database/namespace of input IDs (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_gene&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;hgnc_symbol&quot;</span></code>).</p></li>
 <li><p><strong>output_db</strong> (<em>str</em>) – Target database/namespace (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;uniprot&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;entrez_gene&quot;</span></code>).</p></li>
-<li><p><strong>species</strong> (<em>str</em>) – Species code (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hsapiens&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mmusculus&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;sscrofa&quot;</span></code>).</p></li>
+<li><p><strong>species</strong> (<em>str</em>) – Species code (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hsapiens&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mmusculus&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;sscrofa&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mmulatta&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;mfascicularis&quot;</span></code>).</p></li>
 <li><p><strong>chunk_size</strong> (<em>int</em>) – Number of IDs per API request.</p></li>
 <li><p><strong>pause</strong> (<em>float</em>) – Seconds to pause between requests.</p></li>
 <li><p><strong>max_retries</strong> (<em>int</em>) – Maximum retry attempts per chunk on failure.</p></li>
@@ -995,7 +1015,8 @@ For non-Ensembl inputs, use ‘mygene’ or ‘gprofiler’ methods.</p>
 <li><p><strong>input_db</strong> (<em>str</em>) – Source database type. Must be one of <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_gene&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_transcript&quot;</span></code>,
 or <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_protein&quot;</span></code>.</p></li>
 <li><p><strong>output_db</strong> (<em>str</em>) – Target database type (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hgnc_symbol&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;uniprot&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;entrez_gene&quot;</span></code>).</p></li>
-<li><p><strong>species</strong> (<em>str</em>) – Species code (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hsapiens&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mmusculus&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;sscrofa&quot;</span></code>).</p></li>
+<li><p><strong>species</strong> (<em>str</em>) – Species code (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;hsapiens&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mmusculus&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;sscrofa&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mmulatta&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;mfascicularis&quot;</span></code>).</p></li>
 <li><p><strong>chunk_size</strong> (<em>int</em>) – Number of IDs per API request.</p></li>
 <li><p><strong>pause</strong> (<em>float</em>) – Pause in seconds between requests.</p></li>
 <li><p><strong>max_retries</strong> (<em>int</em>) – Maximum retry attempts per chunk on failure.</p></li>
@@ -1151,7 +1172,7 @@ or <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_pr
 <dl class="py function">
 <dt class="sig sig-object py" id="idtrack._external_mappers._utils._species_for_mygene">
 <span class="sig-name descname"><span class="pre">_species_for_mygene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">species</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#_species_for_mygene"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._utils._species_for_mygene" title="Link to this definition"></a></dt>
-<dd><p>Return the MyGene-compatible common name for a canonical species code.</p>
+<dd><p>Return the MyGene-compatible species value (common name or NCBI taxon ID) for a species code.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>species</strong> (<em>str</em><em> | </em><em>None</em>)</p>
@@ -1212,7 +1233,8 @@ or <code class="docutils literal notranslate"><span class="pre">&quot;ensembl_pr
 <dt class="sig sig-object py" id="idtrack._external_mappers._utils.canonical_species">
 <span class="sig-name descname"><span class="pre">canonical_species</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">species</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idtrack/_external_mappers/_utils.html#canonical_species"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._external_mappers._utils.canonical_species" title="Link to this definition"></a></dt>
 <dd><p>Return canonical organism code (g:Profiler / Ensembl style).</p>
-<p>Supported out-of-the-box: human → <code class="docutils literal notranslate"><span class="pre">hsapiens</span></code>, mouse → <code class="docutils literal notranslate"><span class="pre">mmusculus</span></code>, pig → <code class="docutils literal notranslate"><span class="pre">sscrofa</span></code>.</p>
+<p>Supported out-of-the-box: human → <code class="docutils literal notranslate"><span class="pre">hsapiens</span></code>, mouse → <code class="docutils literal notranslate"><span class="pre">mmusculus</span></code>, pig → <code class="docutils literal notranslate"><span class="pre">sscrofa</span></code>, rhesus macaque →
+<code class="docutils literal notranslate"><span class="pre">mmulatta</span></code>, cynomolgus macaque → <code class="docutils literal notranslate"><span class="pre">mfascicularis</span></code> (names, aliases and NCBI taxon IDs).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>species</strong> (<em>str</em><em> | </em><em>None</em>) – Species code/alias. If <code class="docutils literal notranslate"><span class="pre">None</span></code> or empty, defaults to <code class="docutils literal notranslate"><span class="pre">&quot;hsapiens&quot;</span></code>.</p>
@@ -1328,7 +1350,7 @@ The goal is to make results <em>interpretable</em> without requiring graph theor
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="../reference.html" class="btn btn-neutral float-left" title="Reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="../contributing.html" class="btn btn-neutral float-right" title="Contributor Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="../changes.html" class="btn btn-neutral float-right" title="Changes" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

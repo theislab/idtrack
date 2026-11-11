@@ -9,7 +9,7 @@
   <title>Appendix — Self-tests &amp; Sanity Checks (Human, Mouse, Pig) &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
-      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
       <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
       <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
       <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=0e72a3a5" />
@@ -20,7 +20,7 @@
       <script src="../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
-      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
       <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
       <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
@@ -95,6 +95,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
@@ -155,29 +156,29 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
 
-<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;IDTRACK_LOCAL_REPO&#39;</span><span class="p">,</span> <span class="s1">&#39;./idtrack_cache&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'./idtrack_cache'</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
 <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
 <span class="n">api</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Local repository:&#39;</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Local repository:'</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
 </section>
 <section id="2.-Helper:-pick-a-representative-gene-ID-from-a-built-graph">
 <h2>2. Helper: pick a representative gene ID from a built graph<a class="headerlink" href="#2.-Helper:-pick-a-representative-gene-ID-from-a-built-graph" title="Link to this heading"></a></h2>
-<p>We avoid hard-coding gene IDs for mouse/pig by selecting an example <strong>base Ensembl gene ID</strong> directly from the graph (these look like <code class="docutils literal notranslate"><span class="pre">ENSG...</span></code>, <code class="docutils literal notranslate"><span class="pre">ENSMUSG...</span></code>, <code class="docutils literal notranslate"><span class="pre">ENSSSCG...</span></code>).</p>
+<p>We avoid hard-coding gene IDs for mouse/pig by selecting an example <strong>base Ensembl gene ID</strong> directly from the graph (these look like <code class="docutils literal notranslate"><span class="pre">ENSG...</span></code>, <code class="docutils literal notranslate"><span class="pre">ENSMUSG...</span></code>, <code class="docutils literal notranslate"><span class="pre">ENSSSCG...</span></code>; the macaques use <code class="docutils literal notranslate"><span class="pre">ENSMMUG...</span></code> and <code class="docutils literal notranslate"><span class="pre">ENSMFAG...</span></code>).</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">pick_example_base_gene_id</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">)</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_base_ensembl</span><span class="p">[</span><span class="s1">&#39;gene&#39;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">)</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_base_ensembl</span><span class="p">[</span><span class="s1">'gene'</span><span class="p">]:</span>
             <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;No base_ensembl_gene node found in the graph.&#39;</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">'No base_ensembl_gene node found in the graph.'</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -197,8 +198,8 @@
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 3A.1 YAML presence</span>
-<span class="n">human_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;homo_sapiens_externals_modified.yml&#39;</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;OK&#39;</span> <span class="k">if</span> <span class="n">human_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;NOTE: missing (IDTrack can fall back to packaged default for human)&#39;</span><span class="p">,</span> <span class="n">human_yaml</span><span class="p">)</span>
+<span class="n">human_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">'homo_sapiens_externals_modified.yml'</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'OK'</span> <span class="k">if</span> <span class="n">human_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="s1">'NOTE: missing (IDTrack can fall back to packaged default for human)'</span><span class="p">,</span> <span class="n">human_yaml</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -207,14 +208,14 @@
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 3A.2 Build/load graph</span>
-<span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;human&#39;</span><span class="p">)</span>
+<span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'human'</span><span class="p">)</span>
 <span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="n">latest_release</span>
 <span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Organism:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;organism&#39;</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Release:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;ensembl_release&#39;</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assembly:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;genome_assembly&#39;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Organism:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">'organism'</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Release:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">'ensembl_release'</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Assembly:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">'genome_assembly'</span><span class="p">])</span>
 <br/></pre></div>
 </div>
 </div>
@@ -242,10 +243,11 @@
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mouse_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;mus_musculus_externals_modified.yml&#39;</span>
-<span class="n">HAS_MOUSE_YAML</span> <span class="o">=</span> <span class="n">mouse_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;OK&#39;</span> <span class="k">if</span> <span class="n">HAS_MOUSE_YAML</span> <span class="k">else</span> <span class="s1">&#39;MISSING (create this in Part 2 for mouse)&#39;</span><span class="p">,</span> <span class="n">mouse_yaml</span><span class="p">)</span>
-<br/></pre></div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mouse_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">'mus_musculus_externals_modified.yml'</span>
+<span class="c1"># A local file (Part 2) overrides the packaged default; either is fine.</span>
+<span class="n">HAS_MOUSE_YAML</span> <span class="o">=</span> <span class="n">mouse_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">or</span> <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">idtrack</span><span class="o">.</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s1">'default_config'</span> <span class="o">/</span> <span class="n">mouse_yaml</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'OK'</span> <span class="k">if</span> <span class="n">HAS_MOUSE_YAML</span> <span class="k">else</span> <span class="s1">'MISSING (create this in Part 2 for mouse)'</span><span class="p">,</span> <span class="n">mouse_yaml</span><span class="p">)</span>
+</pre></div>
 </div>
 </div>
 <div class="nbinput nblast docutils container">
@@ -253,16 +255,16 @@
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_MOUSE_YAML</span><span class="p">:</span>
-    <span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;mus musculus&#39;</span><span class="p">)</span>
+    <span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'mus musculus'</span><span class="p">)</span>
     <span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="n">latest_release</span>
     <span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Organism:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;organism&#39;</span><span class="p">])</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Release:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;ensembl_release&#39;</span><span class="p">])</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assembly:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;genome_assembly&#39;</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Organism:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">'organism'</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Release:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">'ensembl_release'</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Assembly:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">'genome_assembly'</span><span class="p">])</span>
 <span class="k">else</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Skipping mouse tests: missing mus_musculus_externals_modified.yml&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Skipping mouse tests: missing mus_musculus_externals_modified.yml'</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -275,7 +277,7 @@
     <span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="n">example_id</span><span class="p">,</span> <span class="n">from_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
     <span class="n">result</span>
 <span class="k">else</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Skipping mouse smoke conversion (mouse graph not built).&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Skipping mouse smoke conversion (mouse graph not built).'</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -286,10 +288,11 @@
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
 </pre></div>
 </div>
-<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pig_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;sus_scrofa_externals_modified.yml&#39;</span>
-<span class="n">HAS_PIG_YAML</span> <span class="o">=</span> <span class="n">pig_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;OK&#39;</span> <span class="k">if</span> <span class="n">HAS_PIG_YAML</span> <span class="k">else</span> <span class="s1">&#39;MISSING (create this in Part 2 for pig)&#39;</span><span class="p">,</span> <span class="n">pig_yaml</span><span class="p">)</span>
-<br/></pre></div>
+<div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pig_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">'sus_scrofa_externals_modified.yml'</span>
+<span class="c1"># A local file (Part 2) overrides the packaged default; either is fine.</span>
+<span class="n">HAS_PIG_YAML</span> <span class="o">=</span> <span class="n">pig_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">or</span> <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">idtrack</span><span class="o">.</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s1">'default_config'</span> <span class="o">/</span> <span class="n">pig_yaml</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'OK'</span> <span class="k">if</span> <span class="n">HAS_PIG_YAML</span> <span class="k">else</span> <span class="s1">'MISSING (create this in Part 2 for pig)'</span><span class="p">,</span> <span class="n">pig_yaml</span><span class="p">)</span>
+</pre></div>
 </div>
 </div>
 <div class="nbinput nblast docutils container">
@@ -297,16 +300,16 @@
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_PIG_YAML</span><span class="p">:</span>
-    <span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;sus scrofa&#39;</span><span class="p">)</span>
+    <span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'sus scrofa'</span><span class="p">)</span>
     <span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="n">latest_release</span>
     <span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Organism:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;organism&#39;</span><span class="p">])</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Release:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;ensembl_release&#39;</span><span class="p">])</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assembly:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">&#39;genome_assembly&#39;</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Organism:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">'organism'</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Release:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">'ensembl_release'</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Assembly:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">'genome_assembly'</span><span class="p">])</span>
 <span class="k">else</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Skipping pig tests: missing sus_scrofa_externals_modified.yml&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Skipping pig tests: missing sus_scrofa_externals_modified.yml'</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -319,7 +322,7 @@
     <span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="n">example_id</span><span class="p">,</span> <span class="n">from_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
     <span class="n">result</span>
 <span class="k">else</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Skipping pig smoke conversion (pig graph not built).&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Skipping pig smoke conversion (pig graph not built).'</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -336,7 +339,7 @@
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Example: build TrackTests for human and run one invariant</span>
 <span class="c1"># (This is optional; skip if you just want to use IDTrack.)</span>
 
-<span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;human&#39;</span><span class="p">)</span>
+<span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'human'</span><span class="p">)</span>
 <span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">latest_release</span><span class="p">,</span> <span class="n">return_test</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
 <span class="n">tests</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span>  <span class="c1"># TrackTests instance</span>
@@ -350,9 +353,9 @@
 <h2>5. If something fails<a class="headerlink" href="#5.-If-something-fails" title="Link to this heading"></a></h2>
 <p>Common failure modes and fixes:</p>
 <ol class="arabic simple">
-<li><p><strong>Missing YAML</strong> (mouse/pig): run <code class="docutils literal notranslate"><span class="pre">02_prepare_new_external_yaml.ipynb</span></code> and create the <code class="docutils literal notranslate"><span class="pre">_modified.yml</span></code>.</p></li>
+<li><p><strong>Missing YAML</strong>: every supported organism ships a default; for another organism run <code class="docutils literal notranslate"><span class="pre">02_prepare_new_external_yaml.ipynb</span></code> and create the <code class="docutils literal notranslate"><span class="pre">_modified.yml</span></code>. If a build warns that releases have no YAML entry, extend the file (Part 2, section 2.6).</p></li>
 <li><p><strong>Permission errors</strong>: change <code class="docutils literal notranslate"><span class="pre">IDTRACK_LOCAL_REPO</span></code> to a writable path.</p></li>
-<li><p><strong>Network / MySQL issues</strong>: REST/FTP access is required; direct MySQL access is optional (IDTrack falls back to HTTPS/FTP dumps).</p></li>
+<li><p><strong>Network / MySQL issues</strong>: REST/FTP access is required; direct MySQL access is optional (IDTrack falls back to HTTPS/FTP dumps; <code class="docutils literal notranslate"><span class="pre">IDTRACK_ENSEMBL_ACCESS=https</span></code> skips MySQL entirely).</p></li>
 <li><p><strong>Disk full</strong>: graphs can be large; move your local repository to a larger disk.</p></li>
 </ol>
 </section>

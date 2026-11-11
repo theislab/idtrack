@@ -9,7 +9,7 @@
   <title>Part 7 — Advanced Topics &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
-      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
       <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
       <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
       <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=0e72a3a5" />
@@ -20,7 +20,7 @@
       <script src="../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
-      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
       <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
       <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
@@ -99,6 +99,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
@@ -172,65 +173,65 @@
 
     <span class="n">IDTRACK_OK</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;idtrack import failed -&gt;&#39;</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'idtrack import failed -&gt;'</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
     <span class="n">IDTRACK_OK</span> <span class="o">=</span> <span class="kc">False</span>
 
-<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;IDTRACK_LOCAL_REPO&#39;</span><span class="p">,</span> <span class="s1">&#39;./idtrack_cache&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'./idtrack_cache'</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
 <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Local repository:&#39;</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Local repository:'</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
 
 <span class="k">if</span> <span class="n">IDTRACK_OK</span><span class="p">:</span>
-    <span class="n">organism</span> <span class="o">=</span> <span class="s1">&#39;homo_sapiens&#39;</span>
+    <span class="n">organism</span> <span class="o">=</span> <span class="s1">'homo_sapiens'</span>
 
     <span class="c1"># Prefer your configured YAML if it exists; otherwise fall back to the package default.</span>
-    <span class="n">configured</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s1">_externals_modified.yml&#39;</span>
-    <span class="n">default_cfg</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">idtrack</span><span class="o">.</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s1">&#39;default_config&#39;</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s1">_externals_modified.yml&#39;</span>
+    <span class="n">configured</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s1">_externals_modified.yml'</span>
+    <span class="n">default_cfg</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">idtrack</span><span class="o">.</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s1">'default_config'</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s1">_externals_modified.yml'</span>
 
     <span class="n">source_path</span> <span class="o">=</span> <span class="n">configured</span> <span class="k">if</span> <span class="n">configured</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="n">default_cfg</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Reading YAML from:&#39;</span><span class="p">,</span> <span class="n">source_path</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Reading YAML from:'</span><span class="p">,</span> <span class="n">source_path</span><span class="p">)</span>
 
-    <span class="n">y</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">source_path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">source_path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">))</span>
     <span class="n">form</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">organism</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="n">strict_allowlist</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s1">&#39;HGNC Symbol&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;EntrezGene&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;UniProtKB&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;RefSeq_mRNA&#39;</span><span class="p">,</span>
+        <span class="s1">'HGNC Symbol'</span><span class="p">,</span>
+        <span class="s1">'EntrezGene'</span><span class="p">,</span>
+        <span class="s1">'UniProtKB'</span><span class="p">,</span>
+        <span class="s1">'RefSeq_mRNA'</span><span class="p">,</span>
     <span class="p">}</span>
 
     <span class="n">broad_allowlist</span> <span class="o">=</span> <span class="n">strict_allowlist</span> <span class="o">|</span> <span class="p">{</span>
         <span class="c1"># Add cautiously; broad profiles can increase ambiguity.</span>
-        <span class="s1">&#39;RefSeq_peptide&#39;</span><span class="p">,</span>
-        <span class="s1">&#39;ArrayExpress&#39;</span><span class="p">,</span>
+        <span class="s1">'RefSeq_peptide'</span><span class="p">,</span>
+        <span class="s1">'ArrayExpress'</span><span class="p">,</span>
     <span class="p">}</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">make_profile</span><span class="p">(</span><span class="n">base</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">allowlist</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
         <span class="n">out</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">base</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">db_name</span><span class="p">,</span> <span class="n">db_block</span> <span class="ow">in</span> <span class="n">out</span><span class="p">[</span><span class="n">organism</span><span class="p">][</span><span class="n">form</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">include</span> <span class="o">=</span> <span class="n">db_name</span> <span class="ow">in</span> <span class="n">allowlist</span>
-            <span class="k">for</span> <span class="n">_asm</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">db_block</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Assembly&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;Include&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">include</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">_asm</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">db_block</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'Assembly'</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">attrs</span><span class="p">[</span><span class="s1">'Include'</span><span class="p">]</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">include</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">out</span>
 
     <span class="n">strict_yaml</span> <span class="o">=</span> <span class="n">make_profile</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">strict_allowlist</span><span class="p">)</span>
     <span class="n">broad_yaml</span> <span class="o">=</span> <span class="n">make_profile</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">broad_allowlist</span><span class="p">)</span>
 
-    <span class="n">strict_path</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s1">_externals_modified_strict.yml&#39;</span>
-    <span class="n">broad_path</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s1">_externals_modified_broad.yml&#39;</span>
+    <span class="n">strict_path</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s1">_externals_modified_strict.yml'</span>
+    <span class="n">broad_path</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s1">_externals_modified_broad.yml'</span>
 
-    <span class="n">strict_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">strict_yaml</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
-    <span class="n">broad_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">broad_yaml</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+    <span class="n">strict_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">strict_yaml</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">)</span>
+    <span class="n">broad_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">broad_yaml</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">)</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Wrote strict profile:&#39;</span><span class="p">,</span> <span class="n">strict_path</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Wrote broad  profile:&#39;</span><span class="p">,</span> <span class="n">broad_path</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Wrote strict profile:'</span><span class="p">,</span> <span class="n">strict_path</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Wrote broad  profile:'</span><span class="p">,</span> <span class="n">broad_path</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
 
     <span class="nb">print</span><span class="p">()</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;To activate a profile: copy/rename it to:&#39;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="n">configured</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'To activate a profile: copy/rename it to:'</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">' '</span><span class="p">,</span> <span class="n">configured</span><span class="p">)</span>
 <span class="k">else</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Skipping YAML profile demo (idtrack not imported).&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Skipping YAML profile demo (idtrack not imported).'</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -281,7 +282,7 @@ To activate a profile: copy/rename it to:
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">apply_allowlist_to_yaml</span><span class="p">(</span><span class="n">template_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">allowlist</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">out_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">y</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">template_path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">template_path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">))</span>
     <span class="n">form</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">organism</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="n">out</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
@@ -291,29 +292,29 @@ To activate a profile: copy/rename it to:
         <span class="n">include</span> <span class="o">=</span> <span class="n">db_name</span> <span class="ow">in</span> <span class="n">allowlist</span>
         <span class="k">if</span> <span class="n">include</span><span class="p">:</span>
             <span class="n">enabled</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">db_name</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">_asm</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">db_block</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Assembly&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">attrs</span><span class="p">[</span><span class="s1">&#39;Include&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">include</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">_asm</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">db_block</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'Assembly'</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">attrs</span><span class="p">[</span><span class="s1">'Include'</span><span class="p">]</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">include</span><span class="p">)</span>
 
-    <span class="n">out_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Wrote:&#39;</span><span class="p">,</span> <span class="n">out_path</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Enabled (count):&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">enabled</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Enabled (sample):&#39;</span><span class="p">,</span> <span class="n">enabled</span><span class="p">[:</span><span class="mi">15</span><span class="p">])</span>
+    <span class="n">out_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">allow_unicode</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Wrote:'</span><span class="p">,</span> <span class="n">out_path</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Enabled (count):'</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">enabled</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Enabled (sample):'</span><span class="p">,</span> <span class="n">enabled</span><span class="p">[:</span><span class="mi">15</span><span class="p">])</span>
 
 
 <span class="c1"># Example: apply a mouse allowlist if a template exists in your local repository</span>
-<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;IDTRACK_LOCAL_REPO&#39;</span><span class="p">,</span> <span class="s1">&#39;./idtrack_cache&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
-<span class="n">organism</span> <span class="o">=</span> <span class="s1">&#39;mus_musculus&#39;</span>
+<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'./idtrack_cache'</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">organism</span> <span class="o">=</span> <span class="s1">'mus_musculus'</span>
 
-<span class="n">template</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s1">_externals_template.yml&#39;</span>
-<span class="n">out_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s1">_externals_modified.yml&#39;</span>
+<span class="n">template</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s1">_externals_template.yml'</span>
+<span class="n">out_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s1">_externals_modified.yml'</span>
 
-<span class="n">allowlist_mouse</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;MGI Symbol&#39;</span><span class="p">,</span> <span class="s1">&#39;EntrezGene&#39;</span><span class="p">,</span> <span class="s1">&#39;UniProtKB&#39;</span><span class="p">,</span> <span class="s1">&#39;RefSeq_mRNA&#39;</span><span class="p">}</span>
+<span class="n">allowlist_mouse</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'MGI Symbol'</span><span class="p">,</span> <span class="s1">'EntrezGene'</span><span class="p">,</span> <span class="s1">'UniProtKB'</span><span class="p">,</span> <span class="s1">'RefSeq_mRNA'</span><span class="p">}</span>
 
 <span class="k">if</span> <span class="n">template</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
     <span class="n">apply_allowlist_to_yaml</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">organism</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">allowlist</span><span class="o">=</span><span class="n">allowlist_mouse</span><span class="p">,</span> <span class="n">out_path</span><span class="o">=</span><span class="n">out_yaml</span><span class="p">)</span>
 <span class="k">else</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Template not found:&#39;</span><span class="p">,</span> <span class="n">template</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Generate it first with Part 2 (02_prepare_new_external_yaml.ipynb).&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Template not found:'</span><span class="p">,</span> <span class="n">template</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Generate it first with Part 2 (02_prepare_new_external_yaml.ipynb).'</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -334,8 +335,8 @@ Enabled (sample): [&#39;EntrezGene&#39;, &#39;MGI Symbol&#39;]
 <ul class="simple">
 <li><p><strong>Permission errors in ``IDTRACK_LOCAL_REPO``:</strong> your cache directory is not writable.</p></li>
 <li><p><strong>REST timeouts:</strong> network issues or Ensembl REST is temporarily slow.</p></li>
-<li><p><strong>MySQL connection errors:</strong> outbound MySQL ports may be blocked; IDTrack will fall back to HTTPS/FTP dumps (slower but functional). Port <code class="docutils literal notranslate"><span class="pre">3337</span></code> is used only for the human GRCh37 archive.</p></li>
-<li><p><strong>``ValueError: release not included in YAML``:</strong> your external YAML does not include the snapshot boundary you chose.</p></li>
+<li><p><strong>MySQL connection errors:</strong> outbound MySQL ports may be blocked; IDTrack probes each port once per process and then uses the HTTPS/FTP dumps (same rows and values, slower per table; over HTTPS a text column holding only digit strings is read as numbers). Set <code class="docutils literal notranslate"><span class="pre">IDTRACK_ENSEMBL_ACCESS=https</span></code> to skip MySQL entirely. Port <code class="docutils literal notranslate"><span class="pre">3337</span></code> is Ensembl’s archive server (GRCh37 from release 79; IDTrack also lists it for some mouse GRCm38 and pig Sscrofa10.2 releases).</p></li>
+<li><p><strong>``ValueError: release not included in YAML``:</strong> your external YAML does not include the snapshot boundary you chose; extend it with <code class="docutils literal notranslate"><span class="pre">ExternalDatabases.extend_modified_yaml</span></code> (Part 2, section 2.6). A graph build announces releases without YAML entries once.</p></li>
 <li><p><strong>Unexpected 1→n explosion:</strong> your external allowlist is too broad or contains promiscuous namespaces.</p></li>
 </ul>
 <p>The next cell is a compact diagnostic report you can paste into issues or lab notes.</p>
@@ -351,30 +352,31 @@ Enabled (sample): [&#39;EntrezGene&#39;, &#39;MGI Symbol&#39;]
 
 <span class="n">report</span> <span class="o">=</span> <span class="p">{}</span>
 
-<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;IDTRACK_LOCAL_REPO&#39;</span><span class="p">,</span> <span class="s1">&#39;./idtrack_cache&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'./idtrack_cache'</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
 <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<span class="n">report</span><span class="p">[</span><span class="s1">&#39;local_repository&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
-<span class="n">report</span><span class="p">[</span><span class="s1">&#39;local_repository_writable&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">W_OK</span><span class="p">)</span>
+<span class="n">report</span><span class="p">[</span><span class="s1">'local_repository'</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
+<span class="n">report</span><span class="p">[</span><span class="s1">'local_repository_writable'</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">W_OK</span><span class="p">)</span>
 
 <span class="c1"># YAML + graph snapshot inventory</span>
-<span class="n">report</span><span class="p">[</span><span class="s1">&#39;yaml_files&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;*_externals_modified.yml&#39;</span><span class="p">))</span>
-<span class="n">report</span><span class="p">[</span><span class="s1">&#39;graph_snapshots&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;graph_*.pickle&#39;</span><span class="p">))</span>
+<span class="n">report</span><span class="p">[</span><span class="s1">'yaml_files'</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">'*_externals_modified.yml'</span><span class="p">))</span>
+<span class="n">report</span><span class="p">[</span><span class="s1">'graph_snapshots'</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">'graph_*.pickle'</span><span class="p">))</span>
 
 <span class="c1"># REST connectivity</span>
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
 
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;https://rest.ensembl.org/info/ping&#39;</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;Content-Type&#39;</span><span class="p">:</span> <span class="s1">&#39;application/json&#39;</span><span class="p">},</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">15</span><span class="p">)</span>
-        <span class="n">report</span><span class="p">[</span><span class="s1">&#39;ensembl_rest_status&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">status_code</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'https://rest.ensembl.org/info/ping'</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">'Content-Type'</span><span class="p">:</span> <span class="s1">'application/json'</span><span class="p">},</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">15</span><span class="p">)</span>
+        <span class="n">report</span><span class="p">[</span><span class="s1">'ensembl_rest_status'</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">status_code</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">report</span><span class="p">[</span><span class="s1">&#39;ensembl_rest_status&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;failed: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="n">report</span><span class="p">[</span><span class="s1">'ensembl_rest_status'</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'failed: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">'</span>
 <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-    <span class="n">report</span><span class="p">[</span><span class="s1">&#39;ensembl_rest_status&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;requests_missing: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="n">report</span><span class="p">[</span><span class="s1">'ensembl_rest_status'</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'requests_missing: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">'</span>
 
 <span class="c1"># MySQL ports (best-effort)</span>
-<span class="c1"># Note: port 3337 is for the human GRCh37 archive; other species typically use 3306/5306.</span>
+<span class="c1"># Note: port 3337 is Ensembl's archive server (GRCh37, and some mouse GRCm38 and pig Sscrofa10.2 releases);</span>
+<span class="c1"># other releases use 3306/5306. IDTrack itself probes each port once per process (see `idtrack._ensembl_access`).</span>
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
 
@@ -383,36 +385,36 @@ Enabled (sample): [&#39;EntrezGene&#39;, &#39;MGI Symbol&#39;]
     <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">,</span> <span class="mi">3337</span><span class="p">]:</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">with</span> <span class="n">socket</span><span class="o">.</span><span class="n">create_connection</span><span class="p">((</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">),</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
-                <span class="n">port_status</span><span class="p">[</span><span class="n">port</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;ok&#39;</span>
+                <span class="n">port_status</span><span class="p">[</span><span class="n">port</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'ok'</span>
         <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">port_status</span><span class="p">[</span><span class="n">port</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span>
-    <span class="n">report</span><span class="p">[</span><span class="s1">&#39;ensembl_mysql_ports&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">port_status</span>
+    <span class="n">report</span><span class="p">[</span><span class="s1">'ensembl_mysql_ports'</span><span class="p">]</span> <span class="o">=</span> <span class="n">port_status</span>
 <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-    <span class="n">report</span><span class="p">[</span><span class="s1">&#39;ensembl_mysql_ports&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;skipped: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="n">report</span><span class="p">[</span><span class="s1">'ensembl_mysql_ports'</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'skipped: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">'</span>
 
 <span class="c1"># Print report</span>
 <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">report</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
 
 <span class="c1"># Optional: quick integrity checks (only if a human snapshot exists)</span>
 <span class="c1"># NOTE: TrackTests can be expensive. We only run a very small, cheap check here.</span>
-<span class="k">if</span> <span class="n">report</span><span class="p">[</span><span class="s1">&#39;graph_snapshots&#39;</span><span class="p">]</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="s1">&#39;homo_sapiens&#39;</span> <span class="ow">in</span> <span class="n">g</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">report</span><span class="p">[</span><span class="s1">&#39;graph_snapshots&#39;</span><span class="p">]):</span>
+<span class="k">if</span> <span class="n">report</span><span class="p">[</span><span class="s1">'graph_snapshots'</span><span class="p">]</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="s1">'homo_sapiens'</span> <span class="ow">in</span> <span class="n">g</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">report</span><span class="p">[</span><span class="s1">'graph_snapshots'</span><span class="p">]):</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 
         <span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
         <span class="n">api</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
-        <span class="n">org</span><span class="p">,</span> <span class="n">latest</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;human&#39;</span><span class="p">)</span>
+        <span class="n">org</span><span class="p">,</span> <span class="n">latest</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'human'</span><span class="p">)</span>
 
         <span class="c1"># Load existing snapshot if present; build if missing (may be slow).</span>
         <span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">org</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">latest</span><span class="p">,</span> <span class="n">return_test</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
         <span class="n">ok</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">is_edge_with_same_nts_only_at_backbone_nodes</span><span class="p">()</span>
         <span class="nb">print</span><span class="p">()</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Quick TrackTests check (edge nts invariant):&#39;</span><span class="p">,</span> <span class="n">ok</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">'Quick TrackTests check (edge nts invariant):'</span><span class="p">,</span> <span class="n">ok</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">()</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;TrackTests quick check skipped/failed -&gt;&#39;</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">'TrackTests quick check skipped/failed -&gt;'</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
 <br/></pre></div>
 </div>
 </div>
@@ -476,26 +478,26 @@ Quick TrackTests check (edge nts invariant): True
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Snakemake / Nextflow snippets (printed as plain text)</span>
 
-<span class="n">snakemake_rule</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="n">snakemake_rule</span> <span class="o">=</span> <span class="s2">"""</span>
 <span class="s2">rule idtrack_build_human_graph:</span>
 <span class="s2">    output:</span>
-<span class="s2">        &#39;idtrack_cache/graph_homo_sapiens_*.pickle&#39;</span>
+<span class="s2">        'idtrack_cache/graph_homo_sapiens_*.pickle'</span>
 <span class="s2">    shell:</span>
-<span class="s2">        &quot;python - &lt;&lt;&#39;PY&#39;</span><span class="se">\n</span><span class="s2">import os</span><span class="se">\n</span><span class="s2">from pathlib import Path</span><span class="se">\n</span><span class="s2">import idtrack</span><span class="se">\n\n</span><span class="s2">os.environ[&#39;IDTRACK_LOCAL_REPO&#39;] = os.path.abspath(&#39;idtrack_cache&#39;)</span><span class="se">\n</span><span class="s2">Path(os.environ[&#39;IDTRACK_LOCAL_REPO&#39;]).mkdir(parents=True, exist_ok=True)</span><span class="se">\n\n</span><span class="s2">api = idtrack.API(local_repository=os.environ[&#39;IDTRACK_LOCAL_REPO&#39;])</span><span class="se">\n</span><span class="s2">org, latest = api.resolve_organism(&#39;human&#39;)</span><span class="se">\n</span><span class="s2">api.build_graph(organism_name=org, snapshot_release=latest, calculate_caches=True)</span><span class="se">\n</span><span class="s2">print(&#39;Built:&#39;, org, latest)</span><span class="se">\n</span><span class="s2">PY&quot;</span>
-<span class="s2">&quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+<span class="s2">        "python - &lt;&lt;'PY'</span><span class="se">\n</span><span class="s2">import os</span><span class="se">\n</span><span class="s2">from pathlib import Path</span><span class="se">\n</span><span class="s2">import idtrack</span><span class="se">\n\n</span><span class="s2">os.environ['IDTRACK_LOCAL_REPO'] = os.path.abspath('idtrack_cache')</span><span class="se">\n</span><span class="s2">Path(os.environ['IDTRACK_LOCAL_REPO']).mkdir(parents=True, exist_ok=True)</span><span class="se">\n\n</span><span class="s2">api = idtrack.API(local_repository=os.environ['IDTRACK_LOCAL_REPO'])</span><span class="se">\n</span><span class="s2">org, latest = api.resolve_organism('human')</span><span class="se">\n</span><span class="s2">api.build_graph(organism_name=org, snapshot_release=latest, calculate_caches=True)</span><span class="se">\n</span><span class="s2">print('Built:', org, latest)</span><span class="se">\n</span><span class="s2">PY"</span>
+<span class="s2">"""</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 
-<span class="n">nextflow_process</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="n">nextflow_process</span> <span class="o">=</span> <span class="s2">"""</span>
 <span class="s2">process BUILD_IDTRACK_HUMAN {</span>
 <span class="s2">  output:</span>
-<span class="s2">    path &quot;idtrack_cache/graph_homo_sapiens_*.pickle&quot;</span>
+<span class="s2">    path "idtrack_cache/graph_homo_sapiens_*.pickle"</span>
 <span class="s2">  script:</span>
-<span class="s2">    &quot;export IDTRACK_LOCAL_REPO=$PWD/idtrack_cache</span><span class="se">\n</span><span class="s2">python - &lt;&lt;&#39;PY&#39;</span><span class="se">\n</span><span class="s2">import os</span><span class="se">\n</span><span class="s2">from pathlib import Path</span><span class="se">\n</span><span class="s2">import idtrack</span><span class="se">\n\n</span><span class="s2">repo = os.environ[&#39;IDTRACK_LOCAL_REPO&#39;]</span><span class="se">\n</span><span class="s2">Path(repo).mkdir(parents=True, exist_ok=True)</span><span class="se">\n\n</span><span class="s2">api = idtrack.API(local_repository=repo)</span><span class="se">\n</span><span class="s2">org, latest = api.resolve_organism(&#39;human&#39;)</span><span class="se">\n</span><span class="s2">api.build_graph(organism_name=org, snapshot_release=latest, calculate_caches=True)</span><span class="se">\n</span><span class="s2">print(&#39;Built:&#39;, org, latest)</span><span class="se">\n</span><span class="s2">PY&quot;</span>
+<span class="s2">    "export IDTRACK_LOCAL_REPO=$PWD/idtrack_cache</span><span class="se">\n</span><span class="s2">python - &lt;&lt;'PY'</span><span class="se">\n</span><span class="s2">import os</span><span class="se">\n</span><span class="s2">from pathlib import Path</span><span class="se">\n</span><span class="s2">import idtrack</span><span class="se">\n\n</span><span class="s2">repo = os.environ['IDTRACK_LOCAL_REPO']</span><span class="se">\n</span><span class="s2">Path(repo).mkdir(parents=True, exist_ok=True)</span><span class="se">\n\n</span><span class="s2">api = idtrack.API(local_repository=repo)</span><span class="se">\n</span><span class="s2">org, latest = api.resolve_organism('human')</span><span class="se">\n</span><span class="s2">api.build_graph(organism_name=org, snapshot_release=latest, calculate_caches=True)</span><span class="se">\n</span><span class="s2">print('Built:', org, latest)</span><span class="se">\n</span><span class="s2">PY"</span>
 <span class="s2">}</span>
-<span class="s2">&quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+<span class="s2">"""</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;--- Snakemake example ---&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'--- Snakemake example ---'</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">snakemake_rule</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;--- Nextflow example ---&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'--- Nextflow example ---'</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">nextflow_process</span><span class="p">)</span>
 <br/></pre></div>
 </div>
@@ -641,10 +643,10 @@ bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tu
 bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tunnel.sh<span class="w"> </span>--jump<span class="w"> </span>user@login<span class="w"> </span>compute123
 
 <span class="c1"># Compute node host auto-detected from Jupyter URL (kernel on compute node):</span>
-bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tunnel.sh<span class="w"> </span>--jump<span class="w"> </span>user@login<span class="w"> </span><span class="s2">&quot;http://compute123:8888/lab?token=...&quot;</span>
+bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tunnel.sh<span class="w"> </span>--jump<span class="w"> </span>user@login<span class="w"> </span><span class="s2">"http://compute123:8888/lab?token=..."</span>
 
 <span class="c1"># Optional: one combined SSH command with both Jupyter (-L) and SOCKS (-R):</span>
-bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tunnel.sh<span class="w"> </span>--jump<span class="w"> </span>user@login<span class="w"> </span>--with-jupyter<span class="w"> </span><span class="s2">&quot;http://compute123:8888/lab?token=...&quot;</span>
+bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tunnel.sh<span class="w"> </span>--jump<span class="w"> </span>user@login<span class="w"> </span>--with-jupyter<span class="w"> </span><span class="s2">"http://compute123:8888/lab?token=..."</span>
 </pre></div>
 </div>
 <div class="nbinput docutils container">
@@ -659,11 +661,11 @@ bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tu
 <span class="c1"># If `test=True` (default), the bridge pings Ensembl REST and rolls back automatically on failure.</span>
 <span class="n">b</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">ConnectionBridge</span><span class="p">(</span><span class="n">proxy_port</span><span class="o">=</span><span class="mi">1080</span><span class="p">)</span>
 <span class="n">ok</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">test</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Bridge enabled:&#39;</span><span class="p">,</span> <span class="n">ok</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Bridge enabled:'</span><span class="p">,</span> <span class="n">ok</span><span class="p">)</span>
 
 <span class="c1"># ... run IDTrack code here ...</span>
-<span class="c1"># api = idtrack.API(local_repository=&#39;./idtrack_cache&#39;)</span>
-<span class="c1"># org, latest = api.resolve_organism(&#39;human&#39;)</span>
+<span class="c1"># api = idtrack.API(local_repository='./idtrack_cache')</span>
+<span class="c1"># org, latest = api.resolve_organism('human')</span>
 <span class="c1"># api.build_graph(organism_name=org, snapshot_release=latest, calculate_caches=True)</span>
 
 <span class="c1"># Recommended pattern in scripts:</span>
@@ -671,7 +673,7 @@ bash<span class="w"> </span>idtrack/reproducibility/scripts/connection_bridge_tu
 <span class="c1">#     ... do work ...</span>
 
 <span class="n">b</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Bridge disabled&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Bridge disabled'</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>

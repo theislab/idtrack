@@ -9,7 +9,7 @@
   <title>Installation &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
-      <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=6a604523" />
       <link rel="stylesheet" type="text/css" href="_static/custom_settings.css?v=04d1a194" />
       <link rel="stylesheet" type="text/css" href="_static/tutorials.css?v=0e72a3a5" />
 
@@ -19,7 +19,7 @@
       <script src="_static/documentation_options.js?v=282f96c0"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
-      <script src="_static/design-tabs.js?v=f930bc37"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="_static/design-tabs.js?v=fcb327ea"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -84,6 +84,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#verifying-your-installation">Verifying Your Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#network-access-mysql-or-https">Network Access: MySQL or HTTPS</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#optional-dependencies">Optional Dependencies</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#external-mapping-backends">External Mapping Backends</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#ortholog-analysis">Ortholog Analysis</a></li>
@@ -100,6 +101,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="authors.html">Credits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
@@ -154,20 +156,21 @@ your workflow.</p>
 </ul>
 </li>
 <li><p><a class="reference internal" href="#verifying-your-installation" id="id14">Verifying Your Installation</a></p></li>
-<li><p><a class="reference internal" href="#optional-dependencies" id="id15">Optional Dependencies</a></p>
+<li><p><a class="reference internal" href="#network-access-mysql-or-https" id="id15">Network Access: MySQL or HTTPS</a></p></li>
+<li><p><a class="reference internal" href="#optional-dependencies" id="id16">Optional Dependencies</a></p>
 <ul>
-<li><p><a class="reference internal" href="#external-mapping-backends" id="id16">External Mapping Backends</a></p></li>
-<li><p><a class="reference internal" href="#ortholog-analysis" id="id17">Ortholog Analysis</a></p></li>
-<li><p><a class="reference internal" href="#all-optional-dependencies" id="id18">All Optional Dependencies</a></p></li>
+<li><p><a class="reference internal" href="#external-mapping-backends" id="id17">External Mapping Backends</a></p></li>
+<li><p><a class="reference internal" href="#ortholog-analysis" id="id18">Ortholog Analysis</a></p></li>
+<li><p><a class="reference internal" href="#all-optional-dependencies" id="id19">All Optional Dependencies</a></p></li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#troubleshooting" id="id19">Troubleshooting</a></p>
+<li><p><a class="reference internal" href="#troubleshooting" id="id20">Troubleshooting</a></p>
 <ul>
-<li><p><a class="reference internal" href="#common-installation-issues" id="id20">Common Installation Issues</a></p></li>
-<li><p><a class="reference internal" href="#getting-help" id="id21">Getting Help</a></p></li>
+<li><p><a class="reference internal" href="#common-installation-issues" id="id21">Common Installation Issues</a></p></li>
+<li><p><a class="reference internal" href="#getting-help" id="id22">Getting Help</a></p></li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#what-s-next" id="id22">What’s Next?</a></p></li>
+<li><p><a class="reference internal" href="#what-s-next" id="id23">What’s Next?</a></p></li>
 </ul>
 </nav>
 <section id="system-requirements">
@@ -194,10 +197,12 @@ your workflow.</p>
 <td><p>Minimum 4 GB RAM (8 GB recommended for large graphs)</p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>Disk Space</strong></p></td>
-<td><p>2-5 GB for cached databases (varies by organism)</p></td>
+<td><p>About 130-240 MB per cached Ensembl release of an organism (raw and processed tables); a full
+multi-release graph build caches tens of GB (about 20 GB for one human assembly)</p></td>
 </tr>
 <tr class="row-even"><td><p><strong>Network</strong></p></td>
-<td><p>Internet connection required for initial database downloads</p></td>
+<td><p>HTTPS access to <code class="docutils literal notranslate"><span class="pre">ftp.ensembl.org</span></code> and <code class="docutils literal notranslate"><span class="pre">rest.ensembl.org</span></code> for the initial downloads; the Ensembl
+MySQL ports are optional (see <a class="reference internal" href="#ensembl-access"><span class="std std-ref">Network Access: MySQL or HTTPS</span></a>)</p></td>
 </tr>
 </tbody>
 </table>
@@ -245,15 +250,15 @@ issues with other installation methods, try Mamba first.</p>
 <h2>Alternative Installation Methods<a class="headerlink" href="#alternative-installation-methods" title="Link to this heading"></a></h2>
 <div class="sd-tab-set docutils">
 <input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-0">
-Using conda</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-0-content" class="sd-tab-label" for="sd-tab-item-0">
+Using conda</label><div class="sd-tab-content docutils" id="sd-tab-item-0-content">
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>idtrack
 </pre></div>
 </div>
 </div>
 <input id="sd-tab-item-1" name="sd-tab-set-0" type="radio">
-<label class="sd-tab-label" for="sd-tab-item-1">
-Using pip</label><div class="sd-tab-content docutils">
+<label aria-controls="sd-tab-item-1-content" class="sd-tab-label" for="sd-tab-item-1">
+Using pip</label><div class="sd-tab-content docutils" id="sd-tab-item-1-content">
 <p>If you prefer pip or are working in a virtual environment:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
 </pre></div>
@@ -290,7 +295,7 @@ compatible ARM64 binaries are used. This is a one-time setup.</p>
 </pre></div>
 </div>
 <p><strong>Verification:</strong></p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import h5py; print(&#39;HDF5 version:&#39;, h5py.version.hdf5_version)&quot;</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import h5py; print('HDF5 version:', h5py.version.hdf5_version)"</span>
 </pre></div>
 </div>
 <div class="admonition tip">
@@ -374,7 +379,7 @@ easier to manage your installation.</p>
 <p>This installs IDTrack in development mode with all dependencies, including development
 and testing tools.</p>
 <p><strong>Step 3: Verify installation</strong></p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>poetry<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import idtrack; print(f&#39;IDTrack {idtrack.__version__}&#39;)&quot;</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>poetry<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import idtrack; print(f'IDTrack {idtrack.__version__}')"</span>
 </pre></div>
 </div>
 </section>
@@ -397,34 +402,83 @@ script:</p>
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 
 <span class="c1"># Pick a stable, writable cache directory (reused across runs)</span>
-<span class="n">local_repo</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;./idtrack_cache&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">local_repo</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"./idtrack_cache"</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
 <span class="n">local_repo</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="c1"># Print version information</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;IDTrack version: </span><span class="si">{</span><span class="n">idtrack</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"IDTrack version: </span><span class="si">{</span><span class="n">idtrack</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
 <span class="c1"># Test API initialization</span>
 <span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">local_repo</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;API initialized successfully&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"API initialized successfully"</span><span class="p">)</span>
 
 <span class="c1"># Test organism resolution</span>
-<span class="n">organism</span><span class="p">,</span> <span class="n">release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s2">&quot;human&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Resolved organism: </span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Latest Ensembl release: </span><span class="si">{</span><span class="n">release</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">organism</span><span class="p">,</span> <span class="n">release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s2">"human"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Resolved organism: </span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Latest Ensembl release: </span><span class="si">{</span><span class="n">release</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Installation verified successfully!&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Installation verified successfully!"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p><strong>Expected output:</strong></p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>IDTrack version: 0.0.x
 API initialized successfully
 Resolved organism: homo_sapiens
-Latest Ensembl release: 114
+Latest Ensembl release: 116
 
 Installation verified successfully!
 </pre></div>
 </div>
-<p>If you see output similar to this, your installation is complete and working.</p>
+<p>If you see output similar to this, your installation is complete and working (the latest release is the one
+Ensembl serves on the day you run it).</p>
+</section>
+<section id="network-access-mysql-or-https">
+<span id="ensembl-access"></span><h2>Network Access: MySQL or HTTPS<a class="headerlink" href="#network-access-mysql-or-https" title="Link to this heading"></a></h2>
+<p>IDTrack reads Ensembl’s core databases in one of two ways: from the public MySQL service
+(<code class="docutils literal notranslate"><span class="pre">ensembldb.ensembl.org</span></code>, ports 3306, 5306 and 3337) or from the MySQL dumps on
+<code class="docutils literal notranslate"><span class="pre">https://ftp.ensembl.org/pub/</span></code>. Many institutional networks and HPC clusters block the MySQL ports;
+HTTPS is enough. The access mode is chosen with the environment variable <code class="docutils literal notranslate"><span class="pre">IDTRACK_ENSEMBL_ACCESS</span></code> or
+the attribute <code class="docutils literal notranslate"><span class="pre">idtrack.DB.ensembl_access</span></code> (which wins when set):</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 15.0%" />
+<col style="width: 85.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Mode</p></th>
+<th class="head"><p>Behaviour</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">auto</span></code> (default)</p></td>
+<td><p>Each MySQL port is probed once per Python process, with a short timeout. Releases on a port that
+answers are read over MySQL; everything else, and everything after a MySQL connection fails, is read
+from the HTTPS dumps.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">https</span></code></p></td>
+<td><p>MySQL is never contacted; every table is read from the HTTPS dumps.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span><span class="nb">export</span><span class="w"> </span><span class="nv">IDTRACK_ENSEMBL_ACCESS</span><span class="o">=</span>https
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+
+<span class="n">idtrack</span><span class="o">.</span><span class="n">DB</span><span class="o">.</span><span class="n">ensembl_access</span> <span class="o">=</span> <span class="s2">"https"</span>  <span class="c1"># or "auto"</span>
+</pre></div>
+</div>
+<p><strong>What differs between the modes:</strong> both read the same Ensembl tables, with the same rows and values: the
+dump reader decodes MySQL’s escaping (tabs, newlines and backslashes inside fields, <code class="docutils literal notranslate"><span class="pre">NULL</span></code>) so that each
+row holds what the MySQL server returns. One difference remains in the raw tables: over HTTPS, column types
+are inferred from the text, so a text column that holds only digit strings is read as numbers (e.g. the
+<code class="docutils literal notranslate"><span class="pre">old_release</span></code> and <code class="docutils literal notranslate"><span class="pre">new_release</span></code> columns of <code class="docutils literal notranslate"><span class="pre">mapping_session</span></code>), as it was before this access-mode setting
+existed. The HTTPS path downloads whole compressed tables, so it is slower per table than a MySQL query
+(seconds to a minute per large table), but it needs no open port. In <code class="docutils literal notranslate"><span class="pre">auto</span></code> mode a blocked port costs one
+short probe per process, not one per table, and a port whose connection fails is not tried again in that
+process (the tables then come over HTTPS; this costs only speed).</p>
+<p>If you route IDTrack through an SSH tunnel with <code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.ConnectionBridge</span></code>, starting and stopping
+the bridge forgets the probe results, so the ports are probed again through the new route.</p>
 </section>
 <section id="optional-dependencies">
 <h2>Optional Dependencies<a class="headerlink" href="#optional-dependencies" title="Link to this heading"></a></h2>
@@ -433,7 +487,7 @@ Installation verified successfully!
 <h3>External Mapping Backends<a class="headerlink" href="#external-mapping-backends" title="Link to this heading"></a></h3>
 <p>For cross-database identifier mapping using external services:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Install<span class="w"> </span>the<span class="w"> </span>optional<span class="w"> </span>backends<span class="w"> </span>via<span class="w"> </span>Python<span class="w"> </span>extras<span class="w"> </span><span class="o">(</span>recommended<span class="o">)</span>
-<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;idtrack[external-mappers]&quot;</span>
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"idtrack[external-mappers]"</span>
 
 <span class="gp"># </span>Or<span class="w"> </span>install<span class="w"> </span>only<span class="w"> </span>the<span class="w"> </span>libraries<span class="w"> </span>you<span class="w"> </span>need
 <span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>gget<span class="w"> </span>mygene<span class="w"> </span>pybiomart<span class="w"> </span>gprofiler-official
@@ -443,14 +497,14 @@ Installation verified successfully!
 <section id="ortholog-analysis">
 <h3>Ortholog Analysis<a class="headerlink" href="#ortholog-analysis" title="Link to this heading"></a></h3>
 <p>For cross-species ortholog analysis with sequence alignment:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;idtrack[ortholog]&quot;</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"idtrack[ortholog]"</span>
 </pre></div>
 </div>
 </section>
 <section id="all-optional-dependencies">
 <h3>All Optional Dependencies<a class="headerlink" href="#all-optional-dependencies" title="Link to this heading"></a></h3>
 <p>Install all optional dependencies at once:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;idtrack[all-external]&quot;</span>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"idtrack[all-external]"</span>
 </pre></div>
 </div>
 </section>

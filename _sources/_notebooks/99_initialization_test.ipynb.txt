@@ -60,7 +60,7 @@
     "## 2. Helper: pick a representative gene ID from a built graph\n",
     "\n",
     "We avoid hard-coding gene IDs for mouse/pig by selecting an example **base Ensembl gene ID** directly from\n",
-    "the graph (these look like `ENSG...`, `ENSMUSG...`, `ENSSSCG...`).\n"
+    "the graph (these look like `ENSG...`, `ENSMUSG...`, `ENSSSCG...`; the macaques use `ENSMMUG...` and `ENSMFAG...`).\n"
    ]
   },
   {
@@ -168,8 +168,9 @@
    "outputs": [],
    "source": [
     "mouse_yaml = LOCAL_REPOSITORY / 'mus_musculus_externals_modified.yml'\n",
-    "HAS_MOUSE_YAML = mouse_yaml.exists()\n",
-    "print('OK' if HAS_MOUSE_YAML else 'MISSING (create this in Part 2 for mouse)', mouse_yaml)\n"
+    "# A local file (Part 2) overrides the packaged default; either is fine.\n",
+    "HAS_MOUSE_YAML = mouse_yaml.exists() or (Path(idtrack.__file__).parent / 'default_config' / mouse_yaml.name).exists()\n",
+    "print('OK' if HAS_MOUSE_YAML else 'MISSING (create this in Part 2 for mouse)', mouse_yaml)"
    ]
   },
   {
@@ -223,8 +224,9 @@
    "outputs": [],
    "source": [
     "pig_yaml = LOCAL_REPOSITORY / 'sus_scrofa_externals_modified.yml'\n",
-    "HAS_PIG_YAML = pig_yaml.exists()\n",
-    "print('OK' if HAS_PIG_YAML else 'MISSING (create this in Part 2 for pig)', pig_yaml)\n"
+    "# A local file (Part 2) overrides the packaged default; either is fine.\n",
+    "HAS_PIG_YAML = pig_yaml.exists() or (Path(idtrack.__file__).parent / 'default_config' / pig_yaml.name).exists()\n",
+    "print('OK' if HAS_PIG_YAML else 'MISSING (create this in Part 2 for pig)', pig_yaml)"
    ]
   },
   {
@@ -302,9 +304,11 @@
     "\n",
     "Common failure modes and fixes:\n",
     "\n",
-    "1. **Missing YAML** (mouse/pig): run `02_prepare_new_external_yaml.ipynb` and create the `_modified.yml`.\n",
+    "1. **Missing YAML**: every supported organism ships a default; for another organism run `02_prepare_new_external_yaml.ipynb`\n",
+    "   and create the `_modified.yml`. If a build warns that releases have no YAML entry, extend the file (Part 2, section 2.6).\n",
     "2. **Permission errors**: change `IDTRACK_LOCAL_REPO` to a writable path.\n",
-    "3. **Network / MySQL issues**: REST/FTP access is required; direct MySQL access is optional (IDTrack falls back to HTTPS/FTP dumps).\n",
+    "3. **Network / MySQL issues**: REST/FTP access is required; direct MySQL access is optional (IDTrack falls back to HTTPS/FTP dumps;\n",
+    "   `IDTRACK_ENSEMBL_ACCESS=https` skips MySQL entirely).\n",
     "4. **Disk full**: graphs can be large; move your local repository to a larger disk.\n"
    ]
   }

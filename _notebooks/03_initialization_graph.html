@@ -9,7 +9,7 @@
   <title>Part 3 — Graph Initialization &amp; Management &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
-      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=6a604523" />
       <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
       <link rel="stylesheet" type="text/css" href="../_static/custom_settings.css?v=04d1a194" />
       <link rel="stylesheet" type="text/css" href="../_static/tutorials.css?v=0e72a3a5" />
@@ -20,7 +20,7 @@
       <script src="../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
-      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../_static/design-tabs.js?v=fcb327ea"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
       <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
       <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
@@ -74,14 +74,15 @@
 <li class="toctree-l2"><a class="reference internal" href="02_prepare_new_external_yaml.html">Part 2 — External Database Configuration</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Part 3 — Graph Initialization &amp; Management</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#3.0-—-What-you-should-expect-(time-/-disk)">3.0 — What you should expect (time / disk)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#3.0.1-—-Sanity-check:-do-your-external-YAML-files-exist?">3.0.1 — Sanity check: do your external YAML files exist?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3.0.1-—-Sanity-check:-which-external-YAML-files-will-be-used?">3.0.1 — Sanity check: which external YAML files will be used?</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#3.1–3.3-—-Build-graph-snapshots-(one-per-organism)">3.1–3.3 — Build graph snapshots (one per organism)</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#3.1-—-Human-graph-initialization-(multi-assembly)">3.1 — Human graph initialization (multi-assembly)</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#3.2-—-Mouse-graph-initialization-(clean-handoff)">3.2 — Mouse graph initialization (clean handoff)</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#3.3-—-Pig-graph-initialization-(clean-handoff)">3.3 — Pig graph initialization (clean handoff)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#3.4-—-Rhesus-and-cynomolgus-macaque-graph-initialization-(clean-handoff)">3.4 — Rhesus and cynomolgus macaque graph initialization (clean handoff)</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#3.4-—-Graph-management-(all-species)">3.4 — Graph management (all species)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#3.5-—-Graph-management-(all-species)">3.5 — Graph management (all species)</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#Reloading-vs-rebuilding">Reloading vs rebuilding</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#Cache-hygiene">Cache hygiene</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#Switching-organisms-/-assemblies">Switching organisms / assemblies</a></li>
@@ -100,6 +101,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../authors.html">Credits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
@@ -134,17 +136,18 @@
   <a class="idtrack-notebook-download" href="../_sources/_notebooks/03_initialization_graph.ipynb">Download notebook</a>
 </div><section id="Part-3-—-Graph-Initialization-&amp;-Management">
 <h1>Part 3 — Graph Initialization &amp; Management<a class="headerlink" href="#Part-3-—-Graph-Initialization-&-Management" title="Link to this heading"></a></h1>
-<p><em>Last updated:</em> 2026-01-08</p>
+<p><em>Last updated:</em> 2026-11-11</p>
 <p>This notebook shows how to <strong>build and cache</strong> an IDTrack graph snapshot for:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">homo_sapiens</span></code> (human)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">mus_musculus</span></code> (mouse)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">sus_scrofa</span></code> (pig)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">macaca_mulatta</span></code> (rhesus macaque) and <code class="docutils literal notranslate"><span class="pre">macaca_fascicularis</span></code> (cynomolgus macaque)</p></li>
 </ul>
 <p>A graph build is the most expensive step. The good news:</p>
 <ul class="simple">
 <li><p>you usually do it <strong>once per organism + snapshot boundary + external YAML configuration</strong></p></li>
-<li><p>the snapshot can be <strong>multi-assembly</strong> (human has overlapping GRCh38/GRCh37; mouse/pig are clean-handoff by release but legacy builds are supported)</p></li>
+<li><p>the snapshot can be <strong>multi-assembly</strong> (human has overlapping GRCh38/GRCh37; mouse, pig and the macaques are clean-handoff by release but legacy builds are supported)</p></li>
 <li><p>then you reuse the cached graph for fast conversions</p></li>
 </ul>
 <p><strong>Learning objectives</strong></p>
@@ -154,7 +157,7 @@
 <li><p>Learn practical graph-management habits (reload vs rebuild, cache hygiene).</p></li>
 </ul>
 <blockquote>
-<div><p><strong>Prerequisite:</strong> run <code class="docutils literal notranslate"><span class="pre">02_prepare_new_external_yaml.ipynb</span></code> first (especially important for mouse and pig).</p>
+<div><p><strong>Prerequisite:</strong> every supported organism ships a default external YAML; run <code class="docutils literal notranslate"><span class="pre">02_prepare_new_external_yaml.ipynb</span></code> first only if you want your own selection of external databases.</p>
 </div></blockquote>
 <section id="3.0-—-What-you-should-expect-(time-/-disk)">
 <h2>3.0 — What you should expect (time / disk)<a class="headerlink" href="#3.0-—-What-you-should-expect-(time-/-disk)" title="Link to this heading"></a></h2>
@@ -185,13 +188,13 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 
-<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;IDTRACK_LOCAL_REPO&#39;</span><span class="p">,</span> <span class="s1">&#39;./idtrack_cache&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'./idtrack_cache'</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
 <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
 <span class="n">api</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Local repository:&#39;</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Local repository:'</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -204,26 +207,34 @@ Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_not
 </pre></div></div>
 </div>
 </section>
-<section id="3.0.1-—-Sanity-check:-do-your-external-YAML-files-exist?">
-<h2>3.0.1 — Sanity check: do your external YAML files exist?<a class="headerlink" href="#3.0.1-—-Sanity-check:-do-your-external-YAML-files-exist?" title="Link to this heading"></a></h2>
-<p>Human has a packaged default, but for mouse and pig you should have local <code class="docutils literal notranslate"><span class="pre">*_externals_modified.yml</span></code> files.</p>
+<section id="3.0.1-—-Sanity-check:-which-external-YAML-files-will-be-used?">
+<h2>3.0.1 — Sanity check: which external YAML files will be used?<a class="headerlink" href="#3.0.1-—-Sanity-check:-which-external-YAML-files-will-be-used?" title="Link to this heading"></a></h2>
+<p>Every supported organism ships a packaged default (<code class="docutils literal notranslate"><span class="pre">idtrack/default_config/&lt;organism&gt;_externals_modified.yml</span></code>); a file of the same name in your local repository (created in Part 2) takes precedence.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>3
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># External YAML presence (created in Part 2)</span>
-<span class="n">human_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;homo_sapiens_externals_modified.yml&#39;</span>
-<span class="n">mouse_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;mus_musculus_externals_modified.yml&#39;</span>
-<span class="n">pig_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">&#39;sus_scrofa_externals_modified.yml&#39;</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># External YAML presence: local repository first (created in Part 2), else the packaged default</span>
+<span class="n">DEFAULT_CONFIG</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">idtrack</span><span class="o">.</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s1">'default_config'</span>
 
-<span class="n">HAS_HUMAN_YAML</span> <span class="o">=</span> <span class="n">human_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
-<span class="n">HAS_MOUSE_YAML</span> <span class="o">=</span> <span class="n">mouse_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
-<span class="n">HAS_PIG_YAML</span> <span class="o">=</span> <span class="n">pig_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
 
-<span class="nb">print</span><span class="p">((</span><span class="s2">&quot;OK&quot;</span> <span class="k">if</span> <span class="n">HAS_HUMAN_YAML</span> <span class="k">else</span> <span class="s2">&quot;NOTE: missing (human can fall back to packaged default)&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="mi">55</span><span class="p">),</span> <span class="n">human_yaml</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">((</span><span class="s2">&quot;OK&quot;</span> <span class="k">if</span> <span class="n">HAS_MOUSE_YAML</span> <span class="k">else</span> <span class="s2">&quot;MISSING (create in Part 2 for mouse)&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="mi">55</span><span class="p">),</span> <span class="n">mouse_yaml</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">((</span><span class="s2">&quot;OK&quot;</span> <span class="k">if</span> <span class="n">HAS_PIG_YAML</span> <span class="k">else</span> <span class="s2">&quot;MISSING (create in Part 2 for pig)&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="mi">55</span><span class="p">),</span> <span class="n">pig_yaml</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
-<br/></pre></div>
+<span class="k">def</span><span class="w"> </span><span class="nf">_yaml_status</span><span class="p">(</span><span class="n">organism</span><span class="p">):</span>
+    <span class="n">local</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s1">_externals_modified.yml'</span>
+    <span class="n">shipped</span> <span class="o">=</span> <span class="n">DEFAULT_CONFIG</span> <span class="o">/</span> <span class="n">local</span><span class="o">.</span><span class="n">name</span>
+    <span class="k">if</span> <span class="n">local</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">'OK'</span><span class="p">,</span> <span class="n">local</span><span class="o">.</span><span class="n">name</span>
+    <span class="k">if</span> <span class="n">shipped</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">'OK (packaged default)'</span><span class="p">,</span> <span class="n">local</span><span class="o">.</span><span class="n">name</span>
+    <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">'MISSING (create it in Part 2)'</span><span class="p">,</span> <span class="n">local</span><span class="o">.</span><span class="n">name</span>
+
+
+<span class="n">HAS_HUMAN_YAML</span><span class="p">,</span> <span class="o">*</span><span class="n">_human</span> <span class="o">=</span> <span class="n">_yaml_status</span><span class="p">(</span><span class="s1">'homo_sapiens'</span><span class="p">)</span>
+<span class="n">HAS_MOUSE_YAML</span><span class="p">,</span> <span class="o">*</span><span class="n">_mouse</span> <span class="o">=</span> <span class="n">_yaml_status</span><span class="p">(</span><span class="s1">'mus_musculus'</span><span class="p">)</span>
+<span class="n">HAS_PIG_YAML</span><span class="p">,</span> <span class="o">*</span><span class="n">_pig</span> <span class="o">=</span> <span class="n">_yaml_status</span><span class="p">(</span><span class="s1">'sus_scrofa'</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">status</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="n">_human</span><span class="p">,</span> <span class="n">_mouse</span><span class="p">,</span> <span class="n">_pig</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">status</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="mi">55</span><span class="p">),</span> <span class="n">name</span><span class="p">)</span>
+</pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -261,7 +272,7 @@ OK                                                      sus_scrofa_externals_mod
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;human&#39;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'human'</span><span class="p">)</span>
 <span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="n">latest_release</span>  <span class="c1"># pin to a specific release if needed</span>
 <span class="n">organism</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE</span>
 <br/></pre></div>
@@ -483,16 +494,16 @@ api.build_graph(organism_name=organism, snapshot_release=SNAPSHOT_RELEASE, calcu
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Quick inspection</span>
 <span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Organism:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;organism&#39;</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Snapshot release:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ensembl_release&#39;</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Main assembly:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;genome_assembly&#39;</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assemblies in this graph:&#39;</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_genome_assemblies</span><span class="p">()))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Nodes:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_nodes</span><span class="p">())</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Edges:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_edges</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Organism:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'organism'</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Snapshot release:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'ensembl_release'</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Main assembly:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'genome_assembly'</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Assemblies in this graph:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_genome_assemblies</span><span class="p">()))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Nodes:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_nodes</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Edges:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_edges</span><span class="p">())</span>
 
-<span class="n">aed</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="s1">&#39;available_external_databases&#39;</span><span class="p">,</span> <span class="p">[]))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;External DBs enabled (count):&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">aed</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;External DBs (first 20):&#39;</span><span class="p">,</span> <span class="n">aed</span><span class="p">[:</span><span class="mi">20</span><span class="p">])</span>
+<span class="n">aed</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="s1">'available_external_databases'</span><span class="p">,</span> <span class="p">[]))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'External DBs enabled (count):'</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">aed</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'External DBs (first 20):'</span><span class="p">,</span> <span class="n">aed</span><span class="p">[:</span><span class="mi">20</span><span class="p">])</span>
 <br/></pre></div>
 </div>
 </div>
@@ -531,7 +542,7 @@ External DBs (first 20): [&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Where is the graph file stored?</span>
-<span class="nb">sorted</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;graph_homo_sapiens*.pickle&#39;</span><span class="p">))[</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span>
+<span class="nb">sorted</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">'graph_homo_sapiens*.pickle'</span><span class="p">))[</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span>
 <br/></pre></div>
 </div>
 </div>
@@ -547,12 +558,12 @@ External DBs (first 20): [&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#
 </section>
 <section id="3.2-—-Mouse-graph-initialization-(clean-handoff)">
 <h3>3.2 — Mouse graph initialization (clean handoff)<a class="headerlink" href="#3.2-—-Mouse-graph-initialization-(clean-handoff)" title="Link to this heading"></a></h3>
-<p>Mouse is a clean-handoff species (one maintained assembly per release: GRCm37 → GRCm38 → GRCm39). Older assemblies mainly matter for legacy datasets and archive releases; you typically do not have overlapping assemblies within the same release.</p>
+<p>Mouse is a clean-handoff species (one maintained assembly per release: NCBIM37 → GRCm38 → GRCm39). Older assemblies mainly matter for legacy datasets and archive releases; you typically do not have overlapping assemblies within the same release.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;mus musculus&#39;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'mus musculus'</span><span class="p">)</span>
 <span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="n">latest_release</span>
 <span class="n">organism</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE</span>
 <br/></pre></div>
@@ -586,7 +597,7 @@ External DBs (first 20): [&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#
 if HAS_MOUSE_YAML:
     api.build_graph(organism_name=organism, snapshot_release=SNAPSHOT_RELEASE, calculate_caches=False)
 else:
-    print(&#39;Skipping mouse build: mus_musculus_externals_modified.yml is missing (run Part 2 first).&#39;)
+    print('Skipping mouse build: mus_musculus_externals_modified.yml is missing (run Part 2 first).')
 <br/></pre></div>
 </div>
 </div>
@@ -1090,18 +1101,18 @@ else:
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_MOUSE_YAML</span><span class="p">:</span>
     <span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Organism:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;organism&#39;</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Snapshot release:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ensembl_release&#39;</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Main assembly:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;genome_assembly&#39;</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assemblies in this graph:&#39;</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_genome_assemblies</span><span class="p">()))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Nodes:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_nodes</span><span class="p">())</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Edges:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_edges</span><span class="p">())</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Organism:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'organism'</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Snapshot release:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'ensembl_release'</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Main assembly:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'genome_assembly'</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Assemblies in this graph:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_genome_assemblies</span><span class="p">()))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Nodes:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_nodes</span><span class="p">())</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Edges:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_edges</span><span class="p">())</span>
 
-    <span class="n">aed</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="s1">&#39;available_external_databases&#39;</span><span class="p">,</span> <span class="p">[]))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;External DBs enabled (count):&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">aed</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;External DBs (first 20):&#39;</span><span class="p">,</span> <span class="n">aed</span><span class="p">[:</span><span class="mi">20</span><span class="p">])</span>
+    <span class="n">aed</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="s1">'available_external_databases'</span><span class="p">,</span> <span class="p">[]))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'External DBs enabled (count):'</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">aed</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'External DBs (first 20):'</span><span class="p">,</span> <span class="n">aed</span><span class="p">[:</span><span class="mi">20</span><span class="p">])</span>
 <span class="k">else</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Mouse graph not built (missing YAML).&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Mouse graph not built (missing YAML).'</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -1139,7 +1150,7 @@ External DBs (first 20): [&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>7
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">sorted</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;graph_mus_musculus*.pickle&#39;</span><span class="p">))[</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">sorted</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">'graph_mus_musculus*.pickle'</span><span class="p">))[</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span>
 <br/></pre></div>
 </div>
 </div>
@@ -1155,12 +1166,12 @@ External DBs (first 20): [&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#
 </section>
 <section id="3.3-—-Pig-graph-initialization-(clean-handoff)">
 <h3>3.3 — Pig graph initialization (clean handoff)<a class="headerlink" href="#3.3-—-Pig-graph-initialization-(clean-handoff)" title="Link to this heading"></a></h3>
-<p>Pig is a clean-handoff species (one maintained assembly per release: Sscrofa9.2 → Sscrofa10.2 → Sscrofa11.1). Older assemblies mainly matter for legacy datasets and archive releases; you typically do not have overlapping assemblies within the same release.</p>
+<p>Pig is a clean-handoff species (one maintained assembly per release: Sscrofa9 → Sscrofa10.2 → Sscrofa11.1). Older assemblies mainly matter for legacy datasets and archive releases; you typically do not have overlapping assemblies within the same release.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>8
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">&#39;sus scrofa&#39;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'sus scrofa'</span><span class="p">)</span>
 <span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="n">latest_release</span>
 <span class="n">organism</span><span class="p">,</span> <span class="n">SNAPSHOT_RELEASE</span>
 <br/></pre></div>
@@ -1194,7 +1205,7 @@ External DBs (first 20): [&#39;CCDS&#39;, &#39;Clone_based_ensembl_gene&#39;, &#
 if HAS_PIG_YAML:
     api.build_graph(organism_name=organism, snapshot_release=SNAPSHOT_RELEASE, calculate_caches=False)
 else:
-    print(&#39;Skipping pig build: sus_scrofa_externals_modified.yml is missing (run Part 2 first).&#39;)
+    print('Skipping pig build: sus_scrofa_externals_modified.yml is missing (run Part 2 first).')
 <br/></pre></div>
 </div>
 </div>
@@ -1731,18 +1742,18 @@ else:
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_PIG_YAML</span><span class="p">:</span>
     <span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Organism:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;organism&#39;</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Snapshot release:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ensembl_release&#39;</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Main assembly:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;genome_assembly&#39;</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Assemblies in this graph:&#39;</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_genome_assemblies</span><span class="p">()))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Nodes:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_nodes</span><span class="p">())</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Edges:&#39;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_edges</span><span class="p">())</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Organism:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'organism'</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Snapshot release:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'ensembl_release'</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Main assembly:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'genome_assembly'</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Assemblies in this graph:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">list_genome_assemblies</span><span class="p">()))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Nodes:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_nodes</span><span class="p">())</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Edges:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">number_of_edges</span><span class="p">())</span>
 
-    <span class="n">aed</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="s1">&#39;available_external_databases&#39;</span><span class="p">,</span> <span class="p">[]))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;External DBs enabled (count):&#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">aed</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;External DBs (first 20):&#39;</span><span class="p">,</span> <span class="n">aed</span><span class="p">[:</span><span class="mi">20</span><span class="p">])</span>
+    <span class="n">aed</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="s1">'available_external_databases'</span><span class="p">,</span> <span class="p">[]))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'External DBs enabled (count):'</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">aed</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'External DBs (first 20):'</span><span class="p">,</span> <span class="n">aed</span><span class="p">[:</span><span class="mi">20</span><span class="p">])</span>
 <span class="k">else</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Pig graph not built (missing YAML).&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Pig graph not built (missing YAML).'</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -1780,7 +1791,7 @@ External DBs (first 20): [&#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_v
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>11
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">sorted</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;graph_sus_scrofa*.pickle&#39;</span><span class="p">))[</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">sorted</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">'graph_sus_scrofa*.pickle'</span><span class="p">))[</span><span class="o">-</span><span class="mi">5</span><span class="p">:]</span>
 <br/></pre></div>
 </div>
 </div>
@@ -1794,9 +1805,64 @@ External DBs (first 20): [&#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_v
 </pre></div></div>
 </div>
 </section>
+<section id="3.4-—-Rhesus-and-cynomolgus-macaque-graph-initialization-(clean-handoff)">
+<h3>3.4 — Rhesus and cynomolgus macaque graph initialization (clean handoff)<a class="headerlink" href="#3.4-—-Rhesus-and-cynomolgus-macaque-graph-initialization-(clean-handoff)" title="Link to this heading"></a></h3>
+<p>Both macaques are clean-handoff species:</p>
+<ul class="simple">
+<li><p>rhesus (<code class="docutils literal notranslate"><span class="pre">macaca_mulatta</span></code>): MMUL_1 (key <code class="docutils literal notranslate"><span class="pre">1</span></code>, releases 48–85) → Mmul_8.0.1 (<code class="docutils literal notranslate"><span class="pre">801</span></code>, 86–97) → Mmul_10 (<code class="docutils literal notranslate"><span class="pre">10</span></code>, 98+)</p></li>
+<li><p>cynomolgus (<code class="docutils literal notranslate"><span class="pre">macaca_fascicularis</span></code>): Macaca_fascicularis_5.0 (<code class="docutils literal notranslate"><span class="pre">5</span></code>, 91–102) → 6.0 (<code class="docutils literal notranslate"><span class="pre">6</span></code>, 103+)</p></li>
+</ul>
+<p>The snapshot graph links the assemblies through Ensembl’s own history (e.g. rhesus 85 → 86 and 97 → 98), so identifiers from an older genome build convert to the current one. Gene symbols are VGNC symbols on the current assemblies and HGNC symbols on the older ones; both are enabled in the shipped YAML files. Rhesus and cynomolgus are two organisms and two graphs.</p>
+<p>The full builds read every release since 48 (rhesus) or 91 (cynomolgus); they work over HTTPS alone (<code class="docutils literal notranslate"><span class="pre">IDTRACK_ENSEMBL_ACCESS=https</span></code>).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">HAS_MMUL_YAML</span><span class="p">,</span> <span class="o">*</span><span class="n">_mmul</span> <span class="o">=</span> <span class="n">_yaml_status</span><span class="p">(</span><span class="s1">'macaca_mulatta'</span><span class="p">)</span>
+<span class="n">HAS_MFAS_YAML</span><span class="p">,</span> <span class="o">*</span><span class="n">_mfas</span> <span class="o">=</span> <span class="n">_yaml_status</span><span class="p">(</span><span class="s1">'macaca_fascicularis'</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">status</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="n">_mmul</span><span class="p">,</span> <span class="n">_mfas</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">status</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="mi">55</span><span class="p">),</span> <span class="n">name</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%</span><span class="k">collapse</span> Click to show build logs
+# Included for tutorial purposes only.
+
+# Build (or load) the rhesus macaque graph snapshot
+organism, latest_release = api.resolve_organism('macaca_mulatta')
+if HAS_MMUL_YAML:
+    api.build_graph(organism_name=organism, snapshot_release=latest_release, calculate_caches=False)
+    print('Assemblies in this graph:', sorted(api.list_genome_assemblies()))
+else:
+    print('Skipping rhesus build: macaca_mulatta_externals_modified.yml is missing (run Part 2 first).')
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%</span><span class="k">collapse</span> Click to show build logs
+# Included for tutorial purposes only.
+
+# Build (or load) the cynomolgus macaque graph snapshot
+organism, latest_release = api.resolve_organism('macaca_fascicularis')
+if HAS_MFAS_YAML:
+    api.build_graph(organism_name=organism, snapshot_release=latest_release, calculate_caches=False)
+    print('Assemblies in this graph:', sorted(api.list_genome_assemblies()))
+else:
+    print('Skipping cynomolgus build: macaca_fascicularis_externals_modified.yml is missing (run Part 2 first).')
+</pre></div>
+</div>
+</div>
 </section>
-<section id="3.4-—-Graph-management-(all-species)">
-<h2>3.4 — Graph management (all species)<a class="headerlink" href="#3.4-—-Graph-management-(all-species)" title="Link to this heading"></a></h2>
+</section>
+<section id="3.5-—-Graph-management-(all-species)">
+<h2>3.5 — Graph management (all species)<a class="headerlink" href="#3.5-—-Graph-management-(all-species)" title="Link to this heading"></a></h2>
 <section id="Reloading-vs-rebuilding">
 <h3>Reloading vs rebuilding<a class="headerlink" href="#Reloading-vs-rebuilding" title="Link to this heading"></a></h3>
 <ul class="simple">
@@ -1854,22 +1920,22 @@ External DBs (first 20): [&#39;Clone_based_ensembl_gene&#39;, &#39;Clone_based_v
 
 <span class="n">cache</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Local repository:&#39;</span><span class="p">,</span> <span class="n">cache</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'Local repository:'</span><span class="p">,</span> <span class="n">cache</span><span class="p">)</span>
 
 <span class="n">patterns</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s1">&#39;graph_*.pickle&#39;</span><span class="p">,</span>
-    <span class="s1">&#39;*_externals_modified.yml&#39;</span><span class="p">,</span>
-    <span class="s1">&#39;*_externals_template.yml&#39;</span><span class="p">,</span>
+    <span class="s1">'graph_*.pickle'</span><span class="p">,</span>
+    <span class="s1">'*_externals_modified.yml'</span><span class="p">,</span>
+    <span class="s1">'*_externals_template.yml'</span><span class="p">,</span>
 <span class="p">]</span>
 
 <span class="k">for</span> <span class="n">pat</span> <span class="ow">in</span> <span class="n">patterns</span><span class="p">:</span>
     <span class="n">hits</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">cache</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">pat</span><span class="p">))</span>
     <span class="nb">print</span><span class="p">()</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">pat</span><span class="si">}</span><span class="s1"> (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">hits</span><span class="p">)</span><span class="si">}</span><span class="s1">):&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">pat</span><span class="si">}</span><span class="s1"> (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">hits</span><span class="p">)</span><span class="si">}</span><span class="s1">):'</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">hits</span><span class="p">[:</span><span class="mi">10</span><span class="p">]:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  &#39;</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">'  '</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">hits</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;  ...&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">'  ...'</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>

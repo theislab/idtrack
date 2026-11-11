@@ -8,7 +8,7 @@
   <title>idtrack._harmonize_features &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
-      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
       <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
 
@@ -18,7 +18,7 @@
       <script src="../../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
-      <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -66,6 +66,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
@@ -102,6 +103,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>  <span class="c1"># noqa: S403</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">cached_property</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
@@ -120,7 +122,7 @@
 <div class="viewcode-block" id="HarmonizeFeatures">
 <a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">HarmonizeFeatures</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Harmonize gene/feature identifiers across multiple single-cell expression datasets.</span>
+<span class="w">    </span><span class="sd">"""Harmonize gene/feature identifiers across multiple single-cell expression datasets.</span>
 
 <span class="sd">    This manager streamlines the otherwise error-prone task of bringing heterogeneous gene identifiers</span>
 <span class="sd">    (Ensembl IDs, gene symbols, etc.) into a single, version-controlled namespace before integrated</span>
@@ -150,18 +152,21 @@
 <span class="sd">            :py:class:`idtrack.api.API`; used to read the pre-built identifier graph.</span>
 <span class="sd">        target_ensembl_release (int): Ensembl release that all identifiers will be converted *to*.  Must</span>
 <span class="sd">            be ≤ *graph_last_ensembl_release*.</span>
-<span class="sd">        final_database (str): Canonical namespace kept after conversion (e.g. ``&quot;HGNC Symbol&quot;``).</span>
-<span class="sd">            Defaults to ``&quot;HGNC Symbol&quot;``.</span>
-<span class="sd">        organism_name (str): Ensembl-style organism short name (e.g. ``&quot;homo_sapiens&quot;``).</span>
-<span class="sd">            Defaults to ``&quot;homo_sapiens&quot;``.</span>
-<span class="sd">        graph_last_ensembl_release (int): Highest release present in the on-disk IDTrack graph.</span>
-<span class="sd">            Defaults to ``114``.</span>
+<span class="sd">        final_database (Optional[str]): Canonical namespace kept after conversion (e.g. ``"HGNC Symbol"``).</span>
+<span class="sd">            Defaults to the organism's first symbol database (:py:attr:`idtrack.DB.symbol_databases`: HGNC Symbol</span>
+<span class="sd">            for human, MGI Symbol for mouse, VGNC Symbol for pig and the macaques).</span>
+<span class="sd">        organism_name (Optional[str]): Organism, as an Ensembl species name (e.g. ``"homo_sapiens"``) or any query</span>
+<span class="sd">            :py:meth:`idtrack.API.resolve_organism` accepts. If ``None``, it is read from the graph files in</span>
+<span class="sd">            *idtrack_local_repository*, which must then hold graphs of exactly one organism.</span>
+<span class="sd">        graph_last_ensembl_release (Optional[int]): Snapshot release of the IDTrack graph. If ``None``, the newest</span>
+<span class="sd">            graph of the organism in *idtrack_local_repository* (built by :py:meth:`idtrack.API.build_graph`) is</span>
+<span class="sd">            used, or the latest Ensembl release of the organism when there is none.</span>
 <span class="sd">        verbose_level (Literal[0, 1, 2]): Logging verbosity; 0 = errors only, 1 = warnings, 2 =</span>
 <span class="sd">            info.  Defaults to ``2``.</span>
 <span class="sd">        debugging_variables (bool): Retain heavy intermediate structures for post-mortem</span>
 <span class="sd">            inspection.  Defaults to ``False``.</span>
 <span class="sd">        converted_id_column (str): Column name used to store converted identifiers inside the</span>
-<span class="sd">            resulting ``AnnData.var`` DataFrame.  Defaults to ``&quot;converted_id&quot;``.</span>
+<span class="sd">            resulting ``AnnData.var`` DataFrame.  Defaults to ``"converted_id"``.</span>
 
 <span class="sd">    Attributes:</span>
 <span class="sd">        idt (idtrack.api.API): Lazily initialised IDTrack interface used for all identifier look-ups.</span>
@@ -173,19 +178,19 @@
 <span class="sd">            they were consistently non-convertible across *all* datasets.</span>
 <span class="sd">        removed_inconsistent_identifier_matching (dict[str, set[str]]): Features whose mappings disagreed</span>
 <span class="sd">            between datasets and were therefore removed for consistency.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">nonmatching_but_consistent_suffix</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">nonmatching_but_consistent_suffix</span> <span class="o">=</span> <span class="s2">""</span>
 
     <span class="c1"># Internal column name for matched Ensembl gene IDs.</span>
-    <span class="c1"># Using a distinct name avoids conflicts when final_database=&quot;ensembl_gene&quot;.</span>
-    <span class="n">_ENSEMBL_GENE_COLUMN</span> <span class="o">=</span> <span class="s2">&quot;matching_ensembl_gene&quot;</span>
+    <span class="c1"># Using a distinct name avoids conflicts when final_database="ensembl_gene".</span>
+    <span class="n">_ENSEMBL_GENE_COLUMN</span> <span class="o">=</span> <span class="s2">"matching_ensembl_gene"</span>
 
 <div class="viewcode-block" id="HarmonizeFeatures._get_column_as_series">
 <a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures._get_column_as_series">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_column_as_series</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Safely extract a single column from a DataFrame, always returning a Series.</span>
+<span class="w">        </span><span class="sd">"""Safely extract a single column from a DataFrame, always returning a Series.</span>
 
 <span class="sd">        When a DataFrame has duplicate column names, ``df[column]`` returns a DataFrame</span>
 <span class="sd">        instead of a Series. This method handles such edge cases by selecting the first</span>
@@ -197,7 +202,7 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            pd.Series: The column data as a Series.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">result</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
             <span class="c1"># Duplicate column names exist; take the first one and warn</span>
@@ -212,14 +217,14 @@
         <span class="n">project_local_repository</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">idtrack_local_repository</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">target_ensembl_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-        <span class="n">final_database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;HGNC Symbol&quot;</span><span class="p">,</span>
-        <span class="n">organism_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;homo_sapiens&quot;</span><span class="p">,</span>
-        <span class="n">graph_last_ensembl_release</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">114</span><span class="p">,</span>
+        <span class="n">final_database</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">organism_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">graph_last_ensembl_release</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">verbose_level</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
         <span class="n">debugging_variables</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-        <span class="n">converted_id_column</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;converted_id&quot;</span><span class="p">,</span>
+        <span class="n">converted_id_column</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"converted_id"</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Instantiate the harmoniser and perform lightweight validation.</span>
+<span class="w">        </span><span class="sd">"""Instantiate the harmoniser and perform lightweight validation.</span>
 
 <span class="sd">        The constructor merely *prepares* the harmonisation context: it validates input paths, configures</span>
 <span class="sd">        logging, and primes IDTrack.  Heavy work—graph initialisation, identifier matching, gene-symbol</span>
@@ -231,25 +236,24 @@
 <span class="sd">            project_local_repository (str): See :py:meth:`HarmonizeFeatures`.</span>
 <span class="sd">            idtrack_local_repository (str): See :py:meth:`HarmonizeFeatures`.</span>
 <span class="sd">            target_ensembl_release (int): See :py:meth:`HarmonizeFeatures`.</span>
-<span class="sd">            final_database (str): See :py:meth:`HarmonizeFeatures`.</span>
-<span class="sd">            organism_name (str): See :py:meth:`HarmonizeFeatures`.</span>
-<span class="sd">            graph_last_ensembl_release (int): See :py:meth:`HarmonizeFeatures`.</span>
+<span class="sd">            final_database (Optional[str]): See :py:meth:`HarmonizeFeatures`.</span>
+<span class="sd">            organism_name (Optional[str]): See :py:meth:`HarmonizeFeatures`.</span>
+<span class="sd">            graph_last_ensembl_release (Optional[int]): See :py:meth:`HarmonizeFeatures`.</span>
 <span class="sd">            verbose_level (Literal[0, 1, 2]): See :py:meth:`HarmonizeFeatures`.</span>
 <span class="sd">            debugging_variables (bool): See :py:meth:`HarmonizeFeatures`.</span>
 <span class="sd">            converted_id_column (str): See :py:meth:`HarmonizeFeatures`.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If *verbose_level* is not 0, 1, or 2.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">            ValueError: If *verbose_level* is not 0, 1, 2 or 3, if *organism_name* is ``None`` and the graphs in</span>
+<span class="sd">                *idtrack_local_repository* do not name exactly one organism, or if *final_database* is ``None`` and</span>
+<span class="sd">                the organism declares no symbol database.</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">project_name</span> <span class="o">=</span> <span class="n">project_name</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">project_local_repository</span> <span class="o">=</span> <span class="n">project_local_repository</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data_h5ad_dict</span> <span class="o">=</span> <span class="n">data_h5ad_dict</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">converted_id_column</span> <span class="o">=</span> <span class="n">converted_id_column</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">idtrack_local_repository</span> <span class="o">=</span> <span class="n">idtrack_local_repository</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">target_ensembl_release</span> <span class="o">=</span> <span class="n">target_ensembl_release</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">graph_last_ensembl_release</span> <span class="o">=</span> <span class="n">graph_last_ensembl_release</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span> <span class="o">=</span> <span class="n">final_database</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">organism_name</span> <span class="o">=</span> <span class="n">organism_name</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">n_datasets</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_h5ad_dict</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">debugging_variables</span> <span class="o">=</span> <span class="n">debugging_variables</span>
 
@@ -262,13 +266,24 @@
         <span class="k">elif</span> <span class="n">verbose_level</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
             <span class="n">_logging</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;verbose_level must be 0, 1, 2, or 3, got </span><span class="si">{</span><span class="n">verbose_level</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"verbose_level must be 0, 1, 2, or 3, got </span><span class="si">{</span><span class="n">verbose_level</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">verbose_level</span> <span class="o">=</span> <span class="n">verbose_level</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">idt</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">idtrack_local_repository</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;harmonize_features&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"harmonize_features"</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">idt</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">(</span><span class="n">_logging</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">idt_initialized</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># Organism, final database and snapshot release: explicit values win; nothing defaults to one organism.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">organism_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_organism_name</span><span class="p">(</span><span class="n">organism_name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">final_database</span> <span class="k">if</span> <span class="n">final_database</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_final_database</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">organism_name</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph_last_ensembl_release</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="nb">int</span><span class="p">(</span><span class="n">graph_last_ensembl_release</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">graph_last_ensembl_release</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_default_graph_last_release</span><span class="p">()</span>
+        <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">dict_n_to_1</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">multiple_ensembl_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
@@ -302,10 +317,95 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_initialize</span><span class="p">()</span>
 
+<div class="viewcode-block" id="HarmonizeFeatures.default_final_database">
+<a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures.default_final_database">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">default_final_database</span><span class="p">(</span><span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the organism's default final database: its first entry in :py:attr:`idtrack.DB.symbol_databases`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            organism: Ensembl species name of a registered organism.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: E.g. ``"HGNC Symbol"`` for human, ``"VGNC Symbol"`` for rhesus macaque.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If the organism is not registered or declares no symbol database.</span>
+<span class="sd">        """</span>
+        <span class="n">databases</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">symbol_databases</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">organism</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">databases</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"No symbol database is declared for organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2"> (`DB.symbol_databases`); "</span>
+                <span class="s2">"pass `final_database` explicitly."</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">databases</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="HarmonizeFeatures._graph_snapshots">
+<a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures._graph_snapshots">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_graph_snapshots</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">"""Return ``{organism: [snapshot releases]}`` of the graphs :py:meth:`idtrack.API.build_graph` would load.</span>
+
+<span class="sd">        Graph files are named by :py:meth:`idtrack._graph_maker.GraphMaker.create_file_name`; the API builds them</span>
+<span class="sd">        with ``ignore_before`` at idtrack's floor and ``narrow=True``.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict[str, list[int]]: Sorted snapshot releases per organism with at least one such graph.</span>
+<span class="sd">        """</span>
+        <span class="n">floor</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">mysql_port_min_release</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+        <span class="n">found</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">idtrack_local_repository</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">found</span>
+        <span class="k">for</span> <span class="n">organism</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">supported_organisms</span><span class="p">:</span>
+            <span class="n">pattern</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">rf</span><span class="s2">"^graph_</span><span class="si">{</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">organism</span><span class="p">)</span><span class="si">}</span><span class="s2">_min</span><span class="si">{</span><span class="n">floor</span><span class="si">}</span><span class="s2">_max([0-9]+)_narrow\.pickle$"</span><span class="p">)</span>
+            <span class="n">releases</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">map</span><span class="p">(</span><span class="n">pattern</span><span class="o">.</span><span class="n">match</span><span class="p">,</span> <span class="n">names</span><span class="p">)</span> <span class="k">if</span> <span class="n">m</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">releases</span><span class="p">:</span>
+                <span class="n">found</span><span class="p">[</span><span class="n">organism</span><span class="p">]</span> <span class="o">=</span> <span class="n">releases</span>
+        <span class="k">return</span> <span class="n">found</span></div>
+
+
+<div class="viewcode-block" id="HarmonizeFeatures._resolve_organism_name">
+<a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures._resolve_organism_name">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_organism_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">organism_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the Ensembl species name to use (see the ``organism_name`` argument)."""</span>
+        <span class="k">if</span> <span class="n">organism_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">organisms</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_graph_snapshots</span><span class="p">())</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">organisms</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">found</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"holds graphs of several organisms (</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">organisms</span><span class="p">)</span><span class="si">}</span><span class="s2">)"</span>
+                    <span class="k">if</span> <span class="n">organisms</span>
+                    <span class="k">else</span> <span class="s2">"holds no graph built by `API.build_graph`"</span>
+                <span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Pass `organism_name`: the idtrack local repository </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">idtrack_local_repository</span><span class="si">!r}</span><span class="s2"> </span><span class="si">{</span><span class="n">found</span><span class="si">}</span><span class="s2">, "</span>
+                    <span class="s2">"so the organism cannot be read from it. Use an Ensembl species name of "</span>
+                    <span class="sa">f</span><span class="s2">"`idtrack.DB.supported_organisms` (</span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">supported_organisms</span><span class="p">)</span><span class="si">}</span><span class="s2">), e.g. "</span>
+                    <span class="s1">'`organism_name="homo_sapiens"`, or a taxon ID or name that `API.resolve_organism` accepts.'</span>
+                <span class="p">)</span>
+            <span class="k">return</span> <span class="n">organisms</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">organism_name</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">supported_organisms</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">organism_name</span>
+        <span class="n">formal_name</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">idt</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="n">organism_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">formal_name</span></div>
+
+
+<div class="viewcode-block" id="HarmonizeFeatures._default_graph_last_release">
+<a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures._default_graph_last_release">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_default_graph_last_release</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the newest graph snapshot of the organism, else the organism's latest Ensembl release."""</span>
+        <span class="n">releases</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph_snapshots</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">organism_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">releases</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">releases</span><span class="p">))</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">idt</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">organism_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">latest_release</span><span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="HarmonizeFeatures._initialize">
 <a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures._initialize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">_initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Populate diagnostic structures for failed or ambiguous identifier conversions.</span>
+<span class="w">        </span><span class="sd">"""Populate diagnostic structures for failed or ambiguous identifier conversions.</span>
 
 <span class="sd">        Called once by :py:meth:`HarmonizeFeatures.__init__`, this routine scans every input dataset and</span>
 <span class="sd">        updates several reporting attributes (for example :py:attr:`removed_conversion_failed_identifiers`</span>
@@ -324,7 +424,7 @@
 <span class="sd">           :py:meth:`HarmonizeFeatures.create_multiple_ensembl_dict`.</span>
 <span class="sd">        5. Touches :py:meth:`datataset_conversion_dataframe_issues` so the cached-property is built</span>
 <span class="sd">           eagerly.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">for</span> <span class="n">dataset_name</span><span class="p">,</span> <span class="n">dataset_path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_h5ad_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">gene_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extract_source_identifiers_from_anndata</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">)</span>
 
@@ -343,18 +443,18 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">reporter_dict_creator</span><span class="p">(</span>
                 <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset_name</span><span class="p">,</span>
                 <span class="n">the_dict</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">removed_inconsistent_identifier_matching</span><span class="p">,</span>
-                <span class="n">the_set</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span><span class="s2">&quot;gene_names_inconsistency&quot;</span><span class="p">],</span>
+                <span class="n">the_set</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span><span class="s2">"gene_names_inconsistency"</span><span class="p">],</span>
             <span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">reporter_dict_creator</span><span class="p">(</span>
                 <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset_name</span><span class="p">,</span>
                 <span class="n">the_dict</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">removed_final_database_duplicates</span><span class="p">,</span>
                 <span class="n">the_set</span><span class="o">=</span><span class="nb">set</span><span class="p">(</span><span class="n">gene_list</span><span class="p">)</span>
-                <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span><span class="s2">&quot;final_database_duplicate_source_ids&quot;</span><span class="p">],</span>
+                <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span><span class="s2">"final_database_duplicate_source_ids"</span><span class="p">],</span>
             <span class="p">)</span>
 
             <span class="k">for</span> <span class="n">the_id</span> <span class="ow">in</span> <span class="n">gene_list</span><span class="p">:</span>
-                <span class="n">conversion</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unified_matching_dict</span><span class="p">[</span><span class="n">the_id</span><span class="p">][</span><span class="s2">&quot;matching&quot;</span><span class="p">][</span><span class="s2">&quot;last_node&quot;</span><span class="p">]</span>
+                <span class="n">conversion</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unified_matching_dict</span><span class="p">[</span><span class="n">the_id</span><span class="p">][</span><span class="s2">"matching"</span><span class="p">][</span><span class="s2">"last_node"</span><span class="p">]</span>
                 <span class="k">if</span> <span class="n">the_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">conversion_failed_but_consistent_identifiers</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">multiple_ensembl_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">conversion</span><span class="p">)</span>
 
@@ -365,7 +465,7 @@
 <div class="viewcode-block" id="HarmonizeFeatures._initialize_idt">
 <a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures._initialize_idt">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">_initialize_idt</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Instantiate the IDTrack interface on first use.</span>
+<span class="w">        </span><span class="sd">"""Instantiate the IDTrack interface on first use.</span>
 
 <span class="sd">        The public API defers expensive graph loading until it is actually required.  This helper therefore</span>
 <span class="sd">        checks whether :py:attr:`idt` is ``None`` and, if so, loads the on-disk identifier graph described by</span>
@@ -373,10 +473,10 @@
 <span class="sd">        subsequent look-ups always target *target_ensembl_release*.  Re-invocations are no-ops.</span>
 
 <span class="sd">        Returns ``None``: The :py:attr:`idt` attribute is populated and ready for queries.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">idt_initialized</span><span class="p">:</span>
-            <span class="n">organism_formal_name</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">idt</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">organism_name</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">idt</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism_formal_name</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">graph_last_ensembl_release</span><span class="p">)</span>
+            <span class="c1"># `self.organism_name` is already the Ensembl species name (see `_resolve_organism_name`).</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">idt</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">organism_name</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">graph_last_ensembl_release</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">idt</span><span class="o">.</span><span class="n">calculate_graph_caches</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">idt_initialized</span> <span class="o">=</span> <span class="kc">True</span></div>
 
@@ -384,7 +484,7 @@
 <div class="viewcode-block" id="HarmonizeFeatures.create_multiple_ensembl_dict">
 <a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures.create_multiple_ensembl_dict">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_multiple_ensembl_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reverse map ambiguous Ensembl target IDs to their originating source identifiers.</span>
+<span class="w">        </span><span class="sd">"""Reverse map ambiguous Ensembl target IDs to their originating source identifiers.</span>
 
 <span class="sd">        During scanning, :py:meth:`_initialize` collects every *(source_id, target_ensembl_id)* pair that</span>
 <span class="sd">        falls outside the *consistent one-to-one* category into ``multiple_ensembl_list``.  This helper</span>
@@ -395,7 +495,7 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            dict[str, list[str]]: ``{target_ensembl_id: [source_id₁, source_id₂, …]}`` with duplicates</span>
 <span class="sd">            removed and values sorted alphanumerically.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">r</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiple_ensembl_list</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">i</span><span class="p">:</span>
@@ -409,37 +509,37 @@
 <div class="viewcode-block" id="HarmonizeFeatures.reporter_dict_creator_helper_reason_finder">
 <a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures.reporter_dict_creator_helper_reason_finder">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">reporter_dict_creator_helper_reason_finder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">the_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Infer why a particular identifier failed or produced a non-one-to-one conversion.</span>
+<span class="w">        </span><span class="sd">"""Infer why a particular identifier failed or produced a non-one-to-one conversion.</span>
 
 <span class="sd">        The algorithm inspects :py:attr:`unified_matching_dict` and categorises *the_id* into one or more</span>
 <span class="sd">        mutually non-exclusive reasons:</span>
 
-<span class="sd">        * ``&quot;n-to-1&quot;``   — The identifier was part of an *n → 1* collapse within *at least one* dataset.</span>
-<span class="sd">        * ``&quot;1-to-0&quot;``   — No target identifier was returned (conversion failure).</span>
-<span class="sd">        * ``&quot;1-to-n&quot;``   — The conversion yielded multiple targets (ambiguous mapping).</span>
+<span class="sd">        * ``"n-to-1"``   — The identifier was part of an *n → 1* collapse within *at least one* dataset.</span>
+<span class="sd">        * ``"1-to-0"``   — No target identifier was returned (conversion failure).</span>
+<span class="sd">        * ``"1-to-n"``   — The conversion yielded multiple targets (ambiguous mapping).</span>
 
 <span class="sd">        The final label is a single string where multiple reasons are concatenated with underscores, e.g.</span>
-<span class="sd">        ``&quot;1-to-0_1-to-n&quot;``.</span>
+<span class="sd">        ``"1-to-0_1-to-n"``.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            the_id (str): Source identifier whose conversion outcome needs explanation.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            str: Underscore-delimited reason string describing the failure or ambiguity class.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">reason</span> <span class="o">=</span> <span class="p">[]</span>
 
         <span class="n">matching</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unified_matching_dict</span><span class="p">[</span><span class="n">the_id</span><span class="p">]</span>
-        <span class="n">len_targets</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">matching</span><span class="p">[</span><span class="s2">&quot;matching&quot;</span><span class="p">][</span><span class="s2">&quot;target_id&quot;</span><span class="p">])</span>
+        <span class="n">len_targets</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">matching</span><span class="p">[</span><span class="s2">"matching"</span><span class="p">][</span><span class="s2">"target_id"</span><span class="p">])</span>
 
         <span class="k">if</span> <span class="n">the_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict_n_to_1</span><span class="p">:</span>  <span class="c1"># in one of the datasets during the integration, this ID was a part of n-to-1.</span>
-            <span class="n">reason</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;n-to-1&quot;</span><span class="p">)</span>
+            <span class="n">reason</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"n-to-1"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">len_targets</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">reason</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;1-to-0&quot;</span><span class="p">)</span>
+            <span class="n">reason</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"1-to-0"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">len_targets</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">reason</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;1-to-n&quot;</span><span class="p">)</span>
+            <span class="n">reason</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"1-to-n"</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">reason</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="s2">"_"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">reason</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="HarmonizeFeatures.reporter_dict_creator">
@@ -450,11 +550,11 @@
         <span class="n">the_set</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
         <span class="n">dataset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update or create per-identifier diagnostic entries for a single dataset.</span>
+<span class="w">        </span><span class="sd">"""Update or create per-identifier diagnostic entries for a single dataset.</span>
 
-<span class="sd">        Each identifier in *the_set* is ensured to exist as a key inside *the_dict*.  The entry&#39;s</span>
-<span class="sd">        ``&quot;reason&quot;`` field is generated exactly once using</span>
-<span class="sd">        :py:meth:`reporter_dict_creator_helper_reason_finder`; its ``&quot;datasets_containing&quot;`` list is then</span>
+<span class="sd">        Each identifier in *the_set* is ensured to exist as a key inside *the_dict*.  The entry's</span>
+<span class="sd">        ``"reason"`` field is generated exactly once using</span>
+<span class="sd">        :py:meth:`reporter_dict_creator_helper_reason_finder`; its ``"datasets_containing"`` list is then</span>
 <span class="sd">        appended with *dataset_name*.  This allows quick aggregation of “where did this problematic</span>
 <span class="sd">        identifier occur?” across all datasets.</span>
 
@@ -462,21 +562,21 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            the_dict (dict[str, dict]): Target dictionary that stores diagnostic metadata.  Keys are</span>
-<span class="sd">                source identifiers; values have keys ``&quot;reason&quot;`` (``str``) and</span>
-<span class="sd">                ``&quot;datasets_containing&quot;`` (``list[str]``).</span>
+<span class="sd">                source identifiers; values have keys ``"reason"`` (``str``) and</span>
+<span class="sd">                ``"datasets_containing"`` (``list[str]``).</span>
 <span class="sd">            the_set (set[str]): Identifiers that belong to the diagnostic category represented by</span>
 <span class="sd">                *the_dict*.</span>
 <span class="sd">            dataset_name (str): Human-readable alias of the dataset currently being processed.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">the_set</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">the_dict</span><span class="p">:</span>
-                <span class="n">the_dict</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;reason&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">reporter_dict_creator_helper_reason_finder</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="s2">&quot;datasets_containing&quot;</span><span class="p">:</span> <span class="p">[]}</span>
-            <span class="n">the_dict</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;datasets_containing&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dataset_name</span><span class="p">)</span></div>
+                <span class="n">the_dict</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"reason"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">reporter_dict_creator_helper_reason_finder</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="s2">"datasets_containing"</span><span class="p">:</span> <span class="p">[]}</span>
+            <span class="n">the_dict</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"datasets_containing"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dataset_name</span><span class="p">)</span></div>
 
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">datataset_conversion_dataframe_issues</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Aggregate conversion failures and ambiguities into a tidy diagnostic table.</span>
+<span class="w">        </span><span class="sd">"""Aggregate conversion failures and ambiguities into a tidy diagnostic table.</span>
 
 <span class="sd">        The cached DataFrame has one row per *source identifier* encountered across **all** datasets and</span>
 <span class="sd">        the following columns:</span>
@@ -492,7 +592,7 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            pandas.DataFrame: Combined diagnostic table sorted lexicographically by *dataset* and *reason*.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">gene_list</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unified_matching_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">conversion_failed_identifiers</span>
         <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_dataset_conversion_dataframe</span><span class="p">(</span><span class="n">gene_list</span><span class="o">=</span><span class="n">gene_list</span><span class="p">,</span> <span class="n">initialization_run</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
@@ -501,7 +601,7 @@
         <span class="c1"># ENSG00000268674.2	FAM231B	FAM231B</span>
         <span class="c1"># Report and remove from all conversion lists.</span>
         <span class="n">ensembl_col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ENSEMBL_GENE_COLUMN</span>
-        <span class="n">dfa</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="n">ensembl_col</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="s2">&quot;first&quot;</span><span class="p">)</span>
+        <span class="n">dfa</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="n">ensembl_col</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="s2">"first"</span><span class="p">)</span>
 
         <span class="c1"># Use safe column accessor to handle potential duplicate column names edge cases</span>
         <span class="n">ensembl_gene_duplicated_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_as_series</span><span class="p">(</span><span class="n">dfa</span><span class="p">,</span> <span class="n">ensembl_col</span><span class="p">)</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -512,7 +612,7 @@
 
         <span class="n">final_db_col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_as_series</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">)</span>
         <span class="n">gene_names_inconsistency</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_as_series</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">final_db_col</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">_gene_names_inconsistency</span><span class="p">)],</span> <span class="s2">&quot;Query ID&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_as_series</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">final_db_col</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">_gene_names_inconsistency</span><span class="p">)],</span> <span class="s2">"Query ID"</span><span class="p">)</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
         <span class="p">)</span>
 
         <span class="n">final_database_chosen_single_ensembl_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
@@ -531,12 +631,12 @@
             <span class="n">final_database_chosen_single_ensembl_dict</span><span class="p">[</span><span class="n">final_final_database_gene_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">chosen_ensembl_id</span>
             <span class="c1"># Mark source IDs with non-chosen ensembl_genes for removal to prevent duplicates</span>
             <span class="n">non_chosen_rows</span> <span class="o">=</span> <span class="n">df_subset</span><span class="p">[</span><span class="n">ensembl_gene_col</span> <span class="o">!=</span> <span class="n">chosen_ensembl_id</span><span class="p">]</span>
-            <span class="n">final_database_duplicate_source_ids</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_column_as_series</span><span class="p">(</span><span class="n">non_chosen_rows</span><span class="p">,</span> <span class="s2">&quot;Query ID&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+            <span class="n">final_database_duplicate_source_ids</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_column_as_series</span><span class="p">(</span><span class="n">non_chosen_rows</span><span class="p">,</span> <span class="s2">"Query ID"</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
 
         <span class="k">return</span> <span class="p">{</span>
-            <span class="s2">&quot;gene_names_inconsistency&quot;</span><span class="p">:</span> <span class="n">gene_names_inconsistency</span><span class="p">,</span>
-            <span class="s2">&quot;final_database_chosen_single_ensembl_dict&quot;</span><span class="p">:</span> <span class="n">final_database_chosen_single_ensembl_dict</span><span class="p">,</span>
-            <span class="s2">&quot;final_database_duplicate_source_ids&quot;</span><span class="p">:</span> <span class="n">final_database_duplicate_source_ids</span><span class="p">,</span>
+            <span class="s2">"gene_names_inconsistency"</span><span class="p">:</span> <span class="n">gene_names_inconsistency</span><span class="p">,</span>
+            <span class="s2">"final_database_chosen_single_ensembl_dict"</span><span class="p">:</span> <span class="n">final_database_chosen_single_ensembl_dict</span><span class="p">,</span>
+            <span class="s2">"final_database_duplicate_source_ids"</span><span class="p">:</span> <span class="n">final_database_duplicate_source_ids</span><span class="p">,</span>
         <span class="p">}</span>
 
 <div class="viewcode-block" id="HarmonizeFeatures.create_dataset_conversion_dataframe">
@@ -544,18 +644,18 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">create_dataset_conversion_dataframe</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">gene_list</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">],</span> <span class="n">initialization_run</span><span class="p">:</span> <span class="nb">bool</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build a two-column mapping table for a single dataset&#39;s feature identifiers.</span>
+<span class="w">        </span><span class="sd">"""Build a two-column mapping table for a single dataset's feature identifiers.</span>
 
 <span class="sd">        The routine transforms every source identifier in *gene_list* into the target namespace defined by</span>
 <span class="sd">        ``self.final_database`` and Ensembl gene IDs.  The resulting convertible subset is written into a</span>
 <span class="sd">        new :py:class:`pandas.DataFrame` with three columns—``_ENSEMBL_GENE_COLUMN``, ``self.final_database``,</span>
-<span class="sd">        and ``&quot;Query ID&quot;``—while problematic identifiers are annotated or filtered according to the rules</span>
+<span class="sd">        and ``"Query ID"``—while problematic identifiers are annotated or filtered according to the rules</span>
 <span class="sd">        established during :py:meth:`_initialize`.</span>
 
 <span class="sd">        When called by :py:meth:`_initialize` (*initialization_run* ``True``), the method writes provisional</span>
 <span class="sd">        mappings without inspecting post-initialisation overrides.  In subsequent calls</span>
 <span class="sd">        (*initialization_run* ``False``) it resolves single-Ensembl ambiguities via</span>
-<span class="sd">        ``self.datataset_conversion_dataframe_issues[&quot;final_database_chosen_single_ensembl_dict&quot;]`` to</span>
+<span class="sd">        ``self.datataset_conversion_dataframe_issues["final_database_chosen_single_ensembl_dict"]`` to</span>
 <span class="sd">        guarantee a one-to-one relation between indices and feature rows.</span>
 
 <span class="sd">        Args:</span>
@@ -566,29 +666,29 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            pandas.DataFrame: Mapping table ready to become ``adata.var``.  Columns are</span>
-<span class="sd">            ``_ENSEMBL_GENE_COLUMN``, ``self.final_database``, and the original ``&quot;Query ID&quot;`` for traceability.</span>
+<span class="sd">            ``_ENSEMBL_GENE_COLUMN``, ``self.final_database``, and the original ``"Query ID"`` for traceability.</span>
 
 <span class="sd">        Raises:</span>
 <span class="sd">            AssertionError: If diagnostic sets such as :py:attr:`conversion_failed_identifiers` were not</span>
 <span class="sd">                populated—indicating an incorrect call order—or if unexpected duplicate target IDs remain</span>
 <span class="sd">                after processing.</span>
 <span class="sd">            ValueError: When malformed conversion entry.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="c1"># Ensure unified_matching_dict is populated (verifies proper initialization order).</span>
         <span class="c1"># The cached properties conversion_failed_identifiers and conversion_failed_but_consistent_identifiers</span>
         <span class="c1"># may legitimately be empty when all conversions succeed or when failures are all consistent/inconsistent.</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unified_matching_dict</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">&quot;Possible function call order issue: unified_matching_dict is empty!&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">"Possible function call order issue: unified_matching_dict is empty!"</span><span class="p">)</span>
 
         <span class="n">new_var_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">the_id</span> <span class="ow">in</span> <span class="n">gene_list</span><span class="p">:</span>
-            <span class="n">conversion</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unified_matching_dict</span><span class="p">[</span><span class="n">the_id</span><span class="p">][</span><span class="s2">&quot;matching&quot;</span><span class="p">][</span><span class="s2">&quot;last_node&quot;</span><span class="p">]</span>
+            <span class="n">conversion</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unified_matching_dict</span><span class="p">[</span><span class="n">the_id</span><span class="p">][</span><span class="s2">"matching"</span><span class="p">][</span><span class="s2">"last_node"</span><span class="p">]</span>
 
             <span class="k">if</span> <span class="n">the_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">conversion_failed_but_consistent_identifiers</span><span class="p">:</span>
-                <span class="n">modified_id</span> <span class="o">=</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">the_id</span><span class="si">}{</span><span class="n">HarmonizeFeatures</span><span class="o">.</span><span class="n">nonmatching_but_consistent_suffix</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">the_id</span><span class="p">)</span>
+                <span class="n">modified_id</span> <span class="o">=</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">the_id</span><span class="si">}{</span><span class="n">HarmonizeFeatures</span><span class="o">.</span><span class="n">nonmatching_but_consistent_suffix</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">the_id</span><span class="p">)</span>
                 <span class="n">new_var_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">modified_id</span><span class="p">)</span> <span class="o">+</span> <span class="p">[</span><span class="n">the_id</span><span class="p">])</span>
 
-            <span class="c1"># 1-to-n&#39;s and 1-to-0s are either removed or kept as consistent ones.</span>
+            <span class="c1"># 1-to-n's and 1-to-0s are either removed or kept as consistent ones.</span>
             <span class="c1"># if there is multiple ensembl id matching, then len(conversion) != 1.</span>
             <span class="c1"># it keeps the first one for now, the possible lists are saved self.multiple_ensembl_list in `initialize` method</span>
 
@@ -597,9 +697,9 @@
                 <span class="c1"># Validate the conversion tuple structure to prevent DataFrame column misalignment</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">first_match</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">))</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">first_match</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;Malformed conversion entry for identifier </span><span class="si">{</span><span class="n">the_id</span><span class="si">!r}</span><span class="s2">: expected a 2-tuple &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;(ensembl_gene, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="si">}</span><span class="s2">), got </span><span class="si">{</span><span class="n">first_match</span><span class="si">!r}</span><span class="s2"> with &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;type=</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">first_match</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">, len=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">first_match</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">hasattr</span><span class="p">(</span><span class="n">first_match</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;__len__&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;N/A&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="sa">f</span><span class="s2">"Malformed conversion entry for identifier </span><span class="si">{</span><span class="n">the_id</span><span class="si">!r}</span><span class="s2">: expected a 2-tuple "</span>
+                        <span class="sa">f</span><span class="s2">"(ensembl_gene, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="si">}</span><span class="s2">), got </span><span class="si">{</span><span class="n">first_match</span><span class="si">!r}</span><span class="s2"> with "</span>
+                        <span class="sa">f</span><span class="s2">"type=</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">first_match</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">, len=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">first_match</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">hasattr</span><span class="p">(</span><span class="n">first_match</span><span class="p">,</span><span class="w"> </span><span class="s1">'__len__'</span><span class="p">)</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">'N/A'</span><span class="si">}</span><span class="s2">"</span>
                     <span class="p">)</span>
                 <span class="n">ensembl_gene</span><span class="p">,</span> <span class="n">final_db_value</span> <span class="o">=</span> <span class="n">first_match</span>
                 <span class="n">new_var_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">ensembl_gene</span><span class="p">,</span> <span class="n">final_db_value</span><span class="p">,</span> <span class="n">the_id</span><span class="p">])</span>
@@ -608,29 +708,29 @@
                 <span class="c1"># Validate the conversion tuple structure</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">first_match</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">))</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">first_match</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;Malformed conversion entry for identifier </span><span class="si">{</span><span class="n">the_id</span><span class="si">!r}</span><span class="s2">: expected a 2-tuple &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;(ensembl_gene, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="si">}</span><span class="s2">), got </span><span class="si">{</span><span class="n">first_match</span><span class="si">!r}</span><span class="s2"> with &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;type=</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">first_match</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">, len=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">first_match</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">hasattr</span><span class="p">(</span><span class="n">first_match</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;__len__&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;N/A&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="sa">f</span><span class="s2">"Malformed conversion entry for identifier </span><span class="si">{</span><span class="n">the_id</span><span class="si">!r}</span><span class="s2">: expected a 2-tuple "</span>
+                        <span class="sa">f</span><span class="s2">"(ensembl_gene, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="si">}</span><span class="s2">), got </span><span class="si">{</span><span class="n">first_match</span><span class="si">!r}</span><span class="s2"> with "</span>
+                        <span class="sa">f</span><span class="s2">"type=</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">first_match</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">, len=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">first_match</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">hasattr</span><span class="p">(</span><span class="n">first_match</span><span class="p">,</span><span class="w"> </span><span class="s1">'__len__'</span><span class="p">)</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">'N/A'</span><span class="si">}</span><span class="s2">"</span>
                     <span class="p">)</span>
                 <span class="n">ensembl_gene</span><span class="p">,</span> <span class="n">final_db_value</span> <span class="o">=</span> <span class="n">first_match</span>
                 <span class="k">if</span> <span class="p">(</span>
                     <span class="n">final_db_value</span>
-                    <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span><span class="s2">&quot;final_database_chosen_single_ensembl_dict&quot;</span><span class="p">]</span>
+                    <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span><span class="s2">"final_database_chosen_single_ensembl_dict"</span><span class="p">]</span>
                 <span class="p">):</span>
                     <span class="n">ensembl_gene</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span>
-                        <span class="s2">&quot;final_database_chosen_single_ensembl_dict&quot;</span>
+                        <span class="s2">"final_database_chosen_single_ensembl_dict"</span>
                     <span class="p">][</span><span class="n">final_db_value</span><span class="p">]</span>
 
                 <span class="n">new_var_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">ensembl_gene</span><span class="p">,</span> <span class="n">final_db_value</span><span class="p">,</span> <span class="n">the_id</span><span class="p">])</span>
 
-        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">new_var_list</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_ENSEMBL_GENE_COLUMN</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">,</span> <span class="s2">&quot;Query ID&quot;</span><span class="p">])</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">new_var_list</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_ENSEMBL_GENE_COLUMN</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">,</span> <span class="s2">"Query ID"</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">df</span></div>
 
 
 <div class="viewcode-block" id="HarmonizeFeatures.feature_harmonizer">
 <a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures.feature_harmonizer">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">feature_harmonizer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert one dataset&#39;s feature space into the unified target namespace.</span>
+<span class="w">        </span><span class="sd">"""Convert one dataset's feature space into the unified target namespace.</span>
 
 <span class="sd">        This convenience wrapper reads a single ``.h5ad`` file, removes identifiers deemed unusable during</span>
 <span class="sd">        :py:meth:`_initialize`, applies the conversion mapping from</span>
@@ -653,13 +753,13 @@
 <span class="sd">        Raises:</span>
 <span class="sd">            AssertionError: If duplicate Ensembl or target-database IDs slip past the conversion checks,</span>
 <span class="sd">                which would break one-to-one mapping assumptions.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">adata</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">read_h5ad</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_h5ad_dict</span><span class="p">[</span><span class="n">dataset_name</span><span class="p">])</span>
         <span class="n">t0</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">n_vars</span>
         <span class="n">remove_bool</span> <span class="o">=</span> <span class="o">~</span><span class="p">(</span>
             <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conversion_failed_identifiers</span><span class="p">)</span>
-            <span class="o">|</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span><span class="s2">&quot;gene_names_inconsistency&quot;</span><span class="p">])</span>
-            <span class="o">|</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span><span class="s2">&quot;final_database_duplicate_source_ids&quot;</span><span class="p">])</span>
+            <span class="o">|</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span><span class="s2">"gene_names_inconsistency"</span><span class="p">])</span>
+            <span class="o">|</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datataset_conversion_dataframe_issues</span><span class="p">[</span><span class="s2">"final_database_duplicate_source_ids"</span><span class="p">])</span>
         <span class="p">)</span>
         <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[:,</span> <span class="n">remove_bool</span><span class="p">]</span>
 
@@ -671,7 +771,7 @@
         <span class="n">final_db_col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_column_as_series</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">)</span>
         <span class="n">bool_remove</span> <span class="o">=</span> <span class="n">ensembl_gene_col</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="ow">or</span> <span class="n">final_db_col</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">bool_remove</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">&quot;Unexpected duplicated entry!&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">"Unexpected duplicated entry!"</span><span class="p">)</span>
 
         <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="n">ensembl_col</span><span class="p">)</span>
         <span class="n">resulting_adata</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">(</span><span class="n">X</span><span class="o">=</span><span class="n">adata</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">obs</span><span class="o">=</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">,</span> <span class="n">var</span><span class="o">=</span><span class="n">df</span><span class="p">)</span>  <span class="c1"># dtype=adata.X.dtype,</span>
@@ -685,7 +785,7 @@
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">dict_1_to_not_1</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Collect identifiers involved in one-to-many or one-to-zero conversions.</span>
+<span class="w">        </span><span class="sd">"""Collect identifiers involved in one-to-many or one-to-zero conversions.</span>
 
 <span class="sd">        This helper scans :py:attr:`unified_matching_dict` and extracts every *source identifier* whose</span>
 <span class="sd">        conversion to the target namespace is **not** a strict one-to-one mapping.  Two situations are</span>
@@ -701,20 +801,20 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            dict[str, set[str]]: ``{problem_class: {source_id₁, source_id₂, …}}`` where *problem_class* is</span>
-<span class="sd">                either ``&quot;1-to-0&quot;`` or ``&quot;1-to-n&quot;``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">                either ``"1-to-0"`` or ``"1-to-n"``.</span>
+<span class="sd">        """</span>
         <span class="n">result</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">query</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">unified_matching_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="s2">&quot;matching&quot;</span><span class="p">][</span><span class="s2">&quot;target_id&quot;</span><span class="p">])</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">result</span><span class="p">[</span><span class="n">query</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="s2">&quot;datasets_containing&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="s2">"matching"</span><span class="p">][</span><span class="s2">"target_id"</span><span class="p">])</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">result</span><span class="p">[</span><span class="n">query</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="s2">"datasets_containing"</span><span class="p">]</span>
 
         <span class="k">return</span> <span class="n">result</span>
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">conversion_failed_identifiers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return identifiers that could not be converted in at least one dataset.</span>
+<span class="w">        </span><span class="sd">"""Return identifiers that could not be converted in at least one dataset.</span>
 
-<span class="sd">        The property wraps :py:meth:`dict_1_to_not_1` and filters its ``&quot;1-to-0&quot;`` category so that</span>
+<span class="sd">        The property wraps :py:meth:`dict_1_to_not_1` and filters its ``"1-to-0"`` category so that</span>
 <span class="sd">        downstream code can quickly query *irrecoverable* failures without iterating over the entire</span>
 <span class="sd">        diagnostic structure.</span>
 
@@ -722,7 +822,7 @@
 <span class="sd">            set[str]: Identifiers that failed conversion in at least one dataset</span>
 <span class="sd">                or have inconsistent mappings (1-to-0, 1-to-n, or n-to-1 where not</span>
 <span class="sd">                all datasets share the same mapping).</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">result</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
 
         <span class="k">for</span> <span class="n">query</span><span class="p">,</span> <span class="n">datasets_containing</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict_1_to_not_1</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -739,7 +839,7 @@
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">conversion_failed_but_consistent_identifiers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Identify non-convertible identifiers that are consistently absent across *all* datasets.</span>
+<span class="w">        </span><span class="sd">"""Identify non-convertible identifiers that are consistently absent across *all* datasets.</span>
 
 <span class="sd">        An identifier that fails conversion in *every* dataset can be retained (or at least logged once)</span>
 <span class="sd">        without jeopardising dataset comparability.  This property computes the set intersection of</span>
@@ -748,7 +848,7 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            set[str]: Identifiers that were never convertible but appeared in every dataset examined.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">_result1</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict_n_to_1</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">conversion_failed_identifiers</span><span class="p">}</span>
         <span class="n">_result2</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict_1_to_not_1</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">conversion_failed_identifiers</span><span class="p">}</span>
         <span class="n">result</span> <span class="o">=</span> <span class="nb">set</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">_result1</span><span class="p">,</span> <span class="n">_result2</span><span class="p">)</span>
@@ -757,7 +857,7 @@
 
     <span class="nd">@cached_property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">unified_matching_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Expose the full source-to-target identifier mapping produced by IDTrack.</span>
+<span class="w">        </span><span class="sd">"""Expose the full source-to-target identifier mapping produced by IDTrack.</span>
 
 <span class="sd">        The dictionary is created during :py:meth:`_initialize` when the IDTrack graph is first queried.</span>
 <span class="sd">        Keys are *source identifiers* (as found in input files); values are **all** candidate target IDs</span>
@@ -768,27 +868,27 @@
 <span class="sd">        * an empty list (1-to-0 conversion failure).</span>
 
 <span class="sd">        Public access to this attribute enables advanced users to perform their own diagnostics or to</span>
-<span class="sd">        reproduce the algorithm&#39;s decisions outside the class.</span>
+<span class="sd">        reproduce the algorithm's decisions outside the class.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            dict[str, list[str]]: Mapping ``{source_id: [target_id₁, target_id₂, …]}`` in the order</span>
 <span class="sd">                delivered by the IDTrack query.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">matching_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_idtrack_matchings_for_all_datasets</span><span class="p">()</span>
         <span class="n">unified_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 
         <span class="k">for</span> <span class="n">dataset_name</span><span class="p">,</span> <span class="n">matching</span> <span class="ow">in</span> <span class="n">matching_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">matching</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">m</span><span class="p">[</span><span class="s2">&quot;query_id&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">unified_dict</span><span class="p">:</span>
-                    <span class="n">unified_dict</span><span class="p">[</span><span class="n">m</span><span class="p">[</span><span class="s2">&quot;query_id&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;matching&quot;</span><span class="p">:</span> <span class="n">m</span><span class="p">,</span> <span class="s2">&quot;datasets_containing&quot;</span><span class="p">:</span> <span class="p">[]}</span>
-                <span class="n">unified_dict</span><span class="p">[</span><span class="n">m</span><span class="p">[</span><span class="s2">&quot;query_id&quot;</span><span class="p">]][</span><span class="s2">&quot;datasets_containing&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dataset_name</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">m</span><span class="p">[</span><span class="s2">"query_id"</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">unified_dict</span><span class="p">:</span>
+                    <span class="n">unified_dict</span><span class="p">[</span><span class="n">m</span><span class="p">[</span><span class="s2">"query_id"</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"matching"</span><span class="p">:</span> <span class="n">m</span><span class="p">,</span> <span class="s2">"datasets_containing"</span><span class="p">:</span> <span class="p">[]}</span>
+                <span class="n">unified_dict</span><span class="p">[</span><span class="n">m</span><span class="p">[</span><span class="s2">"query_id"</span><span class="p">]][</span><span class="s2">"datasets_containing"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dataset_name</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">unified_dict</span>
 
 <div class="viewcode-block" id="HarmonizeFeatures.get_idtrack_matchings_for_all_datasets">
 <a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures.get_idtrack_matchings_for_all_datasets">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_idtrack_matchings_for_all_datasets</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return raw ID-Track matchings for every dataset in the project.</span>
+<span class="w">        </span><span class="sd">"""Return raw ID-Track matchings for every dataset in the project.</span>
 
 <span class="sd">        This helper exposes the unfiltered mapping tables produced by ID-Track so that users can inspect</span>
 <span class="sd">        exactly how each *source identifier* was converted (or failed to convert) in every individual</span>
@@ -804,18 +904,16 @@
 <span class="sd">            dict[str, pandas.DataFrame]: Mapping of dataset alias to its full, row-level ID-Track</span>
 <span class="sd">            matching table.  The dictionary order follows the insertion order of</span>
 <span class="sd">            :py:data:`data_h5ad_dict`.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">result_dataset</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">dataset_name</span><span class="p">,</span> <span class="n">dataset_path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_h5ad_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">dataset_pickle</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">project_local_repository</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;idtrack_result_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">project_name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2">.pickle&quot;</span>
-            <span class="p">)</span>
+            <span class="n">dataset_pickle</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_cache_path</span><span class="p">(</span><span class="n">dataset_name</span><span class="p">)</span>
 
             <span class="n">switch_inconsistency</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">dataset_pickle</span><span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">dataset_pickle</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">):</span>
-                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dataset_pickle</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dataset_pickle</span><span class="p">,</span> <span class="s2">"rb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
                     <span class="n">matching_list</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>  <span class="c1"># noqa: S301</span>
-                <span class="n">_saved_id_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">([</span><span class="n">i</span><span class="p">[</span><span class="s2">&quot;query_id&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">matching_list</span><span class="p">])</span>
+                <span class="n">_saved_id_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">([</span><span class="n">i</span><span class="p">[</span><span class="s2">"query_id"</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">matching_list</span><span class="p">])</span>
                 <span class="n">_dataset_id_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">extract_source_identifiers_from_anndata</span><span class="p">(</span><span class="n">dataset_path</span><span class="o">=</span><span class="n">dataset_path</span><span class="p">))</span>
 
                 <span class="c1"># if the id lists are different than the provided one.</span>
@@ -823,20 +921,20 @@
 
             <span class="k">if</span> <span class="n">switch_inconsistency</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">switch_inconsistency</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose_level</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Pickle not found: `</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2">`. Calculating IDTrack matchings.&quot;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Pickle not found: `</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2">`. Calculating IDTrack matchings."</span><span class="p">)</span>
                 <span class="k">elif</span> <span class="n">switch_inconsistency</span> <span class="ow">is</span> <span class="kc">True</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose_level</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                        <span class="s2">&quot;Inconsistent IDs with pickle object and the &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;dataset: `</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2">`. Calculating IDTrack matchings.&quot;</span>
+                        <span class="s2">"Inconsistent IDs with pickle object and the "</span>
+                        <span class="sa">f</span><span class="s2">"dataset: `</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2">`. Calculating IDTrack matchings."</span>
                     <span class="p">)</span>
                 <span class="n">matching_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_idtrack_for_single_dataset</span><span class="p">(</span><span class="n">dataset_name</span><span class="p">,</span> <span class="n">dataset_path</span><span class="p">)</span>
-                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dataset_pickle</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dataset_pickle</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
                     <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">matching_list</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span>  <span class="c1"># noqa: S301</span>
 
             <span class="n">result_dataset</span><span class="p">[</span><span class="n">dataset_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">matching_list</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose_level</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">binned_conversions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">idt</span><span class="o">.</span><span class="n">classify_multiple_conversion</span><span class="p">(</span><span class="n">matching_list</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">idt</span><span class="o">.</span><span class="n">print_binned_conversion</span><span class="p">(</span><span class="n">binned_conversions</span><span class="p">)</span>
 
             <span class="c1"># Do not allow n_to_1 within a certain dataset.</span>
@@ -845,13 +943,36 @@
         <span class="k">return</span> <span class="n">result_dataset</span></div>
 
 
+<div class="viewcode-block" id="HarmonizeFeatures.result_cache_path">
+<a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures.result_cache_path">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">result_cache_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the path of the cached ID-Track matchings of one dataset.</span>
+
+<span class="sd">        The file name holds everything the matchings depend on besides the identifiers themselves (which are</span>
+<span class="sd">        checked when the file is read): project, dataset, organism, final database, target release and graph</span>
+<span class="sd">        snapshot release, e.g. ``idtrack_result_&lt;project&gt;_&lt;dataset&gt;_homo_sapiens_HGNC-Symbol_rel114_graph115.pickle``.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            dataset_name: Key of :py:attr:`data_h5ad_dict`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Absolute or repository-relative path inside :py:attr:`project_local_repository`.</span>
+<span class="sd">        """</span>
+        <span class="n">final_db_slug</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[^0-9A-Za-z]+"</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">))</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"-"</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"idtrack_result_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">project_name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism_name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">final_db_slug</span><span class="si">}</span><span class="s2">"</span>
+            <span class="sa">f</span><span class="s2">"_rel</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">target_ensembl_release</span><span class="si">}</span><span class="s2">_graph</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">graph_last_ensembl_release</span><span class="si">}</span><span class="s2">.pickle"</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_local_repository</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="HarmonizeFeatures.extract_source_identifiers_from_anndata">
 <a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures.extract_source_identifiers_from_anndata">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">extract_source_identifiers_from_anndata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load an ``.h5ad`` file and harvest the raw feature identifiers.</span>
+<span class="w">        </span><span class="sd">"""Load an ``.h5ad`` file and harvest the raw feature identifiers.</span>
 
 <span class="sd">        To prepare inputs for ID-Track, this routine opens the single-cell expression matrix at</span>
-<span class="sd">        *dataset_path*, reads the ``.var`` DataFrame, and extracts either the ``&quot;gene_id&quot;`` field (if</span>
+<span class="sd">        *dataset_path*, reads the ``.var`` DataFrame, and extracts either the ``"gene_id"`` field (if</span>
 <span class="sd">        present) or the index itself as the *source identifier*.  Identifiers are returned in file order</span>
 <span class="sd">        so that downstream procedures can preserve the original feature ordering when reconstructing</span>
 <span class="sd">        matrices.</span>
@@ -862,8 +983,8 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            list[str]: Ordered list of identifier strings exactly as they appear in the source file.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">adata</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">read_h5ad</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="n">backed</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">)</span>
+<span class="sd">        """</span>
+        <span class="n">adata</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">read_h5ad</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="n">backed</span><span class="o">=</span><span class="s2">"r"</span><span class="p">)</span>
         <span class="n">result</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var_names</span><span class="p">)</span>
         <span class="k">del</span> <span class="n">adata</span>
         <span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
@@ -874,7 +995,7 @@
 <div class="viewcode-block" id="HarmonizeFeatures.run_idtrack_for_single_dataset">
 <a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures.run_idtrack_for_single_dataset">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">run_idtrack_for_single_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert identifiers for one dataset and cache the raw ID-Track output.</span>
+<span class="w">        </span><span class="sd">"""Convert identifiers for one dataset and cache the raw ID-Track output.</span>
 
 <span class="sd">        Given a dataset alias and its on-disk location, this method:</span>
 
@@ -896,7 +1017,7 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            pandas.DataFrame: Full ID-Track matching table for *dataset_name* with columns</span>
 <span class="sd">                ``source_id``, ``target_id``, ``conversion_status``, and any extra metadata returned by the API.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_idt</span><span class="p">()</span>
         <span class="n">gene_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extract_source_identifiers_from_anndata</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">)</span>
 
@@ -914,7 +1035,7 @@
 <div class="viewcode-block" id="HarmonizeFeatures.n_to_1_within_individual_dataset">
 <a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures.n_to_1_within_individual_dataset">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">n_to_1_within_individual_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset_matching_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Detect n-to-1 collapses inside one dataset and populate diagnostic caches.</span>
+<span class="w">        </span><span class="sd">"""Detect n-to-1 collapses inside one dataset and populate diagnostic caches.</span>
 
 <span class="sd">        In the ID-Track context *n-to-1* means **several source identifiers** (``query_id``) converging on the</span>
 <span class="sd">        **same target identifier** (``matched_id``).  Such collapses are problematic because they merge</span>
@@ -939,8 +1060,8 @@
 <span class="sd">            dataset_name (str): Human-readable alias used throughout the project for *this* dataset.</span>
 <span class="sd">            dataset_matching_list (list[dict]): Raw per-feature matchings returned by</span>
 <span class="sd">                :py:class:`idtrack.api.API`.  Each dictionary must provide at least the keys</span>
-<span class="sd">                ``&quot;query_id&quot;``, ``&quot;last_node&quot;``, and ``&quot;final_database&quot;``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">                ``"query_id"``, ``"last_node"``, and ``"final_database"``.</span>
+<span class="sd">        """</span>
         <span class="n">reverse_dict_target</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="n">reverse_dict_alternative_target</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 
@@ -949,16 +1070,16 @@
             <span class="c1"># to capture matching without alternative target database.</span>
             <span class="c1"># note that final database is `None` for 1-to-0, `ensembl_gene` for alternative target database.</span>
 
-            <span class="n">query_id</span> <span class="o">=</span> <span class="n">matching_entry</span><span class="p">[</span><span class="s2">&quot;query_id&quot;</span><span class="p">]</span>
+            <span class="n">query_id</span> <span class="o">=</span> <span class="n">matching_entry</span><span class="p">[</span><span class="s2">"query_id"</span><span class="p">]</span>
 
-            <span class="k">if</span> <span class="n">matching_entry</span><span class="p">[</span><span class="s2">&quot;final_database&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">matching_entry</span><span class="p">[</span><span class="s2">&quot;last_node&quot;</span><span class="p">]:</span>  <span class="c1"># for loop if it is 1-to-n</span>
+            <span class="k">if</span> <span class="n">matching_entry</span><span class="p">[</span><span class="s2">"final_database"</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">matching_entry</span><span class="p">[</span><span class="s2">"last_node"</span><span class="p">]:</span>  <span class="c1"># for loop if it is 1-to-n</span>
                     <span class="k">if</span> <span class="n">j</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">reverse_dict_target</span><span class="p">:</span>
                         <span class="n">reverse_dict_target</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
                     <span class="n">reverse_dict_target</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">query_id</span><span class="p">)</span>
 
-            <span class="k">elif</span> <span class="n">matching_entry</span><span class="p">[</span><span class="s2">&quot;final_database&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;ensembl_gene&quot;</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">matching_entry</span><span class="p">[</span><span class="s2">&quot;last_node&quot;</span><span class="p">]:</span>  <span class="c1"># for loop if it is 1-to-n</span>
+            <span class="k">elif</span> <span class="n">matching_entry</span><span class="p">[</span><span class="s2">"final_database"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"ensembl_gene"</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">matching_entry</span><span class="p">[</span><span class="s2">"last_node"</span><span class="p">]:</span>  <span class="c1"># for loop if it is 1-to-n</span>
 
                     <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">reverse_dict_alternative_target</span><span class="p">:</span>
                         <span class="n">reverse_dict_alternative_target</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1013,13 +1134,13 @@
 <a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">unify_multiple_anndatas</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">mode</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;union&quot;</span><span class="p">,</span> <span class="s2">&quot;intersect&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;union&quot;</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"union"</span><span class="p">,</span> <span class="s2">"intersect"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"union"</span><span class="p">,</span>
         <span class="n">obs_columns_to_keep</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">numeric_var_columns</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">numeric_obs_columns</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>  <span class="c1"># for hdca it is {&quot;age&quot;}</span>
-        <span class="n">handle_anndata_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;handle_anndata&quot;</span><span class="p">,</span>
+        <span class="n">numeric_obs_columns</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>  <span class="c1"># for hdca it is {"age"}</span>
+        <span class="n">handle_anndata_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"handle_anndata"</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Merge several study-specific :py:class:`anndata.AnnData` objects into a single, consolidated dataset.</span>
+<span class="w">        </span><span class="sd">"""Merge several study-specific :py:class:`anndata.AnnData` objects into a single, consolidated dataset.</span>
 
 <span class="sd">        This helper finalises the *feature-harmonisation* workflow.  Earlier stages ensure that every source study</span>
 <span class="sd">        expresses its features (e.g. genes or proteins) in a consistent identifier namespace and that per-cell</span>
@@ -1029,11 +1150,11 @@
 
 <span class="sd">        Two strategies govern how the function reconciles mismatched feature sets:</span>
 
-<span class="sd">        * ``&quot;union&quot;`` (default) preserves the superset of all identifiers.  If a particular study lacks a feature,</span>
+<span class="sd">        * ``"union"`` (default) preserves the superset of all identifiers.  If a particular study lacks a feature,</span>
 <span class="sd">            its expression values are imputed as exact zeros.  This choice maximises information retention at the</span>
 <span class="sd">            cost of a sparse matrix with assay-dependent missingness.</span>
 
-<span class="sd">        * ``&quot;intersect&quot;`` retains only the identifiers present in *every* study, implicitly discarding features</span>
+<span class="sd">        * ``"intersect"`` retains only the identifiers present in *every* study, implicitly discarding features</span>
 <span class="sd">            unique to a subset.  This yields a denser matrix that is easier to factorise but sacrifices potentially</span>
 <span class="sd">            informative study-specific biology.</span>
 
@@ -1043,7 +1164,7 @@
 <span class="sd">        * **.var (feature annotations)**</span>
 <span class="sd">            All columns are outer-joined across studies.  Non-shared categorical values are unioned; numeric columns</span>
 <span class="sd">            specified in *numeric_var_columns* are cast to floating point and NaNs inserted where data are missing.</span>
-<span class="sd">            In *union* mode an additional boolean ``&quot;intersection&quot;`` column flags whether a feature survived the</span>
+<span class="sd">            In *union* mode an additional boolean ``"intersection"`` column flags whether a feature survived the</span>
 <span class="sd">            *intersect* filter, enabling fast subsetting later.</span>
 
 <span class="sd">        * **.obs (cell annotations)**</span>
@@ -1059,9 +1180,9 @@
 <span class="sd">        avoiding densification, and streaming allocation prevents double memory use for extremely large datasets.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            mode (Literal[&quot;union&quot;, &quot;intersect&quot;]): Strategy for reconciling discordant feature sets.  ``&quot;union&quot;``</span>
-<span class="sd">                keeps every identifier observed across studies (padding absent entries with zeros); ``&quot;intersect&quot;``</span>
-<span class="sd">                restricts the result to identifiers common to *all* studies.  Defaults to ``&quot;union&quot;``.</span>
+<span class="sd">            mode (Literal["union", "intersect"]): Strategy for reconciling discordant feature sets.  ``"union"``</span>
+<span class="sd">                keeps every identifier observed across studies (padding absent entries with zeros); ``"intersect"``</span>
+<span class="sd">                restricts the result to identifiers common to *all* studies.  Defaults to ``"union"``.</span>
 <span class="sd">            obs_columns_to_keep (list[str] | None): Names of per-cell metadata columns that must survive the merge</span>
 <span class="sd">                even if they appear in only a subset of studies (e.g. *cell_type*, *donor_age*).  When a column is</span>
 <span class="sd">                missing from a particular study, it is inserted and filled with ``pandas.NA``.  Provide an empty</span>
@@ -1076,7 +1197,7 @@
 <span class="sd">            handle_anndata_key (str): Name of the column inserted into ``.obs`` that records the dictionary key of</span>
 <span class="sd">                the source study.  This provenance tag facilitates stratified visualisation (e.g. UMAP coloured by</span>
 <span class="sd">                batch) and downstream batch-correction utilities that expect a “batch” column.  Defaults to</span>
-<span class="sd">                ``&quot;handle_anndata&quot;``.</span>
+<span class="sd">                ``"handle_anndata"``.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            anndata.AnnData: A fully merged expression matrix whose ``.X`` contains either the union or intersection</span>
@@ -1086,7 +1207,7 @@
 <span class="sd">                keep memory use in check.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If *mode* is not ``&quot;union&quot;`` or ``&quot;intersect&quot;``; if any column listed in</span>
+<span class="sd">            ValueError: If *mode* is not ``"union"`` or ``"intersect"``; if any column listed in</span>
 <span class="sd">                *numeric_var_columns* or *numeric_obs_columns* fails numeric coercion; or if feature identifiers</span>
 <span class="sd">                clash across studies after harmonisation (e.g. two studies mapping different genes to the same ID).</span>
 <span class="sd">            AssertionError: If duplicate cell or feature indices are detected post-merge, a condition that would</span>
@@ -1108,7 +1229,7 @@
 <span class="sd">            Sub-classes may override private hooks</span>
 <span class="sd">            :py:meth:`_before_concat`, :py:meth:`_after_concat`, and :py:meth:`_merge_uns` to refine behaviour without</span>
 <span class="sd">            re-implementing the full algorithm.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="n">numeric_obs_columns</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">numeric_obs_columns</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">numeric_var_columns</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -1137,73 +1258,67 @@
 
             <span class="n">pbar</span><span class="o">.</span><span class="n">set_postfix</span><span class="p">(</span>
                 <span class="p">{</span>
-                    <span class="s2">&quot;dataset&quot;</span><span class="p">:</span> <span class="n">handle</span><span class="p">,</span>
-                    <span class="s2">&quot;study_var&quot;</span><span class="p">:</span> <span class="n">adata_study</span><span class="o">.</span><span class="n">n_vars</span><span class="p">,</span>
-                    <span class="s2">&quot;union_var&quot;</span><span class="p">:</span> <span class="n">adata</span><span class="o">.</span><span class="n">n_vars</span><span class="p">,</span>
-                    <span class="s2">&quot;dbh&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">t0</span> <span class="o">-</span> <span class="n">t1</span><span class="p">),</span>  <span class="c1"># deleted by harmonizer</span>
+                    <span class="s2">"dataset"</span><span class="p">:</span> <span class="n">handle</span><span class="p">,</span>
+                    <span class="s2">"study_var"</span><span class="p">:</span> <span class="n">adata_study</span><span class="o">.</span><span class="n">n_vars</span><span class="p">,</span>
+                    <span class="s2">"union_var"</span><span class="p">:</span> <span class="n">adata</span><span class="o">.</span><span class="n">n_vars</span><span class="p">,</span>
+                    <span class="s2">"dbh"</span><span class="p">:</span> <span class="p">(</span><span class="n">t0</span> <span class="o">-</span> <span class="n">t1</span><span class="p">),</span>  <span class="c1"># deleted by harmonizer</span>
                 <span class="p">}</span>
             <span class="p">)</span>
             <span class="n">pbar</span><span class="o">.</span><span class="n">refresh</span><span class="p">()</span>
-            <span class="c1"># adata_study.obs[&quot;sample_ID&quot;] = adata_study.obs[&quot;sample_ID&quot;].astype(str)  used in hdca?</span>
+            <span class="c1"># adata_study.obs["sample_ID"] = adata_study.obs["sample_ID"].astype(str)  used in hdca?</span>
             <span class="n">adata_study</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">handle_anndata_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">adata_study</span><span class="o">.</span><span class="n">n_obs</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span>
 
-            <span class="n">adata_study</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;unified_index&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">handle</span><span class="si">}</span><span class="s2">_&quot;</span> <span class="o">+</span> <span class="n">adata_study</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
-            <span class="n">adata_study</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;unified_index&quot;</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">adata_study</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="s2">"unified_index"</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">handle</span><span class="si">}</span><span class="s2">_"</span> <span class="o">+</span> <span class="n">adata_study</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+            <span class="n">adata_study</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"unified_index"</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-            <span class="n">final_databases_tested</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;HGNC Symbol&quot;</span><span class="p">]</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_database</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">final_databases_tested</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;Final database other than following databases is not tested:  </span><span class="si">{</span><span class="n">final_databases_tested</span><span class="si">}</span><span class="s2">&quot;</span>
-                <span class="p">)</span>
-
-            <span class="n">adata_study</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Query ID&quot;</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="n">new_final_database_var_column</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">converted_id_column</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">handle</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">adata_study</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"Query ID"</span><span class="p">],</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">new_final_database_var_column</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">converted_id_column</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">handle</span><span class="si">}</span><span class="s2">"</span>
             <span class="n">adata_study</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
-                <span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">:</span> <span class="n">new_final_database_var_column</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;raise&quot;</span>
+                <span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">final_database</span><span class="p">:</span> <span class="n">new_final_database_var_column</span><span class="p">},</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"raise"</span>
             <span class="p">)</span>
 
-            <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;union&quot;</span> <span class="ow">or</span> <span class="n">ind</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">"union"</span> <span class="ow">or</span> <span class="n">ind</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">var_map</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span>
                     <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">,</span>
                     <span class="n">adata_study</span><span class="o">.</span><span class="n">var</span><span class="p">,</span>
-                    <span class="n">how</span><span class="o">=</span><span class="s2">&quot;outer&quot;</span><span class="p">,</span>
+                    <span class="n">how</span><span class="o">=</span><span class="s2">"outer"</span><span class="p">,</span>
                     <span class="n">left_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                     <span class="n">right_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                 <span class="p">)</span>
 
                 <span class="n">adata</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
                     <span class="n">adatas</span><span class="o">=</span><span class="p">[</span><span class="n">adata</span><span class="p">,</span> <span class="n">adata_study</span><span class="p">],</span>
-                    <span class="n">join</span><span class="o">=</span><span class="s2">&quot;outer&quot;</span><span class="p">,</span>
+                    <span class="n">join</span><span class="o">=</span><span class="s2">"outer"</span><span class="p">,</span>
                     <span class="n">fill_value</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
                 <span class="p">)</span>
 
-                <span class="k">if</span> <span class="n">mode</span> <span class="o">!=</span> <span class="s2">&quot;union&quot;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">mode</span> <span class="o">!=</span> <span class="s2">"union"</span><span class="p">:</span>
                     <span class="n">remove_var_columns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_final_database_var_column</span><span class="p">)</span>
 
-            <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;intersect&quot;</span><span class="p">:</span>
+            <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">"intersect"</span><span class="p">:</span>
                 <span class="n">var_map</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span>
                     <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">,</span>
                     <span class="n">adata_study</span><span class="o">.</span><span class="n">var</span><span class="p">,</span>
-                    <span class="n">how</span><span class="o">=</span><span class="s2">&quot;inner&quot;</span><span class="p">,</span>  <span class="c1"># changed from &quot;outer&quot; to &quot;inner&quot;</span>
+                    <span class="n">how</span><span class="o">=</span><span class="s2">"inner"</span><span class="p">,</span>  <span class="c1"># changed from "outer" to "inner"</span>
                     <span class="n">left_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                     <span class="n">right_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                 <span class="p">)</span>
 
                 <span class="n">adata</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
                     <span class="n">adatas</span><span class="o">=</span><span class="p">[</span><span class="n">adata</span><span class="p">,</span> <span class="n">adata_study</span><span class="p">],</span>
-                    <span class="n">join</span><span class="o">=</span><span class="s2">&quot;inner&quot;</span><span class="p">,</span>  <span class="c1"># changed from &quot;outer&quot; to &quot;inner&quot;</span>
+                    <span class="n">join</span><span class="o">=</span><span class="s2">"inner"</span><span class="p">,</span>  <span class="c1"># changed from "outer" to "inner"</span>
                 <span class="p">)</span>
                 <span class="n">remove_var_columns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_final_database_var_column</span><span class="p">)</span>
 
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected harmonization state for dataset </span><span class="si">{</span><span class="n">handle</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unexpected harmonization state for dataset </span><span class="si">{</span><span class="n">handle</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
 
             <span class="c1"># create a mask to array and put it in `uns`, to specify which</span>
             <span class="c1"># are added `0`s because of the `idtrack` process.</span>
             <span class="c1"># not needed: look at the adata.var</span>
 
             <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">var_map</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()):</span>
-                <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">&quot;np.any(var_map.index.duplicated())&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">"np.any(var_map.index.duplicated())"</span><span class="p">)</span>
             <span class="n">adata</span><span class="o">.</span><span class="n">var</span> <span class="o">=</span> <span class="n">var_map</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">var_names</span><span class="p">]</span>
 
             <span class="k">del</span> <span class="n">adata_study</span>
@@ -1211,8 +1326,8 @@
 
         <span class="c1"># Check unified gene naming</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">&quot;len(set(adata.var.index)) != len(adata.var.index)&quot;</span><span class="p">)</span>
-        <span class="n">gene_name_columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">converted_id_column</span><span class="si">}</span><span class="s2">_&quot;</span><span class="p">)]</span>
+            <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">"len(set(adata.var.index)) != len(adata.var.index)"</span><span class="p">)</span>
+        <span class="n">gene_name_columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">converted_id_column</span><span class="si">}</span><span class="s2">_"</span><span class="p">)]</span>
         <span class="n">gene_name_columns</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">gene_name_columns</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
         <span class="n">gene_names_unified</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
         <span class="n">gene_names_inconsistency</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
@@ -1220,21 +1335,21 @@
             <span class="n">i</span> <span class="o">=</span> <span class="n">i</span><span class="p">[</span><span class="o">~</span><span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">i</span><span class="p">))</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">gene_names_inconsistency</span><span class="p">[</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">ind_i</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
-                    <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">converted_id_column</span><span class="si">}</span><span class="s2">_&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]:</span> <span class="n">i</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+                    <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">converted_id_column</span><span class="si">}</span><span class="s2">_"</span><span class="p">)[</span><span class="mi">1</span><span class="p">]:</span> <span class="n">i</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
                 <span class="p">}</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">gene_names_unified</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_names_inconsistency</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;len(gene_names_inconsistency) != 0&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"len(gene_names_inconsistency) != 0"</span><span class="p">)</span>
 
         <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">)</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">"ignore"</span><span class="p">)</span>
             <span class="n">adata</span> <span class="o">=</span> <span class="n">adata</span><span class="p">[:,</span> <span class="o">~</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">gene_names_inconsistency</span><span class="o">.</span><span class="n">keys</span><span class="p">())]</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">converted_id_column</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">&quot;self.converted_id_column in adata.var.columns&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">"self.converted_id_column in adata.var.columns"</span><span class="p">)</span>
             <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">converted_id_column</span><span class="p">]</span> <span class="o">=</span> <span class="n">gene_names_unified</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">converted_id_column</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">&quot;self.converted_id_column not in adata.var.columns&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">"self.converted_id_column not in adata.var.columns"</span><span class="p">)</span>
 
         <span class="c1"># For `intersect` mode, all these columns are gonna be the same, so delete.</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">remove_var_columns</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -1242,26 +1357,26 @@
 
         <span class="c1"># Return</span>
         <span class="k">for</span> <span class="n">numeric_obs_column</span> <span class="ow">in</span> <span class="n">numeric_obs_columns</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">numeric_obs_column</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;coerce&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Non-numeric value in adata.obs at </span><span class="si">{</span><span class="n">numeric_obs_column</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">numeric_obs_column</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"coerce"</span><span class="p">)</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Non-numeric value in adata.obs at </span><span class="si">{</span><span class="n">numeric_obs_column</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
             <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">numeric_obs_column</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">numeric_obs_column</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">numeric_obs_columns</span><span class="p">:</span>
                 <span class="k">continue</span>
             <span class="c1"># Convert to string, remove categories</span>
-            <span class="c1"># Replace None or &#39;nan&#39; values with &#39;NA&#39;</span>
+            <span class="c1"># Replace None or 'nan' values with 'NA'</span>
             <span class="c1"># Convert back to categorical</span>
             <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
                 <span class="n">adata</span><span class="o">.</span><span class="n">obs</span><span class="p">[</span><span class="n">column</span><span class="p">]</span>
                 <span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>  <span class="c1"># ensure string</span>
                 <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">MISSING_VALUES</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">placeholder_na</span><span class="p">)</span>  <span class="c1"># no inplace</span>
-                <span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>  <span class="c1"># recast</span>
+                <span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"category"</span><span class="p">)</span>  <span class="c1"># recast</span>
             <span class="p">)</span>
 
         <span class="k">for</span> <span class="n">numeric_var_column</span> <span class="ow">in</span> <span class="n">numeric_var_columns</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">numeric_var_column</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;coerce&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Non-numeric value in adata.var at </span><span class="si">{</span><span class="n">numeric_var_column</span><span class="si">!r}</span><span class="s2">.&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">numeric_var_column</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"coerce"</span><span class="p">)</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Non-numeric value in adata.var at </span><span class="si">{</span><span class="n">numeric_var_column</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
             <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">numeric_var_column</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">numeric_var_column</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
@@ -1271,11 +1386,11 @@
                 <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">column</span><span class="p">]</span>
                 <span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
                 <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">MISSING_VALUES</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">placeholder_na</span><span class="p">)</span>  <span class="c1"># no inplace</span>
-                <span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"category"</span><span class="p">)</span>
             <span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;union&quot;</span><span class="p">:</span>
-            <span class="n">intersect_column_name</span> <span class="o">=</span> <span class="s2">&quot;intersection&quot;</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">"union"</span><span class="p">:</span>
+            <span class="n">intersect_column_name</span> <span class="o">=</span> <span class="s2">"intersection"</span>
             <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">intersect_column_name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_intersection_column_values</span><span class="p">(</span><span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
             <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">intersect_column_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">adata</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">intersect_column_name</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
 
@@ -1285,16 +1400,16 @@
 <div class="viewcode-block" id="HarmonizeFeatures.create_intersection_column_values">
 <a class="viewcode-back" href="../../reference.html#idtrack._harmonize_features.HarmonizeFeatures.create_intersection_column_values">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_intersection_column_values</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">adata_var</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Flag features present in **every** study after harmonisation.</span>
+<span class="w">        </span><span class="sd">"""Flag features present in **every** study after harmonisation.</span>
 
 <span class="sd">        The merged ``.var`` table produced by :py:meth:`unify_multiple_anndatas` contains one gene-symbol column per</span>
-<span class="sd">        study, each named ``f&quot;{self.converted_id_column}_{handle}&quot;`` where *handle* is the dictionary key that</span>
+<span class="sd">        study, each named ``f"{self.converted_id_column}_{handle}"`` where *handle* is the dictionary key that</span>
 <span class="sd">        identifies the originating dataset.  A cell in one of those columns holds the *gene symbol* originally</span>
 <span class="sd">        reported by the study, or :py:data:`idtrack._db.DB.placeholder_na` if the gene was absent or could not be</span>
 <span class="sd">        mapped to the target namespace.</span>
 
 <span class="sd">        This helper collapses the per-study presence/absence information into a single boolean *intersection* flag,</span>
-<span class="sd">        later exposed to users as ``adata.var[&quot;intersection&quot;]``.  A value of ``1`` indicates that the feature</span>
+<span class="sd">        later exposed to users as ``adata.var["intersection"]``.  A value of ``1`` indicates that the feature</span>
 <span class="sd">        survived the *intersect* filter—i.e., it has a valid symbol in **all** studies—whereas ``0`` marks features</span>
 <span class="sd">        missing from at least one dataset.  The resulting NumPy vector is inserted by the caller; this routine is</span>
 <span class="sd">        intentionally pure and side-effect free.</span>
@@ -1302,15 +1417,15 @@
 <span class="sd">        Args:</span>
 <span class="sd">            adata_var (pandas.DataFrame): The ``.var`` table of the *already concatenated* :py:class:`anndata.AnnData`</span>
 <span class="sd">                object.  It must contain one or more columns whose names start with</span>
-<span class="sd">                ``f&quot;{self.converted_id_column}_&quot;``; each such column is assumed to encode the gene symbol for a</span>
+<span class="sd">                ``f"{self.converted_id_column}_"``; each such column is assumed to encode the gene symbol for a</span>
 <span class="sd">                particular study.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            numpy.ndarray: A 1-D array of ``int`` (values ``0`` or ``1``) with ``len(adata_var)`` elements.  The</span>
 <span class="sd">            *i*-th entry equals ``1`` if the *i*-th feature is present (non-</span>
 <span class="sd">            :py:data:`idtrack._db.DB.placeholder_na`) in **every** per-study symbol column; otherwise it is ``0``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">gene_name_columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">adata_var</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">converted_id_column</span><span class="si">}</span><span class="s2">_&quot;</span><span class="p">)]</span>
+<span class="sd">        """</span>
+        <span class="n">gene_name_columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">adata_var</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">converted_id_column</span><span class="si">}</span><span class="s2">_"</span><span class="p">)]</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">adata_var</span><span class="p">[</span><span class="n">gene_name_columns</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">df</span> <span class="o">!=</span> <span class="n">DB</span><span class="o">.</span><span class="n">placeholder_na</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">gene_name_columns</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span><span class="o">.</span><span class="n">values</span></div>

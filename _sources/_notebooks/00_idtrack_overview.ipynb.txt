@@ -165,6 +165,8 @@
     "- human: **GRCh38** and **GRCh37**\n",
     "- mouse: **GRCm39** and **GRCm38**\n",
     "- pig: **Sscrofa11.1** and **Sscrofa10.2**\n",
+    "- rhesus macaque: **Mmul_10**, **Mmul_8.0.1** and **MMUL_1**\n",
+    "- cynomolgus macaque: **Macaca_fascicularis_6.0** and **5.0**\n",
     "\n",
     "Why this matters in practice: two datasets can use the “same kind of identifiers” but still be anchored to different builds\n",
     "because they were annotated with different GTFs or reference packages. That is a very common atlas-building situation.\n",
@@ -181,7 +183,7 @@
     "inputs into that target in a reproducible way.\n",
     "\n",
     "\n",
-    "Human is the main case where two assemblies are actively supported in parallel (GRCh38 + GRCh37). Mouse and pig are generally *clean-handoff* species (one maintained assembly per release), but older assemblies still matter for legacy datasets."
+    "Human is the main case where two assemblies are actively supported in parallel (GRCh38 + GRCh37). Mouse, pig and the two macaques are *clean-handoff* species (one maintained assembly per release), but older assemblies still matter for legacy datasets."
    ]
   },
   {
@@ -341,6 +343,10 @@
     "- `'human' -> 'homo_sapiens'`\n",
     "- `'mus musculus' -> 'mus_musculus'`\n",
     "- `'sus scrofa' -> 'sus_scrofa'`\n",
+    "- `'Macaca mulatta'` or `9544` -> `'macaca_mulatta'`\n",
+    "\n",
+    "Matching is case-insensitive. Species names and taxon IDs always resolve; a common name shared by several Ensembl species\n",
+    "(e.g. `'pig'`, which every pig breed in Ensembl carries) raises an error that lists the candidates.\n",
     "\n",
     "From now on, the tutorials use the **formal Ensembl names** (snake_case).\n"
    ]
@@ -377,7 +383,10 @@
     "3. **Disk space**: building graphs can use multiple GB.\n",
     "4. **Snapshot boundary + assemblies**: the snapshot release must exist for the organism and the chosen primary assembly. Older assemblies have\n",
     "   different release coverage; a multi-assembly snapshot can still include them when they exist within the release window.\n",
-    "5. **External YAML**: for mouse/pig you must create a `*_externals_modified.yml` in your local repository.\n",
+    "5. **External YAML**: every supported organism ships a default; a `*_externals_modified.yml` in your local repository overrides it.\n",
+    "   If a graph build warns that releases have no entry in the YAML, extend the file (Part 2, section 2.6).\n",
+    "6. **Blocked MySQL ports**: set `IDTRACK_ENSEMBL_ACCESS=https` to skip MySQL entirely (same rows and values; over HTTPS a text\n",
+    "   column holding only digit strings is read as numbers).\n",
     "\n",
     "> **Tip:** For a deeper checklist (including diagnostics helpers), see Part 7.3 in `07_advanced_topics.ipynb`.\n"
    ]

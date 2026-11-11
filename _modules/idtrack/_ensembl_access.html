@@ -1,0 +1,320 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack._ensembl_access &mdash; idtrack 0.0.5 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=282f96c0"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />  
+<!-- Google tag (gtag.js) -->
+<script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"
+></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-FYKLWNJBVK");
+</script>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changes.html">Changes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack._ensembl_access</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack._ensembl_access</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+
+<span class="c1"># Kemal Inecik</span>
+<span class="c1"># k.inecik@gmail.com</span>
+
+<span class="sd">"""How idtrack reaches Ensembl: the access mode and the per-process reachability of TCP ports.</span>
+
+<span class="sd">Ensembl serves the same core databases two ways: the public MySQL service (``ensembldb.ensembl.org``, ports 3306,</span>
+<span class="sd">5306 and 3337) and the MySQL dumps on ``https://ftp.ensembl.org/pub/``. Many networks block the MySQL ports, and a</span>
+<span class="sd">blocked port costs a full connect timeout every time it is tried. This module makes that cost a one-off:</span>
+
+<span class="sd">* :py:func:`ensembl_access_mode` returns the access mode, ``"auto"`` (MySQL where its port answers, the HTTPS dumps</span>
+<span class="sd">  otherwise) or ``"https"`` (MySQL is never touched), from :py:attr:`idtrack._db.DB.ensembl_access` or the</span>
+<span class="sd">  ``IDTRACK_ENSEMBL_ACCESS`` environment variable.</span>
+<span class="sd">* :py:data:`reachability` (a :py:class:`PortReachability`) probes a ``(host, port)`` once per process with a short</span>
+<span class="sd">  timeout and remembers the answer. Every code path that would open a MySQL connection asks it first, and a</span>
+<span class="sd">  connection that fails after a successful probe marks the port unreachable for the rest of the process.</span>
+
+<span class="sd">The results do not depend on the mode: both paths read the same Ensembl tables.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
+
+
+<div class="viewcode-block" id="ensembl_access_mode">
+<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.ensembl_access_mode">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">ensembl_access_mode</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the active Ensembl access mode.</span>
+
+<span class="sd">    :py:attr:`idtrack._db.DB.ensembl_access` wins when it is set; otherwise the environment variable named by</span>
+<span class="sd">    :py:attr:`idtrack._db.DB.ensembl_access_env_var` (``IDTRACK_ENSEMBL_ACCESS``) is read; otherwise ``"auto"``.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: ``"auto"`` or ``"https"``.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If the configured value is not one of :py:attr:`idtrack._db.DB.ensembl_access_modes`.</span>
+<span class="sd">    """</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">ensembl_access</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="s2">"DB.ensembl_access"</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">ensembl_access_env_var</span><span class="p">)</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">ensembl_access_env_var</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">""</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">"auto"</span>
+    <span class="n">mode</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">ensembl_access_modes</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2"> is not a valid Ensembl access mode; use one of </span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">ensembl_access_modes</span><span class="si">}</span><span class="s2">."</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">mode</span></div>
+
+
+
+<div class="viewcode-block" id="PortReachability">
+<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.PortReachability">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">PortReachability</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Remember, for the life of the process, whether a TCP ``(host, port)`` accepts connections.</span>
+
+<span class="sd">    The first question about a ``(host, port)`` opens one TCP connection with a short timeout</span>
+<span class="sd">    (:py:attr:`idtrack._db.DB.mysql_probe_timeout` unless given); every later question is answered from memory.</span>
+<span class="sd">    :py:meth:`mark_unreachable` records a failure observed elsewhere: a MySQL connection that fails after a</span>
+<span class="sd">    successful probe (refused, dropped or lost during a query) marks the port unreachable for the rest of the</span>
+<span class="sd">    process, even if the failure was transient. This only costs speed: the tables are then read from the HTTPS dumps,</span>
+<span class="sd">    which hold the same rows. :py:meth:`reset` forgets everything, which is needed only when the network route changes</span>
+<span class="sd">    inside a process (as :py:class:`idtrack.ConnectionBridge` does when it starts or stops).</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Create an empty reachability memory."""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"ensembl_access"</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PortReachability._probe">
+<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.PortReachability._probe">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_probe</span><span class="p">(</span><span class="n">host</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">timeout_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Open and close one TCP connection; return whether it succeeded."""</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">socket</span><span class="o">.</span><span class="n">create_connection</span><span class="p">((</span><span class="n">host</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">port</span><span class="p">)),</span> <span class="n">timeout</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">timeout_s</span><span class="p">)):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="PortReachability.can_connect">
+<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.PortReachability.can_connect">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">can_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">timeout_s</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return whether ``(host, port)`` accepts TCP connections, probing it only the first time.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            host: Host name.</span>
+<span class="sd">            port: TCP port.</span>
+<span class="sd">            timeout_s: Connect timeout of the probe in seconds; defaults to</span>
+<span class="sd">                :py:attr:`idtrack._db.DB.mysql_probe_timeout`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: The remembered (or freshly probed) answer.</span>
+<span class="sd">        """</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">host</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">port</span><span class="p">))</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="n">known</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">known</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">known</span>
+        <span class="n">timeout</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">mysql_probe_timeout</span> <span class="k">if</span> <span class="n">timeout_s</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">timeout_s</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_probe</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">timeout</span><span class="p">)</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="c1"># Another thread may have answered meanwhile; the first answer stands.</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">result</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="s2">"</span><span class="si">%s</span><span class="s2">:</span><span class="si">%d</span><span class="s2"> does not accept connections (probe timeout </span><span class="si">%.1f</span><span class="s2"> s); it is not tried again in this process."</span><span class="p">,</span>
+                <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">timeout</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="PortReachability.mysql_port_usable">
+<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.PortReachability.mysql_port_usable">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">mysql_port_usable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return whether the Ensembl MySQL service may be used on ``port``.</span>
+
+<span class="sd">        In ``"https"`` mode this is always ``False`` and nothing is probed; in ``"auto"`` mode it is</span>
+<span class="sd">        :py:meth:`can_connect` for :py:attr:`idtrack._db.DB.mysql_host`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            port: MySQL port of :py:attr:`idtrack._db.DB.mysql_host`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: ``True`` if a MySQL connection should be attempted.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">ensembl_access_mode</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"https"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">can_connect</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">mysql_host</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">port</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="PortReachability.mark_unreachable">
+<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.PortReachability.mark_unreachable">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">mark_unreachable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Record that ``(host, port)`` failed, so that it is not tried again in this process.</span>
+
+<span class="sd">        The mark lasts until :py:meth:`reset`; a transient failure therefore also sends later tables to the HTTPS</span>
+<span class="sd">        dumps, which costs speed but not correctness.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            host: Host name.</span>
+<span class="sd">            port: TCP port.</span>
+<span class="sd">            reason: Optional text for the log message.</span>
+<span class="sd">        """</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">host</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">port</span><span class="p">))</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="n">was</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="n">was</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">"</span><span class="si">%s</span><span class="s2">:</span><span class="si">%d</span><span class="s2"> failed</span><span class="si">%s</span><span class="s2">; using the HTTPS dumps instead for the rest of this process."</span><span class="p">,</span>
+                <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="sa">f</span><span class="s2">" (</span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">)"</span> <span class="k">if</span> <span class="n">reason</span> <span class="k">else</span> <span class="s2">""</span><span class="p">,</span>
+            <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PortReachability.known">
+<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.PortReachability.known">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">known</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Return a copy of the remembered answers (for inspection and tests)."""</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PortReachability.reset">
+<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.PortReachability.reset">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Forget every remembered answer (the next question probes again)."""</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
+</div>
+
+
+
+<span class="c1">#: The process-wide reachability memory used by every idtrack code path that would open a MySQL connection.</span>
+<span class="n">reachability</span> <span class="o">=</span> <span class="n">PortReachability</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -8,7 +8,7 @@
   <title>idtrack._external_mappers._backend_pybiomart &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=6a604523" />
       <link rel="stylesheet" type="text/css" href="../../../_static/custom_settings.css?v=04d1a194" />
       <link rel="stylesheet" type="text/css" href="../../../_static/tutorials.css?v=0e72a3a5" />
 
@@ -18,7 +18,7 @@
       <script src="../../../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
-      <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../../_static/design-tabs.js?v=fcb327ea"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
@@ -66,6 +66,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../authors.html">Credits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
@@ -97,12 +98,12 @@
              
   <h1>Source code for idtrack._external_mappers._backend_pybiomart</h1><div class="highlight"><pre>
 <span></span><span class="ch">#!/usr/bin/env python3</span>
-<span class="sd">&quot;&quot;&quot;Ensembl BioMart backend for ID mapping.</span>
+<span class="sd">"""Ensembl BioMart backend for ID mapping.</span>
 
 <span class="sd">This module provides the map_with_pybiomart() function for querying</span>
 <span class="sd">Ensembl BioMart to convert biological identifiers. Supports historical</span>
 <span class="sd">Ensembl releases via archive hosts.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="c1"># Kemal Inecik</span>
 <span class="c1"># k.inecik@gmail.com</span>
@@ -146,21 +147,21 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">_ensembl_archive_host_for_release</span><span class="p">(</span>
     <span class="n">release</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve an Ensembl release or key to an archive host.</span>
+<span class="w">    </span><span class="sd">"""Resolve an Ensembl release or key to an archive host.</span>
 
 <span class="sd">    Examples include an integer release (e.g. ``104``) or a special string key</span>
-<span class="sd">    (e.g. ``&quot;GRCh37&quot;``) mapping to hosts like ``&quot;may2021.archive.ensembl.org&quot;``.</span>
+<span class="sd">    (e.g. ``"GRCh37"``) mapping to hosts like ``"may2021.archive.ensembl.org"``.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        release: Ensembl release number or key (e.g. ``104``, ``&quot;v104&quot;``, ``&quot;GRCh37&quot;``), or ``None``.</span>
+<span class="sd">        release: Ensembl release number or key (e.g. ``104``, ``"v104"``, ``"GRCh37"``), or ``None``.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Archive host for the requested release, or ``None`` if unknown.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="n">release</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
 
-    <span class="c1"># String releases can be things like &quot;104&quot;, &quot;v104&quot;, &quot;GRCh37&quot;, ...</span>
+    <span class="c1"># String releases can be things like "104", "v104", "GRCh37", ...</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">release</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
         <span class="n">s</span> <span class="o">=</span> <span class="n">release</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">s</span><span class="p">:</span>
@@ -171,8 +172,8 @@
         <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_ENSEMBL_SPECIAL_RELEASE_HOSTS</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">_ENSEMBL_SPECIAL_RELEASE_HOSTS</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
 
-        <span class="c1"># Strip a leading &quot;v&quot; or &quot;r&quot; if present (e.g. &quot;v104&quot;)</span>
-        <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[vr]?(\d+)$&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="c1"># Strip a leading "v" or "r" if present (e.g. "v104")</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">"^[vr]?(\d+)$"</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="k">try</span><span class="p">:</span>
@@ -192,58 +193,58 @@
 <div class="viewcode-block" id="_biomart_dataset_for_species">
 <a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._backend_pybiomart._biomart_dataset_for_species">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">_biomart_dataset_for_species</span><span class="p">(</span><span class="n">species</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">explicit</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the Ensembl BioMart dataset name for the given species.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return the Ensembl BioMart dataset name for the given species."""</span>
     <span class="k">if</span> <span class="n">explicit</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">explicit</span>
     <span class="n">s</span> <span class="o">=</span> <span class="n">canonical_species</span><span class="p">(</span><span class="n">species</span><span class="p">)</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">s</span><span class="si">}</span><span class="s2">_gene_ensembl&quot;</span></div>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">s</span><span class="si">}</span><span class="s2">_gene_ensembl"</span></div>
 
 
 
 <div class="viewcode-block" id="_normalize_biomart_host">
 <a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._backend_pybiomart._normalize_biomart_host">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">_normalize_biomart_host</span><span class="p">(</span><span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize an Ensembl BioMart host for pybiomart.</span>
+<span class="w">    </span><span class="sd">"""Normalize an Ensembl BioMart host for pybiomart.</span>
 
 <span class="sd">    Examples of valid outputs:</span>
-<span class="sd">        &quot;http://www.ensembl.org&quot;</span>
-<span class="sd">        &quot;http://nov2020.archive.ensembl.org&quot;</span>
-<span class="sd">        &quot;http://grch37.ensembl.org&quot;</span>
+<span class="sd">        "http://www.ensembl.org"</span>
+<span class="sd">        "http://nov2020.archive.ensembl.org"</span>
+<span class="sd">        "http://grch37.ensembl.org"</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        host: Hostname or URL (scheme optional). If ``None``, defaults to ``&quot;http://www.ensembl.org&quot;``.</span>
+<span class="sd">        host: Hostname or URL (scheme optional). If ``None``, defaults to ``"http://www.ensembl.org"``.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        str: Normalized base URL suitable for pybiomart.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">host</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;http://www.ensembl.org&quot;</span>
+        <span class="k">return</span> <span class="s2">"http://www.ensembl.org"</span>
 
     <span class="n">host</span> <span class="o">=</span> <span class="n">host</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-    <span class="n">parsed</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">host</span> <span class="k">if</span> <span class="s2">&quot;://&quot;</span> <span class="ow">in</span> <span class="n">host</span> <span class="k">else</span> <span class="s2">&quot;http://&quot;</span> <span class="o">+</span> <span class="n">host</span><span class="p">)</span>
-    <span class="n">netloc</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">netloc</span> <span class="ow">or</span> <span class="n">parsed</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="k">return</span> <span class="s2">&quot;http://&quot;</span> <span class="o">+</span> <span class="n">netloc</span></div>
+    <span class="n">parsed</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">host</span> <span class="k">if</span> <span class="s2">"://"</span> <span class="ow">in</span> <span class="n">host</span> <span class="k">else</span> <span class="s2">"http://"</span> <span class="o">+</span> <span class="n">host</span><span class="p">)</span>
+    <span class="n">netloc</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">netloc</span> <span class="ow">or</span> <span class="n">parsed</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="s2">"http://"</span> <span class="o">+</span> <span class="n">netloc</span></div>
 
 
 
 <div class="viewcode-block" id="_bm_list_attribute_names">
 <a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._backend_pybiomart._bm_list_attribute_names">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">_bm_list_attribute_names</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a list of attribute names for a pybiomart Dataset.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return a list of attribute names for a pybiomart Dataset."""</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">attrs</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">list_attributes</span><span class="p">()</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">,</span> <span class="ne">RuntimeError</span><span class="p">):</span>
         <span class="c1"># Different pybiomart versions may not have list_attributes()</span>
-        <span class="n">attrs</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="s2">&quot;attributes&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">attrs</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="s2">"attributes"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">attrs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">[]</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="c1"># biomaRt-style DataFrame</span>
-        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">attrs</span><span class="p">,</span> <span class="s2">&quot;columns&quot;</span><span class="p">):</span>
-            <span class="k">if</span> <span class="s2">&quot;name&quot;</span> <span class="ow">in</span> <span class="n">attrs</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-                <span class="k">return</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()]</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">attrs</span><span class="p">,</span> <span class="s2">"columns"</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s2">"name"</span> <span class="ow">in</span> <span class="n">attrs</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">attrs</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()]</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">return</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">attrs</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()]</span>
         <span class="c1"># dict or list-like</span>
@@ -261,20 +262,20 @@
 <div class="viewcode-block" id="_bm_list_filter_names">
 <a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._backend_pybiomart._bm_list_filter_names">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">_bm_list_filter_names</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a list of filter names for a pybiomart Dataset.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Return a list of filter names for a pybiomart Dataset."""</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">filts</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">list_filters</span><span class="p">()</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">,</span> <span class="ne">RuntimeError</span><span class="p">):</span>
         <span class="c1"># Different pybiomart versions may not have list_filters()</span>
-        <span class="n">filts</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="s2">&quot;filters&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">filts</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="s2">"filters"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">filts</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">[]</span>
 
     <span class="k">try</span><span class="p">:</span>
-        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">filts</span><span class="p">,</span> <span class="s2">&quot;columns&quot;</span><span class="p">):</span>
-            <span class="k">if</span> <span class="s2">&quot;name&quot;</span> <span class="ow">in</span> <span class="n">filts</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-                <span class="k">return</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">filts</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()]</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">filts</span><span class="p">,</span> <span class="s2">"columns"</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s2">"name"</span> <span class="ow">in</span> <span class="n">filts</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">filts</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()]</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">return</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">filts</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()]</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">filts</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
@@ -291,7 +292,7 @@
 <div class="viewcode-block" id="_bm_pick_attribute">
 <a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._backend_pybiomart._bm_pick_attribute">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">_bm_pick_attribute</span><span class="p">(</span><span class="n">canonical_db_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">available_attrs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Choose a BioMart attribute name for a canonical DB.</span>
+<span class="w">    </span><span class="sd">"""Choose a BioMart attribute name for a canonical DB.</span>
 
 <span class="sd">    The helper first tries explicit candidates from :py:data:`_BM_ATTR_CANDIDATES` and</span>
 <span class="sd">    falls back to fuzzy matching on common substrings.</span>
@@ -305,7 +306,7 @@
 
 <span class="sd">    Raises:</span>
 <span class="sd">        RuntimeError: If no compatible attribute is available on the dataset.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">cdb</span> <span class="o">=</span> <span class="n">canonical_db</span><span class="p">(</span><span class="n">canonical_db_name</span><span class="p">)</span>
     <span class="n">attrs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">available_attrs</span><span class="p">))</span>  <span class="c1"># dedupe, preserve order</span>
     <span class="n">attr_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
@@ -317,18 +318,18 @@
             <span class="k">return</span> <span class="n">cand</span>
 
     <span class="c1"># 2) Fuzzy fallback based on typical naming patterns</span>
-    <span class="k">if</span> <span class="n">cdb</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;ensembl_&quot;</span><span class="p">):</span>
-        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">&quot;ensembl_&quot;</span> <span class="o">+</span> <span class="n">cdb</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
-    <span class="k">elif</span> <span class="n">cdb</span> <span class="o">==</span> <span class="s2">&quot;hgnc_symbol&quot;</span><span class="p">:</span>
-        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">&quot;external_gene&quot;</span>
-    <span class="k">elif</span> <span class="n">cdb</span> <span class="o">==</span> <span class="s2">&quot;hgnc_id&quot;</span><span class="p">:</span>
-        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">&quot;hgnc&quot;</span>
-    <span class="k">elif</span> <span class="n">cdb</span> <span class="o">==</span> <span class="s2">&quot;entrez_gene&quot;</span><span class="p">:</span>
-        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">&quot;entrez&quot;</span>
-    <span class="k">elif</span> <span class="n">cdb</span> <span class="o">==</span> <span class="s2">&quot;uniprot&quot;</span><span class="p">:</span>
-        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">&quot;uniprot&quot;</span>
-    <span class="k">elif</span> <span class="n">cdb</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;refseq_&quot;</span><span class="p">):</span>
-        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">&quot;refseq&quot;</span>
+    <span class="k">if</span> <span class="n">cdb</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"ensembl_"</span><span class="p">):</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">"ensembl_"</span> <span class="o">+</span> <span class="n">cdb</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">cdb</span> <span class="o">==</span> <span class="s2">"hgnc_symbol"</span><span class="p">:</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">"external_gene"</span>
+    <span class="k">elif</span> <span class="n">cdb</span> <span class="o">==</span> <span class="s2">"hgnc_id"</span><span class="p">:</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">"hgnc"</span>
+    <span class="k">elif</span> <span class="n">cdb</span> <span class="o">==</span> <span class="s2">"entrez_gene"</span><span class="p">:</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">"entrez"</span>
+    <span class="k">elif</span> <span class="n">cdb</span> <span class="o">==</span> <span class="s2">"uniprot"</span><span class="p">:</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">"uniprot"</span>
+    <span class="k">elif</span> <span class="n">cdb</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"refseq_"</span><span class="p">):</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">"refseq"</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">pattern</span> <span class="o">=</span> <span class="n">cdb</span>
 
@@ -341,8 +342,8 @@
         <span class="k">return</span> <span class="n">contains_hits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;pybiomart: dataset does not provide any attribute compatible with &quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">cdb</span><span class="si">!r}</span><span class="s2">; inspect `dataset.list_attributes()` for valid names.&quot;</span>
+        <span class="sa">f</span><span class="s2">"pybiomart: dataset does not provide any attribute compatible with "</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">cdb</span><span class="si">!r}</span><span class="s2">; inspect `dataset.list_attributes()` for valid names."</span>
     <span class="p">)</span></div>
 
 
@@ -354,7 +355,7 @@
     <span class="n">attr_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">available_filters</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Choose a BioMart filter name.</span>
+<span class="w">    </span><span class="sd">"""Choose a BioMart filter name.</span>
 
 <span class="sd">    The selection depends on the canonical database and chosen attribute.</span>
 
@@ -368,7 +369,7 @@
 
 <span class="sd">    Raises:</span>
 <span class="sd">        RuntimeError: If no compatible filter is available on the dataset.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">cdb</span> <span class="o">=</span> <span class="n">canonical_db</span><span class="p">(</span><span class="n">canonical_db_name</span><span class="p">)</span>
     <span class="n">filt_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">available_filters</span><span class="p">))</span>  <span class="c1"># dedupe, preserve order</span>
     <span class="n">filt_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">filt_list</span><span class="p">)</span>
@@ -382,9 +383,9 @@
     <span class="n">candidates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">attr_name</span><span class="p">)</span>
 
     <span class="c1"># 3) Some small variations</span>
-    <span class="k">if</span> <span class="n">attr_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;_id&quot;</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">attr_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"_id"</span><span class="p">):</span>
         <span class="n">candidates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">attr_name</span><span class="p">[:</span><span class="o">-</span><span class="mi">3</span><span class="p">])</span>
-    <span class="k">if</span> <span class="n">attr_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;_accession&quot;</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">attr_name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"_accession"</span><span class="p">):</span>
         <span class="n">candidates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">attr_name</span><span class="p">[:</span><span class="o">-</span><span class="mi">10</span><span class="p">])</span>
 
     <span class="c1"># Deduplicate candidates but preserve order</span>
@@ -400,16 +401,16 @@
             <span class="k">return</span> <span class="n">c</span>
 
     <span class="c1"># 4) Fuzzy search</span>
-    <span class="k">if</span> <span class="n">cdb</span> <span class="o">==</span> <span class="s2">&quot;hgnc_symbol&quot;</span><span class="p">:</span>
-        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">&quot;external_gene&quot;</span>
-    <span class="k">elif</span> <span class="n">cdb</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;ensembl_&quot;</span><span class="p">):</span>
-        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">&quot;ensembl_&quot;</span> <span class="o">+</span> <span class="n">cdb</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
-    <span class="k">elif</span> <span class="n">cdb</span> <span class="o">==</span> <span class="s2">&quot;entrez_gene&quot;</span><span class="p">:</span>
-        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">&quot;entrez&quot;</span>
-    <span class="k">elif</span> <span class="n">cdb</span> <span class="o">==</span> <span class="s2">&quot;uniprot&quot;</span><span class="p">:</span>
-        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">&quot;uniprot&quot;</span>
-    <span class="k">elif</span> <span class="n">cdb</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;refseq_&quot;</span><span class="p">):</span>
-        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">&quot;refseq&quot;</span>
+    <span class="k">if</span> <span class="n">cdb</span> <span class="o">==</span> <span class="s2">"hgnc_symbol"</span><span class="p">:</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">"external_gene"</span>
+    <span class="k">elif</span> <span class="n">cdb</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"ensembl_"</span><span class="p">):</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">"ensembl_"</span> <span class="o">+</span> <span class="n">cdb</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">cdb</span> <span class="o">==</span> <span class="s2">"entrez_gene"</span><span class="p">:</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">"entrez"</span>
+    <span class="k">elif</span> <span class="n">cdb</span> <span class="o">==</span> <span class="s2">"uniprot"</span><span class="p">:</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">"uniprot"</span>
+    <span class="k">elif</span> <span class="n">cdb</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"refseq_"</span><span class="p">):</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="s2">"refseq"</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">pattern</span> <span class="o">=</span> <span class="n">cdb</span>
 
@@ -422,8 +423,8 @@
         <span class="k">return</span> <span class="n">contains_hits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;pybiomart: dataset does not provide any filter compatible with &quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">cdb</span><span class="si">!r}</span><span class="s2">; inspect `dataset.list_filters()` for valid names.&quot;</span>
+        <span class="sa">f</span><span class="s2">"pybiomart: dataset does not provide any filter compatible with "</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">cdb</span><span class="si">!r}</span><span class="s2">; inspect `dataset.list_filters()` for valid names."</span>
     <span class="p">)</span></div>
 
 
@@ -435,7 +436,7 @@
     <span class="n">input_db</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">output_db</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
-    <span class="n">species</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;hsapiens&quot;</span><span class="p">,</span>
+    <span class="n">species</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"hsapiens"</span><span class="p">,</span>
     <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span>
     <span class="n">pause</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span>
     <span class="n">strip_versions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
@@ -443,21 +444,22 @@
     <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">suppress_method_verbosity</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Map identifiers using Ensembl BioMart via pybiomart.</span>
+<span class="w">    </span><span class="sd">"""Map identifiers using Ensembl BioMart via pybiomart.</span>
 
 <span class="sd">    Note: BioMart can only filter by Ensembl IDs (gene, transcript, protein).</span>
 <span class="sd">    Other ID types can be used as output_db but not input_db.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        ids: Input Ensembl identifiers to map.</span>
-<span class="sd">        input_db: Source database type. Must be one of ``&quot;ensembl_gene&quot;``, ``&quot;ensembl_transcript&quot;``,</span>
-<span class="sd">            or ``&quot;ensembl_protein&quot;``.</span>
-<span class="sd">        output_db: Target database type (e.g. ``&quot;hgnc_symbol&quot;``, ``&quot;uniprot&quot;``, ``&quot;entrez_gene&quot;``).</span>
-<span class="sd">        species: Species code (e.g. ``&quot;hsapiens&quot;``, ``&quot;mmusculus&quot;``, ``&quot;sscrofa&quot;``).</span>
+<span class="sd">        input_db: Source database type. Must be one of ``"ensembl_gene"``, ``"ensembl_transcript"``,</span>
+<span class="sd">            or ``"ensembl_protein"``.</span>
+<span class="sd">        output_db: Target database type (e.g. ``"hgnc_symbol"``, ``"uniprot"``, ``"entrez_gene"``).</span>
+<span class="sd">        species: Species code (e.g. ``"hsapiens"``, ``"mmusculus"``, ``"sscrofa"``, ``"mmulatta"``,</span>
+<span class="sd">            ``"mfascicularis"``).</span>
 <span class="sd">        chunk_size: Number of IDs per BioMart query.</span>
 <span class="sd">        pause: Pause in seconds between queries.</span>
 <span class="sd">        strip_versions: Strip version suffixes from Ensembl/RefSeq IDs.</span>
-<span class="sd">        release: Ensembl release number (e.g. ``104``) or special key (e.g. ``&quot;grch37&quot;``). If ``None``, uses</span>
+<span class="sd">        release: Ensembl release number (e.g. ``104``) or special key (e.g. ``"grch37"``). If ``None``, uses</span>
 <span class="sd">            the current Ensembl release.</span>
 <span class="sd">        show_progress: Display progress bar.</span>
 <span class="sd">        suppress_method_verbosity: Suppress stdout/stderr from pybiomart.</span>
@@ -468,11 +470,11 @@
 <span class="sd">    Raises:</span>
 <span class="sd">        RuntimeError: If the BioMart connection fails or required dataset metadata cannot be retrieved.</span>
 <span class="sd">        ValueError: If ``input_db`` is not an Ensembl type.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">pybiomart</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dataset</span>  <span class="c1"># type: ignore</span>
     <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">raise_missing_dependency</span><span class="p">(</span><span class="s2">&quot;pybiomart&quot;</span><span class="p">,</span> <span class="n">feature</span><span class="o">=</span><span class="s2">&quot;pybiomart ID mapping backend&quot;</span><span class="p">,</span> <span class="n">original_error</span><span class="o">=</span><span class="n">e</span><span class="p">)</span>
+        <span class="n">raise_missing_dependency</span><span class="p">(</span><span class="s2">"pybiomart"</span><span class="p">,</span> <span class="n">feature</span><span class="o">=</span><span class="s2">"pybiomart ID mapping backend"</span><span class="p">,</span> <span class="n">original_error</span><span class="o">=</span><span class="n">e</span><span class="p">)</span>
 
     <span class="n">inp</span> <span class="o">=</span> <span class="n">canonical_db</span><span class="p">(</span><span class="n">input_db</span><span class="p">)</span>
     <span class="n">outp</span> <span class="o">=</span> <span class="n">canonical_db</span><span class="p">(</span><span class="n">output_db</span><span class="p">)</span>
@@ -481,18 +483,18 @@
     <span class="c1"># It can still *return* HGNC/UniProt/etc. as attributes, but input_db</span>
     <span class="c1"># must be one of the Ensembl IDs.</span>
     <span class="k">if</span> <span class="n">inp</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_ENSEMBL_INPUT_DB</span><span class="p">:</span>
-        <span class="n">allowed_str</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">_ENSEMBL_INPUT_DB</span><span class="p">))</span>
+        <span class="n">allowed_str</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">_ENSEMBL_INPUT_DB</span><span class="p">))</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;pybiomart input_db must be one of </span><span class="se">{{</span><span class="si">{</span><span class="n">allowed_str</span><span class="si">}</span><span class="se">}}</span><span class="s2">, got </span><span class="si">{</span><span class="n">inp</span><span class="si">!r}</span><span class="s2">. &quot;</span>
-            <span class="s2">&quot;BioMart cannot filter by HGNC/UniProt directly; keep them as output_db &quot;</span>
-            <span class="s2">&quot;or use method=&#39;mygene&#39;/&#39;gprofiler&#39; for those inputs.&quot;</span>
+            <span class="sa">f</span><span class="s2">"pybiomart input_db must be one of </span><span class="se">{{</span><span class="si">{</span><span class="n">allowed_str</span><span class="si">}</span><span class="se">}}</span><span class="s2">, got </span><span class="si">{</span><span class="n">inp</span><span class="si">!r}</span><span class="s2">. "</span>
+            <span class="s2">"BioMart cannot filter by HGNC/UniProt directly; keep them as output_db "</span>
+            <span class="s2">"or use method='mygene'/'gprofiler' for those inputs."</span>
         <span class="p">)</span>
 
     <span class="n">clean_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">strip_version</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">if</span> <span class="n">strip_versions</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ids</span><span class="p">]</span>
     <span class="n">uniq_ids</span> <span class="o">=</span> <span class="n">_unique_not_null</span><span class="p">(</span><span class="n">clean_ids</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">uniq_ids</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">_ensure_all_inputs</span><span class="p">(</span><span class="n">_empty_result</span><span class="p">(),</span> <span class="n">clean_ids</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">,</span> <span class="s2">&quot;pybiomart&quot;</span><span class="p">,</span> <span class="n">release_used</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_ensure_all_inputs</span><span class="p">(</span><span class="n">_empty_result</span><span class="p">(),</span> <span class="n">clean_ids</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">,</span> <span class="s2">"pybiomart"</span><span class="p">,</span> <span class="n">release_used</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 
     <span class="c1"># Resolve Ensembl archive host solely from `release` (if provided).</span>
     <span class="n">raw_host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
@@ -505,12 +507,12 @@
             <span class="n">raw_host</span> <span class="o">=</span> <span class="n">resolved_release_host</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                <span class="s2">&quot;pybiomart: no known archive host for Ensembl release </span><span class="si">%r</span><span class="s2">; falling back to www.ensembl.org&quot;</span><span class="p">,</span>
+                <span class="s2">"pybiomart: no known archive host for Ensembl release </span><span class="si">%r</span><span class="s2">; falling back to www.ensembl.org"</span><span class="p">,</span>
                 <span class="n">release</span><span class="p">,</span>
             <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">raw_host</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">raw_host</span> <span class="o">=</span> <span class="s2">&quot;http://www.ensembl.org&quot;</span>
+        <span class="n">raw_host</span> <span class="o">=</span> <span class="s2">"http://www.ensembl.org"</span>
 
     <span class="n">host</span> <span class="o">=</span> <span class="n">_normalize_biomart_host</span><span class="p">(</span><span class="n">raw_host</span><span class="p">)</span>
 
@@ -520,7 +522,7 @@
         <span class="n">ds</span> <span class="o">=</span> <span class="n">Dataset</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">dataset_name</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;pybiomart: failed to connect to Ensembl BioMart &quot;</span> <span class="sa">f</span><span class="s2">&quot;(dataset=</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">!r}</span><span class="s2">, host=</span><span class="si">{</span><span class="n">host</span><span class="si">!r}</span><span class="s2">): </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">"pybiomart: failed to connect to Ensembl BioMart "</span> <span class="sa">f</span><span class="s2">"(dataset=</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">!r}</span><span class="s2">, host=</span><span class="si">{</span><span class="n">host</span><span class="si">!r}</span><span class="s2">): </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
 
     <span class="c1"># Discover attributes and filters that actually exist for this dataset</span>
@@ -528,9 +530,9 @@
     <span class="n">filter_names</span> <span class="o">=</span> <span class="n">_bm_list_filter_names</span><span class="p">(</span><span class="n">ds</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">attr_names</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;pybiomart: could not retrieve attributes for dataset </span><span class="si">{</span><span class="n">dataset_name</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"pybiomart: could not retrieve attributes for dataset </span><span class="si">{</span><span class="n">dataset_name</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">filter_names</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;pybiomart: could not retrieve filters for dataset </span><span class="si">{</span><span class="n">dataset_name</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"pybiomart: could not retrieve filters for dataset </span><span class="si">{</span><span class="n">dataset_name</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
 
     <span class="c1"># Choose valid attribute + filter names for the requested mapping</span>
     <span class="n">in_attr</span> <span class="o">=</span> <span class="n">_bm_pick_attribute</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="n">attr_names</span><span class="p">)</span>
@@ -538,7 +540,7 @@
     <span class="n">filter_name</span> <span class="o">=</span> <span class="n">_bm_pick_filter</span><span class="p">(</span><span class="n">inp</span><span class="p">,</span> <span class="n">in_attr</span><span class="p">,</span> <span class="n">filter_names</span><span class="p">)</span>
 
     <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-        <span class="s2">&quot;pybiomart: using dataset=</span><span class="si">%r</span><span class="s2"> host=</span><span class="si">%r</span><span class="s2"> in_attr=</span><span class="si">%r</span><span class="s2"> out_attr=</span><span class="si">%r</span><span class="s2"> filter=</span><span class="si">%r</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="s2">"pybiomart: using dataset=</span><span class="si">%r</span><span class="s2"> host=</span><span class="si">%r</span><span class="s2"> in_attr=</span><span class="si">%r</span><span class="s2"> out_attr=</span><span class="si">%r</span><span class="s2"> filter=</span><span class="si">%r</span><span class="s2">"</span><span class="p">,</span>
         <span class="n">dataset_name</span><span class="p">,</span>
         <span class="n">host</span><span class="p">,</span>
         <span class="n">in_attr</span><span class="p">,</span>
@@ -550,15 +552,15 @@
     <span class="n">n_chunks</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">uniq_ids</span><span class="p">)</span> <span class="o">/</span> <span class="n">chunk_size</span><span class="p">)</span>
     <span class="k">with</span> <span class="n">tqdm</span><span class="p">(</span>
         <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">uniq_ids</span><span class="p">),</span>
-        <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;pybiomart&quot;</span><span class="p">,</span>
+        <span class="n">desc</span><span class="o">=</span><span class="s2">"pybiomart"</span><span class="p">,</span>
         <span class="n">mininterval</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
         <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">show_progress</span><span class="p">,</span>
         <span class="n">ncols</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
-        <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;ids&quot;</span><span class="p">,</span>
+        <span class="n">unit</span><span class="o">=</span><span class="s2">"ids"</span><span class="p">,</span>
     <span class="p">)</span> <span class="k">as</span> <span class="n">progress</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">_chunker</span><span class="p">(</span><span class="n">uniq_ids</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">),</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                <span class="s2">&quot;pybiomart: querying chunk </span><span class="si">%d</span><span class="s2">/</span><span class="si">%d</span><span class="s2"> (n=</span><span class="si">%d</span><span class="s2">)&quot;</span><span class="p">,</span>
+                <span class="s2">"pybiomart: querying chunk </span><span class="si">%d</span><span class="s2">/</span><span class="si">%d</span><span class="s2"> (n=</span><span class="si">%d</span><span class="s2">)"</span><span class="p">,</span>
                 <span class="n">i</span><span class="p">,</span>
                 <span class="n">n_chunks</span><span class="p">,</span>
                 <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">),</span>
@@ -575,20 +577,20 @@
                     <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                         <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
                             <span class="p">{</span>
-                                <span class="s2">&quot;input_id&quot;</span><span class="p">:</span> <span class="n">chunk</span><span class="p">,</span>
-                                <span class="s2">&quot;output_id&quot;</span><span class="p">:</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">),</span>
+                                <span class="s2">"input_id"</span><span class="p">:</span> <span class="n">chunk</span><span class="p">,</span>
+                                <span class="s2">"output_id"</span><span class="p">:</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">),</span>
                             <span class="p">}</span>
                         <span class="p">)</span>
                     <span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="n">in_attr</span><span class="p">:</span> <span class="s2">&quot;input_id&quot;</span><span class="p">,</span> <span class="n">out_attr</span><span class="p">:</span> <span class="s2">&quot;output_id&quot;</span><span class="p">})</span>
-                    <span class="n">keep_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;input_id&quot;</span><span class="p">,</span> <span class="s2">&quot;output_id&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+                    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="n">in_attr</span><span class="p">:</span> <span class="s2">"input_id"</span><span class="p">,</span> <span class="n">out_attr</span><span class="p">:</span> <span class="s2">"output_id"</span><span class="p">})</span>
+                    <span class="n">keep_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"input_id"</span><span class="p">,</span> <span class="s2">"output_id"</span><span class="p">)</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="n">keep_cols</span><span class="p">:</span>
                         <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                             <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
                                 <span class="p">{</span>
-                                    <span class="s2">&quot;input_id&quot;</span><span class="p">:</span> <span class="n">chunk</span><span class="p">,</span>
-                                    <span class="s2">&quot;output_id&quot;</span><span class="p">:</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">),</span>
+                                    <span class="s2">"input_id"</span><span class="p">:</span> <span class="n">chunk</span><span class="p">,</span>
+                                    <span class="s2">"output_id"</span><span class="p">:</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">),</span>
                                 <span class="p">}</span>
                             <span class="p">)</span>
                         <span class="p">)</span>
@@ -596,14 +598,14 @@
                         <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">keep_cols</span><span class="p">]</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">())</span>
 
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;pybiomart chunk failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-                <span class="n">meta</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"pybiomart chunk failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="n">meta</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}</span>
                 <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                     <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
                         <span class="p">{</span>
-                            <span class="s2">&quot;input_id&quot;</span><span class="p">:</span> <span class="n">chunk</span><span class="p">,</span>
-                            <span class="s2">&quot;output_id&quot;</span><span class="p">:</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">),</span>
-                            <span class="s2">&quot;metadata_json&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">_json</span><span class="p">(</span><span class="n">meta</span><span class="p">)]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">),</span>
+                            <span class="s2">"input_id"</span><span class="p">:</span> <span class="n">chunk</span><span class="p">,</span>
+                            <span class="s2">"output_id"</span><span class="p">:</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">),</span>
+                            <span class="s2">"metadata_json"</span><span class="p">:</span> <span class="p">[</span><span class="n">_json</span><span class="p">(</span><span class="n">meta</span><span class="p">)]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">),</span>
                         <span class="p">}</span>
                     <span class="p">)</span>
                 <span class="p">)</span>
@@ -612,30 +614,30 @@
             <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">pause</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">frames</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">_ensure_all_inputs</span><span class="p">(</span><span class="n">_empty_result</span><span class="p">(),</span> <span class="n">clean_ids</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">,</span> <span class="s2">&quot;pybiomart&quot;</span><span class="p">,</span> <span class="n">release_used</span><span class="o">=</span><span class="n">host</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_ensure_all_inputs</span><span class="p">(</span><span class="n">_empty_result</span><span class="p">(),</span> <span class="n">clean_ids</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">,</span> <span class="s2">"pybiomart"</span><span class="p">,</span> <span class="n">release_used</span><span class="o">=</span><span class="n">host</span><span class="p">)</span>
 
     <span class="n">out</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;input_db&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">inp</span>
-    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;output_db&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">outp</span>
-    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;method&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;pybiomart&quot;</span>
-    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;release_used&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">host</span>
-    <span class="k">if</span> <span class="s2">&quot;metadata_json&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">out</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;metadata_json&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_json</span><span class="p">({})</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">"input_db"</span><span class="p">]</span> <span class="o">=</span> <span class="n">inp</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">"output_db"</span><span class="p">]</span> <span class="o">=</span> <span class="n">outp</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">"method"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"pybiomart"</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">"release_used"</span><span class="p">]</span> <span class="o">=</span> <span class="n">host</span>
+    <span class="k">if</span> <span class="s2">"metadata_json"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">out</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"metadata_json"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_json</span><span class="p">({})</span>
 
-    <span class="n">out</span> <span class="o">=</span> <span class="n">_ensure_all_inputs</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">clean_ids</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">,</span> <span class="s2">&quot;pybiomart&quot;</span><span class="p">,</span> <span class="n">release_used</span><span class="o">=</span><span class="n">host</span><span class="p">)</span>
-    <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">([</span><span class="s2">&quot;input_id&quot;</span><span class="p">,</span> <span class="s2">&quot;output_id&quot;</span><span class="p">,</span> <span class="s2">&quot;input_db&quot;</span><span class="p">,</span> <span class="s2">&quot;output_db&quot;</span><span class="p">,</span> <span class="s2">&quot;method&quot;</span><span class="p">,</span> <span class="s2">&quot;release_used&quot;</span><span class="p">])</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">_ensure_all_inputs</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">clean_ids</span><span class="p">,</span> <span class="n">inp</span><span class="p">,</span> <span class="n">outp</span><span class="p">,</span> <span class="s2">"pybiomart"</span><span class="p">,</span> <span class="n">release_used</span><span class="o">=</span><span class="n">host</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">([</span><span class="s2">"input_id"</span><span class="p">,</span> <span class="s2">"output_id"</span><span class="p">,</span> <span class="s2">"input_db"</span><span class="p">,</span> <span class="s2">"output_db"</span><span class="p">,</span> <span class="s2">"method"</span><span class="p">,</span> <span class="s2">"release_used"</span><span class="p">])</span>
 
     <span class="k">return</span> <span class="n">out</span><span class="p">[</span>
         <span class="p">[</span>
-            <span class="s2">&quot;input_id&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;input_db&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;mapping&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;output_id&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;output_db&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;method&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;release_used&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;metadata_json&quot;</span><span class="p">,</span>
+            <span class="s2">"input_id"</span><span class="p">,</span>
+            <span class="s2">"input_db"</span><span class="p">,</span>
+            <span class="s2">"mapping"</span><span class="p">,</span>
+            <span class="s2">"output_id"</span><span class="p">,</span>
+            <span class="s2">"output_db"</span><span class="p">,</span>
+            <span class="s2">"method"</span><span class="p">,</span>
+            <span class="s2">"release_used"</span><span class="p">,</span>
+            <span class="s2">"metadata_json"</span><span class="p">,</span>
         <span class="p">]</span>
     <span class="p">]</span></div>
 

@@ -8,7 +8,7 @@
   <title>idtrack._verify_organism &mdash; idtrack 0.0.5 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
-      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
       <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
       <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
 
@@ -18,7 +18,7 @@
       <script src="../../_static/documentation_options.js?v=282f96c0"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
-      <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -66,6 +66,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../usage.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changes.html">Changes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
@@ -102,6 +103,8 @@
 <span class="c1"># k.inecik@gmail.com</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
@@ -112,18 +115,22 @@
 <div class="viewcode-block" id="VerifyOrganism">
 <a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">VerifyOrganism</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve a tentative organism identifier to the formal Ensembl species name and its latest supported release.</span>
+<span class="w">    </span><span class="sd">"""Resolve a tentative organism identifier to the formal Ensembl species name and its latest supported release.</span>
 
 <span class="sd">    The class shields end-users from the quirks of the Ensembl REST payload by converting any synonym—common name,</span>
-<span class="sd">    scientific name, assembly accession, or NCBI taxon ID—into the canonical Ensembl species identifier</span>
-<span class="sd">    (e.g. ``homo_sapiens``) and the newest Ensembl release that still hosts that species.  Because the mapping is</span>
+<span class="sd">    scientific name, assembly name or accession, or NCBI taxon ID—into the canonical Ensembl species identifier</span>
+<span class="sd">    (e.g. ``homo_sapiens``) and the newest Ensembl release that still hosts that species. Matching is</span>
+<span class="sd">    case-insensitive on both sides. A query equal to a formal name (also written with spaces, e.g.</span>
+<span class="sd">    ``"Macaca mulatta"``) or to a taxon ID is never ambiguous: a taxon ID that Ensembl also gives to strains or</span>
+<span class="sd">    breeds resolves to the species-level entry (``9823`` → ``sus_scrofa``). Any other synonym that several species</span>
+<span class="sd">    share (``"pig"`` is the common name of every pig breed) raises an error that lists the candidates.  Because the mapping is</span>
 <span class="sd">    refreshed on every instantiation through a live call to the Ensembl REST API, downstream workflows in *idtrack*</span>
 <span class="sd">    always rely on up-to-date metadata rather than a possibly stale local cache.</span>
 
 <span class="sd">    After construction the instance offers two high-level helpers::</span>
 
-<span class="sd">        &gt;&gt;&gt; resolver = VerifyOrganism(&quot;human&quot;)</span>
-<span class="sd">        &gt;&gt;&gt; resolver.get_formal_name()      # &#39;homo_sapiens&#39;</span>
+<span class="sd">        &gt;&gt;&gt; resolver = VerifyOrganism("human")</span>
+<span class="sd">        &gt;&gt;&gt; resolver.get_formal_name()      # 'homo_sapiens'</span>
 <span class="sd">        &gt;&gt;&gt; resolver.get_latest_release()   # 117  (example)</span>
 
 <span class="sd">    Both helpers are backed by two public dataframes created during initialisation:</span>
@@ -132,10 +139,10 @@
 <span class="sd">      formal name and flags synonyms that are ambiguous across species.</span>
 <span class="sd">    * :py:attr:`~VerifyOrganism.ensembl_release_dataframe` — one-row table (indexed by *formal_name*) holding the latest</span>
 <span class="sd">      Ensembl release number.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">organism_query</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialise the resolver and pre-fetch synonym/release tables from the Ensembl REST API.</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">organism_query</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]):</span>
+<span class="w">        </span><span class="sd">"""Initialise the resolver and pre-fetch synonym/release tables from the Ensembl REST API.</span>
 
 <span class="sd">        The constructor immediately invokes :py:meth:`~VerifyOrganism.fetch_organism_and_latest_release`, downloading</span>
 <span class="sd">        the complete species list from ``{DB.rest_server_api}{DB.rest_server_ext}`` so that all subsequent look-ups run</span>
@@ -143,15 +150,16 @@
 <span class="sd">        can handle network or data-quality issues explicitly.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            organism_query (str): Organism identifier supplied by the user—common name (``&quot;human&quot;``),</span>
-<span class="sd">                shorthand (``&quot;hsapiens&quot;``), taxon ID (``9606``), or fully qualified Ensembl species name</span>
-<span class="sd">                (``&quot;homo_sapiens&quot;``).  The value is converted to lower case before processing.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">            organism_query (str | int): Organism identifier supplied by the user—common name (``"human"``),</span>
+<span class="sd">                shorthand (``"hsapiens"``), taxon ID (``9606`` or ``"9606"``), assembly name (``"Mmul_10"``), or</span>
+<span class="sd">                Ensembl species name (``"homo_sapiens"``, ``"Macaca mulatta"``). The value is converted to a</span>
+<span class="sd">                stripped, lower-case string before processing.</span>
+<span class="sd">        """</span>
         <span class="c1"># Instance attributes</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;verify_organism&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"verify_organism"</span><span class="p">)</span>
 
         <span class="c1"># Fetch the latest information from the Ensembl resources regarding</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">organism_query</span> <span class="o">=</span> <span class="n">organism_query</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">organism_query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">organism_query</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name_synonyms_dataframe</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release_dataframe</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fetch_organism_and_latest_release</span><span class="p">(</span>
             <span class="n">connect_timeout</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_timeout</span><span class="p">,</span> <span class="n">read_timeout</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">reading_timeout</span>
         <span class="p">)</span>
@@ -159,7 +167,7 @@
 <div class="viewcode-block" id="VerifyOrganism.get_latest_release">
 <a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism.get_latest_release">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_latest_release</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the latest Ensembl release number associated with the queried organism.</span>
+<span class="w">        </span><span class="sd">"""Return the latest Ensembl release number associated with the queried organism.</span>
 
 <span class="sd">        This helper calls :py:meth:`~VerifyOrganism.get_formal_name` to resolve the user-supplied organism query</span>
 <span class="sd">        to the canonical Ensembl species name, then looks up that key in the dataframe prepared at instantiation</span>
@@ -169,42 +177,68 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            int: The most recent Ensembl release available for the resolved organism.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">formal_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_formal_name</span><span class="p">()</span>
-        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release_dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">formal_name</span><span class="p">][</span><span class="s2">&quot;ensembl_release&quot;</span><span class="p">])</span></div>
+        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release_dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">formal_name</span><span class="p">][</span><span class="s2">"ensembl_release"</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="VerifyOrganism.normalize">
+<a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism.normalize">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the matching key of a query or synonym: ``str(value)``, stripped and lower-cased."""</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="VerifyOrganism.get_formal_name">
 <a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism.get_formal_name">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_formal_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve the user&#39;s organism query to the canonical Ensembl species name.</span>
+<span class="w">        </span><span class="sd">"""Resolve the user's organism query to the canonical Ensembl species name.</span>
 
-<span class="sd">        The method performs an exact match against the *synonym* column of</span>
-<span class="sd">        :py:data:`~VerifyOrganism.name_synonyms_dataframe`, which was pre-populated from the Ensembl REST *species*</span>
-<span class="sd">        endpoint.  Synonyms include scientific names, common names, NCBI TaxIDs, assembly accessions and other</span>
-<span class="sd">        aliases, allowing flexible user input while guaranteeing that only one formally recognised organism is</span>
-<span class="sd">        selected before any expensive data retrieval begins.</span>
+<span class="sd">        Resolution, in this order (all comparisons on normalised, lower-case strings):</span>
+
+<span class="sd">        1. the query is a formal name (``"homo_sapiens"``), also with spaces or hyphens for underscores</span>
+<span class="sd">           (``"Macaca mulatta"``);</span>
+<span class="sd">        2. the query is a taxon ID: the organism with that ID, or—when Ensembl gives the ID to several strains or</span>
+<span class="sd">           breeds—the species-level entry (the formal name of two words, ``sus_scrofa`` for ``9823``);</span>
+<span class="sd">        3. any other synonym of :py:data:`~VerifyOrganism.name_synonyms_dataframe` (common names, display names,</span>
+<span class="sd">           assembly names and accessions, aliases), which must belong to exactly one organism.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            str: The canonical Ensembl species identifier (always lower-case, e.g. ``&quot;homo_sapiens&quot;``).</span>
+<span class="sd">            str: The canonical Ensembl species identifier (always lower-case, e.g. ``"homo_sapiens"``).</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            KeyError: If the query string does not match any synonym in the dataframe.</span>
-<span class="sd">            ValueError: If the query matches more than one formal name, indicating an ambiguous synonym.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">the_search</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_synonyms_dataframe</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">name_synonyms_dataframe</span><span class="p">[</span><span class="s2">&quot;synonym&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism_query</span><span class="p">]</span>
-        <span class="n">cm</span> <span class="o">=</span> <span class="s2">&quot;Please inspect &#39;name_synonyms_dataframe&#39; variable of this instance for troubleshooting.&quot;</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">the_search</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The query (`</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism_query</span><span class="si">}</span><span class="s2">`) is not defined in the Ensembl database. </span><span class="si">{</span><span class="n">cm</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">the_search</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;There are multiple entries for query (`</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism_query</span><span class="si">}</span><span class="s2">`) &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot; in Ensembl database. The query is hence ambiguous. </span><span class="si">{</span><span class="n">cm</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_synonyms_dataframe</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">name_synonyms_dataframe</span><span class="p">[</span><span class="s2">&quot;synonym&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism_query</span><span class="p">][</span>
-                <span class="s2">&quot;formal_name&quot;</span>
-            <span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+<span class="sd">            KeyError: If the query does not match any synonym.</span>
+<span class="sd">            ValueError: If the query matches more than one organism (an ambiguous synonym); the message lists the</span>
+<span class="sd">                candidates.</span>
+<span class="sd">        """</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism_query</span>
+        <span class="n">cm</span> <span class="o">=</span> <span class="s2">"Please inspect 'name_synonyms_dataframe' variable of this instance for troubleshooting."</span>
+        <span class="n">formal_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release_dataframe</span><span class="o">.</span><span class="n">index</span>
+        <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[\s\-]+"</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">,</span> <span class="n">query</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="n">formal_names</span><span class="p">:</span>
+                <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_synonyms_dataframe</span>
+        <span class="n">matches</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">"synonym"</span><span class="p">]</span> <span class="o">==</span> <span class="n">query</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">matches</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The query (`</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">`) is not defined in the Ensembl database. </span><span class="si">{</span><span class="n">cm</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+        <span class="n">candidates</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">matches</span><span class="p">[</span><span class="s2">"formal_name"</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">candidates</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">candidates</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">query</span><span class="o">.</span><span class="n">isdecimal</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">matches</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"taxon_id"</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="n">taxon_candidates</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">matches</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">matches</span><span class="p">[</span><span class="s2">"kind"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"taxon_id"</span><span class="p">,</span> <span class="s2">"formal_name"</span><span class="p">]))</span>
+            <span class="n">species_level</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">taxon_candidates</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"_"</span><span class="p">))</span> <span class="o">==</span> <span class="mi">2</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">species_level</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">species_level</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="n">shown</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">candidates</span><span class="p">[:</span><span class="mi">25</span><span class="p">])</span> <span class="o">+</span> <span class="p">(</span><span class="sa">f</span><span class="s2">", ... (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">candidates</span><span class="p">)</span><span class="si">}</span><span class="s2"> in total)"</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">candidates</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">25</span> <span class="k">else</span> <span class="s2">""</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"There are multiple entries for query (`</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">`) in Ensembl database. The query is hence ambiguous. "</span>
+            <span class="sa">f</span><span class="s2">"Candidates: </span><span class="si">{</span><span class="n">shown</span><span class="si">}</span><span class="s2">. Use the Ensembl species name (e.g. `</span><span class="si">{</span><span class="n">candidates</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">`) or the taxon ID instead."</span>
+        <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="VerifyOrganism.fetch_organism_and_latest_release">
@@ -212,13 +246,14 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">fetch_organism_and_latest_release</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">connect_timeout</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">read_timeout</span><span class="p">:</span> <span class="nb">int</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Query the Ensembl REST API once and build lookup tables for species synonyms and latest releases.</span>
+<span class="w">        </span><span class="sd">"""Query the Ensembl REST API once and build lookup tables for species synonyms and latest releases.</span>
 
 <span class="sd">        This internal utility performs a single call to ``/info/species`` on the Ensembl REST server, parses the</span>
 <span class="sd">        returned JSON, and constructs two pandas dataframes:</span>
 
-<span class="sd">        * ``name_synonyms_df`` - one row per synonym, with columns ``synonym``, ``formal_name`` and ``ambiguous``</span>
-<span class="sd">            (``True`` if the synonym belongs to more than one species).</span>
+<span class="sd">        * ``name_synonyms_df`` - one row per (normalised synonym, species), with columns ``synonym``,</span>
+<span class="sd">            ``formal_name``, ``kind`` (``"formal_name"``, ``"taxon_id"`` or ``"other"``) and ``ambiguous`` (``True``</span>
+<span class="sd">            if the synonym belongs to more than one species).</span>
 <span class="sd">        * ``latest_ensembl_releases_df`` - indexed by ``formal_name`` and holding a single ``ensembl_release``</span>
 <span class="sd">            integer column.</span>
 
@@ -236,26 +271,26 @@
 
 <span class="sd">        Raises:</span>
 <span class="sd">            TimeoutError: If the combined *(connect_timeout, read_timeout)* limit is exceeded.</span>
-<span class="sd">            ValueError: If the JSON schema differs from the expected ``{&quot;species&quot;: [...]}`` structure or required</span>
+<span class="sd">            ValueError: If the JSON schema differs from the expected ``{"species": [...]}`` structure or required</span>
 <span class="sd">                keys are missing.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Ensembl Rest API query to get the organism names and associated releases.&quot;</span><span class="p">)</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Ensembl Rest API query to get the organism names and associated releases."</span><span class="p">)</span>
 
         <span class="k">try</span><span class="p">:</span>
             <span class="k">with</span> <span class="n">requests</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>  <span class="c1"># Create a session</span>
                 <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
                     <span class="n">DB</span><span class="o">.</span><span class="n">rest_server_api</span> <span class="o">+</span> <span class="n">DB</span><span class="o">.</span><span class="n">rest_server_ext</span><span class="p">,</span>
-                    <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Content-Type&quot;</span><span class="p">:</span> <span class="s2">&quot;application/json&quot;</span><span class="p">},</span>
+                    <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">"Content-Type"</span><span class="p">:</span> <span class="s2">"application/json"</span><span class="p">},</span>
                     <span class="n">timeout</span><span class="o">=</span><span class="p">(</span><span class="n">connect_timeout</span><span class="p">,</span> <span class="n">read_timeout</span><span class="p">),</span>
                 <span class="p">)</span> <span class="k">as</span> <span class="n">r</span><span class="p">:</span>  <span class="c1"># Connect to the REST API.</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="n">r</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
                         <span class="c1"># If everything is not fine regarding the response, raise an error.</span>
                         <span class="n">r</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
-                    <span class="n">decoded_results</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s2">&quot;species&quot;</span><span class="p">]</span>  <span class="c1"># Otherwise decode the json into a dictionary.</span>
+                    <span class="n">decoded_results</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s2">"species"</span><span class="p">]</span>  <span class="c1"># Otherwise decode the json into a dictionary.</span>
 
         <span class="k">except</span> <span class="p">(</span><span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ReadTimeout</span><span class="p">,</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ConnectTimeout</span><span class="p">)</span> <span class="k">as</span> <span class="n">esc</span><span class="p">:</span>
             <span class="c1"># Raise an exception if it takes too long to get the data from Ensembl REST API.</span>
-            <span class="k">raise</span> <span class="ne">TimeoutError</span><span class="p">(</span><span class="s2">&quot;Internet connection is slow or server does not respond!&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">esc</span>
+            <span class="k">raise</span> <span class="ne">TimeoutError</span><span class="p">(</span><span class="s2">"Internet connection is slow or server does not respond!"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">esc</span>
 
         <span class="c1"># Process the resulting response.</span>
         <span class="n">name_synonyms</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[]</span>
@@ -263,46 +298,47 @@
 
         <span class="k">for</span> <span class="n">organism</span> <span class="ow">in</span> <span class="n">decoded_results</span><span class="p">:</span>
             <span class="c1"># Make sure the organisms are as they should be.</span>
-            <span class="k">if</span> <span class="s2">&quot;core&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">organism</span><span class="p">[</span><span class="s2">&quot;groups&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="s2">"core"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">organism</span><span class="p">[</span><span class="s2">"groups"</span><span class="p">]:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;`</span><span class="si">{</span><span class="n">organism</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">` does not contain &#39;core&#39; group. &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;This causes many errors when downloading databases in this package.&quot;</span>
+                    <span class="sa">f</span><span class="s2">"`</span><span class="si">{</span><span class="n">organism</span><span class="p">[</span><span class="s1">'name'</span><span class="p">]</span><span class="si">}</span><span class="s2">` does not contain 'core' group. "</span>
+                    <span class="sa">f</span><span class="s2">"This causes many errors when downloading databases in this package."</span>
                 <span class="p">)</span>
-                <span class="c1"># Note that &#39;core&#39; is used in the MySQL or FTP queries by the idtrack package.</span>
+                <span class="c1"># Note that 'core' is used in the MySQL or FTP queries by the idtrack package.</span>
 
             <span class="c1"># Make sure there is one and only one item for a given organism.</span>
-            <span class="k">if</span> <span class="n">organism</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">latest_ensembl_releases</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;`</span><span class="si">{</span><span class="n">organism</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">` has defined more than one latest release.&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">organism</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span> <span class="ow">in</span> <span class="n">latest_ensembl_releases</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"`</span><span class="si">{</span><span class="n">organism</span><span class="p">[</span><span class="s1">'name'</span><span class="p">]</span><span class="si">}</span><span class="s2">` has defined more than one latest release."</span><span class="p">)</span>
 
-            <span class="c1"># In very early releases, there are floating releases like &quot;18.2&quot;. This package does not support those.</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">float</span><span class="p">(</span><span class="n">organism</span><span class="p">[</span><span class="s2">&quot;release&quot;</span><span class="p">])</span> <span class="o">==</span> <span class="nb">int</span><span class="p">(</span><span class="n">organism</span><span class="p">[</span><span class="s2">&quot;release&quot;</span><span class="p">]):</span>
+            <span class="c1"># In very early releases, there are floating releases like "18.2". This package does not support those.</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">float</span><span class="p">(</span><span class="n">organism</span><span class="p">[</span><span class="s2">"release"</span><span class="p">])</span> <span class="o">==</span> <span class="nb">int</span><span class="p">(</span><span class="n">organism</span><span class="p">[</span><span class="s2">"release"</span><span class="p">]):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;Ensembl release is not in integer format: </span><span class="si">{</span><span class="n">organism</span><span class="p">[</span><span class="s1">&#39;release&#39;</span><span class="p">]</span><span class="si">!r}</span><span class="s2"> &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;(organism: </span><span class="si">{</span><span class="n">organism</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="si">!r}</span><span class="s2">)&quot;</span>
+                    <span class="sa">f</span><span class="s2">"Ensembl release is not in integer format: </span><span class="si">{</span><span class="n">organism</span><span class="p">[</span><span class="s1">'release'</span><span class="p">]</span><span class="si">!r}</span><span class="s2"> "</span>
+                    <span class="sa">f</span><span class="s2">"(organism: </span><span class="si">{</span><span class="n">organism</span><span class="p">[</span><span class="s1">'name'</span><span class="p">]</span><span class="si">!r}</span><span class="s2">)"</span>
                 <span class="p">)</span>
 
             <span class="c1"># Save the associated the latest release</span>
-            <span class="n">latest_ensembl_releases</span><span class="p">[</span><span class="n">organism</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">organism</span><span class="p">[</span><span class="s2">&quot;release&quot;</span><span class="p">])</span>
+            <span class="n">latest_ensembl_releases</span><span class="p">[</span><span class="n">organism</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">organism</span><span class="p">[</span><span class="s2">"release"</span><span class="p">])</span>
 
-            <span class="c1"># Fetch all the organism names associated with the organism.</span>
-            <span class="n">synonyms</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
-                <span class="nb">set</span><span class="p">(</span>
-                    <span class="p">[</span><span class="n">organism</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;common_name&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;taxon_id&quot;</span><span class="p">,</span> <span class="s2">&quot;accession&quot;</span><span class="p">,</span> <span class="s2">&quot;assembly&quot;</span><span class="p">,</span> <span class="s2">&quot;display_name&quot;</span><span class="p">]]</span>
-                    <span class="o">+</span> <span class="n">organism</span><span class="p">[</span><span class="s2">&quot;aliases&quot;</span><span class="p">]</span>
-                <span class="p">)</span>
-            <span class="p">)</span>
-            <span class="c1"># For all the names of a given organism: if it is None, ignore.</span>
-            <span class="n">organism_name_synonyms</span> <span class="o">=</span> <span class="p">[(</span><span class="n">i</span><span class="p">,</span> <span class="n">organism</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">synonyms</span> <span class="k">if</span> <span class="n">i</span><span class="p">]</span>
-            <span class="c1"># Also add the organism TaxID as integer.</span>
-            <span class="n">organism_name_synonyms</span> <span class="o">+=</span> <span class="p">[(</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">organism_name_synonyms</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">isdecimal</span><span class="p">()]</span>
-            <span class="n">name_synonyms</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">organism_name_synonyms</span><span class="p">)</span>
+            <span class="c1"># Fetch all the organism names associated with the organism; match on normalised strings.</span>
+            <span class="n">formal_name</span> <span class="o">=</span> <span class="n">organism</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+            <span class="n">kinds</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">"common_name"</span><span class="p">,</span> <span class="s2">"accession"</span><span class="p">,</span> <span class="s2">"assembly"</span><span class="p">,</span> <span class="s2">"display_name"</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">organism</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">field</span><span class="p">):</span>
+                    <span class="n">kinds</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">organism</span><span class="p">[</span><span class="n">field</span><span class="p">]),</span> <span class="s2">"other"</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">alias</span> <span class="ow">in</span> <span class="n">organism</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"aliases"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]:</span>
+                <span class="k">if</span> <span class="n">alias</span><span class="p">:</span>
+                    <span class="n">kinds</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">alias</span><span class="p">),</span> <span class="s2">"other"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">organism</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"taxon_id"</span><span class="p">):</span>
+                <span class="n">kinds</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">organism</span><span class="p">[</span><span class="s2">"taxon_id"</span><span class="p">])]</span> <span class="o">=</span> <span class="s2">"taxon_id"</span>
+            <span class="n">kinds</span><span class="p">[</span><span class="n">formal_name</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"formal_name"</span>
+            <span class="n">name_synonyms</span><span class="o">.</span><span class="n">extend</span><span class="p">((</span><span class="n">synonym</span><span class="p">,</span> <span class="n">formal_name</span><span class="p">,</span> <span class="n">kind</span><span class="p">)</span> <span class="k">for</span> <span class="n">synonym</span><span class="p">,</span> <span class="n">kind</span> <span class="ow">in</span> <span class="n">kinds</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
 
-        <span class="n">name_synonyms_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">name_synonyms</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;synonym&quot;</span><span class="p">,</span> <span class="s2">&quot;formal_name&quot;</span><span class="p">])</span>
-        <span class="c1">#  If it is associated with another organism, mark as &#39;ambiguous&#39;.</span>
-        <span class="n">name_synonyms_df</span><span class="p">[</span><span class="s2">&quot;ambiguous&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name_synonyms_df</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;synonym&quot;</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">name_synonyms_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">name_synonyms</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"synonym"</span><span class="p">,</span> <span class="s2">"formal_name"</span><span class="p">,</span> <span class="s2">"kind"</span><span class="p">])</span>
+        <span class="c1">#  If it is associated with another organism, mark as 'ambiguous'.</span>
+        <span class="n">name_synonyms_df</span><span class="p">[</span><span class="s2">"ambiguous"</span><span class="p">]</span> <span class="o">=</span> <span class="n">name_synonyms_df</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">"synonym"</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="c1"># Convert the result into data frame.</span>
         <span class="n">latest_ensembl_releases_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span>
-            <span class="n">latest_ensembl_releases</span><span class="p">,</span> <span class="n">orient</span><span class="o">=</span><span class="s2">&quot;index&quot;</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ensembl_release&quot;</span><span class="p">]</span>
+            <span class="n">latest_ensembl_releases</span><span class="p">,</span> <span class="n">orient</span><span class="o">=</span><span class="s2">"index"</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"ensembl_release"</span><span class="p">]</span>
         <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">name_synonyms_df</span><span class="p">,</span> <span class="n">latest_ensembl_releases_df</span></div>

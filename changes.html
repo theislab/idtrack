@@ -1,0 +1,203 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Changes &mdash; idtrack 0.0.5 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=6a604523" />
+      <link rel="stylesheet" type="text/css" href="_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="_static/tutorials.css?v=0e72a3a5" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=282f96c0"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="_static/design-tabs.js?v=fcb327ea"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Contributor Guide" href="contributing.html" />
+    <link rel="prev" title="External Mappers" href="reference/external_mappers.html" />  
+<!-- Google tag (gtag.js) -->
+<script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"
+></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-FYKLWNJBVK");
+</script>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            idtrack
+              <img src="_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">Reference</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Changes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#unreleased">Unreleased</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Changes</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/changes.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="changes">
+<h1>Changes<a class="headerlink" href="#changes" title="Link to this heading"></a></h1>
+<p>This page lists the changes that affect users, newest first. Version numbers follow <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>.</p>
+<section id="unreleased">
+<h2>Unreleased<a class="headerlink" href="#unreleased" title="Link to this heading"></a></h2>
+<p><strong>New organisms</strong></p>
+<ul class="simple">
+<li><p>Rhesus macaque (<code class="docutils literal notranslate"><span class="pre">macaca_mulatta</span></code>; assemblies Mmul_10, Mmul_8.0.1 and MMUL_1, keys <code class="docutils literal notranslate"><span class="pre">10</span></code>, <code class="docutils literal notranslate"><span class="pre">801</span></code> and <code class="docutils literal notranslate"><span class="pre">1</span></code>)
+and cynomolgus macaque (<code class="docutils literal notranslate"><span class="pre">macaca_fascicularis</span></code>; Macaca_fascicularis_6.0 and 5.0, keys <code class="docutils literal notranslate"><span class="pre">6</span></code> and <code class="docutils literal notranslate"><span class="pre">5</span></code>) are
+supported like human, mouse and pig. Ensembl names the MMUL_1 and Mmul_10 core databases alike
+(<code class="docutils literal notranslate"><span class="pre">macaca_mulatta_core_&lt;release&gt;_10</span></code>); MMUL_1 therefore has the key <code class="docutils literal notranslate"><span class="pre">1</span></code>. See the Supported Organisms table in
+<a class="reference internal" href="usage.html"><span class="doc">Quickstart</span></a>.</p></li>
+<li><p>Organisms are declared in one table, <code class="docutils literal notranslate"><span class="pre">DB.assembly_mysqlport_priority</span></code>; <code class="docutils literal notranslate"><span class="pre">DB.register_organism</span></code> adds or
+replaces one for the running session (see “Adding Organism Support” in <a class="reference internal" href="contributing.html"><span class="doc">Contributor Guide</span></a>).</p></li>
+<li><p>The shipped external-database files of human, mouse and pig now include Ensembl release 116.
+<code class="docutils literal notranslate"><span class="pre">ExternalDatabases.extend_modified_yaml</span></code> extends a file to new releases, and a graph build warns once about
+releases its file does not cover.</p></li>
+</ul>
+<p><strong>Access to Ensembl</strong></p>
+<ul class="simple">
+<li><p>New access modes, set with the environment variable <code class="docutils literal notranslate"><span class="pre">IDTRACK_ENSEMBL_ACCESS</span></code> or <code class="docutils literal notranslate"><span class="pre">DB.ensembl_access</span></code>:
+<code class="docutils literal notranslate"><span class="pre">auto</span></code> (default: MySQL where its ports answer, the HTTPS dumps otherwise) and <code class="docutils literal notranslate"><span class="pre">https</span></code> (MySQL is never
+contacted). Each MySQL port is probed once per process instead of before every table; a port whose connection
+fails is not tried again in that process. An invalid value raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> when a <code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code> is
+created. See <a class="reference internal" href="installation.html#ensembl-access"><span class="std std-ref">Network Access: MySQL or HTTPS</span></a>.</p></li>
+<li><p>Tables read from the HTTPS dumps are now decoded as MySQL loads them (escaped tabs, newlines and backslashes in
+fields), so such rows are no longer split or dropped.</p></li>
+</ul>
+<p><strong>Changed behaviour and removed attributes</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">DB.main_assembly</span></code> (a human-only default, <code class="docutils literal notranslate"><span class="pre">38</span></code>) is removed. Use the organism’s preferred assembly,
+<code class="docutils literal notranslate"><span class="pre">DB.assemblies_by_priority(organism)[0]</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures</span></code> no longer defaults to human:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">organism_name</span></code> is read from the graphs in the IDTrack local repository when not given; if they name no or
+several organisms, it must be passed.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">graph_last_ensembl_release</span></code> defaults to the newest local graph of the organism (else Ensembl’s latest
+release) instead of the fixed release 114, so conversions that relied on the default can differ.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">final_database</span></code> defaults to the organism’s first symbol database (<code class="docutils literal notranslate"><span class="pre">DB.symbol_databases</span></code>: HGNC Symbol for
+human, MGI Symbol for mouse, VGNC Symbol for pig and the macaques).</p></li>
+<li><p>Result caches are recomputed once: their file name now carries organism, final database, target release and
+graph release (<code class="docutils literal notranslate"><span class="pre">idtrack_result_&lt;project&gt;_&lt;dataset&gt;_&lt;organism&gt;_&lt;database&gt;_rel&lt;r&gt;_graph&lt;g&gt;.pickle</span></code>). The old
+name held none of these, so it could return a result made with another configuration.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">API.resolve_organism</span></code> / <code class="docutils literal notranslate"><span class="pre">VerifyOrganism</span></code> match case-insensitively and accept taxon IDs as integers or
+strings; a taxon ID shared by strains or breeds resolves to the species (<code class="docutils literal notranslate"><span class="pre">9823</span></code> → <code class="docutils literal notranslate"><span class="pre">sus_scrofa</span></code>). A common
+name that several Ensembl species share, such as <code class="docutils literal notranslate"><span class="pre">&quot;pig&quot;</span></code>, raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> that lists the candidates;
+use the species name or the taxon ID.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">VerifyOrganism.name_synonyms_dataframe</span></code> has a new <code class="docutils literal notranslate"><span class="pre">kind</span></code> column (<code class="docutils literal notranslate"><span class="pre">formal_name</span></code>, <code class="docutils literal notranslate"><span class="pre">taxon_id</span></code> or
+<code class="docutils literal notranslate"><span class="pre">other</span></code>); synonyms are stored as lower-case strings, and the separate integer rows for taxon IDs are gone.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Track</span></code> raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> for a graph whose organism is not in the organism table (previously the
+assemblies were ordered by their numeric code); register the organism first.</p></li>
+<li><p>Without an explicit assembly, <code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code> now picks the highest-priority assembly that has a release
+inside <code class="docutils literal notranslate"><span class="pre">ignore_before</span></code>/<code class="docutils literal notranslate"><span class="pre">ignore_after</span></code> (e.g. a mouse snapshot at release 100 uses GRCm38).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_available_databases</span></code> lists the core databases of the organism’s configured assemblies
+within their release ranges, the same in both access modes.</p></li>
+<li><p>Removed methods that only raised <code class="docutils literal notranslate"><span class="pre">NotImplementedError</span></code>: <code class="docutils literal notranslate"><span class="pre">GraphMaker.initialize_downloads</span></code>,
+<code class="docutils literal notranslate"><span class="pre">GraphMaker.update_graph_with_the_new_release</span></code>, <code class="docutils literal notranslate"><span class="pre">DatabaseManager.available_tables_mysql</span></code> and
+<code class="docutils literal notranslate"><span class="pre">DatabaseManager.get_release_date</span></code>.</p></li>
+<li><p>The notebooks under <code class="docutils literal notranslate"><span class="pre">reproducibility/experiments/prev/</span></code> are frozen history (they are not part of the
+experiment index in <code class="docutils literal notranslate"><span class="pre">reproducibility/experiments/README.md</span></code>) and are not updated; for example,
+<code class="docutils literal notranslate"><span class="pre">prev/initialization_test.ipynb</span></code> still uses <code class="docutils literal notranslate"><span class="pre">DB.main_assembly</span></code>.</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="reference/external_mappers.html" class="btn btn-neutral float-left" title="External Mappers" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="contributing.html" class="btn btn-neutral float-right" title="Contributor Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

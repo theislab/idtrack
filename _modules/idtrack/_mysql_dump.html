@@ -1,0 +1,394 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>idtrack._mysql_dump &mdash; idtrack 0.0.5 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=6a604523" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom_settings.css?v=04d1a194" />
+      <link rel="stylesheet" type="text/css" href="../../_static/tutorials.css?v=0e72a3a5" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=282f96c0"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="../../_static/design-tabs.js?v=fcb327ea"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />  
+<!-- Google tag (gtag.js) -->
+<script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-FYKLWNJBVK"
+></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-FYKLWNJBVK");
+</script>
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            idtrack
+              <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference.html">Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changes.html">Changes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributor Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../code_of_conduct.html">Contributor Covenant Code of Conduct</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">idtrack</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">idtrack._mysql_dump</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for idtrack._mysql_dump</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+
+<span class="c1"># Kemal Inecik</span>
+<span class="c1"># k.inecik@gmail.com</span>
+
+<span class="sa">r</span><span class="sd">"""Read Ensembl's MySQL table dumps (``&lt;table&gt;.txt.gz``) exactly as MySQL would load them.</span>
+
+<span class="sd">The dumps are written by ``SELECT ... INTO OUTFILE`` with the default ``FIELDS TERMINATED BY '\t' ESCAPED BY</span>
+<span class="sd">'\\' LINES TERMINATED BY '\n'``. In that format a backslash escapes the next character: a field that holds a tab</span>
+<span class="sd">or a newline is written as a backslash followed by the raw tab or newline, a backslash as ``\\``, NUL as</span>
+<span class="sd">``\0``, and SQL ``NULL`` as a field consisting of ``\N``. ``LOAD DATA`` also reads ``\b``, ``\n``, ``\r``,</span>
+<span class="sd">``\t`` and ``\Z`` as backspace, newline, carriage return, tab and Ctrl-Z. Any other escaped character stands for</span>
+<span class="sd">itself. Raw carriage returns are ordinary data (only ``\n`` ends a record).</span>
+
+<span class="sd">Reading such a file with a plain tab-separated parser splits a record at every escaped newline, keeps the escaping</span>
+<span class="sd">backslashes and treats a leading double quote as CSV quoting. :py:func:`read_mysql_dump` instead decodes each record</span>
+<span class="sd">the way ``LOAD DATA`` does and hands pandas an unambiguous CSV stream, so the frame matches what the MySQL server</span>
+<span class="sd">returns for the same table (``NULL`` becomes ``NaN``; pandas infers the column dtypes as it does for any text</span>
+<span class="sd">input). Records without escapes or quotes, the vast majority, pass through untouched.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">csv</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="c1"># MySQL `LOAD DATA` escape sequences; any other escaped character stands for itself.</span>
+<span class="n">_ESCAPES</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"0"</span><span class="p">:</span> <span class="s2">"</span><span class="se">\x00</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"b"</span><span class="p">:</span> <span class="s2">"</span><span class="se">\b</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"n"</span><span class="p">:</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"r"</span><span class="p">:</span> <span class="s2">"</span><span class="se">\r</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"t"</span><span class="p">:</span> <span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"Z"</span><span class="p">:</span> <span class="s2">"</span><span class="se">\x1a</span><span class="s2">"</span><span class="p">}</span>
+<span class="n">_NULL_TOKEN</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\\</span><span class="s2">N"</span>  <span class="c1"># noqa: S105 - the MySQL dump token for NULL, not a password</span>
+<span class="c1"># Values that pandas cannot carry through its parser verbatim: they are emitted as an empty field and restored</span>
+<span class="c1"># after parsing. A literal "\N" would otherwise read as NULL, and NUL ends a field in pandas' C tokenizer.</span>
+<span class="n">_RESTORE_CHARS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"</span><span class="se">\x00</span><span class="s2">"</span><span class="p">,)</span>
+
+
+<div class="viewcode-block" id="_ends_with_odd_backslashes">
+<a class="viewcode-back" href="../../reference.html#idtrack._mysql_dump._ends_with_odd_backslashes">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_ends_with_odd_backslashes</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return whether *text* ends with an odd number of backslashes (i.e. its last character is escaped)."""</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"</span><span class="se">\\</span><span class="s2">"</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">count</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">1</span></div>
+
+
+
+<div class="viewcode-block" id="_only_null_escapes">
+<a class="viewcode-back" href="../../reference.html#idtrack._mysql_dump._only_null_escapes">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_only_null_escapes</span><span class="p">(</span><span class="n">record</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""Return whether every backslash of *record* belongs to a whole-field ``\N`` (SQL NULL)."""</span>
+    <span class="n">padded</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\t</span><span class="s2">"</span> <span class="o">+</span> <span class="n">record</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\t</span><span class="s2">"</span>
+    <span class="c1"># Two passes: one pass of `str.replace` skips every second member of adjacent `\N` fields.</span>
+    <span class="n">reduced</span> <span class="o">=</span> <span class="n">padded</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"</span><span class="se">\t\\</span><span class="s2">N</span><span class="se">\t</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"</span><span class="se">\t\t</span><span class="s2">"</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"</span><span class="se">\t\\</span><span class="s2">N</span><span class="se">\t</span><span class="s2">"</span><span class="p">,</span> <span class="s2">"</span><span class="se">\t\t</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">"</span><span class="se">\\</span><span class="s2">"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">reduced</span></div>
+
+
+
+<div class="viewcode-block" id="_decode_fields">
+<a class="viewcode-back" href="../../reference.html#idtrack._mysql_dump._decode_fields">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_decode_fields</span><span class="p">(</span><span class="n">record</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">"""Split one logical record into decoded field values (``None`` for SQL NULL)."""</span>
+    <span class="n">fields</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">current</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">raw_is_null_token</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># whether the raw text of the current field is exactly `\N` so far</span>
+    <span class="n">raw_length</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+    <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">:</span>
+        <span class="n">char</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">char</span> <span class="o">==</span> <span class="s2">"</span><span class="se">\\</span><span class="s2">"</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">:</span>
+            <span class="n">nxt</span> <span class="o">=</span> <span class="n">record</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">current</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_ESCAPES</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">nxt</span><span class="p">,</span> <span class="n">nxt</span><span class="p">))</span>
+            <span class="n">raw_is_null_token</span> <span class="o">=</span> <span class="n">raw_is_null_token</span> <span class="ow">and</span> <span class="n">raw_length</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">nxt</span> <span class="o">==</span> <span class="s2">"N"</span>
+            <span class="n">raw_length</span> <span class="o">+=</span> <span class="mi">2</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">2</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">char</span> <span class="o">==</span> <span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">:</span>
+            <span class="n">fields</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span> <span class="k">if</span> <span class="p">(</span><span class="n">raw_is_null_token</span> <span class="ow">and</span> <span class="n">raw_length</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span> <span class="k">else</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current</span><span class="p">))</span>
+            <span class="n">current</span><span class="p">,</span> <span class="n">raw_is_null_token</span><span class="p">,</span> <span class="n">raw_length</span> <span class="o">=</span> <span class="p">[],</span> <span class="kc">True</span><span class="p">,</span> <span class="mi">0</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">continue</span>
+        <span class="c1"># A trailing lone backslash (malformed input) is kept as a literal character.</span>
+        <span class="n">current</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">char</span><span class="p">)</span>
+        <span class="n">raw_is_null_token</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">raw_length</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">fields</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span> <span class="k">if</span> <span class="p">(</span><span class="n">raw_is_null_token</span> <span class="ow">and</span> <span class="n">raw_length</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span> <span class="k">else</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">fields</span></div>
+
+
+
+<div class="viewcode-block" id="_quote_csv">
+<a class="viewcode-back" href="../../reference.html#idtrack._mysql_dump._quote_csv">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_quote_csv</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Quote a value for pandas' default CSV dialect (double quotes, doubled inside)."""</span>
+    <span class="k">return</span> <span class="s1">'"'</span> <span class="o">+</span> <span class="n">value</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">'"'</span><span class="p">,</span> <span class="s1">'""'</span><span class="p">)</span> <span class="o">+</span> <span class="s1">'"'</span></div>
+
+
+
+<div class="viewcode-block" id="MySQLDumpCSVStream">
+<a class="viewcode-back" href="../../reference.html#idtrack._mysql_dump.MySQLDumpCSVStream">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MySQLDumpCSVStream</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">TextIOBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""Text stream that turns a MySQL dump into CSV that pandas parses unambiguously.</span>
+
+<span class="sd">    Records are read from *source* (a text stream of the dump) and written out as tab-separated CSV records:</span>
+<span class="sd">    records without backslash escapes or double quotes are passed through; the others are decoded field by field,</span>
+<span class="sd">    and fields containing a tab, newline or double quote are quoted. SQL ``NULL`` stays ``\N`` (read by pandas as</span>
+<span class="sd">    ``NaN`` through ``na_values``). Values that pandas cannot reproduce verbatim are emitted as empty fields and</span>
+<span class="sd">    recorded in :py:attr:`restore` as ``(record index, field index, value)`` for :py:func:`read_mysql_dump` to put back.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        source: Readable text stream of the dump (already decompressed).</span>
+<span class="sd">        chunk_size: Number of characters read from *source* at a time.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="mi">20</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Wrap *source*; nothing is read until :py:meth:`read` is called."""</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_source</span> <span class="o">=</span> <span class="n">source</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_chunk_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">chunk_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tail</span> <span class="o">=</span> <span class="s2">""</span>  <span class="c1"># text after the last newline seen</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_partial</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># physical lines of a record whose newline was escaped</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_out</span> <span class="o">=</span> <span class="s2">""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_eof</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">records</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">restore</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="MySQLDumpCSVStream.readable">
+<a class="viewcode-back" href="../../reference.html#idtrack._mysql_dump.MySQLDumpCSVStream.readable">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">readable</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return ``True``: the stream supports :py:meth:`read`."""</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_emit_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pieces</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="s1">'"'</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">record</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="s2">"</span><span class="se">\\</span><span class="s2">"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">record</span> <span class="ow">or</span> <span class="n">_only_null_escapes</span><span class="p">(</span><span class="n">record</span><span class="p">)):</span>
+            <span class="n">pieces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">out_fields</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">field_index</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">_decode_fields</span><span class="p">(</span><span class="n">record</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">out_fields</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_NULL_TOKEN</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">value</span> <span class="o">==</span> <span class="n">_NULL_TOKEN</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="n">c</span> <span class="ow">in</span> <span class="n">value</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">_RESTORE_CHARS</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">restore</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">records</span><span class="p">,</span> <span class="n">field_index</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+                    <span class="n">out_fields</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">""</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="s2">"</span><span class="se">\t</span><span class="s2">"</span> <span class="ow">in</span> <span class="n">value</span> <span class="ow">or</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span> <span class="ow">in</span> <span class="n">value</span> <span class="ow">or</span> <span class="s1">'"'</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+                    <span class="n">out_fields</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_quote_csv</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">out_fields</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">pieces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_fields</span><span class="p">))</span>
+        <span class="n">pieces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">records</span> <span class="o">+=</span> <span class="mi">1</span>
+
+<div class="viewcode-block" id="MySQLDumpCSVStream._consume_line">
+<a class="viewcode-back" href="../../reference.html#idtrack._mysql_dump.MySQLDumpCSVStream._consume_line">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_consume_line</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">pieces</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Handle one physical line (without its newline)."""</span>
+        <span class="k">if</span> <span class="n">_ends_with_odd_backslashes</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
+            <span class="c1"># The newline that ended this physical line is escaped: it is part of the field.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_partial</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\\\n</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partial</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_partial</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+            <span class="n">record</span> <span class="o">=</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_partial</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_partial</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">record</span> <span class="o">=</span> <span class="n">line</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_emit_record</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">pieces</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_fill</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_chunk_size</span><span class="p">)</span>
+        <span class="n">pieces</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_eof</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tail</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partial</span><span class="p">:</span>
+                <span class="c1"># Last record without a terminating newline.</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partial</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_partial</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tail</span><span class="p">)</span>
+                    <span class="n">record</span> <span class="o">=</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_partial</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_partial</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_emit_record</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">pieces</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_emit_record</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tail</span><span class="p">,</span> <span class="n">pieces</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_tail</span> <span class="o">=</span> <span class="s2">""</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">lines</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tail</span> <span class="o">+</span> <span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tail</span> <span class="o">=</span> <span class="n">lines</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_consume_line</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">pieces</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">pieces</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_out</span> <span class="o">+=</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pieces</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MySQLDumpCSVStream.read">
+<a class="viewcode-back" href="../../reference.html#idtrack._mysql_dump.MySQLDumpCSVStream.read">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return up to *size* characters of CSV (everything that is left when *size* is negative or ``None``)."""</span>
+        <span class="k">if</span> <span class="n">size</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">size</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_eof</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_fill</span><span class="p">()</span>
+            <span class="n">out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="p">,</span> <span class="s2">""</span>
+            <span class="k">return</span> <span class="n">out</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">size</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_eof</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fill</span><span class="p">()</span>
+        <span class="n">out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="p">[:</span><span class="n">size</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_out</span><span class="p">[</span><span class="n">size</span><span class="p">:]</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="_parse_csv">
+<a class="viewcode-back" href="../../reference.html#idtrack._mysql_dump._parse_csv">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_csv</span><span class="p">(</span><span class="n">stream</span><span class="p">:</span> <span class="s2">"MySQLDumpCSVStream"</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">usecols</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">"""Parse the CSV produced by :py:class:`MySQLDumpCSVStream` (tab-separated, double-quote quoting, ``\N`` NULL)."""</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+        <span class="n">stream</span><span class="p">,</span>
+        <span class="n">sep</span><span class="o">=</span><span class="s2">"</span><span class="se">\t</span><span class="s2">"</span><span class="p">,</span>
+        <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">names</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span>
+        <span class="n">na_values</span><span class="o">=</span><span class="p">[</span><span class="n">_NULL_TOKEN</span><span class="p">],</span>
+        <span class="n">keep_default_na</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">low_memory</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">usecols</span><span class="o">=</span><span class="n">usecols</span><span class="p">,</span>
+        <span class="n">lineterminator</span><span class="o">=</span><span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span>
+        <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_MINIMAL</span><span class="p">,</span>
+        <span class="n">quotechar</span><span class="o">=</span><span class="s1">'"'</span><span class="p">,</span>
+        <span class="n">doublequote</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">skip_blank_lines</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="read_mysql_dump">
+<a class="viewcode-back" href="../../reference.html#idtrack._mysql_dump.read_mysql_dump">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">read_mysql_dump</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">usecols</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Parse a MySQL table dump into a DataFrame with the values MySQL would return.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        source: Readable text stream of the decompressed ``&lt;table&gt;.txt`` dump.</span>
+<span class="sd">        columns: Column names of the table, in schema order.</span>
+<span class="sd">        usecols: Optional subset of *columns* to keep (in this order).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pandas.DataFrame: One row per record; SQL ``NULL`` is ``NaN``; empty strings stay empty strings.</span>
+<span class="sd">    """</span>
+    <span class="n">stream</span> <span class="o">=</span> <span class="n">MySQLDumpCSVStream</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">_parse_csv</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="n">columns</span><span class="p">,</span> <span class="n">usecols</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">pd</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">EmptyDataError</span><span class="p">:</span>
+        <span class="c1"># An empty table: the MySQL server returns no rows, with the table's columns.</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">usecols</span><span class="p">)</span> <span class="k">if</span> <span class="n">usecols</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">columns</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">stream</span><span class="o">.</span><span class="n">restore</span><span class="p">:</span>
+        <span class="n">kept</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">record_index</span><span class="p">,</span> <span class="n">field_index</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">stream</span><span class="o">.</span><span class="n">restore</span><span class="p">:</span>
+            <span class="n">column</span> <span class="o">=</span> <span class="n">columns</span><span class="p">[</span><span class="n">field_index</span><span class="p">]</span> <span class="k">if</span> <span class="n">field_index</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">kept</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="nb">object</span><span class="p">:</span>
+                    <span class="n">df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>
+                <span class="n">df</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">record_index</span><span class="p">,</span> <span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">if</span> <span class="n">usecols</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">usecols</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">df</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Kemal Inecik.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
