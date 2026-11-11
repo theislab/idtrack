@@ -12,7 +12,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -408,7 +408,7 @@ def _add_connection_edge(g: TheGraph, n1: str, n2: str, db_name: str, assembly: 
     edge_data[0][DB.connection_dict][db_name][assembly].add(release)
 
 
-def build_real_gene_graph(spec: RealGraphSpec, source: Optional[str] = None) -> tuple[TheGraph, dict[str, str]]:
+def build_real_gene_graph(spec: RealGraphSpec, source: str | None = None) -> tuple[TheGraph, dict[str, str]]:
     """Build a small, real gene-only graph for the selected Ensembl releases of one organism and assembly.
 
     Args:

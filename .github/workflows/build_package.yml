@@ -33,8 +33,9 @@ jobs:
             # Do not cancel the whole matrix if a single entry fails.
             fail-fast: false
             matrix:
-                # Pin runner images to reduce surprise breakage when `*-latest` moves.
-                os: [ubuntu-22.04, macos-14, windows-2022]
+                # Pin runner images to reduce surprise breakage when `*-latest` moves. GitHub retires images
+                # (macos-14 is no longer offered); check GitHub's list of hosted runner labels when a job cannot start.
+                os: [ubuntu-22.04, macos-15, windows-2022]
                 python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
 
         # Use bash everywhere so globs like dist/*.whl behave consistently across OSes.

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import copy
 from contextlib import contextmanager
+from types import MappingProxyType
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -195,6 +196,18 @@ class TestRegisterOrganism:
                 DatabaseManager(organism="danio_rerio", form="gene", local_repository="/nonexistent/dir")
         assert "danio_rerio" not in DB.supported_organisms
         assert 11 not in DB.all_assemblies
+
+    def test_read_only_mappings_are_stored_as_independent_dicts(self):
+        """Entries given as read-only mappings are accepted and stored as plain dicts, detached from the input."""
+        ports = [3306, 5306]
+        entry = MappingProxyType({"Name": "GRCz11", "Ports": ports, "Priority": 1, "ReleaseRange": [92, None]})
+        with restored_organism_table():
+            DB.register_organism("danio_rerio", MappingProxyType({11: entry}), symbol_databases=["ZFIN"])
+            stored = DB.assembly_mysqlport_priority["danio_rerio"]
+            assert type(stored) is dict and type(stored[11]) is dict
+            assert stored[11] == dict(entry)
+            ports.append(3337)
+            assert stored[11]["Ports"] == [3306, 5306]
 
     def test_rejected_entry_leaves_table_unchanged(self):
         """Rejected entry leaves table unchanged."""

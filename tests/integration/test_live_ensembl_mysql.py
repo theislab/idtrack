@@ -85,6 +85,58 @@ def _fetch_core_schemas(*, organism: str, port: int) -> list[str]:
     raise RuntimeError(f"Unable to query information_schema on port {int(port)} for {organism!r}: {last_exc}")
 
 
+def _fetch_assembly_names(*, port: int, schemas: list[str]) -> dict[str, str]:
+    """Return ``assembly.default`` from the ``meta`` table of each schema (``"?"`` where it cannot be read).
+
+    Used only to explain a failure: the name tells which assembly a core database really holds, independently of
+    the suffix-and-release rule of the organism table.
+
+    Args:
+        port: MySQL port of the Ensembl public service.
+        schemas: Core database names found on that port (from ``information_schema``, so they are real schema names).
+
+    Returns:
+        Mapping of each schema to its declared assembly name.
+    """
+    names: dict[str, str] = {}
+    if not schemas:
+        return names
+    try:
+        with pymysql.connect(
+            host=DB.mysql_host,
+            user=DB.myqsl_user,
+            password=DB.mysql_togo,
+            port=int(port),
+            connect_timeout=max(DB.connection_timeout, 30),
+            read_timeout=max(DB.reading_timeout, 60),
+        ) as conn:
+            with conn.cursor() as cur:
+                for schema in schemas:
+                    try:
+                        # Identifiers cannot be bound as parameters; the names come from information_schema.
+                        cur.execute(
+                            f"SELECT meta_value FROM `{schema}`.meta "  # noqa: S608
+                            "WHERE meta_key = 'assembly.default' LIMIT 1"
+                        )
+                        row = cur.fetchone()
+                        value = row[0] if row else "?"
+                        names[schema] = value.decode("utf-8") if isinstance(value, bytes) else str(value)
+                    except Exception:
+                        names[schema] = "?"
+    except Exception as exc:
+        return {schema: f"? ({exc.__class__.__name__}: {exc})" for schema in schemas}
+    return {schema: names.get(schema, "?") for schema in schemas}
+
+
+def _describe(schemas_by_port: dict[int, list[str]]) -> dict[int, list[tuple[str, str]]]:
+    """Pair each schema with the assembly name its ``meta`` table declares, per port."""
+    return {
+        port: sorted(_fetch_assembly_names(port=port, schemas=sorted(set(schemas))).items())
+        for port, schemas in sorted(schemas_by_port.items())
+        if schemas
+    }
+
+
 @pytest.fixture(scope="session")
 def live_mysql_core_catalog() -> dict[str, dict[int, dict[str, Any]]]:
     """Return live core schema metadata from Ensembl public MySQL.
@@ -169,13 +221,18 @@ def live_mysql_core_catalog() -> dict[str, dict[int, dict[str, Any]]]:
 @pytest.mark.database
 def test_live_mysql_config_covers_all_discovered_assemblies(live_mysql_core_catalog):
     """Ensure every core database Ensembl exposes on the configured ports belongs to a configured assembly."""
+    # All organisms are checked before the test fails; the failure names, per organism and port, each unassigned
+    # core database with the assembly name its `meta` table declares.
+    problems: dict[str, dict[int, list[tuple[str, str]]]] = {}
     for organism in DB.supported_organisms:
-        unconfigured: list[str] = []
-        for port_info in live_mysql_core_catalog[organism].values():
-            unconfigured.extend(port_info["unconfigured"])
-        # The live service often hosts only the current and previous release.
-        # Older/discontinued assemblies can still be supported via the HTTPS/FTP MySQL dumps.
-        assert not unconfigured, (organism, sorted(set(unconfigured)))
+        unconfigured = {
+            int(port): list(port_info["unconfigured"])
+            for port, port_info in live_mysql_core_catalog[organism].items()
+            if port_info["unconfigured"]
+        }
+        if unconfigured:
+            problems[organism] = _describe(unconfigured)
+    assert not problems, problems
 
 
 @pytest.mark.integration
@@ -183,6 +240,10 @@ def test_live_mysql_config_covers_all_discovered_assemblies(live_mysql_core_cata
 @pytest.mark.database
 def test_live_mysql_config_ports_match_discovered_ports(live_mysql_core_catalog):
     """Ensure each (organism, assembly) lists exactly the ports where Ensembl hosts it."""
+    # All assemblies are checked before the test fails. For each mismatch the failure gives the discovered and the
+    # configured ports and, for every port that is discovered but not configured, the core databases found there
+    # with the assembly name their `meta` table declares.
+    problems: list[dict[str, Any]] = []
     for organism in DB.supported_organisms:
         for assembly, cfg in DB.assembly_mysqlport_priority[organism].items():
             discovered_ports = {
@@ -195,12 +256,22 @@ def test_live_mysql_config_ports_match_discovered_ports(live_mysql_core_catalog)
                 # This (organism, assembly) is not present on the live MySQL service (e.g. historic assemblies).
                 # Access is expected to happen via the HTTPS/FTP dumps instead.
                 continue
-            assert discovered_ports == set(map(int, cfg["Ports"])), (
-                organism,
-                int(assembly),
-                discovered_ports,
-                cfg["Ports"],
-            )
+            configured_ports = set(map(int, cfg["Ports"]))
+            if discovered_ports != configured_ports:
+                extra = {
+                    port: list(live_mysql_core_catalog[organism][port]["by_assembly"][int(assembly)].values())
+                    for port in sorted(discovered_ports - configured_ports)
+                }
+                problems.append(
+                    {
+                        "organism": organism,
+                        "assembly": int(assembly),
+                        "discovered_ports": sorted(discovered_ports),
+                        "configured_ports": list(cfg["Ports"]),
+                        "on_unconfigured_ports": _describe(extra),
+                    }
+                )
+    assert not problems, problems
 
 
 @pytest.mark.integration

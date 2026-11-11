@@ -146,8 +146,8 @@ jobs:
                           networkx>=3,<4
                           PyYAML>=6,<7
                           sparse<1
-                          requests==2.32.4
-                          urllib3==2.5.0
+                          requests==2.33.0
+                          urllib3==2.8.0
                     - python-version: "3.10"
                       dependency-set: "pandas>=2 / numpy>=2 (modern deps)"
                       constraints: |
@@ -157,8 +157,8 @@ jobs:
                           networkx>=3,<4
                           PyYAML>=6,<7
                           sparse>=0.15,<1
-                          requests==2.32.4
-                          urllib3==2.5.0
+                          requests==2.33.0
+                          urllib3==2.8.0
 
                     # -------------------------------------------------------------------------
                     # Python 3.11
@@ -192,8 +192,8 @@ jobs:
                           networkx>=3,<4
                           PyYAML>=6,<7
                           sparse<1
-                          requests==2.32.4
-                          urllib3==2.5.0
+                          requests==2.33.0
+                          urllib3==2.8.0
                     - python-version: "3.11"
                       dependency-set: "pandas>=2 / numpy>=2 (modern deps)"
                       constraints: |
@@ -203,8 +203,8 @@ jobs:
                           networkx>=3,<4
                           PyYAML>=6,<7
                           sparse>=0.15,<1
-                          requests==2.32.4
-                          urllib3==2.5.0
+                          requests==2.33.0
+                          urllib3==2.8.0
 
                     # -------------------------------------------------------------------------
                     # Python 3.12+ – focus on modern stacks (older scientific wheels may not exist).

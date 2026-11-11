@@ -481,13 +481,17 @@ class DB:
                     "['VGNC Symbol', 'HGNC Symbol'], or an empty list if it has none)."
                 )
             symbol_databases = cls.symbol_databases[name]
-        table = copy.deepcopy(cls.assembly_mysqlport_priority)
-        table[name] = copy.deepcopy(dict(assemblies))
+        # The validator only reads, so the candidate table may hold the caller's mappings as they are; the stored
+        # entry is a copy made of plain dictionaries, whatever mapping types the caller passed.
+        table: dict[str, Mapping[int, Mapping[str, Any]]] = dict(cls.assembly_mysqlport_priority)
+        table[name] = assemblies
         symbols = dict(cls.symbol_databases)
         symbols[name] = tuple(symbol_databases)
         cls._validate_organism_table(table, symbols)
 
-        cls.assembly_mysqlport_priority[name] = table[name]
+        cls.assembly_mysqlport_priority[name] = {
+            int(key): copy.deepcopy(dict(entry)) for key, entry in assemblies.items()
+        }
         cls.symbol_databases[name] = symbols[name]
         cls.organism_table_version += 1
         cls._rebuild_organism_tables()
