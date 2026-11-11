@@ -31,9 +31,11 @@ Before installing IDTrack, ensure your system meets these requirements:
     * - **Memory**
       - Minimum 4 GB RAM (8 GB recommended for large graphs)
     * - **Disk Space**
-      - 2-5 GB for cached databases (varies by organism)
+      - About 130-240 MB per cached Ensembl release of an organism (raw and processed tables); a full
+        multi-release graph build caches tens of GB (about 20 GB for one human assembly)
     * - **Network**
-      - Internet connection required for initial database downloads
+      - HTTPS access to ``ftp.ensembl.org`` and ``rest.ensembl.org`` for the initial downloads; the Ensembl
+        MySQL ports are optional (see :ref:`ensembl-access`)
 
 .. note::
 
@@ -293,11 +295,60 @@ script:
     IDTrack version: 0.0.x
     API initialized successfully
     Resolved organism: homo_sapiens
-    Latest Ensembl release: 114
+    Latest Ensembl release: 116
 
     Installation verified successfully!
 
-If you see output similar to this, your installation is complete and working.
+If you see output similar to this, your installation is complete and working (the latest release is the one
+Ensembl serves on the day you run it).
+
+
+.. _ensembl-access:
+
+Network Access: MySQL or HTTPS
+------------------------------
+
+IDTrack reads Ensembl's core databases in one of two ways: from the public MySQL service
+(``ensembldb.ensembl.org``, ports 3306, 5306 and 3337) or from the MySQL dumps on
+``https://ftp.ensembl.org/pub/``. Many institutional networks and HPC clusters block the MySQL ports;
+HTTPS is enough. The access mode is chosen with the environment variable ``IDTRACK_ENSEMBL_ACCESS`` or
+the attribute ``idtrack.DB.ensembl_access`` (which wins when set):
+
+.. list-table::
+    :header-rows: 1
+    :widths: 15 85
+
+    * - Mode
+      - Behaviour
+    * - ``auto`` (default)
+      - Each MySQL port is probed once per Python process, with a short timeout. Releases on a port that
+        answers are read over MySQL; everything else, and everything after a MySQL connection fails, is read
+        from the HTTPS dumps.
+    * - ``https``
+      - MySQL is never contacted; every table is read from the HTTPS dumps.
+
+.. code-block:: console
+
+    $ export IDTRACK_ENSEMBL_ACCESS=https
+
+.. code-block:: python
+
+    import idtrack
+
+    idtrack.DB.ensembl_access = "https"  # or "auto"
+
+**What differs between the modes:** both read the same Ensembl tables, with the same rows and values: the
+dump reader decodes MySQL's escaping (tabs, newlines and backslashes inside fields, ``NULL``) so that each
+row holds what the MySQL server returns. One difference remains in the raw tables: over HTTPS, column types
+are inferred from the text, so a text column that holds only digit strings is read as numbers (e.g. the
+``old_release`` and ``new_release`` columns of ``mapping_session``), as it was before this access-mode setting
+existed. The HTTPS path downloads whole compressed tables, so it is slower per table than a MySQL query
+(seconds to a minute per large table), but it needs no open port. In ``auto`` mode a blocked port costs one
+short probe per process, not one per table, and a port whose connection fails is not tried again in that
+process (the tables then come over HTTPS; this costs only speed).
+
+If you route IDTrack through an SSH tunnel with :py:class:`idtrack.ConnectionBridge`, starting and stopping
+the bridge forgets the probe results, so the ports are probed again through the new route.
 
 
 Optional Dependencies

@@ -296,6 +296,29 @@ class TestTrackAssemblyHandling:
         """Test main assembly is set."""
         assert mock_the_graph.graph["genome_assembly"] == 38
 
+    def test_assembly_priority_comes_from_the_table(self, mock_the_graph):
+        """Assembly order is the organism table's; an unregistered organism is an error (no numeric fallback)."""
+        import logging
+
+        import pytest
+
+        from idtrack._track import Track
+
+        def _track_for(graph):
+            track = Track.__new__(Track)
+            track.log = logging.getLogger("track")
+            track.graph = graph
+            return track
+
+        track = _track_for(mock_the_graph)
+        track._ensure_assembly_priority_cache()
+        assert track._assembly_priority_by_assembly == {38: 1}
+
+        graph = mock_the_graph.copy()
+        graph.graph["organism"] = "danio_rerio"
+        with pytest.raises(ValueError, match="register_organism"):
+            _track_for(graph)._ensure_assembly_priority_cache()
+
     def test_assembly_specific_nodes(self, mock_the_graph):
         """Test assembly-specific node handling."""
         from idtrack._db import DB

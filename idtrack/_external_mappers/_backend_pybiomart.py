@@ -332,7 +332,8 @@ def map_with_pybiomart(
         input_db: Source database type. Must be one of ``"ensembl_gene"``, ``"ensembl_transcript"``,
             or ``"ensembl_protein"``.
         output_db: Target database type (e.g. ``"hgnc_symbol"``, ``"uniprot"``, ``"entrez_gene"``).
-        species: Species code (e.g. ``"hsapiens"``, ``"mmusculus"``, ``"sscrofa"``).
+        species: Species code (e.g. ``"hsapiens"``, ``"mmusculus"``, ``"sscrofa"``, ``"mmulatta"``,
+            ``"mfascicularis"``).
         chunk_size: Number of IDs per BioMart query.
         pause: Pause in seconds between queries.
         strip_versions: Strip version suffixes from Ensembl/RefSeq IDs.

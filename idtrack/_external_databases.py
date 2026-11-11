@@ -3,12 +3,87 @@
 # Kemal Inecik
 # k.inecik@gmail.com
 
+import json
 import logging
 import os
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
 import yaml
+
+# Where the documented recipe for making an externals YAML lives (shown in error messages).
+_EXTERNALS_RECIPE = (
+    "the tutorial 'External database configuration' (docs/_notebooks/02_prepare_new_external_yaml.ipynb) and "
+    "'Adding organism support' in the contributing guide"
+)
+
+
+class ExternalsReleaseNotCoveredError(ValueError):
+    """Raised when an externals YAML file has no entry for the requested Ensembl release."""
+
+
+def _yaml_scalar(value: Any) -> str:
+    """Format a scalar the way the shipped externals YAML files do (plain when unambiguous, else double-quoted)."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, np.integer)):
+        return str(int(value))
+    text = str(value)
+    if text and text == text.strip() and "\n" not in text:
+        try:
+            if yaml.safe_load(f"k: {text}") == {"k": text}:
+                return text
+        except yaml.YAMLError:
+            pass
+    return json.dumps(text, ensure_ascii=False)
+
+
+def _yaml_key(key: Any) -> str:
+    """Format a mapping key like :py:func:`_yaml_scalar`, checking that it reads back as the same key."""
+    text = str(key)
+    if text and text == text.strip() and "\n" not in text:
+        try:
+            if yaml.safe_load(f"{text}: 0") == {text: 0}:
+                return text
+        except yaml.YAMLError:
+            pass
+    return json.dumps(text, ensure_ascii=False)
+
+
+def write_externals_yaml(data: dict, path: str) -> None:
+    """Write an externals YAML file in the layout of the files shipped in ``idtrack/default_config``.
+
+    The layout is block style with four-space indentation, the keys of every mapping sorted (as
+    :py:func:`yaml.dump` sorts them), assembly keys and other strings that would read back as another type
+    double-quoted (``"38"``, ``""``), and release lists plain (``Ensembl release: 90,91,92``). Loading the result
+    with :py:func:`yaml.safe_load` gives back *data*.
+
+    Args:
+        data: Parsed externals YAML, ``{organism: {form: {database: entry}}}``, each entry holding ``Assembly``,
+            ``Database Index`` and ``Potential Synonymous``.
+        path: Target file path (overwritten).
+
+    Raises:
+        ValueError: If the written text would not read back as *data* (a guard on the formatter itself).
+    """
+    lines: list[str] = []
+
+    def emit(node: Any, depth: int) -> None:
+        indent = "    " * depth
+        for key, value in sorted(node.items(), key=lambda kv: str(kv[0])):
+            if isinstance(value, dict):
+                lines.append(f"{indent}{_yaml_key(key)}:")
+                emit(value, depth + 1)
+            else:
+                lines.append(f"{indent}{_yaml_key(key)}: {_yaml_scalar(value)}")
+
+    emit(data, 0)
+    text = "\n".join(lines) + "\n"
+    if yaml.safe_load(text) != data:  # pragma: no cover - guards the formatter itself
+        raise ValueError(f"Internal error: the externals YAML written to {path!r} does not read back unchanged.")
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(text)
 
 
 class ExternalDatabases:
@@ -58,16 +133,17 @@ class ExternalDatabases:
 
         Args:
             organism (str): Canonical Ensembl species identifier in *snake_case*
-                (e.g. ``"homo_sapiens"``).  Case-insensitive but must match Ensembl conventions.
+                (e.g. ``"homo_sapiens"``), exactly as in :py:attr:`idtrack.DB.supported_organisms`.
             ensembl_release (int): Target Ensembl release number (e.g. ``110``). Must correspond to a
                 release that actually exists for *organism* and *genome_assembly*.
             form (str): Entity level—``"gene"``, ``"transcript"``, or ``"translation"``.  Any other
                 value raises :py:class:`ValueError` in higher-level validation.
             local_repository (str): Writable directory where YAML files and downloads are cached.
                 The directory need not pre-exist; if missing, most public methods will attempt to create it.
-            genome_assembly (int): Genome assembly code as used in Ensembl core schema naming
-                (e.g. ``38`` = human GRCh38, ``37`` = human GRCh37, ``39`` = mouse GRCm39, ``111`` = pig Sscrofa11.1).
-                Used to disambiguate multiple assemblies available for the same *organism*/*release* pair.
+            genome_assembly (int): Assembly key of :py:attr:`idtrack.DB.assembly_mysqlport_priority`
+                (e.g. ``38`` = human GRCh38, ``37`` = human GRCh37, ``39`` = mouse GRCm39, ``111`` = pig Sscrofa11.1,
+                ``10`` = rhesus Mmul_10). The YAML's assembly keys are these keys. Used to disambiguate multiple
+                assemblies available for the same *organism*/*release* pair.
         """
         # The logger for informing the user about the progress.
         self.log = logging.getLogger("external_databases")
@@ -189,8 +265,7 @@ class ExternalDatabases:
                                 f"in database {a1}/{a2}/{a3}."
                             )
 
-        with open(self.file_name_template_yaml(), "w") as yaml_file:
-            yaml.dump(r, yaml_file)
+        write_externals_yaml(r, self.file_name_template_yaml())
 
         self.log.warning(
             f"File created on {self.file_name_template_yaml()}\n"
@@ -251,16 +326,56 @@ class ExternalDatabases:
         else:
             raise ValueError(f"Unknown value for 'mode': {mode}.")
 
+    def _modified_yaml_path(self) -> str:
+        """Return the path of the modified YAML to use: the local repository's copy, else the shipped default.
+
+        Returns:
+            str: Path of the file to read.
+
+        Raises:
+            FileNotFoundError: If neither exists; the message names the file to create and how to make it.
+        """
+        configured = self.file_name_modified_yaml(mode="configured")
+        if os.access(configured, os.R_OK):
+            return configured
+        self.log.warning(f"External database config is not found in provided temp directory: `{configured}`.")
+
+        default = self.file_name_modified_yaml(mode="default")
+        if os.access(default, os.R_OK):
+            self.log.warning(f"The package uses the default config file for {self.organism}.")
+            return default
+
+        raise FileNotFoundError(
+            f"No externals YAML file for organism {self.organism!r}: neither `{configured}` (local repository) nor "
+            f"`{default}` (shipped with idtrack) exists. Create `{configured}`: make a template with "
+            "`DatabaseManager.create_database_content()` and `ExternalDatabases.create_template_yaml()`, set "
+            "`Include: true` for the databases to use (e.g. with `idtrack._default_externals.apply_allowlist`) and "
+            f"save it under that name. The documented recipe is {_EXTERNALS_RECIPE}."
+        )
+
+    def read_modified_yaml(self) -> dict:
+        """Read the modified YAML (local repository first, then the shipped default) without release checks.
+
+        Returns:
+            dict: Parsed YAML content keyed by ``{organism → form → database → Assembly → {...}}``.
+
+        Raises:
+            FileNotFoundError: If neither the *configured* nor the *default* YAML file exists (see
+                :py:meth:`load_modified_yaml`).
+        """
+        with open(self._modified_yaml_path()) as yaml_file:
+            return yaml.safe_load(yaml_file) or {}
+
     def load_modified_yaml(self) -> dict:
         """Load the user-edited or default YAML configuration and verify release compatibility.
 
         This convenience wrapper searches for the *configured* YAML file first; if it
         does not exist or lacks read permissions a warning is logged and the
         *default* YAML file shipped with the package is tried instead.  Failure to
-        locate **either** file aborts the process with :py:class:`FileNotFoundError`.
-        After loading, the method delegates to
-        :py:meth:`ExternalDatabases.validate_yaml_file_up_to_date` to ensure that the
-        currently requested Ensembl release is represented in the configuration.
+        locate **either** file aborts with a :py:class:`FileNotFoundError` that names the
+        file to create and the documented way to create it.  After loading, the method
+        delegates to :py:meth:`ExternalDatabases.validate_yaml_file_up_to_date` to ensure
+        that the currently requested Ensembl release is represented in the configuration.
 
         Returns:
             dict: Parsed YAML content keyed by ``{organism → form → database → Assembly → {...}}``.
@@ -268,25 +383,33 @@ class ExternalDatabases:
         Raises:
             FileNotFoundError: If neither the *configured* nor the *default* YAML file can be accessed.
         """
-        file_name = self.file_name_modified_yaml(mode="configured")
-        if not os.access(file_name, os.R_OK):
-            self.log.warning(f"External database config is not found in provided temp directory: `{file_name}`.")
-
-            file_name = self.file_name_modified_yaml(mode="default")  # Look at the alternative
-            if os.access(file_name, os.R_OK):
-                self.log.warning(f"The package uses the default config file for {self.organism}.")
-            else:
-                raise FileNotFoundError(
-                    "No external database YAML found for organism "
-                    f"{self.organism!r} (searched configured and default paths). "
-                    "Create a `<organism>_externals_modified.yml` in your local repository or "
-                    "use an organism that ships with a default config."
-                )
-
-        with open(file_name) as yaml_file:
-            y = yaml.safe_load(yaml_file)
+        y = self.read_modified_yaml()
         self.validate_yaml_file_up_to_date(y)
         return y
+
+    @staticmethod
+    def _releases_of(read_yaml_file: dict, organism: Optional[str] = None) -> set[int]:
+        """Return every release listed in a parsed externals YAML (for one organism, or for all)."""
+        organisms = [organism] if organism is not None else list(read_yaml_file or {})
+        return {
+            int(e)
+            for org in organisms
+            for _, j2 in ((read_yaml_file or {}).get(org) or {}).items()
+            for _, j3 in (j2 or {}).items()
+            for _, j4 in j3["Assembly"].items()
+            for e in str(j4["Ensembl release"]).split(",")
+        }
+
+    def covered_releases(self) -> set[int]:
+        """Return the Ensembl releases that the organism's externals YAML lists (any form, database or assembly).
+
+        Returns:
+            set[int]: Releases with at least one entry; empty if the file has no entry for the organism.
+
+        Raises:
+            FileNotFoundError: If no externals YAML file exists for the organism (see :py:meth:`load_modified_yaml`).
+        """
+        return self._releases_of(self.read_modified_yaml(), self.organism)
 
     def validate_yaml_file_up_to_date(self, read_yaml_file):
         """Assert that the YAML configuration lists the active Ensembl release.
@@ -296,37 +419,160 @@ class ExternalDatabases:
         nested—and verifies that :py:attr:`ExternalDatabases.ensembl_release` is
         present.  Triggering an exception here prevents downstream graph-construction
         logic from silently operating on incomplete or outdated metadata, prompting
-        users to regenerate or update the YAML file before proceeding.
+        users to extend the YAML file (:py:meth:`extend_modified_yaml`) before proceeding.
+
+        A file that exists but has no entry for the organism or form is accepted: the graph is then built without
+        external databases for it.
 
         Args:
             read_yaml_file (dict): Dictionary produced by
                 :py:meth:`ExternalDatabases.load_modified_yaml` containing the loaded YAML structure.
 
         Raises:
-            ValueError: If the current Ensembl release is absent from the YAML configuration.
+            ExternalsReleaseNotCoveredError: If the current Ensembl release is absent from the YAML configuration
+                (a :py:class:`ValueError`).
         """
-        # Allow "no external databases" runs (e.g. organisms without a shipped default YAML).
+        # Allow "no external databases" runs (a file without an entry for this organism or form).
         if not read_yaml_file or self.organism not in read_yaml_file or self.form not in read_yaml_file[self.organism]:
             return
 
         if not read_yaml_file[self.organism][self.form]:
             return
 
-        ensembl_releases = {
-            int(e)
-            for _, j1 in read_yaml_file.items()
-            for _, j2 in j1.items()
-            for _, j3 in j2.items()
-            for _, j4 in j3["Assembly"].items()
-            for e in j4["Ensembl release"].split(",")
-        }
+        ensembl_releases = self._releases_of(read_yaml_file, self.organism)
         if self.ensembl_release not in ensembl_releases:
-            raise ValueError(
+            raise ExternalsReleaseNotCoveredError(
                 f"The Ensembl release {self.ensembl_release} is not included in any entry of the YAML config file.\n"
-                f"Please update the configuration to include this release, or create the graph/track object using a "
-                f"supported release (e.g., {max(ensembl_releases)}).\n"
+                f"Please extend the configuration to this release (`ExternalDatabases.extend_modified_yaml`), or "
+                f"create the graph/track object using a supported release (e.g., {max(ensembl_releases)}).\n"
                 "You may also report this issue on GitHub so the default configuration can be updated."
             )
+
+    def extend_modified_yaml(
+        self, content: pd.DataFrame, output_path: Optional[str] = None, base_path: Optional[str] = None
+    ) -> dict[str, Any]:
+        """Extend the organism's modified externals YAML to the releases of a database-content table.
+
+        This is the way to bring an existing ``<organism>_externals_modified.yml`` up to new Ensembl releases
+        without regenerating and re-curating it. *content* is the output of
+        :py:meth:`idtrack._database_manager.DatabaseManager.create_database_content` for the new releases (build the
+        manager with ``ignore_before`` and ``ignore_after`` set to them). For every ``(form, database, assembly)``
+        that *content* holds:
+
+        * an existing entry gets the new releases added to its ``Ensembl release`` list, and keeps its ``Include``
+          flag;
+        * a database that the file does not have yet is added with ``Include: false`` and reported under
+          ``"new_databases"``, so that a person can decide whether to enable it;
+        * a known database that appears with a new assembly gets an entry for that assembly. Its ``Include`` flag is
+          ``true`` only if the database is ``Include: true`` on every assembly it already has (the database is then
+          enabled as a whole, as in the shipped files); otherwise it is ``false``. All such entries are reported
+          under ``"new_assembly_entries"``, and the ones switched on, which no person has reviewed, are listed again
+          under ``"switched_on"`` and in a warning.
+
+        The base file is *base_path* if given, else the local repository's copy if present, else the shipped
+        default. The result is written to *output_path* (default: ``<local_repository>/<organism>_externals_modified.yml``),
+        in the layout of the shipped files. Passing a template as both *base_path* and *output_path* extends the
+        template the same way (all its flags are ``false``).
+
+        Args:
+            content: Frame with at least the columns ``organism``, ``form``, ``name_db``, ``assembly`` and
+                ``release``; rows of other organisms are ignored.
+            output_path: Where to write the extended file.
+            base_path: File to extend instead of the modified YAML that :py:meth:`load_modified_yaml` would read.
+
+        Returns:
+            dict[str, Any]: Report with keys ``"path"`` (file written), ``"releases"`` (releases of *content*),
+            ``"extended_entries"`` (number of existing entries that gained releases), ``"new_databases"`` (list of
+            ``(form, database, assembly)``), ``"new_assembly_entries"`` (list of
+            ``(form, database, assembly, include)``) and ``"switched_on"`` (list of ``(form, database, assembly)``
+            of the new assembly entries added with ``Include: true``).
+
+        Raises:
+            ValueError: If *content* lacks a required column or has no row for the organism.
+        """
+        required = {"organism", "form", "name_db", "assembly", "release"}
+        missing_cols = sorted(required - set(content.columns))
+        if missing_cols:
+            raise ValueError(
+                f"`content` lacks the columns {missing_cols} (expected the output of create_database_content)."
+            )
+        rows = content[content["organism"] == self.organism]
+        if rows.empty:
+            raise ValueError(f"`content` has no row for organism {self.organism!r}.")
+
+        if base_path is not None:
+            with open(base_path) as yaml_file:
+                y = yaml.safe_load(yaml_file) or {}
+        else:
+            y = self.read_modified_yaml()
+        org = y.setdefault(self.organism, {})
+        indexes = [int(entry.get("Database Index", -1)) for dbs in org.values() for entry in (dbs or {}).values()]
+        next_index = (max(indexes) + 1) if indexes else 0
+
+        extended = 0
+        new_databases: list[tuple[str, str, int]] = []
+        new_assembly_entries: list[tuple[str, str, int, bool]] = []
+        grouped = rows.groupby(["form", "name_db", "assembly"], sort=True)["release"]
+        new_db_entries: dict[tuple[str, str], dict] = {}
+        for (form, db_name, assembly), releases in grouped:
+            form, db_name, asm_key = str(form), str(db_name), str(int(assembly))
+            rels = {int(r) for r in releases}
+            if org.get(form) is None:
+                org[form] = {}
+            dbs = org[form]
+            if db_name not in dbs:
+                entry = new_db_entries.setdefault((form, db_name), {"Assembly": {}, "Potential Synonymous": ""})
+                entry["Assembly"][asm_key] = {"Ensembl release": ",".join(map(str, sorted(rels))), "Include": False}
+                new_databases.append((form, db_name, int(asm_key)))
+                continue
+            assemblies = dbs[db_name]["Assembly"]
+            if asm_key not in assemblies:
+                flags = {bool(v["Include"]) for v in assemblies.values()}
+                include = flags == {True}
+                assemblies[asm_key] = {"Ensembl release": ",".join(map(str, sorted(rels))), "Include": include}
+                new_assembly_entries.append((form, db_name, int(asm_key), include))
+                continue
+            current = {int(r) for r in str(assemblies[asm_key]["Ensembl release"]).split(",")}
+            if not rels <= current:
+                assemblies[asm_key]["Ensembl release"] = ",".join(map(str, sorted(current | rels)))
+                extended += 1
+
+        for (form, db_name), entry in sorted(new_db_entries.items()):
+            org[form][db_name] = {
+                "Assembly": entry["Assembly"],
+                "Database Index": next_index,
+                "Potential Synonymous": "",
+            }
+            next_index += 1
+
+        path = output_path or self.file_name_modified_yaml(mode="configured")
+        write_externals_yaml(y, path)
+
+        report: dict[str, Any] = {
+            "path": path,
+            "releases": sorted({int(r) for r in rows["release"]}),
+            "extended_entries": extended,
+            "new_databases": new_databases,
+            "new_assembly_entries": new_assembly_entries,
+            "switched_on": [(form, db_name, asm) for form, db_name, asm, include in new_assembly_entries if include],
+        }
+        self.log.info(
+            f"Externals YAML for {self.organism} extended to releases {report['releases']}: {extended} entries gained "
+            f"releases; written to `{path}`."
+        )
+        if new_databases:
+            self.log.warning(
+                f"{len(new_databases)} new (form, database, assembly) entries were added with `Include: false`; "
+                f"review them and enable the ones to use: {new_databases}"
+            )
+        if new_assembly_entries:
+            self.log.warning(f"Known databases appeared with new assemblies: {new_assembly_entries}")
+        if report["switched_on"]:
+            self.log.warning(
+                "These new assembly entries were added with `Include: true` because their database is enabled on all "
+                f"its other assemblies; review them: {report['switched_on']}"
+            )
+        return report
 
     def give_list_for_case(self, give_type: str) -> list:
         """Return database names or assembly codes extracted from the external-DB YAML file.
@@ -363,23 +609,25 @@ class ExternalDatabases:
                 unexpected internal inconsistency is encountered while traversing
                 the YAML structure.
         """
+        if give_type not in ("db", "assembly"):
+            raise ValueError(f"give_type must be 'db' or 'assembly', got {give_type!r}.")
         the_dict_loaded = self.load_modified_yaml()
-        the_dict = the_dict_loaded[self.organism][self.form]
+        # A file without an entry for this organism or form means "no external databases" (see
+        # `validate_yaml_file_up_to_date`).
+        the_dict = (the_dict_loaded.get(self.organism) or {}).get(self.form) or {}
 
         result = set()
         for db_name in the_dict:
             for asm in the_dict[db_name]["Assembly"]:
                 item = the_dict[db_name]["Assembly"][asm]
-                res_ens = map(int, item["Ensembl release"].split(","))
-
-                if self.ensembl_release in res_ens and item["Include"]:
-                    if give_type == "db":
-                        # Only add db_name if assembly matches
-                        if int(asm) == self.genome_assembly:
-                            result.add(db_name)
-                    elif give_type == "assembly":
-                        result.add(int(asm))
-                    else:
-                        raise ValueError(f"give_type must be 'db' or 'assembly', got {give_type!r}.")
+                releases = {int(r) for r in str(item["Ensembl release"]).split(",")}
+                if self.ensembl_release not in releases or not item["Include"]:
+                    continue
+                if give_type == "db":
+                    # Only add db_name if assembly matches
+                    if int(asm) == self.genome_assembly:
+                        result.add(db_name)
+                else:
+                    result.add(int(asm))
 
         return list(result)

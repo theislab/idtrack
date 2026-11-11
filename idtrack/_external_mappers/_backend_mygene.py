@@ -135,7 +135,8 @@ def map_with_mygene(
         ids: Input identifiers to map.
         input_db: Source database type (e.g. ``"ensembl_gene"``, ``"hgnc_symbol"``, ``"entrez_gene"``).
         output_db: Target database type (e.g. ``"uniprot"``, ``"hgnc_symbol"``, ``"entrez_gene"``).
-        species: Species code (e.g. ``"hsapiens"``, ``"mmusculus"``, ``"sscrofa"``).
+        species: Species code (e.g. ``"hsapiens"``, ``"mmusculus"``, ``"sscrofa"``, ``"mmulatta"``,
+            ``"mfascicularis"``).
         chunk_size: Number of IDs per API request.
         pause: Pause in seconds between API requests.
         max_retries: Maximum retry attempts per chunk on failure.

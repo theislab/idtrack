@@ -4,6 +4,7 @@ import gc
 import logging
 import os
 import pickle  # noqa: S403
+import re
 import warnings
 from functools import cached_property
 from typing import Literal, Optional, Union
@@ -50,12 +51,15 @@ class HarmonizeFeatures:
             :py:class:`idtrack.api.API`; used to read the pre-built identifier graph.
         target_ensembl_release (int): Ensembl release that all identifiers will be converted *to*.  Must
             be ≤ *graph_last_ensembl_release*.
-        final_database (str): Canonical namespace kept after conversion (e.g. ``"HGNC Symbol"``).
-            Defaults to ``"HGNC Symbol"``.
-        organism_name (str): Ensembl-style organism short name (e.g. ``"homo_sapiens"``).
-            Defaults to ``"homo_sapiens"``.
-        graph_last_ensembl_release (int): Highest release present in the on-disk IDTrack graph.
-            Defaults to ``114``.
+        final_database (Optional[str]): Canonical namespace kept after conversion (e.g. ``"HGNC Symbol"``).
+            Defaults to the organism's first symbol database (:py:attr:`idtrack.DB.symbol_databases`: HGNC Symbol
+            for human, MGI Symbol for mouse, VGNC Symbol for pig and the macaques).
+        organism_name (Optional[str]): Organism, as an Ensembl species name (e.g. ``"homo_sapiens"``) or any query
+            :py:meth:`idtrack.API.resolve_organism` accepts. If ``None``, it is read from the graph files in
+            *idtrack_local_repository*, which must then hold graphs of exactly one organism.
+        graph_last_ensembl_release (Optional[int]): Snapshot release of the IDTrack graph. If ``None``, the newest
+            graph of the organism in *idtrack_local_repository* (built by :py:meth:`idtrack.API.build_graph`) is
+            used, or the latest Ensembl release of the organism when there is none.
         verbose_level (Literal[0, 1, 2]): Logging verbosity; 0 = errors only, 1 = warnings, 2 =
             info.  Defaults to ``2``.
         debugging_variables (bool): Retain heavy intermediate structures for post-mortem
@@ -109,9 +113,9 @@ class HarmonizeFeatures:
         project_local_repository: str,
         idtrack_local_repository: str,
         target_ensembl_release: int,
-        final_database: str = "HGNC Symbol",
-        organism_name: str = "homo_sapiens",
-        graph_last_ensembl_release: int = 114,
+        final_database: Optional[str] = None,
+        organism_name: Optional[str] = None,
+        graph_last_ensembl_release: Optional[int] = None,
         verbose_level: Literal[0, 1, 2] = 2,
         debugging_variables: bool = False,
         converted_id_column: str = "converted_id",
@@ -128,15 +132,17 @@ class HarmonizeFeatures:
             project_local_repository (str): See :py:meth:`HarmonizeFeatures`.
             idtrack_local_repository (str): See :py:meth:`HarmonizeFeatures`.
             target_ensembl_release (int): See :py:meth:`HarmonizeFeatures`.
-            final_database (str): See :py:meth:`HarmonizeFeatures`.
-            organism_name (str): See :py:meth:`HarmonizeFeatures`.
-            graph_last_ensembl_release (int): See :py:meth:`HarmonizeFeatures`.
+            final_database (Optional[str]): See :py:meth:`HarmonizeFeatures`.
+            organism_name (Optional[str]): See :py:meth:`HarmonizeFeatures`.
+            graph_last_ensembl_release (Optional[int]): See :py:meth:`HarmonizeFeatures`.
             verbose_level (Literal[0, 1, 2]): See :py:meth:`HarmonizeFeatures`.
             debugging_variables (bool): See :py:meth:`HarmonizeFeatures`.
             converted_id_column (str): See :py:meth:`HarmonizeFeatures`.
 
         Raises:
-            ValueError: If *verbose_level* is not 0, 1, or 2.
+            ValueError: If *verbose_level* is not 0, 1, 2 or 3, if *organism_name* is ``None`` and the graphs in
+                *idtrack_local_repository* do not name exactly one organism, or if *final_database* is ``None`` and
+                the organism declares no symbol database.
         """
         self.project_name = project_name
         self.project_local_repository = project_local_repository
@@ -144,9 +150,6 @@ class HarmonizeFeatures:
         self.converted_id_column = converted_id_column
         self.idtrack_local_repository = idtrack_local_repository
         self.target_ensembl_release = target_ensembl_release
-        self.graph_last_ensembl_release = graph_last_ensembl_release
-        self.final_database = final_database
-        self.organism_name = organism_name
         self.n_datasets = len(self.data_h5ad_dict)
         self.debugging_variables = debugging_variables
 
@@ -166,6 +169,17 @@ class HarmonizeFeatures:
         self.log = logging.getLogger("harmonize_features")
         self.idt.configure_logger(_logging)
         self.idt_initialized = False
+
+        # Organism, final database and snapshot release: explicit values win; nothing defaults to one organism.
+        self.organism_name = self._resolve_organism_name(organism_name)
+        self.final_database = (
+            final_database if final_database is not None else self.default_final_database(self.organism_name)
+        )
+        self.graph_last_ensembl_release = (
+            int(graph_last_ensembl_release)
+            if graph_last_ensembl_release is not None
+            else self._default_graph_last_release()
+        )
 
         self.dict_n_to_1: dict[str, list[str]] = dict()
         self.multiple_ensembl_list: list[list[tuple[str, str]]] = list()
@@ -198,6 +212,79 @@ class HarmonizeFeatures:
         self.removed_final_database_duplicates: dict[str, dict[str, list[str]]] = dict()
 
         self._initialize()
+
+    @staticmethod
+    def default_final_database(organism: str) -> str:
+        """Return the organism's default final database: its first entry in :py:attr:`idtrack.DB.symbol_databases`.
+
+        Args:
+            organism: Ensembl species name of a registered organism.
+
+        Returns:
+            str: E.g. ``"HGNC Symbol"`` for human, ``"VGNC Symbol"`` for rhesus macaque.
+
+        Raises:
+            ValueError: If the organism is not registered or declares no symbol database.
+        """
+        databases = DB.symbol_databases.get(organism)
+        if not databases:
+            raise ValueError(
+                f"No symbol database is declared for organism {organism!r} (`DB.symbol_databases`); "
+                "pass `final_database` explicitly."
+            )
+        return str(databases[0])
+
+    def _graph_snapshots(self) -> dict[str, list[int]]:
+        """Return ``{organism: [snapshot releases]}`` of the graphs :py:meth:`idtrack.API.build_graph` would load.
+
+        Graph files are named by :py:meth:`idtrack._graph_maker.GraphMaker.create_file_name`; the API builds them
+        with ``ignore_before`` at idtrack's floor and ``narrow=True``.
+
+        Returns:
+            dict[str, list[int]]: Sorted snapshot releases per organism with at least one such graph.
+        """
+        floor = int(min(DB.mysql_port_min_release.values()))
+        found: dict[str, list[int]] = {}
+        try:
+            names = os.listdir(self.idtrack_local_repository)
+        except OSError:
+            return found
+        for organism in DB.supported_organisms:
+            pattern = re.compile(rf"^graph_{re.escape(organism)}_min{floor}_max([0-9]+)_narrow\.pickle$")
+            releases = sorted(int(m.group(1)) for m in map(pattern.match, names) if m)
+            if releases:
+                found[organism] = releases
+        return found
+
+    def _resolve_organism_name(self, organism_name: Optional[str]) -> str:
+        """Return the Ensembl species name to use (see the ``organism_name`` argument)."""
+        if organism_name is None:
+            organisms = sorted(self._graph_snapshots())
+            if len(organisms) != 1:
+                found = (
+                    f"holds graphs of several organisms ({', '.join(organisms)})"
+                    if organisms
+                    else "holds no graph built by `API.build_graph`"
+                )
+                raise ValueError(
+                    f"Pass `organism_name`: the idtrack local repository {self.idtrack_local_repository!r} {found}, "
+                    "so the organism cannot be read from it. Use an Ensembl species name of "
+                    f"`idtrack.DB.supported_organisms` ({', '.join(DB.supported_organisms)}), e.g. "
+                    '`organism_name="homo_sapiens"`, or a taxon ID or name that `API.resolve_organism` accepts.'
+                )
+            return organisms[0]
+        if organism_name in DB.supported_organisms:
+            return organism_name
+        formal_name, _ = self.idt.resolve_organism(organism_name)
+        return formal_name
+
+    def _default_graph_last_release(self) -> int:
+        """Return the newest graph snapshot of the organism, else the organism's latest Ensembl release."""
+        releases = self._graph_snapshots().get(self.organism_name)
+        if releases:
+            return int(max(releases))
+        _, latest_release = self.idt.resolve_organism(self.organism_name)
+        return int(latest_release)
 
     def _initialize(self) -> None:
         """Populate diagnostic structures for failed or ambiguous identifier conversions.
@@ -267,8 +354,8 @@ class HarmonizeFeatures:
         Returns ``None``: The :py:attr:`idt` attribute is populated and ready for queries.
         """
         if not self.idt_initialized:
-            organism_formal_name, _ = self.idt.resolve_organism(self.organism_name)
-            self.idt.build_graph(organism_name=organism_formal_name, snapshot_release=self.graph_last_ensembl_release)
+            # `self.organism_name` is already the Ensembl species name (see `_resolve_organism_name`).
+            self.idt.build_graph(organism_name=self.organism_name, snapshot_release=self.graph_last_ensembl_release)
             self.idt.calculate_graph_caches()
             self.idt_initialized = True
 
@@ -681,9 +768,7 @@ class HarmonizeFeatures:
         """
         result_dataset = dict()
         for dataset_name, dataset_path in self.data_h5ad_dict.items():
-            dataset_pickle = os.path.join(
-                self.project_local_repository, f"idtrack_result_{self.project_name}_{dataset_name}.pickle"
-            )
+            dataset_pickle = self.result_cache_path(dataset_name)
 
             switch_inconsistency = None
             if os.path.isfile(dataset_pickle) and os.access(dataset_pickle, os.R_OK):
@@ -717,6 +802,26 @@ class HarmonizeFeatures:
             self.n_to_1_within_individual_dataset(dataset_name=dataset_name, dataset_matching_list=matching_list)
 
         return result_dataset
+
+    def result_cache_path(self, dataset_name: str) -> str:
+        """Return the path of the cached ID-Track matchings of one dataset.
+
+        The file name holds everything the matchings depend on besides the identifiers themselves (which are
+        checked when the file is read): project, dataset, organism, final database, target release and graph
+        snapshot release, e.g. ``idtrack_result_<project>_<dataset>_homo_sapiens_HGNC-Symbol_rel114_graph115.pickle``.
+
+        Args:
+            dataset_name: Key of :py:attr:`data_h5ad_dict`.
+
+        Returns:
+            str: Absolute or repository-relative path inside :py:attr:`project_local_repository`.
+        """
+        final_db_slug = re.sub(r"[^0-9A-Za-z]+", "-", str(self.final_database)).strip("-")
+        name = (
+            f"idtrack_result_{self.project_name}_{dataset_name}_{self.organism_name}_{final_db_slug}"
+            f"_rel{self.target_ensembl_release}_graph{self.graph_last_ensembl_release}.pickle"
+        )
+        return os.path.join(self.project_local_repository, name)
 
     def extract_source_identifiers_from_anndata(self, dataset_path: str) -> list[str]:
         """Load an ``.h5ad`` file and harvest the raw feature identifiers.
@@ -1011,12 +1116,6 @@ class HarmonizeFeatures:
 
             adata_study.obs["unified_index"] = f"{handle}_" + adata_study.obs.index.astype(str)
             adata_study.obs.set_index("unified_index", drop=True, inplace=True)
-
-            final_databases_tested = ["HGNC Symbol"]
-            if self.final_database not in final_databases_tested:
-                self.log.warning(
-                    f"Final database other than following databases is not tested:  {final_databases_tested}"
-                )
 
             adata_study.var.drop(columns=["Query ID"], inplace=True)
             new_final_database_var_column = f"{self.converted_id_column}_{handle}"

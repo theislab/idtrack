@@ -25,7 +25,12 @@ from typing import Any
 
 import pandas as pd
 
-from idtrack._external_mappers._constants import _DB_ALIASES, _SPECIES_ALIASES, SUPPORTED_DBS
+from idtrack._external_mappers._constants import (
+    _DB_ALIASES,
+    _SPECIES_ALIASES,
+    _SPECIES_CANONICAL_TO_MYGENE,
+    SUPPORTED_DBS,
+)
 
 __all__ = [
     "canonical_db",
@@ -256,7 +261,8 @@ def canonical_db(db: str) -> str:
 def canonical_species(species: str | None) -> str:
     """Return canonical organism code (g:Profiler / Ensembl style).
 
-    Supported out-of-the-box: human → ``hsapiens``, mouse → ``mmusculus``, pig → ``sscrofa``.
+    Supported out-of-the-box: human → ``hsapiens``, mouse → ``mmusculus``, pig → ``sscrofa``, rhesus macaque →
+    ``mmulatta``, cynomolgus macaque → ``mfascicularis`` (names, aliases and NCBI taxon IDs).
 
     Args:
         species: Species code/alias. If ``None`` or empty, defaults to ``"hsapiens"``.
@@ -271,15 +277,9 @@ def canonical_species(species: str | None) -> str:
 
 
 def _species_for_mygene(species: str | None) -> str:
-    """Return the MyGene-compatible common name for a canonical species code."""
+    """Return the MyGene-compatible species value (common name or NCBI taxon ID) for a species code."""
     cs = canonical_species(species)
-    if cs == "hsapiens":
-        return "human"
-    if cs == "mmusculus":
-        return "mouse"
-    if cs == "sscrofa":
-        return "pig"
-    return cs
+    return _SPECIES_CANONICAL_TO_MYGENE.get(cs, cs)
 
 
 # ----------------------------- Helper utils -------------------------------- #

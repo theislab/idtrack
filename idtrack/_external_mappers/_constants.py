@@ -92,16 +92,57 @@ _SPECIES_ALIASES = {
     "homo_sapiens": "hsapiens",
     "homo sapiens": "hsapiens",
     "hsapiens": "hsapiens",
+    "9606": "hsapiens",
     # Mouse
     "mouse": "mmusculus",
     "mus_musculus": "mmusculus",
     "mus musculus": "mmusculus",
     "mmusculus": "mmusculus",
+    "10090": "mmusculus",
     # Pig
     "pig": "sscrofa",
     "sus_scrofa": "sscrofa",
     "sus scrofa": "sscrofa",
     "sscrofa": "sscrofa",
+    "9823": "sscrofa",
+    # Rhesus macaque
+    "rhesus macaque": "mmulatta",
+    "rhesus": "mmulatta",
+    "macaca_mulatta": "mmulatta",
+    "macaca mulatta": "mmulatta",
+    "mmulatta": "mmulatta",
+    "9544": "mmulatta",
+    # Cynomolgus (crab-eating) macaque
+    "cynomolgus macaque": "mfascicularis",
+    "cynomolgus": "mfascicularis",
+    "crab-eating macaque": "mfascicularis",
+    "macaca_fascicularis": "mfascicularis",
+    "macaca fascicularis": "mfascicularis",
+    "mfascicularis": "mfascicularis",
+    "9541": "mfascicularis",
+}
+
+# Per-service species names, keyed by the canonical short code (which is g:Profiler's organism id and the prefix of
+# Ensembl BioMart's `<code>_gene_ensembl` datasets; both list all five species). Checked against each service:
+# g:Profiler `api/util/organisms_list`, Ensembl BioMart `martservice?type=datasets`, MyGene.info `query?species=`
+# (common names for human, mouse and pig, NCBI taxon IDs otherwise), and Bgee `api/?page=species`.
+
+# Ensembl species names (used by gget, which queries Ensembl).
+_SPECIES_CANONICAL_TO_ENSEMBL: dict[str, str] = {
+    "hsapiens": "homo_sapiens",
+    "mmusculus": "mus_musculus",
+    "sscrofa": "sus_scrofa",
+    "mmulatta": "macaca_mulatta",
+    "mfascicularis": "macaca_fascicularis",
+}
+
+# MyGene.info `species` values.
+_SPECIES_CANONICAL_TO_MYGENE: dict[str, str] = {
+    "hsapiens": "human",
+    "mmusculus": "mouse",
+    "sscrofa": "pig",
+    "mmulatta": "9544",
+    "mfascicularis": "9541",
 }
 
 # Map canonical short codes -> how they appear in Bgee's 'genus' / 'species'
@@ -109,6 +150,8 @@ _SPECIES_CANONICAL_TO_BGEENAMES: dict[str, tuple[str, str]] = {
     "hsapiens": ("Homo", "sapiens"),
     "mmusculus": ("Mus", "musculus"),
     "sscrofa": ("Sus", "scrofa"),
+    "mmulatta": ("Macaca", "mulatta"),
+    "mfascicularis": ("Macaca", "fascicularis"),
     # Extend this as you add more species
 }
 
@@ -232,6 +275,8 @@ _ENSEMBL_ARCHIVE_BY_RELEASE: dict[int, str] = {
     112: "may2024.archive.ensembl.org",
     113: "oct2024.archive.ensembl.org",
     114: "may2025.archive.ensembl.org",
+    115: "sep2025.archive.ensembl.org",
+    116: "jun2026.archive.ensembl.org",
 }
 
 _ENSEMBL_SPECIAL_RELEASE_HOSTS: dict[str, str] = {

@@ -56,16 +56,16 @@ test: ## run tests quickly with the default Python
 	pytest
 
 test-slow: ## run slow tests (network/integration tests)
-	pytest -m slow
+	pytest --runslow -m slow
 
-test-integration: ## run all integration tests
-	pytest -m integration
+test-integration: ## run all integration tests (including slow ones)
+	pytest --runslow -m integration
 
 test-all-with-slow: ## run all tests including slow tests
-	pytest --ignore-glob='**/test_external_mappers.py' -m '' tests/
+	pytest --runslow --ignore-glob='**/test_external_mappers.py' -m '' tests/
 
 test-full: ## run complete test suite including slow and external-mappers
-	pytest -m ''
+	pytest --runslow -m ''
 
 test-coverage: ## run tests with coverage report
 	pytest --cov=idtrack --cov-report=term --cov-report=html

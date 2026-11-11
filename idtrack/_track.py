@@ -71,9 +71,9 @@ class Track:
                 cross-reference tables from a local cache or a live MySQL mirror.
                 The same instance is forwarded to :py:class:`_graph_maker.GraphMaker`.
             kwargs: Additional keyword arguments forwarded verbatim to
-                :py:meth:`_graph_maker.GraphMaker.get_graph`.  Common flags include
-                `force_rebuild` (recompute the graph from scratch), `species`
-                (restrict to one taxon), and `cache_dir` (override on-disk cache location).
+                :py:meth:`_graph_maker.GraphMaker.get_graph`: ``narrow``, ``create_even_if_exist`` (rebuild even if
+                a cached graph exists), ``save_after_calculation``, ``overwrite_even_if_exist``, ``form_list`` and
+                ``narrow_external``.
         """
         self.log = logging.getLogger("track")
         self.db_manager = db_manager
@@ -91,6 +91,9 @@ class Track:
 
         Some test fixtures construct `Track` via `Track.__new__()` (bypassing `__init__`). Keep
         the conversion code robust by lazily initialising the per-graph assembly-priority mapping.
+
+        Raises:
+            ValueError: If the graph's organism is not registered in the organism table.
         """
         if hasattr(self, "_assembly_priority_by_assembly") and hasattr(self, "_assembly_priority"):
             return
@@ -98,29 +101,31 @@ class Track:
         organism = self.graph.graph.get("organism")
         assemblies = sorted(self.graph.available_genome_assemblies)
 
-        priority_by_assembly: dict[int, int] = {}
-        if isinstance(organism, str) and organism in DB.assembly_mysqlport_priority:
-            cfg = DB.assembly_mysqlport_priority[organism]
-            priority_by_assembly = {a: int(cfg[a]["Priority"]) for a in assemblies if a in cfg}
+        # Assembly keys carry no order of their own (rhesus Mmul_8.0.1 is 801 but older than Mmul_10, 10): the order
+        # comes from the organism table only.
+        if not isinstance(organism, str) or organism not in DB.assembly_mysqlport_priority:
+            raise ValueError(
+                f"The graph's organism {organism!r} is not registered in the organism table "
+                f"(supported: {DB.supported_organisms}), so its assemblies cannot be ordered. Register it with "
+                "`idtrack.DB.register_organism` before loading the graph."
+            )
+        cfg = DB.assembly_mysqlport_priority[organism]
+        priority_by_assembly: dict[int, int] = {a: int(cfg[a]["Priority"]) for a in assemblies if a in cfg}
 
-            missing = [a for a in assemblies if a not in cfg]
-            if missing:
-                self.log.warning(
-                    "Graph contains genome assemblies not configured for organism %r: %s. "
-                    "Treating them as lowest priority; update DB.assembly_mysqlport_priority to set an explicit order.",
-                    organism,
-                    sorted(missing),
-                )
-                # Keep configured priorities for known assemblies; treat unknown assemblies as lowest priority
-                # (largest numeric value) so we do not silently "prefer" an unconfigured assembly.
-                start_rank = (max(priority_by_assembly.values()) if priority_by_assembly else 0) + 1
-                for offset, assembly in enumerate(sorted(missing), start=0):
-                    priority_by_assembly[int(assembly)] = start_rank + offset
-
-        if not priority_by_assembly:
-            # Fallback heuristic: higher numeric assembly code is treated as newer/preferred.
-            assemblies_desc = sorted(assemblies, reverse=True)
-            priority_by_assembly = {int(assembly): rank for rank, assembly in enumerate(assemblies_desc, start=1)}
+        missing = [a for a in assemblies if a not in cfg]
+        if missing:
+            self.log.warning(
+                "Graph contains genome assemblies not configured for organism %r: %s. "
+                "Treating them as lowest priority; add them with `idtrack.DB.register_organism` to set an explicit "
+                "order.",
+                organism,
+                sorted(missing),
+            )
+            # Keep configured priorities for known assemblies; treat unknown assemblies as lowest priority so we do
+            # not silently "prefer" an unconfigured assembly.
+            start_rank = (max(priority_by_assembly.values()) if priority_by_assembly else 0) + 1
+            for offset, assembly in enumerate(sorted(missing), start=0):
+                priority_by_assembly[int(assembly)] = start_rank + offset
 
         self._assembly_priority_by_assembly = priority_by_assembly
         self._assembly_priority = sorted(set(priority_by_assembly.values()), reverse=True)
@@ -1231,7 +1236,7 @@ class Track:
         imp1, imp2, imp3 = set(), set(), set()
         for i in _temp:
             nt = self.graph.nodes[i][DB.node_type_str]
-            if nt in DB.nts_external:
+            if nt == DB.nts_external:
                 imp1.add(i)
             elif nt in ensembl_include[form_importance_order[0]]:
                 imp2.add(i)
@@ -2035,10 +2040,10 @@ class Track:
             return_ensembl_alternative (bool): When no synonym can be found,
                 add a fallback entry that keeps the Ensembl gene.
             prevent_assembly_jumps (bool): If ``True``, disallow conversion paths
-                that cross between different genome assemblies. Defaults to ``False``.
+                that cross between different genome assemblies. Defaults to ``True``.
             account_for_hyperconnected_nodes (bool): If ``True``, skip nodes
                 that are marked as hyperconnective (very high connectivity) to
-                prevent search explosion and low-quality paths. Defaults to ``True``.
+                prevent search explosion and low-quality paths. Defaults to ``False``.
 
         Returns:
             dict: The same `converted` dict, updated in place (and also

@@ -109,12 +109,21 @@ class TestDBAssemblyConfiguration:
         assert "homo_sapiens" in DB.assembly_mysqlport_priority
         assert 37 in DB.assembly_mysqlport_priority["homo_sapiens"]
 
-    def test_main_assembly_is_highest_priority(self):
-        """Test main_assembly is the highest priority assembly."""
+    def test_highest_priority_assembly_per_organism(self):
+        """Test the priority-1 assembly of each organism is the one `assemblies_by_priority` puts first."""
         from idtrack._db import DB
 
-        # Main assembly should be the one with priority 1
-        assert DB.main_assembly == 38
+        expected = {
+            "homo_sapiens": 38,
+            "mus_musculus": 39,
+            "sus_scrofa": 111,
+            "macaca_mulatta": 10,
+            "macaca_fascicularis": 6,
+        }
+        for organism, assembly in expected.items():
+            assert DB.assemblies_by_priority(organism)[0] == assembly
+            assert DB.assembly_mysqlport_priority[organism][assembly]["Priority"] == 1
+        assert not hasattr(DB, "main_assembly")
 
     def test_assembly_priorities_are_unique_per_organism(self):
         """Test assembly priorities are unique and start at 1 per organism."""
@@ -394,7 +403,7 @@ class TestDBImmutability:
             "rest_server_api",
             "mysql_host",
             "assembly_mysqlport_priority",
-            "main_assembly",
+            "symbol_databases",
             "node_type_str",
             "nts_external",
             "forms_in_order",

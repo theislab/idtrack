@@ -38,8 +38,7 @@ def _make_matching(query_id: str, target_pairs: list[tuple[str, str]] | None, fi
     }
 
 
-def _synthetic_matchings() -> _SyntheticMatchings:
-    final_db = "HGNC Symbol"
+def _synthetic_matchings(final_db: str = "HGNC Symbol") -> _SyntheticMatchings:
     ensg1 = "ENSG00000000001"
     ensg2 = "ENSG00000000002"
     ensg3 = "ENSG00000000003"
@@ -66,10 +65,12 @@ def _synthetic_matchings() -> _SyntheticMatchings:
     return _SyntheticMatchings(dataset_to_matchings={"d1": d1, "d2": d2})
 
 
-@pytest.fixture
-def harmonizer(tmp_path, monkeypatch) -> HarmonizeFeatures:
+def _make_harmonizer(
+    tmp_path, monkeypatch, organism_name="homo_sapiens", final_database="HGNC Symbol"
+) -> HarmonizeFeatures:
     """Create a HarmonizeFeatures instance backed by synthetic matchings."""
-    synthetic = _synthetic_matchings()
+    expected_final = final_database or DB.symbol_databases[organism_name][0]
+    synthetic = _synthetic_matchings(expected_final)
 
     d1_path = tmp_path / "d1.h5ad"
     d2_path = tmp_path / "d2.h5ad"
@@ -112,13 +113,19 @@ def harmonizer(tmp_path, monkeypatch) -> HarmonizeFeatures:
         project_local_repository=str(project_repo),
         idtrack_local_repository=str(idtrack_repo),
         target_ensembl_release=101,
-        final_database="HGNC Symbol",
-        organism_name="homo_sapiens",
+        final_database=final_database,
+        organism_name=organism_name,
         graph_last_ensembl_release=101,
         verbose_level=0,
         debugging_variables=True,
         converted_id_column="converted_id",
     )
+
+
+@pytest.fixture
+def harmonizer(tmp_path, monkeypatch) -> HarmonizeFeatures:
+    """Create a HarmonizeFeatures instance backed by synthetic matchings."""
+    return _make_harmonizer(tmp_path, monkeypatch)
 
 
 def test_import_harmonize_features():
@@ -218,3 +225,76 @@ def test_get_column_as_series_handles_duplicates():
     # Test that KeyError is raised for non-existent column
     with pytest.raises(KeyError):
         HarmonizeFeatures._get_column_as_series(df_normal, "nonexistent")
+
+
+@pytest.mark.parametrize(
+    ("organism", "symbol_database"),
+    [(organism, db) for organism, databases in sorted(DB.symbol_databases.items()) for db in databases],
+)
+def test_harmonizer_works_for_every_symbol_database(tmp_path, monkeypatch, organism, symbol_database):
+    """The harmonisation runs the same way for each organism's symbol databases (formerly HGNC-only)."""
+    h = _make_harmonizer(tmp_path, monkeypatch, organism_name=organism, final_database=symbol_database)
+    assert h.final_database == symbol_database
+    adata = h.unify_multiple_anndatas(
+        mode="intersect",
+        obs_columns_to_keep=["cell_type", "age"],
+        numeric_obs_columns={"age"},
+        handle_anndata_key="handle",
+    )
+    assert set(adata.var.index) == {"ENSG00000000001", "ENSG00000141510", "FAIL_ALL", "TP53_ALIAS"}
+
+
+@pytest.mark.parametrize("organism", sorted(DB.symbol_databases))
+def test_default_final_database_is_the_first_symbol_database(tmp_path, monkeypatch, organism):
+    """Without `final_database`, the organism's first symbol database is used (no human default)."""
+    h = _make_harmonizer(tmp_path, monkeypatch, organism_name=organism, final_database=None)
+    assert h.final_database == DB.symbol_databases[organism][0]
+    assert HarmonizeFeatures.default_final_database("macaca_mulatta") == "VGNC Symbol"
+    assert HarmonizeFeatures.default_final_database("mus_musculus") == "MGI Symbol"
+
+
+def _bare_harmonizer(idtrack_repo, project_repo=None) -> HarmonizeFeatures:
+    h = HarmonizeFeatures.__new__(HarmonizeFeatures)
+    h.idtrack_local_repository = str(idtrack_repo)
+    h.project_local_repository = str(project_repo or idtrack_repo)
+    return h
+
+
+def test_organism_and_snapshot_resolved_from_graph_files(tmp_path):
+    """Without `organism_name`/`graph_last_ensembl_release`, the graphs `API.build_graph` made are used."""
+    for name in (
+        "graph_macaca_mulatta_min48_max114_narrow.pickle",
+        "graph_macaca_mulatta_min48_max116_narrow.pickle",
+        "graph_macaca_mulatta_min100_max116_narrow.pickle",  # not a graph build_graph would load
+    ):
+        (tmp_path / name).write_bytes(b"")
+    h = _bare_harmonizer(tmp_path)
+    h.organism_name = h._resolve_organism_name(None)
+    assert h.organism_name == "macaca_mulatta"
+    assert h._default_graph_last_release() == 116
+
+    (tmp_path / "graph_homo_sapiens_min48_max115_narrow.pickle").write_bytes(b"")
+    with pytest.raises(ValueError, match="Pass `organism_name`.*several organisms.*homo_sapiens, macaca_mulatta"):
+        _bare_harmonizer(tmp_path)._resolve_organism_name(None)
+
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    with pytest.raises(ValueError, match='Pass `organism_name`.*holds no graph.*organism_name="homo_sapiens"'):
+        _bare_harmonizer(empty)._resolve_organism_name(None)
+
+
+def test_organism_without_symbol_database_needs_final_database():
+    """Organism without symbol database needs final database."""
+    with pytest.raises(ValueError, match="pass `final_database`"):
+        HarmonizeFeatures.default_final_database("danio_rerio")
+
+
+def test_result_cache_key_includes_organism_database_and_releases(tmp_path):
+    """Result cache key includes organism database and releases."""
+    h = _bare_harmonizer(tmp_path)
+    h.project_name, h.organism_name, h.final_database = "proj", "macaca_mulatta", "VGNC Symbol"
+    h.target_ensembl_release, h.graph_last_ensembl_release = 110, 116
+    path = h.result_cache_path("d1")
+    assert path.endswith("idtrack_result_proj_d1_macaca_mulatta_VGNC-Symbol_rel110_graph116.pickle")
+    h.final_database = "HGNC Symbol"
+    assert h.result_cache_path("d1") != path

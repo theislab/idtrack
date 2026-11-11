@@ -26,6 +26,9 @@ import threading
 from dataclasses import dataclass
 from typing import Any
 
+from idtrack._db import DB
+from idtrack._ensembl_access import reachability
+
 
 class ConnectionBridge:
     """Route this Python process' outgoing TCP connections through an SSH-provided SOCKS proxy.
@@ -227,6 +230,8 @@ class ConnectionBridge:
             state.original_socket_cls = None
             state.original_env = None
             state.original_socks_proxy = None
+            # The route to Ensembl changed back: forget which MySQL ports were (un)reachable.
+            reachability.reset()
 
         cls._emit_global("[idtrack] ConnectionBridge disabled (atexit/test cleanup).", verbose=verbose)
 
@@ -291,6 +296,8 @@ class ConnectionBridge:
                 state.atexit_registered = True
 
             self._started = True
+            # The route to Ensembl changed: forget which MySQL ports were (un)reachable.
+            reachability.reset()
 
         self._emit(
             "[idtrack] ConnectionBridge enabled: all TCP sockets in this Python process are routed through "
@@ -352,14 +359,13 @@ class ConnectionBridge:
         self._emit(f"[idtrack] ConnectionBridge check OK (Ensembl REST): {payload}", verbose=verbose)
 
         for port, label in ((3306, "3306"), (3337, "3337/GRCh37")):
-            try:
-                with socket.create_connection(("ensembldb.ensembl.org", int(port)), timeout=10.0):
-                    pass
+            # Probed through the process-wide reachability memory, so the answer is the one IDTrack then uses.
+            if reachability.can_connect(DB.mysql_host, int(port), timeout_s=10.0):
                 self._emit(f"[idtrack] ConnectionBridge check OK (Ensembl MySQL {label}): reachable", verbose=verbose)
-            except Exception as exc:
+            else:
                 self._emit(
-                    f"[idtrack] ConnectionBridge check WARN (Ensembl MySQL {label}): {exc} "
-                    "(IDTrack may still work via HTTPS/FTP/REST).",
+                    f"[idtrack] ConnectionBridge check WARN (Ensembl MySQL {label}): not reachable "
+                    "(IDTrack works via the HTTPS dumps instead).",
                     verbose=verbose,
                     level=logging.WARNING,
                 )
@@ -410,6 +416,8 @@ class ConnectionBridge:
             state.original_socket_cls = None
             state.original_env = None
             state.original_socks_proxy = None
+            # The route to Ensembl changed back: forget which MySQL ports were (un)reachable.
+            reachability.reset()
 
         self._emit("[idtrack] ConnectionBridge disabled: normal networking restored.", verbose=verbose)
 

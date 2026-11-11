@@ -186,7 +186,8 @@ def map_with_gprofiler(
         ids: Input identifiers to map.
         input_db: Database/namespace of input IDs (e.g. ``"ensembl_gene"``, ``"hgnc_symbol"``).
         output_db: Target database/namespace (e.g. ``"uniprot"``, ``"entrez_gene"``).
-        species: Species code (e.g. ``"hsapiens"``, ``"mmusculus"``, ``"sscrofa"``).
+        species: Species code (e.g. ``"hsapiens"``, ``"mmusculus"``, ``"sscrofa"``, ``"mmulatta"``,
+            ``"mfascicularis"``).
         chunk_size: Number of IDs per API request.
         pause: Seconds to pause between requests.
         max_retries: Maximum retry attempts per chunk on failure.

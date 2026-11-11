@@ -105,7 +105,7 @@ class API:
         """
         self._require_track().graph.calculate_caches(for_test=for_test)
 
-    def resolve_organism(self, tentative_organism_name: str) -> tuple[str, int]:
+    def resolve_organism(self, tentative_organism_name: Union[str, int]) -> tuple[str, int]:
         """Normalize a tentative organism name and fetch the latest supported Ensembl release.
 
         This shields callers from Ensembl naming quirks by resolving a user-provided synonym (e.g. common name,
@@ -115,8 +115,11 @@ class API:
         a consistent, up-to-date pair.
 
         Args:
-            tentative_organism_name (str): Organism descriptor in any supported synonym form (e.g. ``"human"``,
-                ``"hsapiens"``, ``"9606"``, or ``"homo_sapiens"``). Matching is case-insensitive.
+            tentative_organism_name (str | int): Organism descriptor in any supported synonym form (e.g. ``"human"``,
+                ``"hsapiens"``, ``9606``, ``"Macaca mulatta"``, ``"Mmul_10"`` or ``"homo_sapiens"``). Matching is
+                case-insensitive. Ensembl species names and taxon IDs always resolve; a common name that several
+                Ensembl species share (``"pig"`` is shared by the pig breeds) raises a :py:class:`ValueError` that
+                lists the candidates.
 
         Returns:
             tuple[str, int]: ``(formal_name, latest_release)`` where ``formal_name`` is the canonical Ensembl species
@@ -146,10 +149,12 @@ class API:
             organism_name (str): Canonical Ensembl species name (e.g. ``"homo_sapiens"``).
             snapshot_release (int): Most recent Ensembl release to include; later releases are ignored for
                 reproducibility.
-            genome_assembly (int | None): Genome assembly code used in Ensembl core schema names
-                (``<organism>_core_<release>_<assembly>``). This selects the **primary** assembly for the snapshot
-                (e.g. ``38`` = human GRCh38, ``37`` = human GRCh37, ``39`` = mouse GRCm39, ``111`` = pig Sscrofa11.1).
-                If ``None`` (default), the highest-priority assembly configured for the organism is used. Note that
+            genome_assembly (int | None): Assembly key of the organism table
+                (:py:attr:`idtrack.DB.assembly_mysqlport_priority`; usually the code in Ensembl core schema names
+                ``<organism>_core_<release>_<code>``). This selects the **primary** assembly for the snapshot
+                (e.g. ``38`` = human GRCh38, ``37`` = human GRCh37, ``39`` = mouse GRCm39, ``111`` = pig Sscrofa11.1,
+                ``10`` = rhesus Mmul_10, ``6`` = cynomolgus Macaca_fascicularis_6.0). If ``None`` (default), the
+                highest-priority assembly configured for the organism is used. Note that
                 the resulting snapshot graph can still include additional assemblies within the snapshot window;
                 use :py:meth:`idtrack.API.list_genome_assemblies` to inspect what is present.
             ignore_before (int | None): Earliest Ensembl release to include in the snapshot window. When ``None``
@@ -199,9 +204,9 @@ class API:
                 :py:meth:`idtrack.API.resolve_organism`.
             snapshot_release (int): Ensembl release anchoring this build. Data from later releases are ignored to ensure
                 reproducible results.
-            genome_assembly (int | None): Genome assembly code used in Ensembl core schema names
-                (``<organism>_core_<release>_<assembly>``). This selects the **primary** assembly for the snapshot
-                (default: highest-priority/newest configured for the organism). The snapshot graph can still include
+            genome_assembly (int | None): Assembly key of the organism table
+                (:py:attr:`idtrack.DB.assembly_mysqlport_priority`). This selects the **primary** assembly for the
+                snapshot (default: highest-priority/newest configured for the organism). The snapshot graph can still include
                 additional assemblies within the snapshot window; use :py:meth:`idtrack.API.list_genome_assemblies`
                 to inspect what is present.
             return_test (bool): If ``True``, initialise :py:class:`idtrack._track_tests.TrackTests` instead of the

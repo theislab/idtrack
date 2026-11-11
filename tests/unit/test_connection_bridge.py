@@ -89,3 +89,19 @@ def test_connection_bridge_rejects_proxy_switch_while_active():
         other.start(test=False, verbose=False)
 
     bridge.stop(verbose=False)
+
+
+def test_connection_bridge_resets_mysql_reachability():
+    """Starting and stopping the bridge changes the route, so remembered port probes are forgotten."""
+    from idtrack._db import DB
+    from idtrack._ensembl_access import reachability
+
+    reachability.reset()
+    reachability.mark_unreachable(DB.mysql_host, 3306, "blocked before the bridge")
+    bridge = idtrack.ConnectionBridge(proxy_port=1080)
+    assert bridge.start(test=False, verbose=False) is True
+    assert reachability.known() == {}
+
+    reachability.mark_unreachable(DB.mysql_host, 3306, "blocked through the bridge")
+    bridge.stop(verbose=False)
+    assert reachability.known() == {}

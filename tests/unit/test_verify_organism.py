@@ -438,3 +438,101 @@ class TestAmbiguousSynonyms:
 
             with pytest.raises(ValueError, match="ambiguous"):
                 resolver.get_formal_name()
+
+
+def _resolver_for(species: list[dict], query):
+    """Build a VerifyOrganism for *query* against a mocked `/info/species` payload."""
+    with patch("requests.Session") as mock_session:
+        session_instance = MagicMock()
+        mock_session.return_value.__enter__ = MagicMock(return_value=session_instance)
+        mock_session.return_value.__exit__ = MagicMock(return_value=False)
+        response = MagicMock()
+        response.ok = True
+        response.json.return_value = {"species": species}
+        session_instance.get.return_value.__enter__ = MagicMock(return_value=response)
+        session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
+
+        from idtrack._verify_organism import VerifyOrganism
+
+        return VerifyOrganism(query)
+
+
+def _species(name, common, taxon, assembly, aliases=(), display=None):
+    return {
+        "name": name,
+        "common_name": common,
+        "display_name": display or common.capitalize(),
+        "taxon_id": taxon,
+        "assembly": assembly,
+        "accession": f"GCA_{assembly}",
+        "release": "116",
+        "groups": ["core"],
+        "aliases": list(aliases),
+    }
+
+
+# Shaped like Ensembl's payload: aliases only on the reference entries, breeds share the common name and taxon ID.
+SPECIES = [
+    _species("homo_sapiens", "human", "9606", "GRCh38", aliases=["hsapiens", "homo sapiens", "9606", "human"]),
+    _species("sus_scrofa", "pig", "9823", "Sscrofa11.1", aliases=["sscrofa", "pig", "9823", "sus scrofa"]),
+    _species("sus_scrofa_bamei", "pig", "9823", "Bamei_pig_v1", display="Pig - Bamei"),
+    _species("sus_scrofa_meishan", "pig", "9823", "Meishan_pig_v1", display="Pig - Meishan"),
+    _species("macaca_mulatta", "Macaque", "9544", "Mmul_10"),
+    _species("macaca_fascicularis", "Crab-eating macaque", "9541", "Macaca_fascicularis_6.0"),
+    _species("mus_musculus_aj", "house mouse", "10090", "A_J_v3", display="Mouse A/J"),
+    _species("mus_musculus_balbcj", "house mouse", "10090", "BALB_cJ_v3", display="Mouse BALB/cJ"),
+]
+
+
+class TestResolution:
+    """Case-insensitive matching, taxon IDs as int or str, and ambiguity rules."""
+
+    @pytest.mark.parametrize(
+        ("query", "expected"),
+        [
+            ("macaca_mulatta", "macaca_mulatta"),
+            ("Macaca mulatta", "macaca_mulatta"),
+            ("MACACA_MULATTA", "macaca_mulatta"),
+            ("Mmul_10", "macaca_mulatta"),
+            ("macaque", "macaca_mulatta"),
+            (9544, "macaca_mulatta"),
+            ("9541", "macaca_fascicularis"),
+            ("Crab-eating macaque", "macaca_fascicularis"),
+            ("Macaca_fascicularis_6.0", "macaca_fascicularis"),
+            ("Homo Sapiens", "homo_sapiens"),
+            ("HSAPIENS", "homo_sapiens"),
+            (9606, "homo_sapiens"),
+            # A taxon ID shared with breeds resolves to the species-level entry.
+            (9823, "sus_scrofa"),
+            ("9823", "sus_scrofa"),
+            # A formal name is never ambiguous.
+            ("sus_scrofa_bamei", "sus_scrofa_bamei"),
+            ("Sus scrofa", "sus_scrofa"),
+        ],
+    )
+    def test_resolves(self, query, expected):
+        """Resolves."""
+        assert _resolver_for(SPECIES, query).get_formal_name() == expected
+
+    def test_ambiguous_common_name_lists_candidates(self):
+        """Ambiguous common name lists candidates."""
+        resolver = _resolver_for(SPECIES, "house mouse")
+        with pytest.raises(ValueError, match="ambiguous") as info:
+            resolver.get_formal_name()
+        assert "mus_musculus_aj" in str(info.value) and "mus_musculus_balbcj" in str(info.value)
+
+    def test_taxon_without_species_level_entry_is_ambiguous(self):
+        """Taxon without species level entry is ambiguous."""
+        with pytest.raises(ValueError, match="mus_musculus_aj, mus_musculus_balbcj"):
+            _resolver_for(SPECIES, 10090).get_formal_name()
+
+    def test_unknown_query(self):
+        """Unknown query."""
+        with pytest.raises(KeyError):
+            _resolver_for(SPECIES, "zebrafish").get_formal_name()
+
+    def test_integer_query_is_normalised(self):
+        """Integer query is normalised."""
+        resolver = _resolver_for(SPECIES, 9544)
+        assert resolver.organism_query == "9544"
+        assert resolver.get_latest_release() == 116

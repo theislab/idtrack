@@ -410,11 +410,25 @@ def test_external_db_merge_coerces_string_external_db_id(synthetic_dm, monkeypat
 
 
 def test_release_discovery_and_mysql_database_from_server_catalog(tmp_path, monkeypatch):
-    """available_releases/mysql_database should be discovered from server catalog."""
+    """available_releases/mysql_database should be discovered from server catalog.
+
+    Offline: the MySQL port is reported usable and the HTTPS scan is unavailable, so the index comes from the
+    (mocked) MySQL catalogue alone.
+    """
     import pymysql
 
+    from idtrack._ensembl_access import reachability
+
+    monkeypatch.setattr(reachability, "mysql_port_usable", lambda port: True)
+    monkeypatch.setattr(DatabaseManager, "_core_db_index_cache", {})
+
+    def _no_https(cls, **_kwargs):
+        raise RuntimeError("HTTPS dumps are not used in this unit test")
+
+    monkeypatch.setattr(DatabaseManager, "_get_core_db_index_from_ftp", classmethod(_no_https))
+
     class _Cursor:
-        def execute(self, _query: str) -> None:  # noqa: ARG002
+        def execute(self, _query: str, _params=None) -> None:  # noqa: ARG002
             return None
 
         def fetchall(self):

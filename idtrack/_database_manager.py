@@ -10,7 +10,6 @@ import io
 import logging
 import os
 import re
-import socket
 import time
 import warnings
 from collections import Counter
@@ -26,7 +25,9 @@ import requests
 
 import idtrack._utils_hdf5 as hs
 from idtrack._db import DB
+from idtrack._ensembl_access import ensembl_access_mode, reachability
 from idtrack._external_databases import ExternalDatabases
+from idtrack._mysql_dump import read_mysql_dump
 
 
 class DatabaseManager:
@@ -63,17 +64,42 @@ class DatabaseManager:
     concise, human-readable dump of that state.
     """
 
-    _core_db_index_cache: dict[tuple[str, int], dict[str, Any]] = {}
+    # Keyed by (organism, assembly key, DB.organism_table_version) so that `DB.register_organism` invalidates it.
+    _core_db_index_cache: dict[tuple[str, int, int], dict[str, Any]] = {}
     _ftp_schema_cache: dict[str, dict[str, list[str]]] = {}
     _ensembl_latest_release_cache: Optional[int] = None
 
-    @staticmethod
-    def _tcp_can_connect(host: str, port: int, timeout_s: float = 2.0) -> bool:
-        try:
-            with socket.create_connection((host, int(port)), timeout=float(timeout_s)):
+    # pymysql error codes that mean the server or the route to it failed (not the query): can't connect,
+    # server has gone away, lost connection during query, lost connection at handshake.
+    _MYSQL_CONNECTION_ERROR_CODES = frozenset({2003, 2006, 2013, 2055})
+
+    @classmethod
+    def _is_mysql_connection_failure(cls, exc: BaseException) -> bool:
+        """Return whether *exc* (or its cause) means the MySQL server could not be reached or dropped the link."""
+        for err in cls._iter_exception_chain(exc):
+            if isinstance(err, (pymysql.err.InterfaceError, OSError)):
                 return True
-        except OSError:
-            return False
+            if isinstance(err, pymysql.err.OperationalError) and err.args:
+                try:
+                    if int(err.args[0]) in cls._MYSQL_CONNECTION_ERROR_CODES:
+                        return True
+                except (TypeError, ValueError):
+                    continue
+        return False
+
+    @staticmethod
+    def _release_window(organism: str, genome_assembly: int) -> tuple[int, Optional[int]]:
+        """Return the releases an assembly may have: its ``ReleaseRange`` clipped to idtrack's floor (48).
+
+        Both discovery paths (the MySQL probe and the HTTPS scan) accept only releases inside this window, so they
+        agree on what an assembly is even where two assemblies share a core-database suffix.
+
+        Returns:
+            tuple[int, Optional[int]]: ``(first, last)``; ``last`` is ``None`` for an open-ended assembly.
+        """
+        first, last = DB.release_range(organism, int(genome_assembly))
+        floor = int(min(DB.mysql_port_min_release.values()))
+        return max(int(first), floor), last
 
     @classmethod
     def _ensembl_latest_release(cls) -> int:
@@ -179,27 +205,23 @@ class DatabaseManager:
         """Locate the core DB directory name (may include patch letters) and its HTTPS directory URL."""
         release = int(release)
         genome_assembly = int(genome_assembly)
-        expected = f"{organism}_core_{release}_{genome_assembly}"
+        expected = f"{organism}_core_{release}_{DB.db_suffix(organism, genome_assembly)}"
         pattern = re.compile(rf"^{re.escape(expected)}[a-z]*$")
         log = logging.getLogger("database_manager")
 
         for root in cls._ftp_mysql_root_candidates(organism=organism, genome_assembly=genome_assembly, release=release):
             # Fast path: exact directory (no patch letter)
-            if cls._tcp_can_connect(DB.ensembl_ftp_base, 443, timeout_s=2.0):
-                try:
-                    with requests.get(
-                        f"{root}{expected}/",
-                        timeout=(DB.connection_timeout, DB.reading_timeout),
-                        stream=True,
-                    ) as resp:
-                        if resp.status_code == 200:
-                            return expected, f"{root}{expected}/"
-                        if resp.status_code not in (403, 404):
-                            # Unexpected status; fall back to listing below.
-                            pass
-                except requests.RequestException as exc:
-                    # Fall back to listing below; keep this quiet unless debugging connectivity.
-                    log.debug("Failed to probe Ensembl dump directory %r: %s", f"{root}{expected}/", exc)
+            try:
+                with requests.get(
+                    f"{root}{expected}/",
+                    timeout=(DB.connection_timeout, DB.reading_timeout),
+                    stream=True,
+                ) as resp:
+                    if resp.status_code == 200:
+                        return expected, f"{root}{expected}/"
+            except requests.RequestException as exc:
+                # Fall back to listing below; keep this quiet unless debugging connectivity.
+                log.debug("Failed to probe Ensembl dump directory %r: %s", f"{root}{expected}/", exc)
 
             # Slow path: list and look for patch-letter variants (e.g. `_36p`).
             listing: Optional[str] = None
@@ -222,27 +244,12 @@ class DatabaseManager:
         """Build a core-DB availability index by probing the Ensembl HTTPS/FTP MySQL dumps."""
         log = logging.getLogger("database_manager")
         latest_release = cls._ensembl_latest_release()
-        min_release = int(min(DB.mysql_port_min_release.values()))
-
-        # Use assembly-specific release range if available to reduce FTP probe time
-        assembly_config = DB.assembly_mysqlport_priority.get(organism, {}).get(int(genome_assembly), {})
-        release_range_config = assembly_config.get("ReleaseRange")
-        if release_range_config:
-            range_min, range_max = release_range_config
-            # Constrain to the assembly's expected release window
-            min_release = max(int(min_release), int(range_min))
-            max_release = int(range_max) if range_max is not None else int(latest_release)
-            max_release = min(max_release, int(latest_release))
-            log.info(
-                f"Using assembly-specific release range for {organism} assembly {genome_assembly}: "
-                f"releases {min_release}-{max_release} (from config {release_range_config})"
-            )
-        else:
-            max_release = int(latest_release)
-            log.warning(
-                f"No ReleaseRange configured for {organism} assembly {genome_assembly}; "
-                f"searching all releases {min_release}-{max_release} (this may be slow)"
-            )
+        min_release, range_max = cls._release_window(organism, int(genome_assembly))
+        max_release = min(int(range_max) if range_max is not None else int(latest_release), int(latest_release))
+        log.info(
+            f"Scanning the HTTPS dumps of {organism} assembly {genome_assembly} "
+            f"(core suffix {DB.db_suffix(organism, int(genome_assembly))!r}) for releases {min_release}-{max_release}."
+        )
 
         releases_range = range(min_release, max_release + 1)
 
@@ -252,8 +259,9 @@ class DatabaseManager:
 
         # First pass: exact directory names only (cheap). Track min/max to constrain patch-letter scans.
         exact_hits: list[int] = []
+        suffix = DB.db_suffix(organism, int(genome_assembly))
         for rel in releases_range:
-            expected = f"{organism}_core_{int(rel)}_{int(genome_assembly)}"
+            expected = f"{organism}_core_{int(rel)}_{suffix}"
             found = None
             found_url = None
             for root in cls._ftp_mysql_root_candidates(
@@ -334,13 +342,21 @@ class DatabaseManager:
     def _probe_mysql_core_schemas_by_port(
         cls, *, organism: str, genome_assembly: int, ports: list[int]
     ) -> tuple[dict[int, set[int]], dict[int, dict[int, str]], dict[int, Exception]]:
-        """Return per-port core DB releases and schema names from the live Ensembl MySQL service."""
+        """Return per-port core DB releases and schema names from the live Ensembl MySQL service.
+
+        Only names of the assembly's core databases (``DbSuffix``, optional patch letters) whose release lies in the
+        assembly's release window (:py:meth:`_release_window`) are kept, exactly as on the HTTPS path. Ports that the
+        process-wide :py:data:`idtrack._ensembl_access.reachability` reports unusable (blocked, or ``"https"``
+        access mode) are skipped without a connection attempt.
+        """
         # Some Ensembl releases encode patch builds as a trailing letter, e.g. `homo_sapiens_core_56_37a`.
-        # Treat these as part of the same "base assembly" (37) for configuration and graph-level purposes.
-        pattern = re.compile(rf"^{re.escape(organism)}_core_([0-9]+)_{int(genome_assembly)}[a-z]*$")
+        # Treat these as part of the same assembly for configuration and graph-level purposes.
+        pattern = DB.core_db_name_pattern(organism, int(genome_assembly))
+        first_release, last_release = cls._release_window(organism, int(genome_assembly))
+        suffix = DB.db_suffix(organism, int(genome_assembly))
         # Use an information_schema filter to avoid `SHOW DATABASES` timeouts on busy ports.
         escaped_organism = organism.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        like_pattern = f"{escaped_organism}\\_core\\_%\\_{int(genome_assembly)}%"
+        like_pattern = f"{escaped_organism}\\_core\\_%\\_{suffix}%"
 
         # Keep keys for all configured ports, even if some are unreachable.
         releases_by_port: dict[int, set[int]] = {int(p): set() for p in ports}
@@ -348,9 +364,12 @@ class DatabaseManager:
         connection_errors: dict[int, Exception] = {}
 
         for port in ports:
-            # Avoid long hangs when outbound MySQL ports are blocked (common on managed networks).
-            if not cls._tcp_can_connect(DB.mysql_host, int(port), timeout_s=float(DB.connection_timeout)):
-                connection_errors[int(port)] = TimeoutError(f"TCP connect to {DB.mysql_host}:{int(port)} timed out")
+            # Avoid long hangs when outbound MySQL ports are blocked (common on managed networks): the port is
+            # probed at most once per process.
+            if not reachability.mysql_port_usable(int(port)):
+                connection_errors[int(port)] = ConnectionError(
+                    f"MySQL {DB.mysql_host}:{int(port)} is not used (unreachable, or Ensembl access mode 'https')"
+                )
                 continue
 
             results_query = None
@@ -381,6 +400,8 @@ class DatabaseManager:
 
             if results_query is None:
                 connection_errors[int(port)] = last_exc or RuntimeError("Unknown MySQL connection error")
+                if last_exc is None or cls._is_mysql_connection_failure(last_exc):
+                    reachability.mark_unreachable(DB.mysql_host, int(port), reason=str(last_exc))
                 continue
 
             rels: set[int] = set()
@@ -392,7 +413,10 @@ class DatabaseManager:
                 m = pattern.match(db_name)
                 if not m:
                     continue
-                rel = int(m.group(1))
+                rel = int(m.group("release"))
+                if rel < first_release or (last_release is not None and rel > last_release):
+                    # Another assembly that shares the core-database suffix (e.g. rhesus MMUL_1 vs Mmul_10).
+                    continue
                 rels.add(rel)
                 existing = db_for_release_on_port.get(rel)
                 if existing is None or len(db_name) < len(existing):
@@ -476,9 +500,14 @@ class DatabaseManager:
         - `port_for_release`: deterministic choice of port for each release (first configured port that has it)
         - `db_for_release`: chosen schema name for each release (matching `port_for_release`, includes patch-letter suffixes)
 
+        Both sources (the MySQL probe and the HTTPS scan) look for core databases named with the assembly's
+        ``DbSuffix`` and accept only releases inside its ``ReleaseRange`` (see :py:meth:`_release_window`), so
+        they return the same releases for an assembly. The index is cached per process and per version of the
+        organism table.
+
         Args:
             organism: Canonical Ensembl organism name (e.g. ``"homo_sapiens"``).
-            genome_assembly: Genome assembly version (e.g. ``38`` for GRCh38).
+            genome_assembly: Assembly key of the organism table (e.g. ``38`` for GRCh38).
 
         Returns:
             dict[str, Any]: Mapping describing reachable releases/ports for this organism/assembly.
@@ -486,17 +515,15 @@ class DatabaseManager:
         Raises:
             ValueError: If *organism* or *genome_assembly* is not configured.
         """
-        key = (organism, int(genome_assembly))
+        key = (organism, int(genome_assembly), int(DB.organism_table_version))
         cached = cls._core_db_index_cache.get(key)
         if cached is not None:
             errors = cached.get("mysql_connection_errors") or {}
             if errors:
-                # If a previously failing port now responds, refresh the MySQL-derived portion so
-                # downstream callers don't get stuck with stale partial results.
-                if any(
-                    cls._tcp_can_connect(DB.mysql_host, int(port), timeout_s=float(DB.connection_timeout))
-                    for port in errors
-                ):
+                # If a previously failing port is usable now (only possible after the reachability memory was
+                # reset, e.g. by `ConnectionBridge`), refresh the MySQL-derived portion so downstream callers don't
+                # get stuck with stale partial results. Asking the memory costs nothing otherwise.
+                if any(reachability.mysql_port_usable(int(port)) for port in errors):
                     refreshed = cls._refresh_core_db_index_mysql(
                         cached, organism=organism, genome_assembly=int(genome_assembly)
                     )
@@ -504,17 +531,7 @@ class DatabaseManager:
                     return refreshed
             return cached
 
-        if organism not in DB.assembly_mysqlport_priority:
-            raise ValueError(
-                f"Organism {organism!r} is not configured. Supported organisms: {sorted(DB.assembly_mysqlport_priority)}"
-            )
-        if int(genome_assembly) not in DB.assembly_mysqlport_priority[organism]:
-            raise ValueError(
-                f"Genome assembly {int(genome_assembly)} is not configured for organism {organism!r}. "
-                f"Supported assemblies: {sorted(DB.assembly_mysqlport_priority[organism])}"
-            )
-
-        ports = list(DB.assembly_mysqlport_priority[organism][int(genome_assembly)]["Ports"])
+        ports = list(DB._assembly_entry(organism, int(genome_assembly))["Ports"])
         releases_by_port, db_by_port_release, connection_errors = cls._probe_mysql_core_schemas_by_port(
             organism=organism,
             genome_assembly=int(genome_assembly),
@@ -622,8 +639,8 @@ class DatabaseManager:
         """Initialize a :py:class:`DatabaseManager` for a specific organism, release, and assembly.
 
         Args:
-            organism (str): Canonical species name in Ensembl schema (e.g. ``"homo_sapiens"`` or
-                ``"mus_musculus"``). Anything else raises :py:class:`NotImplementedError`.
+            organism (str): Canonical species name in Ensembl schema (e.g. ``"homo_sapiens"``); one of
+                :py:attr:`idtrack.DB.supported_organisms`, otherwise :py:class:`NotImplementedError` is raised.
             form (str): Biological entity level of interest—one of ``"gene"``, ``"transcript"``,
                 ``"translation"``, …—governing which stable-ID columns will be expected downstream.
             local_repository (str): Absolute or relative path to a writable directory that will hold
@@ -637,24 +654,33 @@ class DatabaseManager:
                 ``np.inf`` (the default) disables the upper bound and includes all newer releases.
             store_raw_always (bool): When ``True`` raw MySQL tables are *always* copied to
                 ``local_repository`` before conversion; when ``False`` they are kept only in memory.
-            genome_assembly (Optional[int]): Genome assembly code used in Ensembl core schema names
-                (``<organism>_core_<release>_<assembly>``). This selects the **primary** assembly used for data access
-                (e.g. ``38`` = human GRCh38, ``39`` = mouse GRCm39, ``111`` = pig Sscrofa11.1). If omitted, the
-                highest-priority assembly for *organism* is used. If *ensembl_release* is provided, the selection is
-                restricted to assemblies that actually contain that release.
+            genome_assembly (Optional[int]): Assembly key of the organism table
+                (:py:attr:`idtrack.DB.assembly_mysqlport_priority`). This selects the **primary** assembly used for
+                data access (e.g. ``38`` = human GRCh38, ``39`` = mouse GRCm39, ``111`` = pig Sscrofa11.1,
+                ``10`` = rhesus Mmul_10). The key usually equals the code in core schema names
+                (``<organism>_core_<release>_<code>``); see the table's ``DbSuffix``. If omitted, the highest-priority
+                assembly for *organism* is used. If *ensembl_release* is provided, the selection is restricted to
+                assemblies that actually contain that release; otherwise to assemblies with a release inside the
+                ``ignore_before``/``ignore_after`` window.
 
         Raises:
-            ValueError: If *form* is not in the supported list or *local_repository* fails basic
-                path/read/write checks.
+            ValueError: If *form* is not in the supported list, *local_repository* fails basic
+                path/read/write checks, or the Ensembl access mode (``IDTRACK_ENSEMBL_ACCESS`` /
+                :py:attr:`idtrack.DB.ensembl_access`) is invalid.
             RuntimeError: If internal port/release configuration is inconsistent.
-            NotImplementedError: If *organism* is not yet supported by the package.
+            NotImplementedError: If *organism* is not in the organism table (:py:attr:`idtrack.DB.supported_organisms`).
         """
         if organism not in DB.supported_organisms:
             raise NotImplementedError(
                 f"Organism {organism!r} is not configured. Supported organisms: {DB.supported_organisms}. "
-                "To add a new organism, extend `idtrack._db.DB.assembly_mysqlport_priority` and review external "
-                "database support via `idtrack._external_databases.ExternalDatabases`."
+                "To add an organism, register it with `idtrack.DB.register_organism` (or add it to "
+                "`DB.assembly_mysqlport_priority` in idtrack/_db.py) and provide its externals YAML file "
+                f"`{organism}_externals_modified.yml`; see 'Adding organism support' in the contributing guide."
             )
+
+        # Validate the Ensembl access mode first, so that an invalid `IDTRACK_ENSEMBL_ACCESS` / `DB.ensembl_access`
+        # raises its own error here instead of surfacing later inside an assembly probe.
+        ensembl_access_mode()
 
         if not os.path.isdir(local_repository):
             raise ValueError(f"`local_repository` must be an existing directory: {local_repository!r}")
@@ -704,12 +730,20 @@ class DatabaseManager:
             raise ValueError("Floating-point Ensembl releases (e.g. 18.2) are not supported; pass an integer release.")
 
         if genome_assembly is None:
-            # Pick the highest-priority assembly that is *actually available* on the public MySQL service.
-            # If the user requested an explicit release, further restrict to assemblies that contain that release.
+            # Pick the highest-priority assembly that is *actually available* (MySQL or HTTPS dumps). If the user
+            # requested an explicit release, restrict to assemblies that contain that release; otherwise to assemblies
+            # with at least one release inside the ignore window (e.g. a mouse snapshot at release 100 is GRCm38,
+            # because GRCm39 starts at 103).
             requested_release = int(ensembl_release) if ensembl_release is not None else None
-            assemblies_by_priority = sorted(
-                configured_assemblies.keys(), key=lambda a: int(configured_assemblies[int(a)]["Priority"])
-            )
+
+            def _has_release_in_window(index: dict[str, Any]) -> bool:
+                return any(
+                    (ignore_before_effective is None or int(r) >= int(ignore_before_effective))
+                    and (np.isinf(ignore_after_effective) or int(r) <= int(ignore_after_effective))
+                    for r in index.get("releases", [])
+                )
+
+            assemblies_by_priority = DB.assemblies_by_priority(organism)
 
             candidate_indexes: dict[int, dict[str, Any]] = {}
             last_exc: Optional[Exception] = None
@@ -721,7 +755,10 @@ class DatabaseManager:
                     last_exc = exc
                     continue
 
-                if requested_release is None or requested_release in candidate_indexes[int(asm)]["port_for_release"]:
+                index = candidate_indexes[int(asm)]
+                if (requested_release is None and _has_release_in_window(index)) or (
+                    requested_release is not None and requested_release in index["port_for_release"]
+                ):
                     genome_assembly = int(asm)
                     break
 
@@ -735,7 +772,8 @@ class DatabaseManager:
                 }
                 raise ValueError(
                     f"Unable to infer a default genome assembly for {organism!r} "
-                    f"with requested release {requested_release!r}. "
+                    f"with requested release {requested_release!r} "
+                    f"(window {ignore_before_effective}..{ignore_after_effective}). "
                     f"Available (min,max) release ranges by assembly: {available_summary}. "
                     f"Last error while probing assemblies: {last_exc}"
                 )
@@ -914,6 +952,7 @@ class DatabaseManager:
             list[int]: Sorted release numbers available for at least one configured assembly.
         """
         log = logging.getLogger("database_manager")
+        ensembl_access_mode()  # an invalid mode must raise here, not be logged as a failed assembly
         releases: set[int] = set()
         cfg = DB.assembly_mysqlport_priority[self.organism]
         assemblies_failed: list[int] = []
@@ -979,7 +1018,10 @@ class DatabaseManager:
 
         The schema naming convention is deterministic:
 
-        ``{organism}_core_{ensembl_release}_{genome_assembly}[<patch>]``
+        ``{organism}_core_{ensembl_release}_{DbSuffix}[<patch>]``
+
+        where ``DbSuffix`` is the assembly's core-database code (:py:meth:`idtrack.DB.db_suffix`, usually the
+        assembly key itself).
 
         For multi-port assemblies (e.g. *sus_scrofa* assembly ``102``), the *port* is selected in
         :py:meth:`__init__` using :py:meth:`_get_core_db_index`.  Once the release is validated to exist on that
@@ -1078,8 +1120,9 @@ class DatabaseManager:
     def change_assembly(self, genome_assembly: int, last_possible_ensembl_release: bool = False) -> "DatabaseManager":
         """Clone the manager while targeting a new genome assembly (e.g. GRCh38 → GRCh37).
 
-        Genome assemblies are encoded as integers in Ensembl's schema naming (``38`` for *GRCh38*,
-        ``37`` for *GRCh37*, ``39`` for *GRCm39*, ``111`` for *Sscrofa11.1*, …).  When
+        Genome assemblies are identified by the integer keys of :py:attr:`idtrack.DB.assembly_mysqlport_priority`
+        (``38`` for *GRCh38*, ``37`` for *GRCh37*, ``39`` for *GRCm39*, ``111`` for *Sscrofa11.1*, ``1`` for rhesus
+        *MMUL_1*, …).  When
         *last_possible_ensembl_release* is ``True`` the
         method automatically picks the most recent Ensembl release that **still** provides MySQL dumps for the
         requested assembly, ensuring compatibility.  All other settings are copied verbatim.
@@ -1104,46 +1147,34 @@ class DatabaseManager:
             genome_assembly=genome_assembly,
         )
 
-    def create_available_databases(self) -> pd.Series:
-        """Discover MySQL databases for the configured organism/assembly.
+    def create_available_databases(self) -> pd.DataFrame:
+        """List the core databases of the organism's configured assemblies, each within its release range.
 
-        The manager issues a ``SHOW DATABASES`` query against the Ensembl public MySQL mirror and filters
-        names that match ``^{organism}_core_[0-9]+_.*$``.  The resulting list is returned as a single-column
-        dataframe so that callers can seamlessly chain further pandas operations or persist the result.
+        The names come from the core-database index of every assembly in the organism table
+        (:py:meth:`_get_core_db_index`): databases named with the assembly's ``DbSuffix`` (patch letters included,
+        e.g. ``homo_sapiens_core_54_36p``) whose release lies in the assembly's ``ReleaseRange`` and at or above
+        release 48. The index merges the live MySQL catalogue (where its ports are usable) with the HTTPS dump
+        listings, so the list is the same whichever way Ensembl is reached. Core databases of assemblies that the
+        table does not declare, or outside their ranges, are not listed. An assembly for which no database is found
+        is skipped with a warning.
 
         Returns:
-            pandas.DataFrame: One column named ``"available_databases"`` listing all databases that match
-                the organism, irrespective of Ensembl release or genome assembly.
+            pandas.DataFrame: One column named ``"available_databases"``, sorted.
 
         Raises:
-            ValueError: If the server response is not a sequence of single-field tuples **or** if any tuple
-                element is not a string.
+            ValueError: If the Ensembl access mode is invalid (see :py:func:`idtrack._ensembl_access.ensembl_access_mode`).
         """
-        self.log.info(
-            f"Available MySQL databases for {self.organism} in {self.genome_assembly} "
-            f"assembly and {self.ensembl_release} release is being fetched."
-        )
-
-        try:
-            with pymysql.connect(**self.mysql_settings) as connection:
-                with connection.cursor() as cur:
-                    cur.execute("SHOW databases")
-                    results_query = cur.fetchall()
-        except Exception:
-            # Fall back to the HTTPS/FTP MySQL dumps when direct MySQL connectivity is unavailable.
-            core_index = self._get_core_db_index(organism=self.organism, genome_assembly=self.genome_assembly)
-            accepted_databases = sorted({str(v) for v in core_index.get("db_for_release", {}).values() if v})
-            return pd.DataFrame(accepted_databases, columns=["available_databases"])
-
-        if not all([len(i) == 1 and isinstance(i[0], str) for i in results_query]):
-            raise ValueError("The result is in unexpected format.")
-        results_query = [i[0] for i in results_query]  # Get the relevant portion.
-
-        pattern = re.compile(f"^{self.organism}_core_[0-9]+_.+$")
-        accepted_databases = sorted(i for i in results_query if pattern.match(i))
-        results = pd.DataFrame(accepted_databases, columns=["available_databases"])
-
-        return results
+        ensembl_access_mode()  # an invalid mode must raise here, not be read as "no databases found"
+        self.log.info(f"Available core databases for {self.organism} are being listed.")
+        names: set[str] = set()
+        for assembly in DB.assemblies_by_priority(self.organism):
+            try:
+                core_index = self._get_core_db_index(organism=self.organism, genome_assembly=int(assembly))
+            except ValueError as exc:
+                self.log.warning("No core databases found for %s assembly %s: %s", self.organism, assembly, exc)
+                continue
+            names.update(str(v) for v in core_index.get("db_for_release", {}).values() if v)
+        return pd.DataFrame(sorted(names), columns=["available_databases"])
 
     def get_table(
         self,
@@ -1424,16 +1455,9 @@ class DatabaseManager:
         for attempt in range(max_attempts):
             try:
                 with self._open_decompressed_http_text(table_url) as fh:
-                    df = pd.read_csv(
-                        fh,
-                        sep="\t",
-                        header=None,
-                        names=columns,
-                        na_values=["\\N"],
-                        keep_default_na=False,
-                        low_memory=False,
-                        usecols=usecols,
-                    )
+                    # Decode MySQL's dump escaping (escaped tabs/newlines/backslashes, NULL as `\N`) so that the
+                    # rows are the ones the MySQL server would return.
+                    df = read_mysql_dump(fh, columns=columns, usecols=usecols)
                 last_exc = None
                 break
             except Exception as exc:  # noqa: BLE001 - retry only on known transient classes
@@ -1458,9 +1482,6 @@ class DatabaseManager:
                 f"Unable to fetch table {table_key!r} from Ensembl HTTPS dumps: {table_url!r}"
             ) from last_exc
 
-        if usecols is not None:
-            df = df[usecols]
-
         info_usecols = " for following columns: " + ", ".join(usecols) + "." if usecols else "."
         self.log.info(
             f"Raw table for `{table_key}` on ensembl release `{self.ensembl_release}` "
@@ -1471,11 +1492,15 @@ class DatabaseManager:
     def download_table(self, table_key: str, usecols: Optional[list] = None) -> pd.DataFrame:
         """Download a raw Ensembl MySQL table and return it as a DataFrame.
 
-        The method forms the low-level backbone of all table acquisition in *IDTrackDocs*.  It opens a
-        direct connection to the Ensembl Core (or comparable) MySQL schema configured on the current
-        :py:class:`DatabaseManager` instance, issues a `SELECT` statement against *table_key*, converts
-        the results into a :py:class:`pandas.DataFrame`, and performs a minimal sanitisation pass
-        (bytes-to-string decoding, column subset validation, logging).  Public code is expected to call
+        The method forms the low-level backbone of all table acquisition in *IDTrack*.  When the release is on the
+        live Ensembl MySQL service and its port is usable (see :py:mod:`idtrack._ensembl_access`: the port answered
+        its one probe in this process and the access mode is not ``"https"``), it opens a direct connection to the
+        core schema, issues a `SELECT` statement against *table_key*, converts the results into a
+        :py:class:`pandas.DataFrame`, and performs a minimal sanitisation pass (bytes-to-string decoding, column
+        subset validation, logging). Otherwise, or if the MySQL query fails, the same table is read from Ensembl's
+        HTTPS dumps (:py:meth:`_download_table_from_ftp`), which yields the same rows and values; over HTTPS the
+        column types are inferred from the text, so a text column holding only digit strings comes back as numbers.
+        Public code is expected to call
         :py:meth:`DatabaseManager.get_table`, which wraps this helper with caching and post-processing,
         but keeping this routine separate allows fine-grained testing, mocking, and reuse in advanced
         workflows.
@@ -1511,12 +1536,9 @@ class DatabaseManager:
         if int(self.ensembl_release) not in mysql_releases:
             return self._download_table_from_ftp(table_key, usecols=usecols)
 
-        # If MySQL is unreachable (common when outbound 3306/5306 is blocked), fall back to HTTPS dumps.
-        if not self._tcp_can_connect(
-            str(self.mysql_settings["host"]),
-            int(self.mysql_settings["port"]),
-            timeout_s=float(DB.connection_timeout),
-        ):
+        # If MySQL is unreachable (common when outbound 3306/5306 is blocked) or the access mode is "https", use the
+        # HTTPS dumps. The port is probed at most once per process.
+        if not reachability.mysql_port_usable(int(self.mysql_settings["port"])):
             return self._download_table_from_ftp(table_key, usecols=usecols)
 
         which_mysql_server = dict(**self.mysql_settings, **{"database": self.mysql_database})
@@ -1579,35 +1601,13 @@ class DatabaseManager:
                 )
 
                 return df
-        except Exception:
+        except Exception as exc:
+            if self._is_mysql_connection_failure(exc):
+                # A connection that worked before and fails now: do not try this port again in this process.
+                reachability.mark_unreachable(
+                    str(self.mysql_settings["host"]), int(self.mysql_settings["port"]), str(exc)
+                )
             return self._download_table_from_ftp(table_key, usecols=usecols)
-
-    def available_tables_mysql(self):
-        """Enumerate tables present in the selected Ensembl MySQL schema.
-
-        Intended to complement :py:meth:`available_databases_mysql`: while that
-        method lists *databases* (one per organism/release/assembly), this one will
-        drill into the active database and return the table names themselves, such
-        as ``"gene"``, ``"transcript"``, ``"xref"``, and so on.
-
-        Raises:
-            NotImplementedError: Always - the table enumeration logic has not yet been written.
-        """
-        raise NotImplementedError
-
-    def get_release_date(self):
-        """Return a mapping of Ensembl release numbers to their publication dates.
-
-        The future implementation will query the ``meta`` table of each reachable
-        release—or fall back to the Ensembl REST API—to build a dictionary such as
-        ``{105: date(2022, 11, 1), 106: date(2023, 2, 7), …}``.  Down-stream
-        routines can then translate between absolute dates and release numbers,
-        enabling chronology-aware analyses and reporting.
-
-        Raises:
-            NotImplementedError: Always - date discovery is not yet implemented.
-        """
-        raise NotImplementedError
 
     @staticmethod
     def _determine_usecols_ids(form: str) -> tuple[list[str], list[str], list[str]]:
@@ -2568,7 +2568,7 @@ class DatabaseManager:
         * ``relationarchive`` — historical gene/ID relationships across releases.
         * ``idhistory`` — full ID history; qualifier ``narrow`` restricts to current IDs.
         * ``versioninfo`` — version comparison across releases.
-        * ``availabledatabases`` — list of locally cacheable resources.
+        * ``availabledatabases`` — names of the organism's core databases (all releases and assemblies).
 
         Additional indicators may be introduced by subclass extensions; consult the
         module documentation for the authoritative list.

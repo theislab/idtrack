@@ -594,20 +594,124 @@ def _selected_real_graph_organisms() -> list[str]:
     """
     env = os.environ.get("IDTRACK_TEST_ORGANISMS") or os.environ.get("IDTRACK_TEST_ORGANISM")
     if env:
-        parts = [p.strip() for p in re.split(r"[,\\s]+", env) if p.strip()]
+        parts = [p.strip() for p in re.split(r"[,\s]+", env) if p.strip()]
         return parts
 
     discovered = _discover_default_config_organisms()
     return discovered if discovered else ["homo_sapiens"]
 
 
-def _default_real_graph_release_window() -> tuple[int, int]:
-    """Default Ensembl release window used by integration tests."""
-    min_rel = int(os.environ.get("IDTRACK_TEST_IGNORE_BEFORE", "100"))
-    max_rel = int(os.environ.get("IDTRACK_TEST_IGNORE_AFTER", "103"))
+# Seed genes: insulin, glucagon, PDX1, TP53 and KRAS as Ensembl names them today (Ensembl REST `lookup/symbol` and
+# MyGene.info); a seed absent from the test window is simply not part of the graph.
+SEED_GENES_MUS_MUSCULUS = (
+    "ENSMUSG00000000215",  # Ins2
+    "ENSMUSG00000000394",  # Gcg
+    "ENSMUSG00000029644",  # Pdx1
+    "ENSMUSG00000059552",  # Trp53
+    "ENSMUSG00000030265",  # Kras
+)
+SEED_GENES_SUS_SCROFA = (
+    "ENSSSCG00000033740",  # INS
+    "ENSSSCG00000015895",  # GCG
+    "ENSSSCG00000055811",  # PDX1
+    "ENSSSCG00000017950",  # TP53
+    "ENSSSCG00000026969",  # KRAS
+)
+SEED_GENES_MACACA_MULATTA = (
+    "ENSMMUG00000031267",  # INS
+    "ENSMMUG00000050348",  # GCG
+    "ENSMMUG00000064615",  # PDX1
+    "ENSMMUG00000008639",  # TP53
+    "ENSMMUG00000015381",  # KRAS
+)
+SEED_GENES_MACACA_FASCICULARIS = (
+    "ENSMFAG00000000997",  # INS
+    "ENSMFAG00000041524",  # GCG
+    "ENSMFAG00000063371",  # PDX1
+    "ENSMFAG00000038506",  # TP53
+    "ENSMFAG00000047411",  # KRAS
+)
+
+# Per-organism defaults of the real-graph fixtures: the primary assembly, a release window inside it, seed genes
+# (insulin, glucagon, PDX1, TP53, KRAS where the organism's Ensembl gene set has them) and the external databases to
+# prefer (the organism's symbol databases first). Environment variables override assembly and window for all.
+REAL_GRAPH_DEFAULTS: dict[str, dict[str, Any]] = {
+    "homo_sapiens": {
+        "assembly": 38,
+        "window": (100, 103),
+        "seed_gene_ids": (
+            "ENSG00000141510",  # TP53
+            "ENSG00000012048",  # BRCA1
+            "ENSG00000139618",  # BRCA2
+            "ENSG00000157764",  # BRAF
+            "ENSG00000133703",  # KRAS
+        ),
+    },
+    "mus_musculus": {
+        "assembly": 39,
+        "window": (103, 106),
+        "seed_gene_ids": SEED_GENES_MUS_MUSCULUS,
+    },
+    "sus_scrofa": {
+        "assembly": 111,
+        "window": (100, 103),
+        "seed_gene_ids": SEED_GENES_SUS_SCROFA,
+    },
+    "macaca_mulatta": {
+        "assembly": 10,
+        "window": (100, 103),
+        "seed_gene_ids": SEED_GENES_MACACA_MULATTA,
+    },
+    "macaca_fascicularis": {
+        "assembly": 6,
+        "window": (103, 106),
+        "seed_gene_ids": SEED_GENES_MACACA_FASCICULARIS,
+    },
+}
+
+
+def real_graph_settings(organism: str) -> dict[str, Any]:
+    """Return assembly, release window, seed genes and preferred external databases for *organism*.
+
+    ``IDTRACK_TEST_ASSEMBLY``, ``IDTRACK_TEST_IGNORE_BEFORE`` and ``IDTRACK_TEST_IGNORE_AFTER`` override the
+    per-organism defaults; an organism without defaults (e.g. one registered at run time) uses its highest-priority
+    assembly and four releases from ``max(first release, 100)``.
+
+    Args:
+        organism: Organism of the organism table.
+
+    Returns:
+        dict[str, Any]: ``assembly``, ``window`` (first, last release), ``seed_gene_ids`` and ``preferred_databases``.
+
+    Raises:
+        ValueError: If the release window is empty.
+    """
+    defaults = REAL_GRAPH_DEFAULTS.get(organism)
+    if defaults is None:
+        assembly = DB.assemblies_by_priority(organism)[0]
+        first, _last = DB.release_range(organism, assembly)
+        start = max(first, 100)
+        defaults = {"assembly": assembly, "window": (start, start + 3), "seed_gene_ids": ()}
+    assembly = int(os.environ.get("IDTRACK_TEST_ASSEMBLY", str(defaults["assembly"])))
+    min_rel = int(os.environ.get("IDTRACK_TEST_IGNORE_BEFORE", str(defaults["window"][0])))
+    max_rel = int(os.environ.get("IDTRACK_TEST_IGNORE_AFTER", str(defaults["window"][1])))
     if min_rel > max_rel:
         raise ValueError("IDTRACK_TEST_IGNORE_BEFORE must be <= IDTRACK_TEST_IGNORE_AFTER")
-    return min_rel, max_rel
+    preferred = list(DB.symbol_databases.get(organism, ())) + ["EntrezGene", "UniProtKB Gene Name"]
+    return {
+        "assembly": assembly,
+        "window": (min_rel, max_rel),
+        "seed_gene_ids": tuple(defaults["seed_gene_ids"]),
+        "preferred_databases": preferred,
+    }
+
+
+def _slow_tests_enabled(config) -> bool:
+    """Return whether slow tests run in this session (``--runslow`` or ``IDTRACK_SKIP_SLOW=0``)."""
+    if config.getoption("runslow"):
+        return True
+    env_override = os.getenv("IDTRACK_SKIP_SLOW")
+    return env_override is not None and env_override.strip().lower() in {"0", "false", "no"}
 
 
 @pytest.fixture(scope="session")
@@ -635,24 +739,30 @@ def organism_under_test(request) -> str:
 
 
 @pytest.fixture(scope="session")
-def real_gene_graph(real_graph_cache_root: Path, organism_under_test: str) -> tuple[Any, dict[str, str]]:
-    """Small, real gene graph for Ensembl releases 100–103 (cached on disk).
+def real_gene_graph(request, real_graph_cache_root: Path, organism_under_test: str) -> tuple[Any, dict[str, str]]:
+    """Small, real gene graph of a few Ensembl releases of one assembly (cached on disk).
 
-    Builds the graph via targeted MySQL queries for a curated set of genes and external IDs, so it stays tiny and
-    avoids multi-GB genome-wide builds.
+    Builds the graph for a curated set of genes and external IDs, so it stays tiny and avoids multi-GB genome-wide
+    builds: with targeted MySQL queries where the public MySQL service is usable, otherwise from Ensembl's HTTPS
+    dumps. The HTTPS build downloads whole tables (tens of MB per release), so it runs only when slow tests are
+    enabled (``--runslow``); a graph cached by an earlier build is always used.
 
     Args:
+        request: Pytest request (to read whether slow tests are enabled).
         real_graph_cache_root: Root directory for the on-disk cache.
         organism_under_test: Organism name to build the graph for.
 
     Returns:
         tuple[Any, dict[str, str]]: ``(graph, fixtures)`` where fixtures contains stable example identifiers.
     """
-    from tests._real_graph_builder import RealGraphSpec, load_or_build_real_gene_graph
+    from tests._real_graph_builder import RealGraphSpec, load_or_build_real_gene_graph, uses_https_dumps
 
     organism = organism_under_test
-    genome_assembly = int(os.environ.get("IDTRACK_TEST_ASSEMBLY", str(DB.main_assembly)))
-    ignore_before, ignore_after = _default_real_graph_release_window()
+    if organism not in DB.supported_organisms:
+        pytest.skip(f"Organism {organism!r} is not in the organism table.")
+    settings = real_graph_settings(organism)
+    genome_assembly = int(settings["assembly"])
+    ignore_before, ignore_after = settings["window"]
 
     # Prefer a small, portable subset of externals from the organism's default config.
     external_dbs: tuple[str, ...]
@@ -667,12 +777,7 @@ def real_gene_graph(real_graph_cache_root: Path, organism_under_test: str) -> tu
             genome_assembly=genome_assembly,
         )
         candidates = sorted(set(ed.give_list_for_case("db")))
-        preferred = [
-            "HGNC Symbol",
-            "MGI Symbol",
-            "EntrezGene",
-            "UniProtKB",
-        ]
+        preferred = settings["preferred_databases"]
         selected: list[str] = [db for db in preferred if db in candidates]
         selected.extend([db for db in candidates if db not in selected])
         external_dbs = tuple(selected[:6]) if selected else ("EntrezGene",)
@@ -684,17 +789,7 @@ def real_gene_graph(real_graph_cache_root: Path, organism_under_test: str) -> tu
         organism=organism,
         genome_assembly=genome_assembly,
         releases=releases,
-        seed_gene_ids=(
-            (
-                "ENSG00000141510",  # TP53
-                "ENSG00000012048",  # BRCA1
-                "ENSG00000139618",  # BRCA2
-                "ENSG00000157764",  # BRAF
-                "ENSG00000133703",  # KRAS
-            )
-            if organism == "homo_sapiens"
-            else ()
-        ),
+        seed_gene_ids=settings["seed_gene_ids"],
         external_databases=external_dbs,
     )
 
@@ -702,6 +797,16 @@ def real_gene_graph(real_graph_cache_root: Path, organism_under_test: str) -> tu
         real_graph_cache_root
         / f"graph_{organism}_asm{genome_assembly}_min{ignore_before}_max{ignore_after}_gene_small.pickle"
     )
+    if not graph_path.exists() and not _slow_tests_enabled(request.config):
+        try:
+            https = uses_https_dumps(spec)
+        except Exception as exc:  # pragma: no cover - network dependent
+            pytest.skip(f"Unable to reach Ensembl for the real gene graph: {exc}")
+        if https:
+            pytest.skip(
+                "Ensembl MySQL is not usable here, and building the real gene graph from the HTTPS dumps is slow: "
+                "run with --runslow (or IDTRACK_SKIP_SLOW=0)."
+            )
     try:
         return load_or_build_real_gene_graph(graph_path, spec)
     except Exception as exc:  # pragma: no cover

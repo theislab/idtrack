@@ -26,6 +26,7 @@ import pytest
 
 from idtrack._database_manager import DatabaseManager
 from idtrack._db import DB
+from idtrack._ensembl_access import reachability
 
 
 def _escape_like(value: str) -> str:
@@ -91,9 +92,14 @@ def live_mysql_core_catalog() -> dict[str, dict[int, dict[str, Any]]]:
     Structure:
         catalog[organism][port] = {
             "schemas": [schema_name, ...],
-            "by_assembly": {assembly: {release: schema_name}},
-            "releases_by_assembly": {assembly: {release, ...}},
+            "by_assembly": {assembly key: {release: schema_name}},
+            "releases_by_assembly": {assembly key: {release, ...}},
+            "unconfigured": [schema_name, ...],
         }
+
+    Schema names carry the core-database suffix, not the assembly key; a name is assigned to the assembly whose
+    ``DbSuffix`` and ``ReleaseRange`` match (:py:meth:`idtrack.DB.assembly_for_core_db`), so rhesus
+    ``macaca_mulatta_core_<r>_10`` is MMUL_1 (key 1) up to release 85 and Mmul_10 (key 10) from release 98.
 
     Returns:
         Nested dictionary mapping organism -> port -> schema metadata.
@@ -110,7 +116,7 @@ def live_mysql_core_catalog() -> dict[str, dict[int, dict[str, Any]]]:
         }
     )
 
-    unreachable = [p for p in ports if not _can_connect(p)]
+    unreachable = [p for p in ports if not reachability.mysql_port_usable(p) or not _can_connect(p)]
     if unreachable:
         pytest.skip(f"Ensembl public MySQL not reachable on ports {unreachable}.")
 
@@ -120,19 +126,23 @@ def live_mysql_core_catalog() -> dict[str, dict[int, dict[str, Any]]]:
         for port in ports:
             schemas = _fetch_core_schemas(organism=organism, port=port)
             pattern = re.compile(
-                rf"^{re.escape(organism)}_core_(?P<release>[0-9]+)_(?P<assembly>[0-9]+)(?P<patch>[a-z]*)$"
+                rf"^{re.escape(organism)}_core_(?P<release>[0-9]+)_(?P<suffix>[0-9]+)(?P<patch>[a-z]*)$"
             )
 
             by_assembly: dict[int, dict[int, str]] = defaultdict(dict)
             releases_by_assembly: dict[int, set[int]] = defaultdict(set)
             mismatched: list[str] = []
+            unconfigured: list[str] = []
             for schema in schemas:
                 m = pattern.match(schema)
                 if not m:
                     mismatched.append(schema)
                     continue
                 rel = int(m.group("release"))
-                asm = int(m.group("assembly"))
+                asm = DB.assembly_for_core_db(organism, m.group("suffix"), rel)
+                if asm is None:
+                    unconfigured.append(schema)
+                    continue
                 releases_by_assembly[asm].add(rel)
                 # Deterministic choice if Ensembl ever exposes multiple patch variants.
                 existing = by_assembly[asm].get(rel)
@@ -149,6 +159,7 @@ def live_mysql_core_catalog() -> dict[str, dict[int, dict[str, Any]]]:
                 "schemas": schemas,
                 "by_assembly": dict(by_assembly),
                 "releases_by_assembly": {asm: set(rels) for asm, rels in releases_by_assembly.items()},
+                "unconfigured": unconfigured,
             }
     return catalog
 
@@ -157,16 +168,14 @@ def live_mysql_core_catalog() -> dict[str, dict[int, dict[str, Any]]]:
 @pytest.mark.network
 @pytest.mark.database
 def test_live_mysql_config_covers_all_discovered_assemblies(live_mysql_core_catalog):
-    """Ensure our config includes every core assembly Ensembl exposes on the configured ports."""
+    """Ensure every core database Ensembl exposes on the configured ports belongs to a configured assembly."""
     for organism in DB.supported_organisms:
-        discovered: set[int] = set()
+        unconfigured: list[str] = []
         for port_info in live_mysql_core_catalog[organism].values():
-            discovered.update(port_info["releases_by_assembly"].keys())
-
-        configured = set(DB.assembly_mysqlport_priority[organism].keys())
+            unconfigured.extend(port_info["unconfigured"])
         # The live service often hosts only the current and previous release.
         # Older/discontinued assemblies can still be supported via the HTTPS/FTP MySQL dumps.
-        assert discovered.issubset(configured), (organism, sorted(discovered), sorted(configured))
+        assert not unconfigured, (organism, sorted(set(unconfigured)))
 
 
 @pytest.mark.integration
@@ -270,10 +279,13 @@ def test_database_manager_resolves_every_release_for_each_configured_assembly(li
                     )
                     assert int(dm.mysql_settings["port"]) == int(core_index["port_for_release"][int(rel)])
                     assert str(dm.mysql_database) == str(core_index["db_for_release"][int(rel)])
-                    assert re.match(
-                        rf"^{re.escape(organism)}_core_{int(rel)}_{int(assembly)}[a-z]*$",
-                        str(dm.mysql_database),
-                    ), (organism, int(assembly), int(rel), dm.mysql_database)
+                    match = DB.core_db_name_pattern(organism, int(assembly)).match(str(dm.mysql_database))
+                    assert match is not None and int(match.group("release")) == int(rel), (
+                        organism,
+                        int(assembly),
+                        int(rel),
+                        dm.mysql_database,
+                    )
 
 
 @pytest.mark.integration

@@ -9,6 +9,7 @@
    installation
    usage
    reference
+   changes
    contributing
    authors
    code_of_conduct

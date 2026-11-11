@@ -341,6 +341,63 @@ def test_construct_graph_adds_base_nodes_and_merges_case_insensitive_externals(s
     assert 100 in edge_data["available_releases"] or 101 in edge_data["available_releases"]
 
 
+def test_construct_graph_warns_once_about_releases_missing_from_externals_yaml(synthetic_graph_dm):
+    """A release without an entry in the externals YAML is announced once and gets no external edges."""
+    import warnings
+
+    import yaml
+
+    yaml_path = os.path.join(synthetic_graph_dm.local_repository, "homo_sapiens_externals_modified.yml")
+    with open(yaml_path, "w") as handle:
+        yaml.safe_dump(
+            {
+                "homo_sapiens": {
+                    "gene": {
+                        "HGNC": {
+                            "Assembly": {"38": {"Ensembl release": "101", "Include": True}},
+                            "Database Index": 0,
+                            "Potential Synonymous": "",
+                        }
+                    }
+                }
+            },
+            handle,
+        )
+
+    gm = GraphMaker(synthetic_graph_dm)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        g = gm.construct_graph(narrow=True, form_list=["gene"], narrow_external=True)
+    messages = [
+        str(w.message) for w in caught if issubclass(w.category, UserWarning) and "externals YAML" in str(w.message)
+    ]
+    assert len(messages) == 1
+    assert "[100]" in messages[0] and "extend_modified_yaml" in messages[0]
+
+    ext_node = "TP53" if "TP53" in g.nodes else "tp53"
+    releases = set()
+    for target in g.neighbors(ext_node):
+        for data in g.get_edge_data(ext_node, target).values():
+            releases |= set(data.get("available_releases", set()))
+    assert releases == {101}
+
+
+def test_construct_graph_without_externals_yaml_fails_before_building(synthetic_graph_dm, monkeypatch):
+    """An organism without any externals YAML stops at once with a message naming the file to create."""
+    from idtrack._external_databases import ExternalDatabases
+
+    missing = os.path.join(synthetic_graph_dm.local_repository, "absent", "homo_sapiens_externals_modified.yml")
+    monkeypatch.setattr(ExternalDatabases, "file_name_modified_yaml", lambda self, mode: missing)
+
+    def _must_not_run(*args, **kwargs):
+        raise AssertionError("the history graph must not be built without an externals YAML")
+
+    monkeypatch.setattr(GraphMaker, "construct_graph_form", _must_not_run)
+    gm = GraphMaker(synthetic_graph_dm)
+    with pytest.raises(FileNotFoundError, match="create_template_yaml"):
+        gm.construct_graph(narrow=True, form_list=["gene"], narrow_external=True)
+
+
 def test_get_graph_roundtrips_pickle_cache(synthetic_graph_dm):
     """Ensure get_graph writes and reloads a cached pickle."""
     gm = GraphMaker(synthetic_graph_dm)
@@ -392,14 +449,9 @@ def test_remove_non_gene_trees_prunes_transcript_history():
 
 def test_graph_maker_requires_latest_release(synthetic_graph_dm):
     """Ensure GraphMaker requires constructing from the latest release."""
-    import inspect
-
     older = synthetic_graph_dm.change_release(100)
     with pytest.raises(ValueError):
         GraphMaker(older)
-
-    source = inspect.getsource(GraphMaker.update_graph_with_the_new_release)
-    assert "raise NotImplementedError" in source
 
 
 class TestGraphMakerPerformance:

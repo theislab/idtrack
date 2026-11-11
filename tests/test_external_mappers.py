@@ -241,6 +241,25 @@ class TestCanonicalSpecies:
         assert canonical_species("sus_scrofa") == "sscrofa"
         assert canonical_species("sscrofa") == "sscrofa"
 
+    def test_macaque_aliases(self):
+        """Test rhesus and cynomolgus macaque aliases, including NCBI taxon IDs."""
+        for alias in ("rhesus macaque", "macaca_mulatta", "Macaca mulatta", "mmulatta", "9544"):
+            assert canonical_species(alias) == "mmulatta"
+        for alias in ("cynomolgus macaque", "crab-eating macaque", "macaca_fascicularis", "mfascicularis", "9541"):
+            assert canonical_species(alias) == "mfascicularis"
+
+    def test_every_species_has_a_name_for_each_service(self):
+        """Each canonical species has an Ensembl name (gget), a MyGene value and a Bgee genus/species."""
+        from idtrack._external_mappers._constants import (
+            _SPECIES_CANONICAL_TO_ENSEMBL,
+            _SPECIES_CANONICAL_TO_MYGENE,
+        )
+
+        for code in set(_SPECIES_ALIASES.values()):
+            assert code in _SPECIES_CANONICAL_TO_ENSEMBL
+            assert code in _SPECIES_CANONICAL_TO_MYGENE
+            assert code in _SPECIES_CANONICAL_TO_BGEENAMES
+
     def test_default_is_human(self):
         """Test default species is human."""
         assert canonical_species(None) == "hsapiens"
@@ -273,6 +292,11 @@ class TestSpeciesForMygene:
         """Test pig conversion for MyGene."""
         assert _species_for_mygene("sscrofa") == "pig"
         assert _species_for_mygene("pig") == "pig"
+
+    def test_macaques_use_taxon_ids(self):
+        """Use NCBI taxon IDs for the macaques, which MyGene has no common name for."""
+        assert _species_for_mygene("mmulatta") == "9544"
+        assert _species_for_mygene("macaca_fascicularis") == "9541"
 
 
 class TestStripVersion:

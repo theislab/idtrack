@@ -9,6 +9,7 @@ import logging
 import os
 import pickle
 import string
+import warnings
 from typing import Optional, Union
 
 import networkx as nx
@@ -51,25 +52,6 @@ class GraphMaker:
         if db_manager.ensembl_release != max(db_manager.available_releases):
             raise ValueError("'Graph' has to be created with the latest release possible defined in 'db_manager'.")
         self.db_manager = db_manager
-
-    def initialize_downloads(self):
-        """Initialize the external database downloads.
-
-        Raises:
-            NotImplementedError: Not implemented yet. Currently, the necessary data sources are downloaded when needed
-                during the graph construction process.
-        """
-        raise NotImplementedError
-
-    def update_graph_with_the_new_release(self):
-        """When new release arrive, just add new nodes.
-
-        Raises:
-            NotImplementedError: Not implemented yet. Currently, the user is expected to recreate whole graph using
-                ``get_graph`` method. Note that not all databases need to be re-downloaded, the program will only
-                download the new release, and re-construct the graph.
-        """
-        raise NotImplementedError
 
     # flake8: noqa: C901
     def construct_graph(
@@ -147,6 +129,10 @@ class GraphMaker:
 
         # The order is important for form_list in compose_all, due to some clashing ensembl IDs.
         form_list = self.db_manager.available_form_of_interests if not form_list else form_list
+
+        # Check the externals YAML before the (long) history build: a missing file stops here with a message that
+        # names the file to create, and releases without an entry are announced once.
+        externals_releases = self._releases_with_externals()
         dbman_s = {f: self.db_manager.change_form(f) for f in form_list}
         graph_s = {
             f: GraphMaker.remove_non_gene_trees(  # Remove_non_gene_tree before compose_all.
@@ -220,17 +206,11 @@ class GraphMaker:
                 # the order is important in adding new nodes into the core graph.
                 # it is important to capture correct ens_release in min_ens_release dictionary
 
-                db_manager = dbman_s[f].change_release_auto_assembly(ens_rel)
-                try:
-                    rc = db_manager.create_external_all(return_mode="all", narrow_external=narrow_external)
-                except ValueError as exc:
-                    # Older releases may be outside the configured external YAML; skip externals for that release
-                    # while still allowing the Ensembl-only history graph to be constructed.
-                    msg = str(exc)
-                    if "is not included in any entry of the YAML config file" not in msg:
-                        raise
-                    self.log.warning("Skipping external mappings for release %s: %s", int(ens_rel), msg)
+                if int(ens_rel) not in externals_releases:
+                    # Announced once by `_releases_with_externals`; the Ensembl-only history graph still covers it.
                     continue
+                db_manager = dbman_s[f].change_release_auto_assembly(ens_rel)
+                rc = db_manager.create_external_all(return_mode="all", narrow_external=narrow_external)
 
                 for _ind, entry in rc.iterrows():
                     # Note that the `rc` dataframe have higher priority assembly entries at the top.
@@ -436,6 +416,43 @@ class GraphMaker:
         #   maybe: just create a dict out of this instead [do not edit the nodes graph etc]?
 
         return g
+
+    def _releases_with_externals(self) -> set[int]:
+        """Return the releases of the graph that the organism's externals YAML covers, warning once about the rest.
+
+        Releases of :py:attr:`DatabaseManager.available_releases_all_assemblies` that the YAML does not list get no
+        external identifiers in the graph. That is announced here once, as a :py:class:`UserWarning` and in the log,
+        with the way to fix it (:py:meth:`idtrack._external_databases.ExternalDatabases.extend_modified_yaml`),
+        instead of being skipped quietly release by release.
+
+        Returns:
+            set[int]: Releases whose external identifiers are added to the graph.
+
+        Raises:
+            FileNotFoundError: If the organism has no externals YAML file at all (the message names the file to
+                create and how).
+        """
+        external_inst = self.db_manager.external_inst
+        covered = external_inst.covered_releases()
+        releases = sorted(int(r) for r in self.db_manager.available_releases_all_assemblies)
+        missing = [r for r in releases if r not in covered]
+        if missing:
+            path = external_inst._modified_yaml_path()
+            if covered:
+                msg = (
+                    f"The externals YAML `{path}` has no entry for {self.db_manager.organism} Ensembl releases "
+                    f"{missing}: the graph gets no external identifiers (symbols, NCBI gene, UniProt, ...) for these "
+                    "releases. Extend the file with `ExternalDatabases.extend_modified_yaml` (tutorial 02) and "
+                    "rebuild the graph."
+                )
+            else:
+                msg = (
+                    f"The externals YAML `{path}` has no entry for {self.db_manager.organism}: the graph is built "
+                    "without external identifiers."
+                )
+            warnings.warn(msg, UserWarning, stacklevel=3)
+            self.log.warning(msg)
+        return {r for r in releases if r in covered}
 
     def _merge_nodes_with_the_same_in_lower_case(self, g: TheGraph):
         self.log.info("Synonymous external nodes are being merged into one.")

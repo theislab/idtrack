@@ -109,3 +109,26 @@ class TestHdf5CacheUtilities:
 
         loaded = read_exported(hierarchy="/df", file_path=str(path))
         pd.testing.assert_frame_equal(loaded, df)
+
+
+def test_zero_row_frame_with_string_columns_roundtrips(tmp_path):
+    """A frame with no rows and string columns (e.g. an empty `idhistory_narrow`) can be saved and read back."""
+    df = pd.DataFrame(
+        {
+            "old_stable_id": pd.Series([], dtype=object),
+            "new_stable_id": pd.Series([], dtype=object),
+            "score": pd.Series([], dtype=float),
+            "old_release": pd.Series([], dtype=float),
+        }
+    )
+    path = tmp_path / "zero.h5"
+    export_disk(df, "ens116_processed_idhistory_narrow_gene", str(path), False, logger=logging.getLogger("t"))
+    back = read_exported("ens116_processed_idhistory_narrow_gene", str(path))
+    assert list(back.columns) == list(df.columns)
+    assert len(back) == 0
+    assert back["old_stable_id"].dtype == object
+    assert back["score"].dtype == float
+
+    categorical = pd.DataFrame({"c": pd.Categorical([], categories=[])})
+    to_hdf(str(tmp_path / "zero_cat.h5"), "k", categorical, mode="w")
+    assert len(read_hdf(str(tmp_path / "zero_cat.h5"), "k")) == 0

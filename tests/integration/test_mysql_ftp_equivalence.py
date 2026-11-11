@@ -22,6 +22,7 @@ import requests
 
 from idtrack._database_manager import DatabaseManager
 from idtrack._db import DB
+from idtrack._ensembl_access import reachability
 
 
 def _can_reach_ensembl_ftp() -> bool:
@@ -60,7 +61,7 @@ def human38_mysql_release() -> int:
         pytest.skip(f"Unable to reach https://{DB.ensembl_ftp_base}/pub/ from the test environment.")
 
     ports = [int(p) for p in DB.assembly_mysqlport_priority["homo_sapiens"][38]["Ports"]]
-    if not any(_can_connect_mysql_port(p) for p in ports):
+    if not any(reachability.mysql_port_usable(p) and _can_connect_mysql_port(p) for p in ports):
         pytest.skip(f"Ensembl public MySQL not reachable on any of the human GRCh38 ports: {ports}.")
 
     core_index = DatabaseManager._get_core_db_index(organism="homo_sapiens", genome_assembly=38)
@@ -137,15 +138,8 @@ def test_get_table_cache_overwrite_is_source_independent(human38_mysql_release: 
             store_raw_always=False,
         )
 
-        # 1) Force FTP for the first materialisation.
-        tcp_orig = DatabaseManager._tcp_can_connect
-
-        def _tcp_mysql_block_only(host: str, port: int, timeout_s: float = 2.0) -> bool:  # noqa: ARG001
-            if host == DB.mysql_host:
-                return False
-            return tcp_orig(host, port, timeout_s=timeout_s)
-
-        monkeypatch.setattr(DatabaseManager, "_tcp_can_connect", staticmethod(_tcp_mysql_block_only))
+        # 1) Force FTP for the first materialisation (access mode "https": MySQL is not touched).
+        monkeypatch.setattr(DB, "ensembl_access", "https")
         df_ftp_cached = dm.get_table(
             "coord_system",
             usecols=usecols,
@@ -155,7 +149,7 @@ def test_get_table_cache_overwrite_is_source_independent(human38_mysql_release: 
         )
 
         # 2) Force MySQL and overwrite the same cached key.
-        monkeypatch.setattr(DatabaseManager, "_tcp_can_connect", staticmethod(tcp_orig))
+        monkeypatch.setattr(DB, "ensembl_access", "auto")
 
         def _forbid_ftp(*_args, **_kwargs):
             raise AssertionError("Unexpected FTP fallback while forcing MySQL overwrite of the cached table.")

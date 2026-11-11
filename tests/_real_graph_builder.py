@@ -1,15 +1,26 @@
+"""Build tiny, real gene graphs for the end-to-end tests.
+
+The graph holds a handful of genes over a few releases of one assembly. Its tables come from the public Ensembl MySQL
+service through targeted queries when that service is usable (see :py:mod:`idtrack._ensembl_access`), and from
+Ensembl's HTTPS dumps otherwise; both sources yield the same graph.
+"""
+
 from __future__ import annotations
 
+import tempfile
 from collections.abc import Iterable
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
+import pandas as pd
 import pymysql
 
 from idtrack._database_manager import DatabaseManager
 from idtrack._db import DB
+from idtrack._ensembl_access import reachability
 from idtrack._the_graph import TheGraph
 
 
@@ -228,10 +239,151 @@ def _fetch_external_mappings(
             if db_name in external_databases and dbprimary_acc is not None:
                 rows_out.append((stable_id_s, version_i, str(db_name), str(dbprimary_acc)))
 
-    # Deduplicate while preserving order
+    return _unique(rows_out)
+
+
+def uses_https_dumps(spec: RealGraphSpec) -> bool:
+    """Return whether :py:func:`build_real_gene_graph` would read *spec* from the HTTPS dumps (MySQL not usable)."""
+    core_index = DatabaseManager._get_core_db_index(organism=spec.organism, genome_assembly=spec.genome_assembly)
+    port = core_index["port_for_release"][int(spec.max_release)]
+    return not reachability.mysql_port_usable(int(port))
+
+
+@lru_cache(maxsize=64)
+def _https_table(
+    organism: str, genome_assembly: int, release: int, table: str, columns: tuple[str, ...]
+) -> pd.DataFrame:
+    """Download one table of one release from the HTTPS dumps (decoded as MySQL would return it)."""
+    with tempfile.TemporaryDirectory(prefix="idtrack_real_graph_") as tmpdir:
+        dm = DatabaseManager(
+            organism=organism,
+            form="gene",
+            local_repository=tmpdir,
+            ensembl_release=int(release),
+            ignore_before=int(release),
+            ignore_after=int(release),
+            genome_assembly=int(genome_assembly),
+            store_raw_always=False,
+        )
+        return dm._download_table_from_ftp(table, usecols=list(columns))
+
+
+class _HTTPSSource:
+    """The queries of the MySQL source, answered from whole tables of the HTTPS dumps."""
+
+    def __init__(self, organism: str, genome_assembly: int) -> None:
+        self.organism = organism
+        self.genome_assembly = int(genome_assembly)
+
+    def _table(self, release: int, table: str, columns: tuple[str, ...]) -> pd.DataFrame:
+        return _https_table(self.organism, self.genome_assembly, int(release), table, columns)
+
+    def gene_id_change(self, release: int, min_release: int, max_release: int):
+        events = self._table(
+            release,
+            "stable_id_event",
+            ("old_stable_id", "old_version", "new_stable_id", "new_version", "mapping_session_id", "type", "score"),
+        )
+        sessions = self._table(release, "mapping_session", ("mapping_session_id", "old_release", "new_release"))
+        sessions = sessions.assign(
+            old_release=pd.to_numeric(sessions["old_release"], errors="coerce"),
+            new_release=pd.to_numeric(sessions["new_release"], errors="coerce"),
+        )
+        df = events.merge(sessions, on="mapping_session_id", how="inner")
+        df = df[
+            (df["type"] == "gene")
+            & df["old_release"].between(min_release, max_release)
+            & df["new_release"].between(min_release, max_release)
+            & df["old_stable_id"].notna()
+            & df["new_stable_id"].notna()
+            & (df["old_stable_id"] != df["new_stable_id"])
+        ]
+        if df.empty:
+            return None
+        row = df.sort_values(["old_release", "new_release", "old_stable_id", "new_stable_id"]).iloc[0]
+        return (
+            str(row["old_stable_id"]),
+            int(row["old_version"]),
+            str(row["new_stable_id"]),
+            int(row["new_version"]),
+            int(row["old_release"]),
+            int(row["new_release"]),
+            float(row["score"]) if pd.notna(row["score"]) else float("nan"),
+        )
+
+    def seed_gene_ids(self, release: int, limit: int = 5) -> list[str]:
+        genes = self._table(release, "gene", ("gene_id", "stable_id", "version"))
+        return sorted(str(s) for s in genes["stable_id"].dropna())[: max(0, int(limit))]
+
+    def gene_versions(self, release: int, stable_ids: list[str]) -> dict[str, int]:
+        genes = self._table(release, "gene", ("gene_id", "stable_id", "version"))
+        genes = genes[genes["stable_id"].isin(set(stable_ids))]
+        return {str(s): int(v) for s, v in zip(genes["stable_id"], genes["version"])}
+
+    def external_mappings(
+        self, release: int, stable_ids: list[str], external_databases: tuple[str, ...]
+    ) -> list[tuple[str, int, str, str]]:
+        if not stable_ids or not external_databases:
+            return []
+        genes = self._table(release, "gene", ("gene_id", "stable_id", "version"))
+        genes = genes[genes["stable_id"].isin(set(stable_ids))]
+        links = self._table(release, "object_xref", ("ensembl_id", "ensembl_object_type", "xref_id"))
+        links = links[(links["ensembl_object_type"] == "Gene") & links["ensembl_id"].isin(set(genes["gene_id"]))]
+        xrefs = self._table(release, "xref", ("xref_id", "external_db_id", "dbprimary_acc", "display_label"))
+        dbs = self._table(release, "external_db", ("external_db_id", "db_name", "db_display_name"))
+        joined = (
+            genes.merge(links, left_on="gene_id", right_on="ensembl_id")
+            .merge(xrefs, on="xref_id")
+            .merge(dbs, on="external_db_id")
+        )
+        rows_out: list[tuple[str, int, str, str]] = []
+        for row in joined.itertuples(index=False):
+            if row.db_display_name in external_databases and pd.notna(row.display_label):
+                rows_out.append(
+                    (str(row.stable_id), int(row.version), str(row.db_display_name), str(row.display_label))
+                )
+            if row.db_name in external_databases and pd.notna(row.dbprimary_acc):
+                rows_out.append((str(row.stable_id), int(row.version), str(row.db_name), str(row.dbprimary_acc)))
+        return _unique(rows_out)
+
+
+class _MySQLSource:
+    """Targeted queries against the public Ensembl MySQL service (one connection per release)."""
+
+    def __init__(self, organism: str, genome_assembly: int) -> None:
+        self.organism = organism
+        self.genome_assembly = int(genome_assembly)
+
+    def _connect(self, release: int) -> pymysql.connections.Connection:
+        db_name = _resolve_core_db_name(organism=self.organism, release=release, genome_assembly=self.genome_assembly)
+        return _mysql_connect(
+            organism=self.organism, genome_assembly=self.genome_assembly, ensembl_release=release, database=db_name
+        )
+
+    def gene_id_change(self, release: int, min_release: int, max_release: int):
+        with self._connect(release) as conn:
+            return _discover_gene_id_change(conn=conn, min_release=min_release, max_release=max_release)
+
+    def seed_gene_ids(self, release: int, limit: int = 5) -> list[str]:
+        with self._connect(release) as conn:
+            return _fetch_seed_gene_ids(conn=conn, limit=limit)
+
+    def gene_versions(self, release: int, stable_ids: list[str]) -> dict[str, int]:
+        with self._connect(release) as conn:
+            return _fetch_gene_versions(conn=conn, stable_ids=stable_ids)
+
+    def external_mappings(
+        self, release: int, stable_ids: list[str], external_databases: tuple[str, ...]
+    ) -> list[tuple[str, int, str, str]]:
+        with self._connect(release) as conn:
+            return _fetch_external_mappings(conn=conn, stable_ids=stable_ids, external_databases=external_databases)
+
+
+def _unique(rows: list[tuple[str, int, str, str]]) -> list[tuple[str, int, str, str]]:
+    """Deduplicate while preserving order."""
     seen: set[tuple[str, int, str, str]] = set()
     unique: list[tuple[str, int, str, str]] = []
-    for row in rows_out:
+    for row in rows:
         if row not in seen:
             seen.add(row)
             unique.append(row)
@@ -256,36 +408,35 @@ def _add_connection_edge(g: TheGraph, n1: str, n2: str, db_name: str, assembly: 
     edge_data[0][DB.connection_dict][db_name][assembly].add(release)
 
 
-def build_real_gene_graph(spec: RealGraphSpec) -> tuple[TheGraph, dict[str, str]]:
-    """Build a small, real homo_sapiens gene-only graph for the selected Ensembl releases.
+def build_real_gene_graph(spec: RealGraphSpec, source: Optional[str] = None) -> tuple[TheGraph, dict[str, str]]:
+    """Build a small, real gene-only graph for the selected Ensembl releases of one organism and assembly.
 
     Args:
         spec: Real-graph build specification (organism, assembly, releases, and seed identifiers).
+        source: ``"mysql"`` or ``"https"``; by default MySQL when its port is usable, the HTTPS dumps otherwise.
 
     Returns:
         tuple[TheGraph, dict[str, str]]: ``(graph, fixtures)`` where fixtures contains stable example identifiers
         discovered during build.
 
     Raises:
-        ValueError: If ``spec.releases`` is empty.
+        ValueError: If ``spec.releases`` is empty or *source* is unknown.
     """
     releases = list(spec.releases)
     if not releases:
         raise ValueError("spec.releases cannot be empty")
 
-    db_for_max = _resolve_core_db_name(
-        organism=spec.organism, release=spec.max_release, genome_assembly=spec.genome_assembly
-    )
+    if source is None:
+        source = "https" if uses_https_dumps(spec) else "mysql"
+    if source == "https":
+        tables: Any = _HTTPSSource(spec.organism, spec.genome_assembly)
+    elif source == "mysql":
+        tables = _MySQLSource(spec.organism, spec.genome_assembly)
+    else:
+        raise ValueError(f"Unknown source {source!r}; use 'mysql' or 'https'.")
+
     change_event: tuple[str, int, str, int, int, int, float] | None
-    with _mysql_connect(
-        organism=spec.organism,
-        genome_assembly=spec.genome_assembly,
-        ensembl_release=spec.max_release,
-        database=db_for_max,
-    ) as conn_max:
-        change_event = _discover_gene_id_change(
-            conn=conn_max, min_release=spec.min_release, max_release=spec.max_release
-        )
+    change_event = tables.gene_id_change(spec.max_release, spec.min_release, spec.max_release)
 
     seed_ids = list(spec.seed_gene_ids)
     fixtures: dict[str, str] = {}
@@ -302,20 +453,10 @@ def build_real_gene_graph(spec: RealGraphSpec) -> tuple[TheGraph, dict[str, str]
         )
 
     if not seed_ids:
-        with _mysql_connect(
-            organism=spec.organism,
-            genome_assembly=spec.genome_assembly,
-            ensembl_release=spec.max_release,
-            database=db_for_max,
-        ) as conn_max:
-            seed_ids.extend(_fetch_seed_gene_ids(conn=conn_max, limit=5))
+        seed_ids.extend(tables.seed_gene_ids(spec.max_release, limit=5))
 
     stable_ids = sorted(set(seed_ids))
     fixtures["seed_gene_ids"] = ",".join(stable_ids)
-    db_by_release = {
-        rel: _resolve_core_db_name(organism=spec.organism, release=rel, genome_assembly=spec.genome_assembly)
-        for rel in releases
-    }
 
     g = TheGraph(
         name=f"{spec.organism}_{spec.max_release}_gene_small",
@@ -334,40 +475,29 @@ def build_real_gene_graph(spec: RealGraphSpec) -> tuple[TheGraph, dict[str, str]
     # Collect versions and externals per release.
     versions_by_release: dict[int, dict[str, int]] = {}
     for rel in releases:
-        db_name = db_by_release[rel]
-        with _mysql_connect(
-            organism=spec.organism,
-            genome_assembly=spec.genome_assembly,
-            ensembl_release=rel,
-            database=db_name,
-        ) as conn:
-            versions = _fetch_gene_versions(conn=conn, stable_ids=stable_ids)
-            versions_by_release[rel] = versions
+        versions = tables.gene_versions(rel, stable_ids)
+        versions_by_release[rel] = versions
 
-            for stable_id, version in versions.items():
-                node_name = f"{stable_id}{DB.id_ver_delimiter}{version}"
-                g.add_node(
-                    node_name,
-                    **{
-                        DB.node_type_str: DB.nts_ensembl["gene"],
-                        "ID": stable_id,
-                        "Version": int(version),
-                    },
-                )
-
-            # External edges: only for genes present in this release.
-            ext_rows = _fetch_external_mappings(
-                conn=conn,
-                stable_ids=sorted(versions.keys()),
-                external_databases=spec.external_databases,
+        for stable_id, version in versions.items():
+            node_name = f"{stable_id}{DB.id_ver_delimiter}{version}"
+            g.add_node(
+                node_name,
+                **{
+                    DB.node_type_str: DB.nts_ensembl["gene"],
+                    "ID": stable_id,
+                    "Version": int(version),
+                },
             )
-            for stable_id, version, db, ext_id in ext_rows:
-                gene_node = f"{stable_id}{DB.id_ver_delimiter}{version}"
-                if gene_node not in g.nodes:
-                    continue
-                if ext_id not in g.nodes:
-                    g.add_node(ext_id, **{DB.node_type_str: DB.nts_external})
-                _add_connection_edge(g, ext_id, gene_node, db, spec.genome_assembly, rel)
+
+        # External edges: only for genes present in this release.
+        ext_rows = tables.external_mappings(rel, sorted(versions.keys()), spec.external_databases)
+        for stable_id, version, db, ext_id in ext_rows:
+            gene_node = f"{stable_id}{DB.id_ver_delimiter}{version}"
+            if gene_node not in g.nodes:
+                continue
+            if ext_id not in g.nodes:
+                g.add_node(ext_id, **{DB.node_type_str: DB.nts_external})
+            _add_connection_edge(g, ext_id, gene_node, db, spec.genome_assembly, rel)
 
     # Add backbone birth/version-change/retirement edges per stable_id.
     for stable_id in stable_ids:

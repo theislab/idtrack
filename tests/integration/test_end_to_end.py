@@ -2,8 +2,10 @@
 """High-value end-to-end integration tests for idtrack.
 
 These tests intentionally avoid genome-wide graph builds (which can require tens of GB of RAM).
-Instead they use a tiny but real gene-only snapshot spanning a bounded Ensembl-release window,
-generated from targeted MySQL queries and cached on disk.
+Instead they use a tiny but real gene-only snapshot spanning a bounded Ensembl-release window of one assembly
+(per organism, see `REAL_GRAPH_DEFAULTS` in `tests/conftest.py`), generated from targeted MySQL queries where the
+public MySQL service is usable and from Ensembl's HTTPS dumps otherwise (that build runs with `--runslow`), and
+cached on disk.
 """
 
 from __future__ import annotations
@@ -103,6 +105,7 @@ def _pick_any_external_node(graph: TheGraph, *, release: int) -> str:
 
 
 @pytest.mark.integration
+@pytest.mark.network
 class TestRealGraphSnapshot:
     """Sanity-check the real snapshot build and cache."""
 
@@ -165,6 +168,7 @@ class TestRealGraphSnapshot:
 
 
 @pytest.mark.integration
+@pytest.mark.network
 class TestTimeTravelAndExternalDatabases:
     """Integration checks for conversion, time travel, and externals."""
 
@@ -307,6 +311,7 @@ class TestTimeTravelAndExternalDatabases:
 
 
 @pytest.mark.integration
+@pytest.mark.network
 class TestTrackTestsHarness:
     """Run TrackTests invariants against the real snapshot."""
 
@@ -322,6 +327,7 @@ class TestTrackTestsHarness:
 
 
 @pytest.mark.integration
+@pytest.mark.network
 class TestAPIIntegration:
     """Integration checks for the high-level API."""
 

@@ -10,7 +10,10 @@ These tests download small real tables from `https://ftp.ensembl.org/pub/...` to
    - human GRCh37 (assembly 37), including the GRCh37 archive path for release 78
    - human NCBI36 (assembly 36)
    - mouse GRCm37/38/39 (assemblies 37/38/39)
-   - pig Sscrofa9.2/10.2/11.1 (assemblies 9/102/111)
+   - pig Sscrofa9/10.2/11.1 (assemblies 9/102/111)
+   - rhesus macaque MMUL_1/Mmul_8.0.1/Mmul_10 (assemblies 1/801/10; MMUL_1 and Mmul_10 share the core-database
+     suffix `10`, told apart by release)
+   - cynomolgus macaque Macaca_fascicularis_5.0/6.0 (assemblies 5/6)
 
 The tests are marked as slow/network and will be skipped if the FTP host is unreachable.
 """
@@ -60,6 +63,13 @@ EXPECTED_RANGES: dict[tuple[str, int], dict[str, int | str]] = {
     ("sus_scrofa", 111): {"min": 90, "max": "latest"},
     ("sus_scrofa", 102): {"min": 67, "max": 89},
     ("sus_scrofa", 9): {"min": 56, "max": 66},
+    # Rhesus macaque: clean handoffs; key 1 (MMUL_1) and key 10 (Mmul_10) are both `macaca_mulatta_core_<r>_10`.
+    ("macaca_mulatta", 10): {"min": 98, "max": "latest"},
+    ("macaca_mulatta", 801): {"min": 86, "max": 97},
+    ("macaca_mulatta", 1): {"min": 48, "max": 85},
+    # Cynomolgus macaque: clean handoff at release 103.
+    ("macaca_fascicularis", 6): {"min": 103, "max": "latest"},
+    ("macaca_fascicularis", 5): {"min": 91, "max": 102},
 }
 
 REQUIRED_CORE_TABLES: set[str] = {
@@ -228,3 +238,29 @@ def test_ftp_schema_contains_required_tables(ensembl_latest_release: int, organi
                     int(rel),
                     stable_table,
                 )
+
+
+@pytest.mark.integration
+@pytest.mark.network
+@pytest.mark.slow
+def test_dump_escapes_are_decoded_like_mysql() -> None:
+    """Rows whose text holds escaped newlines (rhesus 90 `external_db`) stay single rows, as MySQL returns them."""
+    if not _can_reach_ensembl_ftp():
+        pytest.skip(f"Unable to reach https://{DB.ensembl_ftp_base}/pub/ from the test environment.")
+
+    with tempfile.TemporaryDirectory(prefix="idtrack_ftp_escape_test_") as tmpdir:
+        dm = DatabaseManager(
+            organism="macaca_mulatta",
+            form="gene",
+            local_repository=tmpdir,
+            ensembl_release=90,
+            genome_assembly=801,
+            store_raw_always=False,
+        )
+        df = dm._download_table_from_ftp("external_db")
+        assert df["external_db_id"].dtype.kind == "i"
+        description = df.loc[df["db_name"] == "EO", "description"].iloc[0]
+        assert description == (
+            "Plant environmental conditions ontology terms.\r\nMore information in there:\r\n"
+            "http://www.gramene.org/plant_ontology/ontology_browse.html#eo"
+        )

@@ -4,6 +4,8 @@
 # k.inecik@gmail.com
 
 import logging
+import re
+from typing import Union
 
 import pandas as pd
 import requests
@@ -15,8 +17,12 @@ class VerifyOrganism:
     """Resolve a tentative organism identifier to the formal Ensembl species name and its latest supported release.
 
     The class shields end-users from the quirks of the Ensembl REST payload by converting any synonym—common name,
-    scientific name, assembly accession, or NCBI taxon ID—into the canonical Ensembl species identifier
-    (e.g. ``homo_sapiens``) and the newest Ensembl release that still hosts that species.  Because the mapping is
+    scientific name, assembly name or accession, or NCBI taxon ID—into the canonical Ensembl species identifier
+    (e.g. ``homo_sapiens``) and the newest Ensembl release that still hosts that species. Matching is
+    case-insensitive on both sides. A query equal to a formal name (also written with spaces, e.g.
+    ``"Macaca mulatta"``) or to a taxon ID is never ambiguous: a taxon ID that Ensembl also gives to strains or
+    breeds resolves to the species-level entry (``9823`` → ``sus_scrofa``). Any other synonym that several species
+    share (``"pig"`` is the common name of every pig breed) raises an error that lists the candidates.  Because the mapping is
     refreshed on every instantiation through a live call to the Ensembl REST API, downstream workflows in *idtrack*
     always rely on up-to-date metadata rather than a possibly stale local cache.
 
@@ -34,7 +40,7 @@ class VerifyOrganism:
       Ensembl release number.
     """
 
-    def __init__(self, organism_query: str):
+    def __init__(self, organism_query: Union[str, int]):
         """Initialise the resolver and pre-fetch synonym/release tables from the Ensembl REST API.
 
         The constructor immediately invokes :py:meth:`~VerifyOrganism.fetch_organism_and_latest_release`, downloading
@@ -43,15 +49,16 @@ class VerifyOrganism:
         can handle network or data-quality issues explicitly.
 
         Args:
-            organism_query (str): Organism identifier supplied by the user—common name (``"human"``),
-                shorthand (``"hsapiens"``), taxon ID (``9606``), or fully qualified Ensembl species name
-                (``"homo_sapiens"``).  The value is converted to lower case before processing.
+            organism_query (str | int): Organism identifier supplied by the user—common name (``"human"``),
+                shorthand (``"hsapiens"``), taxon ID (``9606`` or ``"9606"``), assembly name (``"Mmul_10"``), or
+                Ensembl species name (``"homo_sapiens"``, ``"Macaca mulatta"``). The value is converted to a
+                stripped, lower-case string before processing.
         """
         # Instance attributes
         self.log = logging.getLogger("verify_organism")
 
         # Fetch the latest information from the Ensembl resources regarding
-        self.organism_query = organism_query.lower()
+        self.organism_query = self.normalize(organism_query)
         self.name_synonyms_dataframe, self.ensembl_release_dataframe = self.fetch_organism_and_latest_release(
             connect_timeout=DB.connection_timeout, read_timeout=DB.reading_timeout
         )
@@ -71,35 +78,58 @@ class VerifyOrganism:
         formal_name = self.get_formal_name()
         return int(self.ensembl_release_dataframe.loc[formal_name]["ensembl_release"])
 
+    @staticmethod
+    def normalize(value: Union[str, int]) -> str:
+        """Return the matching key of a query or synonym: ``str(value)``, stripped and lower-cased."""
+        return str(value).strip().lower()
+
     def get_formal_name(self) -> str:
         """Resolve the user's organism query to the canonical Ensembl species name.
 
-        The method performs an exact match against the *synonym* column of
-        :py:data:`~VerifyOrganism.name_synonyms_dataframe`, which was pre-populated from the Ensembl REST *species*
-        endpoint.  Synonyms include scientific names, common names, NCBI TaxIDs, assembly accessions and other
-        aliases, allowing flexible user input while guaranteeing that only one formally recognised organism is
-        selected before any expensive data retrieval begins.
+        Resolution, in this order (all comparisons on normalised, lower-case strings):
+
+        1. the query is a formal name (``"homo_sapiens"``), also with spaces or hyphens for underscores
+           (``"Macaca mulatta"``);
+        2. the query is a taxon ID: the organism with that ID, or—when Ensembl gives the ID to several strains or
+           breeds—the species-level entry (the formal name of two words, ``sus_scrofa`` for ``9823``);
+        3. any other synonym of :py:data:`~VerifyOrganism.name_synonyms_dataframe` (common names, display names,
+           assembly names and accessions, aliases), which must belong to exactly one organism.
 
         Returns:
             str: The canonical Ensembl species identifier (always lower-case, e.g. ``"homo_sapiens"``).
 
         Raises:
-            KeyError: If the query string does not match any synonym in the dataframe.
-            ValueError: If the query matches more than one formal name, indicating an ambiguous synonym.
+            KeyError: If the query does not match any synonym.
+            ValueError: If the query matches more than one organism (an ambiguous synonym); the message lists the
+                candidates.
         """
-        the_search = self.name_synonyms_dataframe[self.name_synonyms_dataframe["synonym"] == self.organism_query]
+        query = self.organism_query
         cm = "Please inspect 'name_synonyms_dataframe' variable of this instance for troubleshooting."
-        if len(the_search) == 0:
-            raise KeyError(f"The query (`{self.organism_query}`) is not defined in the Ensembl database. {cm}")
-        elif len(the_search) > 1:
-            raise ValueError(
-                f"There are multiple entries for query (`{self.organism_query}`) "
-                f" in Ensembl database. The query is hence ambiguous. {cm}"
-            )
-        else:
-            return self.name_synonyms_dataframe[self.name_synonyms_dataframe["synonym"] == self.organism_query][
-                "formal_name"
-            ].iloc[0]
+        formal_names = self.ensembl_release_dataframe.index
+        for candidate in (query, re.sub(r"[\s\-]+", "_", query)):
+            if candidate in formal_names:
+                return str(candidate)
+
+        df = self.name_synonyms_dataframe
+        matches = df[df["synonym"] == query]
+        if len(matches) == 0:
+            raise KeyError(f"The query (`{query}`) is not defined in the Ensembl database. {cm}")
+
+        candidates = sorted(set(matches["formal_name"]))
+        if len(candidates) == 1:
+            return str(candidates[0])
+
+        if query.isdecimal() and (matches["kind"] == "taxon_id").any():
+            taxon_candidates = sorted(set(matches.loc[matches["kind"] == "taxon_id", "formal_name"]))
+            species_level = [c for c in taxon_candidates if len(c.split("_")) == 2]
+            if len(species_level) == 1:
+                return str(species_level[0])
+
+        shown = ", ".join(candidates[:25]) + (f", ... ({len(candidates)} in total)" if len(candidates) > 25 else "")
+        raise ValueError(
+            f"There are multiple entries for query (`{query}`) in Ensembl database. The query is hence ambiguous. "
+            f"Candidates: {shown}. Use the Ensembl species name (e.g. `{candidates[0]}`) or the taxon ID instead."
+        )
 
     def fetch_organism_and_latest_release(
         self, connect_timeout: int, read_timeout: int
@@ -109,8 +139,9 @@ class VerifyOrganism:
         This internal utility performs a single call to ``/info/species`` on the Ensembl REST server, parses the
         returned JSON, and constructs two pandas dataframes:
 
-        * ``name_synonyms_df`` - one row per synonym, with columns ``synonym``, ``formal_name`` and ``ambiguous``
-            (``True`` if the synonym belongs to more than one species).
+        * ``name_synonyms_df`` - one row per (normalised synonym, species), with columns ``synonym``,
+            ``formal_name``, ``kind`` (``"formal_name"``, ``"taxon_id"`` or ``"other"``) and ``ambiguous`` (``True``
+            if the synonym belongs to more than one species).
         * ``latest_ensembl_releases_df`` - indexed by ``formal_name`` and holding a single ``ensembl_release``
             integer column.
 
@@ -176,20 +207,21 @@ class VerifyOrganism:
             # Save the associated the latest release
             latest_ensembl_releases[organism["name"].lower()] = int(organism["release"])
 
-            # Fetch all the organism names associated with the organism.
-            synonyms = list(
-                set(
-                    [organism[j] for j in ["common_name", "name", "taxon_id", "accession", "assembly", "display_name"]]
-                    + organism["aliases"]
-                )
-            )
-            # For all the names of a given organism: if it is None, ignore.
-            organism_name_synonyms = [(i, organism["name"].lower()) for i in synonyms if i]
-            # Also add the organism TaxID as integer.
-            organism_name_synonyms += [(int(i), j) for i, j in organism_name_synonyms if i.isdecimal()]
-            name_synonyms.extend(organism_name_synonyms)
+            # Fetch all the organism names associated with the organism; match on normalised strings.
+            formal_name = organism["name"].lower()
+            kinds: dict[str, str] = {}
+            for field in ["common_name", "accession", "assembly", "display_name"]:
+                if organism.get(field):
+                    kinds.setdefault(self.normalize(organism[field]), "other")
+            for alias in organism.get("aliases") or []:
+                if alias:
+                    kinds.setdefault(self.normalize(alias), "other")
+            if organism.get("taxon_id"):
+                kinds[self.normalize(organism["taxon_id"])] = "taxon_id"
+            kinds[formal_name] = "formal_name"
+            name_synonyms.extend((synonym, formal_name, kind) for synonym, kind in kinds.items())
 
-        name_synonyms_df = pd.DataFrame(name_synonyms, columns=["synonym", "formal_name"])
+        name_synonyms_df = pd.DataFrame(name_synonyms, columns=["synonym", "formal_name", "kind"])
         #  If it is associated with another organism, mark as 'ambiguous'.
         name_synonyms_df["ambiguous"] = name_synonyms_df.duplicated(subset=["synonym"], keep=False)
         # Convert the result into data frame.

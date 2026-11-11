@@ -18,7 +18,7 @@ import typing as _t
 import pandas as pd
 from tqdm import tqdm
 
-from idtrack._external_mappers._constants import _ENSEMBL_INPUT_DB
+from idtrack._external_mappers._constants import _ENSEMBL_INPUT_DB, _SPECIES_CANONICAL_TO_ENSEMBL
 from idtrack._external_mappers._utils import (
     _chunker,
     _empty_result,
@@ -128,7 +128,8 @@ def map_with_gget(
         input_db: Source database type. Must be one of ``"ensembl_gene"``, ``"ensembl_transcript"``,
             or ``"ensembl_protein"``.
         output_db: Target database type (e.g. ``"hgnc_symbol"``, ``"uniprot"``, ``"entrez_gene"``).
-        species: Species code (e.g. ``"hsapiens"``, ``"mmusculus"``, ``"sscrofa"``).
+        species: Species code (e.g. ``"hsapiens"``, ``"mmusculus"``, ``"sscrofa"``, ``"mmulatta"``,
+            ``"mfascicularis"``).
         chunk_size: Number of IDs per API request.
         pause: Pause in seconds between requests.
         max_retries: Maximum retry attempts per chunk on failure.
@@ -189,11 +190,7 @@ def map_with_gget(
         kwargs["expand"] = False
 
     species_code = canonical_species(species)
-    gget_species = {
-        "hsapiens": "homo_sapiens",
-        "mmusculus": "mus_musculus",
-        "sscrofa": "sus_scrofa",
-    }.get(species_code, species_code)
+    gget_species = _SPECIES_CANONICAL_TO_ENSEMBL.get(species_code, species_code)
     if "species" in sig_params:
         kwargs["species"] = gget_species
 

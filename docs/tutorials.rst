@@ -34,7 +34,7 @@ These tutorials are the **primary learning resource** for IDTrack. They are writ
       - Installation and a clean, reusable local repository directory
       - :doc:`_notebooks/01_installation_guide`
     * - Part 2
-      - External database configuration (YAML) for human, mouse, pig (and how to add a new organism)
+      - External database configuration (YAML) for human, mouse, pig, rhesus and cynomolgus macaque, extending a YAML to new Ensembl releases, and how to add a new organism
       - :doc:`_notebooks/02_prepare_new_external_yaml`
     * - Part 3
       - Build snapshot graphs (multi-assembly where applicable), reuse caches, and manage rebuilds across organisms and output assemblies

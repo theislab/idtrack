@@ -531,3 +531,242 @@ class TestDatabaseIndex:
             idx = data["homo_sapiens"]["gene"][db]["Database Index"]
             assert idx not in indices
             indices.add(idx)
+
+
+DEFAULT_CONFIG_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "idtrack", "default_config")
+
+
+class TestMissingYaml:
+    """An organism without any externals YAML gets one clear error."""
+
+    def test_message_names_file_and_recipe(self, temp_dir):
+        """Message names file and recipe."""
+        from idtrack._external_databases import ExternalDatabases
+
+        edb = ExternalDatabases(
+            organism="danio_rerio", ensembl_release=110, form="gene", local_repository=temp_dir, genome_assembly=11
+        )
+        with pytest.raises(FileNotFoundError) as info:
+            edb.load_modified_yaml()
+        message = str(info.value)
+        assert os.path.join(temp_dir, "danio_rerio_externals_modified.yml") in message
+        assert "create_template_yaml" in message and "02_prepare_new_external_yaml" in message
+
+    def test_file_without_the_organism_means_no_externals(self, temp_dir):
+        """File without the organism means no externals."""
+        from idtrack._external_databases import ExternalDatabases
+
+        with open(os.path.join(temp_dir, "danio_rerio_externals_modified.yml"), "w") as handle:
+            yaml.safe_dump({"other_organism": {}}, handle)
+        edb = ExternalDatabases(
+            organism="danio_rerio", ensembl_release=110, form="gene", local_repository=temp_dir, genome_assembly=11
+        )
+        assert edb.give_list_for_case("db") == []
+        assert edb.give_list_for_case("assembly") == []
+        assert edb.covered_releases() == set()
+
+
+class TestShippedFiles:
+    """The shipped YAML files, the writer and the allowlists agree."""
+
+    @pytest.mark.parametrize("name", sorted(f for f in os.listdir(DEFAULT_CONFIG_DIR) if f.endswith(".yml")))
+    def test_writer_reproduces_shipped_file(self, temp_dir, name):
+        """Writer reproduces shipped file."""
+        from idtrack._external_databases import write_externals_yaml
+
+        source = os.path.join(DEFAULT_CONFIG_DIR, name)
+        with open(source) as handle:
+            data = yaml.safe_load(handle)
+        target = os.path.join(temp_dir, name)
+        write_externals_yaml(data, target)
+        with open(source) as a, open(target) as b:
+            assert a.read() == b.read()
+
+    @pytest.mark.parametrize(
+        "organism",
+        sorted(
+            f.removesuffix("_externals_template.yml")
+            for f in os.listdir(DEFAULT_CONFIG_DIR)
+            if f.endswith("_externals_template.yml")
+        ),
+    )
+    def test_modified_file_is_template_plus_allowlist(self, organism):
+        """Modified file is template plus allowlist."""
+        from idtrack._default_externals import DEFAULT_EXTERNALS, apply_allowlist
+
+        with open(os.path.join(DEFAULT_CONFIG_DIR, f"{organism}_externals_template.yml")) as handle:
+            template = yaml.safe_load(handle)
+        with open(os.path.join(DEFAULT_CONFIG_DIR, f"{organism}_externals_modified.yml")) as handle:
+            modified = yaml.safe_load(handle)
+        applied, enabled, _absent = apply_allowlist(template, organism, DEFAULT_EXTERNALS[organism])
+        assert enabled > 0
+        assert applied == modified
+
+    def test_every_shipped_modified_file_has_a_template_and_allowlist(self):
+        """Every shipped modified file has a template and allowlist."""
+        from idtrack._db import DB
+        from idtrack._default_externals import DEFAULT_EXTERNALS
+
+        modified = {
+            f.removesuffix("_externals_modified.yml")
+            for f in os.listdir(DEFAULT_CONFIG_DIR)
+            if f.endswith("_externals_modified.yml")
+        }
+        templates = {
+            f.removesuffix("_externals_template.yml")
+            for f in os.listdir(DEFAULT_CONFIG_DIR)
+            if f.endswith("_externals_template.yml")
+        }
+        assert modified == templates
+        assert modified <= set(DEFAULT_EXTERNALS) == set(DB.supported_organisms)
+
+    def test_allowlists_use_configured_assemblies(self):
+        """Allowlists use configured assemblies."""
+        from idtrack._db import DB
+        from idtrack._default_externals import DEFAULT_EXTERNALS
+
+        for organism, allowlist in DEFAULT_EXTERNALS.items():
+            configured = set(DB.assembly_mysqlport_priority[organism])
+            for databases in allowlist.values():
+                for assemblies in databases.values():
+                    assert set(assemblies) == configured, organism
+
+    def test_notebook_allowlists_match_the_package(self):
+        """Tutorial 02 shows the allowlists as editable dicts; they must equal the package's lists."""
+        import ast
+        import json
+        import re
+
+        from idtrack._default_externals import DEFAULT_EXTERNALS
+
+        notebook = os.path.join(
+            os.path.dirname(__file__), "..", "..", "docs", "_notebooks", "02_prepare_new_external_yaml.ipynb"
+        )
+        with open(notebook, encoding="utf-8") as handle:
+            cells = json.load(handle)["cells"]
+        names = {
+            "DEFAULT_HS_EXTERNALS": "homo_sapiens",
+            "DEFAULT_MM_EXTERNALS": "mus_musculus",
+            "DEFAULT_SS_EXTERNALS": "sus_scrofa",
+            "DEFAULT_MMUL_EXTERNALS": "macaca_mulatta",
+            "DEFAULT_MFAS_EXTERNALS": "macaca_fascicularis",
+        }
+        found = {}
+        for cell in cells:
+            source = "".join(cell["source"])
+            for match in re.finditer(r"^(DEFAULT_\w+_EXTERNALS) = (\{.*?\n\})$", source, flags=re.S | re.M):
+                found[match.group(1)] = ast.literal_eval(match.group(2))
+        assert set(found) == set(names)
+        for variable, organism in names.items():
+            assert found[variable] == DEFAULT_EXTERNALS[organism], variable
+
+
+def _content(rows):
+    return pd.DataFrame(rows, columns=["organism", "form", "name_db", "assembly", "release", "count"])
+
+
+class TestExtendModifiedYaml:
+    """`extend_modified_yaml` adds releases, keeps flags and lists new databases."""
+
+    @pytest.fixture
+    def base_yaml(self, temp_dir):
+        """Write a small modified YAML (human, releases 114-115) into the local repository."""
+        data = {
+            "homo_sapiens": {
+                "gene": {
+                    "HGNC Symbol": {
+                        "Assembly": {
+                            "37": {"Ensembl release": "114,115", "Include": True},
+                            "38": {"Ensembl release": "114,115", "Include": True},
+                        },
+                        "Database Index": 3,
+                        "Potential Synonymous": "",
+                    },
+                    "WikiGene": {
+                        "Assembly": {"38": {"Ensembl release": "114,115", "Include": False}},
+                        "Database Index": 7,
+                        "Potential Synonymous": "",
+                    },
+                },
+                "transcript": {
+                    "RefSeq_mRNA": {
+                        "Assembly": {"38": {"Ensembl release": "115", "Include": True}},
+                        "Database Index": 5,
+                        "Potential Synonymous": "",
+                    }
+                },
+            }
+        }
+        path = os.path.join(temp_dir, "homo_sapiens_externals_modified.yml")
+        with open(path, "w") as handle:
+            yaml.safe_dump(data, handle)
+        return path
+
+    def _edb(self, temp_dir, release=116):
+        from idtrack._external_databases import ExternalDatabases
+
+        return ExternalDatabases(
+            organism="homo_sapiens", ensembl_release=release, form="gene", local_repository=temp_dir, genome_assembly=38
+        )
+
+    def test_adds_release_keeps_flags_lists_new(self, temp_dir, base_yaml):
+        """Adds release keeps flags lists new."""
+        edb = self._edb(temp_dir)
+        content = _content(
+            [
+                ("homo_sapiens", "gene", "HGNC Symbol", 38, 116, 10),
+                ("homo_sapiens", "gene", "HGNC Symbol", 37, 116, 9),
+                ("homo_sapiens", "gene", "WikiGene", 38, 116, 5),
+                ("homo_sapiens", "gene", "WikiGene", 37, 116, 5),
+                ("homo_sapiens", "gene", "Brand-new DB", 38, 116, 1),
+                ("homo_sapiens", "transcript", "RefSeq_mRNA", 38, 116, 4),
+                ("homo_sapiens", "transcript", "RefSeq_mRNA", 39, 116, 4),
+                ("mus_musculus", "gene", "MGI Symbol", 39, 116, 4),
+            ]
+        )
+        report = edb.extend_modified_yaml(content)
+        assert report["path"] == base_yaml
+        assert report["releases"] == [116]
+        assert report["extended_entries"] == 4
+        assert report["new_databases"] == [("gene", "Brand-new DB", 38)]
+        assert report["new_assembly_entries"] == [
+            ("gene", "WikiGene", 37, False),
+            ("transcript", "RefSeq_mRNA", 39, True),
+        ]
+        # Only a database enabled on all its assemblies is switched on for a new assembly, and it is listed.
+        assert report["switched_on"] == [("transcript", "RefSeq_mRNA", 39)]
+
+        with open(base_yaml) as handle:
+            y = yaml.safe_load(handle)["homo_sapiens"]
+        assert y["gene"]["HGNC Symbol"]["Assembly"]["38"] == {"Ensembl release": "114,115,116", "Include": True}
+        assert y["gene"]["HGNC Symbol"]["Assembly"]["37"]["Ensembl release"] == "114,115,116"
+        assert y["gene"]["WikiGene"]["Assembly"]["38"] == {"Ensembl release": "114,115,116", "Include": False}
+        assert y["gene"]["Brand-new DB"]["Assembly"]["38"] == {"Ensembl release": "116", "Include": False}
+        assert y["gene"]["Brand-new DB"]["Database Index"] == 8
+        assert y["transcript"]["RefSeq_mRNA"]["Assembly"]["39"]["Include"] is True
+        assert list(y["gene"]) == sorted(y["gene"])
+
+        # The extended file now validates for 116, and a re-run adds nothing.
+        assert edb.load_modified_yaml()["homo_sapiens"]
+        assert edb.covered_releases() == {114, 115, 116}
+        assert self._edb(temp_dir).extend_modified_yaml(content)["extended_entries"] == 0
+
+    def test_writes_to_output_path_and_rejects_bad_content(self, temp_dir, base_yaml):
+        """Writes to output path and rejects bad content."""
+        edb = self._edb(temp_dir)
+        out = os.path.join(temp_dir, "elsewhere.yml")
+        edb.extend_modified_yaml(_content([("homo_sapiens", "gene", "HGNC Symbol", 38, 116, 1)]), output_path=out)
+        assert os.path.exists(out)
+        with open(base_yaml) as handle:
+            assert "116" not in handle.read()
+        with pytest.raises(ValueError, match="no row for organism"):
+            edb.extend_modified_yaml(_content([("mus_musculus", "gene", "MGI Symbol", 39, 116, 1)]))
+        with pytest.raises(ValueError, match="lacks the columns"):
+            edb.extend_modified_yaml(pd.DataFrame({"organism": ["homo_sapiens"]}))
+
+    def test_missing_release_error_mentions_extension(self, temp_dir, base_yaml):
+        """Missing release error mentions extension."""
+        from idtrack._external_databases import ExternalsReleaseNotCoveredError
+
+        with pytest.raises(ExternalsReleaseNotCoveredError, match="extend_modified_yaml"):
+            self._edb(temp_dir, release=116).load_modified_yaml()

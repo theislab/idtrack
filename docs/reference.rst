@@ -75,6 +75,24 @@ Reference
     :show-inheritance:
 
 
+.. automodule:: idtrack._ensembl_access
+    :members:
+    :private-members:
+    :show-inheritance:
+
+
+.. automodule:: idtrack._mysql_dump
+    :members:
+    :private-members:
+    :show-inheritance:
+
+
+.. automodule:: idtrack._default_externals
+    :members:
+    :private-members:
+    :show-inheritance:
+
+
 .. toctree::
     :maxdepth: 1
     :hidden:

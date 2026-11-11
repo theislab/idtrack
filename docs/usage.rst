@@ -87,7 +87,7 @@ Convert a gene symbol to its Ensembl ID at the latest Ensembl release:
 
 .. code-block:: text
 
-    Using homo_sapiens at Ensembl release 114
+    Using homo_sapiens at Ensembl release 116
     TP53 -> ENSG00000141510
 
 .. note::
@@ -288,29 +288,59 @@ Then in your Python code:
 Supported Organisms
 -------------------
 
-IDTrack currently supports the following organisms:
+IDTrack supports the following organisms. Each is declared once, in the organism table
+``idtrack.DB.assembly_mysqlport_priority``, and ships a default external-database configuration
+(``idtrack/default_config/<organism>_externals_modified.yml``).
 
 .. list-table::
     :header-rows: 1
-    :widths: 20 30 50
+    :widths: 18 22 40 20
 
     * - Organism
       - Identifier
-      - External Database Support
+      - Assemblies (key: name, Ensembl releases)
+      - Symbol databases
     * - Human
-      - ``"human"`` or ``"homo_sapiens"``
-      - Full Ensembl + HGNC, NCBI, UniProt
+      - ``"homo_sapiens"``, ``"human"`` or ``9606``
+      - 38: GRCh38, 76+; 37: GRCh37, 55+ (archive from 76); 36: NCBI36, 48-54
+      - HGNC Symbol
     * - Mouse
-      - ``"mouse"`` or ``"mus_musculus"``
-      - Full Ensembl + MGI, NCBI, UniProt
+      - ``"mus_musculus"``, ``"mouse"`` or ``10090``
+      - 39: GRCm39, 103+; 38: GRCm38, 68-102; 37: NCBIM37, 48-67
+      - MGI Symbol
     * - Pig
-      - ``"pig"`` or ``"sus_scrofa"``
-      - Full Ensembl support
+      - ``"sus_scrofa"`` or ``9823``
+      - 111: Sscrofa11.1, 90+; 102: Sscrofa10.2, 67-89; 9: Sscrofa9, 56-66
+      - VGNC Symbol, HGNC Symbol
+    * - Rhesus macaque
+      - ``"macaca_mulatta"`` or ``9544``
+      - 10: Mmul_10, 98+; 801: Mmul_8.0.1, 86-97; 1: MMUL_1, 48-85
+      - VGNC Symbol, HGNC Symbol
+    * - Cynomolgus macaque
+      - ``"macaca_fascicularis"`` or ``9541``
+      - 6: Macaca_fascicularis_6.0, 103+; 5: Macaca_fascicularis_5.0, 91-102
+      - VGNC Symbol, HGNC Symbol
+
+The **key** of an assembly is what IDTrack uses everywhere (the ``genome_assembly`` argument, node types such as
+``assembly_801_ensembl_gene``, cache files ``<organism>_assembly-<key>.h5`` and the assembly keys of the externals
+YAML). It is Ensembl's code from the core database name ``<organism>_core_<release>_<code>`` wherever that is
+unambiguous. Rhesus is the exception: Ensembl names both MMUL_1 (releases up to 85) and Mmul_10 (from 98)
+``macaca_mulatta_core_<release>_10``, so Mmul_10 keeps key ``10`` and MMUL_1 has the key ``1``; IDTrack tells them
+apart by release. Releases before 48 are not available in IDTrack. Except for human (GRCh37 and GRCh38 overlap),
+every organism has one assembly per release, and IDTrack links the assemblies through Ensembl's own history.
+
+Identifiers are matched case-insensitively. Ensembl species names (also written with spaces, e.g.
+``"Macaca mulatta"``) and taxon IDs always resolve; a common name that several Ensembl species share raises an
+error listing the candidates (``"pig"`` is also the common name of every pig breed in Ensembl).
+
+The symbol databases are the default final database of :py:class:`idtrack.HarmonizeFeatures` (the first one) and
+the ones to try for gene symbols. In current Ensembl, macaque genes carry VGNC symbols on the newest assemblies
+and HGNC symbols on earlier ones, and cynomolgus 6.0 has few symbols of either kind.
 
 .. tip::
 
-    Want to add support for another organism? See :doc:`_notebooks/02_prepare_new_external_yaml`
-    for instructions on configuring external databases.
+    Want to add support for another organism? See "Adding Organism Support" in :doc:`contributing` for the
+    recipe, and :doc:`_notebooks/02_prepare_new_external_yaml` for configuring its external databases.
 
 
 Common Patterns
