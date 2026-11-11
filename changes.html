@@ -130,6 +130,13 @@ created. See <a class="reference internal" href="installation.html#ensembl-acces
 <li><p>Tables read from the HTTPS dumps are now decoded as MySQL loads them (escaped tabs, newlines and backslashes in
 fields), so such rows are no longer split or dropped.</p></li>
 </ul>
+<p><strong>Dependencies</strong></p>
+<ul class="simple">
+<li><p>On Python 3.10 and later, idtrack requires <code class="docutils literal notranslate"><span class="pre">requests&gt;=2.33.0</span></code> and <code class="docutils literal notranslate"><span class="pre">urllib3&gt;=2.8.0</span></code>, the first releases
+without the vulnerabilities CVE-2026-25645 (requests) and CVE-2026-44431, -44432, -97687, -97688 and -97689
+(urllib3). These releases do not support Python 3.9, where the earlier floors (<code class="docutils literal notranslate"><span class="pre">requests&gt;=2.32.4</span></code>,
+<code class="docutils literal notranslate"><span class="pre">urllib3&gt;=2.5.0</span></code>) stay.</p></li>
+</ul>
 <p><strong>Changed behaviour and removed attributes</strong></p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">DB.main_assembly</span></code> (a human-only default, <code class="docutils literal notranslate"><span class="pre">38</span></code>) is removed. Use the organism’s preferred assembly,

@@ -30,6 +30,13 @@ Unreleased
 * Tables read from the HTTPS dumps are now decoded as MySQL loads them (escaped tabs, newlines and backslashes in
   fields), so such rows are no longer split or dropped.
 
+**Dependencies**
+
+* On Python 3.10 and later, idtrack requires ``requests>=2.33.0`` and ``urllib3>=2.8.0``, the first releases
+  without the vulnerabilities CVE-2026-25645 (requests) and CVE-2026-44431, -44432, -97687, -97688 and -97689
+  (urllib3). These releases do not support Python 3.9, where the earlier floors (``requests>=2.32.4``,
+  ``urllib3>=2.5.0``) stay.
+
 **Changed behaviour and removed attributes**
 
 * ``DB.main_assembly`` (a human-only default, ``38``) is removed. Use the organism's preferred assembly,
