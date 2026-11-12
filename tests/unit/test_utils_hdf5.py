@@ -201,15 +201,31 @@ def test_datetime_and_timedelta_with_missing_values_roundtrip(tmp_path):
     pd.testing.assert_frame_equal(back, df, check_dtype=True)
 
 
-def test_cache_written_by_idtrack_0_0_5_reads_back_unchanged():
-    """A table cached by idtrack 0.0.5 (pandas 2.2, HDF5 1.14) reads back with the same values and missing values.
+# The HDF5 library line that can read the cache files of idtrack 0.0.5: its writer opened them with
+# `libver="latest"`, so the HDF5 1.14 of its h5py wheels wrote datatype messages of version 4, which HDF5 1.10 does not
+# know ("bad version number for datatype message"); HDF5 1.12 introduced them.
+HDF5_READING_IDTRACK_0_0_5_CACHES = (1, 12, 0)
 
-    The fixture was written with the writer of that version (`tests/data/legacy_cache_v0.0.5.h5`). Text comes back in
-    the default text dtype of the running pandas (`object` under pandas 2, `str` under pandas 3) with NaN for missing
-    values, as pandas itself reads text; every other dtype is the recorded one.
+
+def test_cache_written_by_idtrack_0_0_5_reads_back_unchanged():
+    """A table cached by idtrack 0.0.5 reads back with the same values and missing values.
+
+    The fixture `tests/data/legacy_cache_v0.0.5.h5` is a real cache of that version: written by
+    `tests/data/make_legacy_cache_v0_0_5.py` with the writer of the `v0.0.5` tag, under pandas 2.2.3 and h5py 3.13.0
+    with HDF5 1.14.6, the environment that wrote the owner's caches. Text comes back in the default text dtype of the
+    running pandas (`object` under pandas 2, `str` under pandas 3) with NaN for missing values, as pandas itself reads
+    text; every other dtype is the recorded one. An HDF5 older than 1.12 cannot open such a file at all, whatever
+    idtrack does, so the test is skipped there, with that reason, instead of failing.
     """
     from pathlib import Path
 
+    import h5py
+
+    if h5py.version.hdf5_version_tuple < HDF5_READING_IDTRACK_0_0_5_CACHES:
+        pytest.skip(
+            f"HDF5 {h5py.version.hdf5_version} cannot read files written by HDF5 1.14 with libver='latest' (datatype "
+            "messages of version 4 need HDF5 >= 1.12), as the caches of idtrack 0.0.5 are."
+        )
     path = str(Path(__file__).parents[1] / "data" / "legacy_cache_v0.0.5.h5")
     text = _default_text_dtype()
     expected = pd.DataFrame(

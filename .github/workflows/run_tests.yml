@@ -80,15 +80,21 @@ jobs:
                   sudo apt-get update
                   sudo apt-get install -y pandoc
 
-            # h5py has no wheels for Python 3.15 yet (h5py 3.16.0, November 2026), so pip builds it from source,
-            # which needs the HDF5 library. Remove this step once h5py publishes cp315 wheels.
-            - name: Install HDF5 (Python 3.15 only)
+            # h5py has no wheels for Python 3.15 yet (h5py 3.16.0, November 2026), so pip builds it from source. It is
+            # built against the HDF5 that the h5py wheels of the other Python versions bundle (h5py 3.16.0: HDF5 2.0.0;
+            # update both together), not ubuntu-22.04's libhdf5-dev (1.10, which cannot read caches that idtrack 0.0.5
+            # wrote with the HDF5 1.14 of its wheels), so that this job tests the same library as the others. Remove
+            # these steps once h5py publishes cp315 wheels.
+            - name: Restore the HDF5 build (Python 3.15 only)
               if: matrix.python-version == '3.15'
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install -y libhdf5-dev
-                  # Where Ubuntu puts the serial HDF5 (h5py's build looks here when HDF5_DIR is set).
-                  echo "HDF5_DIR=/usr/lib/x86_64-linux-gnu/hdf5/serial" >> "$GITHUB_ENV"
+              uses: actions/cache@v4
+              with:
+                  path: ~/hdf5-2.0.0
+                  key: hdf5-2.0.0-${{ runner.os }}-ubuntu-22.04-${{ hashFiles('.github/scripts/build_hdf5.sh') }}
+
+            - name: Build HDF5 2.0.0 (Python 3.15 only)
+              if: matrix.python-version == '3.15'
+              run: bash .github/scripts/build_hdf5.sh 2.0.0 "$HOME/hdf5-2.0.0"
 
             # Install Poetry (used by the nox-poetry plugin and the safety session).
             - name: Install Poetry
