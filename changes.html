@@ -127,15 +127,82 @@ releases its file does not cover.</p></li>
 contacted). Each MySQL port is probed once per process instead of before every table; a port whose connection
 fails is not tried again in that process. An invalid value raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> when a <code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code> is
 created. See <a class="reference internal" href="installation.html#ensembl-access"><span class="std std-ref">Network Access: MySQL or HTTPS</span></a>.</p></li>
+<li><p>MySQL port 3337 (Ensembl’s GRCh37 archive) is read for human GRCh37 only, the one parallel assembly Ensembl
+maintains there. The archive also carries older assemblies forward as frozen copies under its later release
+numbers (rhesus MMUL_1 as <code class="docutils literal notranslate"><span class="pre">macaca_mulatta_core_79_10</span></code> to <code class="docutils literal notranslate"><span class="pre">_99_10</span></code>, pig Sscrofa10.2 for 90 to 99, mouse
+GRCm38); these are not annotation of those releases and are no longer part of any graph. An assembly’s releases
+are those of the main servers and of the HTTPS dumps, so a graph built over MySQL equals one built over HTTPS.
+Mouse GRCm38 and pig Sscrofa10.2 no longer list 3337, and <code class="docutils literal notranslate"><span class="pre">DB.register_organism</span></code> rejects 3337 for any other
+assembly (<code class="docutils literal notranslate"><span class="pre">DB.mysql_port_assembly</span></code>). A pig graph that was built over MySQL with an earlier version had
+Sscrofa10.2 edges at releases 90 to 99 from such copies; a rebuilt graph has none.</p></li>
 <li><p>Tables read from the HTTPS dumps are now decoded as MySQL loads them (escaped tabs, newlines and backslashes in
 fields), so such rows are no longer split or dropped.</p></li>
 </ul>
 <p><strong>Dependencies</strong></p>
 <ul class="simple">
-<li><p>On Python 3.10 and later, idtrack requires <code class="docutils literal notranslate"><span class="pre">requests&gt;=2.33.0</span></code> and <code class="docutils literal notranslate"><span class="pre">urllib3&gt;=2.8.0</span></code>, the first releases
-without the vulnerabilities CVE-2026-25645 (requests) and CVE-2026-44431, -44432, -97687, -97688 and -97689
-(urllib3). These releases do not support Python 3.9, where the earlier floors (<code class="docutils literal notranslate"><span class="pre">requests&gt;=2.32.4</span></code>,
-<code class="docutils literal notranslate"><span class="pre">urllib3&gt;=2.5.0</span></code>) stay.</p></li>
+<li><p>idtrack supports Python 3.12 to 3.15; Python 3.9, 3.10 and 3.11 are no longer supported (see pandas 3 below).</p></li>
+<li><p>Minimum versions are raised to releases that install on Python 3.12 and pass the test suite together: pandas 2.3
+(and 3.x), anndata 0.13, numpy 2.1, scipy 1.14, h5py 3.11 (the last three as anndata 0.13 requires), networkx 3.2,
+sparse 0.15, PyYAML 6.0.2, PyMySQL 1.1.1, tqdm 4.66.3, PySocks 1.7.1; optional: biopython 1.81, torch 2.2,
+transformers 4.36. See <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> for the reason of each.</p></li>
+<li><p>idtrack requires <code class="docutils literal notranslate"><span class="pre">requests&gt;=2.33.0</span></code> and <code class="docutils literal notranslate"><span class="pre">urllib3&gt;=2.8.0</span></code>, the first releases without the vulnerabilities
+CVE-2026-25645 (requests) and CVE-2026-44431, -44432, -97687, -97688 and -97689 (urllib3).</p></li>
+</ul>
+<p><strong>pandas 3</strong></p>
+<ul class="simple">
+<li><p>idtrack works with pandas 3 (tested with 2.3 and 3.1 on Python 3.13). The table cache wrote no table with a text column
+under pandas 3 (<code class="docutils literal notranslate"><span class="pre">Unsupported</span> <span class="pre">dtype</span> <span class="pre">&lt;StringDtype(...)&gt;</span></code>), and <code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_ids</span></code> then reported the
+misleading <code class="docutils literal notranslate"><span class="pre">Table</span> <span class="pre">'gene_stable_id'</span> <span class="pre">not</span> <span class="pre">found</span></code>. Text columns of every pandas text dtype are cached now and come
+back in the default text dtype of the running pandas with <code class="docutils literal notranslate"><span class="pre">NaN</span></code> for missing values, which is what pandas gives
+for freshly read text; cache files written under pandas 2 are read unchanged. Cache files are written with the
+default HDF5 format bounds, so files written with HDF5 2.x stay readable by HDF5 1.14.</p></li>
+<li><p>Only a schema answer (<code class="docutils literal notranslate"><span class="pre">idtrack._db.EnsemblSchemaError</span></code>: the release has no such table or column) leads to the
+older-schema fallbacks (<code class="docutils literal notranslate"><span class="pre">&lt;form&gt;_stable_id</span></code> tables, legacy <code class="docutils literal notranslate"><span class="pre">identity_xref</span></code> columns); any other error, such as a
+failed download or cache write, is raised as it is.</p></li>
+<li><p>Supported: Python 3.12 to 3.15 with pandas 2.3 or later (including 3.x) and anndata 0.13 or later. On Python 3.11
+no anndata release supports pandas 3 (the last ones for 3.11 require <code class="docutils literal notranslate"><span class="pre">pandas&lt;3</span></code>; older ones cannot write <code class="docutils literal notranslate"><span class="pre">str</span></code>
+columns to <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code>).</p></li>
+</ul>
+<p><strong>Network</strong></p>
+<ul class="simple">
+<li><p>Ensembl REST requests (organism names, the latest release) are retried on timeouts, connection and SSL errors and
+the HTTP statuses 429 and 5xx (<code class="docutils literal notranslate"><span class="pre">DB.rest_attempts</span></code>, default 3), with the timeouts <code class="docutils literal notranslate"><span class="pre">DB.connection_timeout</span></code>
+(now 15 s) and <code class="docutils literal notranslate"><span class="pre">DB.reading_timeout</span></code> (now 60 s; also used by the HTTPS dumps). After the last attempt
+<code class="docutils literal notranslate"><span class="pre">EnsemblRestError</span></code> (a <code class="docutils literal notranslate"><span class="pre">ConnectionError</span></code>; formerly a <code class="docutils literal notranslate"><span class="pre">TimeoutError</span></code> for timeouts and raw <code class="docutils literal notranslate"><span class="pre">requests</span></code>
+exceptions otherwise) names the URL, the timeouts and how to raise them. See <a class="reference internal" href="installation.html#ensembl-access"><span class="std std-ref">Network Access: MySQL or HTTPS</span></a>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">VerifyOrganism</span></code> asks Ensembl REST for the species list at most once per process and only when a look-up needs
+it; the formal name of a supported organism (also written with spaces) resolves without the network.
+<code class="docutils literal notranslate"><span class="pre">fetch_organism_and_latest_release</span></code> takes no timeout arguments.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code> saves which releases the HTTPS dumps hold in the local repository
+(<code class="docutils literal notranslate"><span class="pre">ensembl_https_index_&lt;organism&gt;_assembly-&lt;key&gt;.json</span></code>) and reads it for a window that ends at a release the
+saved scan reached, so loading a graph that is on disk, and <code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures</span></code> with it, need no network in
+<code class="docutils literal notranslate"><span class="pre">https</span></code> mode.</p></li>
+</ul>
+<p><strong>Older snapshots</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">GraphMaker</span></code> explains, when a manager is not at the newest release of its window, how to build a graph whose
+snapshot is an older release (<code class="docutils literal notranslate"><span class="pre">API.build_graph(...,</span> <span class="pre">snapshot_release=&lt;release&gt;)</span></code>); see “Working with an older
+Ensembl release” in <a class="reference internal" href="usage.html"><span class="doc">Quickstart</span></a>.</p></li>
+</ul>
+<p><strong>Harmonization</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.unify_multiple_anndatas</span></code> loses no <code class="docutils literal notranslate"><span class="pre">obs</span></code> column by default (formerly it kept only those
+named in <code class="docutils literal notranslate"><span class="pre">obs_columns_to_keep</span></code>): the new <code class="docutils literal notranslate"><span class="pre">obs_join=&quot;outer&quot;</span></code> keeps every column of any dataset, missing (as a
+missing value of the column’s kind; integers and booleans become nullable) in the datasets without it;
+<code class="docutils literal notranslate"><span class="pre">obs_join=&quot;inner&quot;</span></code> keeps the columns every dataset has. <code class="docutils literal notranslate"><span class="pre">obs_columns_to_keep</span></code> selects among the joined
+columns; a name that is not among them raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> naming it. Every input <code class="docutils literal notranslate"><span class="pre">var</span></code> column is kept: as one
+column where the datasets agree on each feature, otherwise once per dataset (<code class="docutils literal notranslate"><span class="pre">&lt;column&gt;_&lt;handle&gt;</span></code>). Layers,
+<code class="docutils literal notranslate"><span class="pre">obsm</span></code>, <code class="docutils literal notranslate"><span class="pre">obsp</span></code> and shared <code class="docutils literal notranslate"><span class="pre">uns</span></code> entries are carried over, and <code class="docutils literal notranslate"><span class="pre">X</span></code> keeps its dtype (formerly <code class="docutils literal notranslate"><span class="pre">float64</span></code>).
+<code class="docutils literal notranslate"><span class="pre">raw</span></code> is dropped with a warning.</p></li>
+<li><p>Values of <code class="docutils literal notranslate"><span class="pre">obs</span></code> and <code class="docutils literal notranslate"><span class="pre">var</span></code> are no longer rewritten: the strings <code class="docutils literal notranslate"><span class="pre">&quot;NA&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;none&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;-&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;unknown&quot;</span></code>
+and others stay as they are, numbers stay numbers, and missing values stay missing instead of becoming the
+placeholder <code class="docutils literal notranslate"><span class="pre">_PLACEHOLDER_NA_</span></code>. Text columns become categorical. <code class="docutils literal notranslate"><span class="pre">intersection</span></code> is computed from presence.
+The list of “missing-like” strings used for that rewriting, <code class="docutils literal notranslate"><span class="pre">idtrack._db.MISSING_VALUES</span></code>, is removed.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mode</span></code> and <code class="docutils literal notranslate"><span class="pre">obs_join</span></code> are validated before any work; a <code class="docutils literal notranslate"><span class="pre">handle_anndata_key</span></code> that is already an <code class="docutils literal notranslate"><span class="pre">obs</span></code>
+column, colliding cell names and a generated <code class="docutils literal notranslate"><span class="pre">var</span></code> column name that an input column already has raise
+<code class="docutils literal notranslate"><span class="pre">ValueError</span></code>. <code class="docutils literal notranslate"><span class="pre">create_intersection_column_values</span></code> is removed.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">feature_harmonizer</span></code> returns the whole dataset re-indexed by the harmonised features (layers, <code class="docutils literal notranslate"><span class="pre">obsm</span></code>,
+<code class="docutils literal notranslate"><span class="pre">obsp</span></code>, <code class="docutils literal notranslate"><span class="pre">uns</span></code>, <code class="docutils literal notranslate"><span class="pre">varm</span></code>, the input <code class="docutils literal notranslate"><span class="pre">var</span></code> columns), not only <code class="docutils literal notranslate"><span class="pre">X</span></code> and <code class="docutils literal notranslate"><span class="pre">obs</span></code>.</p></li>
 </ul>
 <p><strong>Changed behaviour and removed attributes</strong></p>
 <ul class="simple">
@@ -166,6 +233,9 @@ assemblies were ordered by their numeric code); register the organism first.</p>
 inside <code class="docutils literal notranslate"><span class="pre">ignore_before</span></code>/<code class="docutils literal notranslate"><span class="pre">ignore_after</span></code> (e.g. a mouse snapshot at release 100 uses GRCm38).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_available_databases</span></code> lists the core databases of the organism’s configured assemblies
 within their release ranges, the same in both access modes.</p></li>
+<li><p>Removed <code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_id_history_fixed</span></code> (deprecated; <code class="docutils literal notranslate"><span class="pre">create_id_history</span></code> handles the same cases) and
+<code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_relation_archive</span></code> with its <code class="docutils literal notranslate"><span class="pre">get_db(&quot;relationarchive&quot;)</span></code> table (it read the incomplete
+<code class="docutils literal notranslate"><span class="pre">gene_archive</span></code> table; <code class="docutils literal notranslate"><span class="pre">create_relation_current</span></code> per release is what the graph uses). Neither was used.</p></li>
 <li><p>Removed methods that only raised <code class="docutils literal notranslate"><span class="pre">NotImplementedError</span></code>: <code class="docutils literal notranslate"><span class="pre">GraphMaker.initialize_downloads</span></code>,
 <code class="docutils literal notranslate"><span class="pre">GraphMaker.update_graph_with_the_new_release</span></code>, <code class="docutils literal notranslate"><span class="pre">DatabaseManager.available_tables_mysql</span></code> and
 <code class="docutils literal notranslate"><span class="pre">DatabaseManager.get_release_date</span></code>.</p></li>

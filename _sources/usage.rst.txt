@@ -243,6 +243,18 @@ Convert identifiers between different Ensembl releases to handle legacy data:
     target = result["target_id"][0] if result["target_id"] else None
     print(f"Release 100 -> Release {latest_release}: {target}")
 
+**Working with an older Ensembl release.** A graph covers every release from idtrack's floor (48) to its
+``snapshot_release``, so the latest graph already converts to and from any older release
+(``to_release=93``, ``from_release=93``); no older graph is needed for that. Build a graph whose snapshot is an
+older release only to reproduce results as they were at that release (the graph then knows nothing after it):
+
+.. code-block:: python
+
+    api.build_graph(organism_name="homo_sapiens", snapshot_release=93)
+
+The graph file is named after the window (``graph_homo_sapiens_min48_max93_narrow.pickle``), so graphs of
+different snapshots live side by side in one local repository.
+
 
 Environment Variable Configuration
 ----------------------------------
@@ -346,6 +358,8 @@ and HGNC symbols on earlier ones, and cynomolgus 6.0 has few symbols of either k
 Common Patterns
 ---------------
 
+.. _reusing-built-graphs:
+
 Reusing Built Graphs
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -363,6 +377,17 @@ Once a graph is built, it's cached locally. Check if a graph exists before build
         snapshot_release=release,
         calculate_caches=True
     )
+
+Loading a graph that is on disk needs no network: the first build saves, next to the tables, which releases the
+Ensembl dumps hold (``ensembl_https_index_<organism>_assembly-<key>.json``), and later runs with the same or an
+earlier ``snapshot_release`` read it from there (in ``https`` mode, see :ref:`ensembl-access`; ``auto`` mode
+still probes the MySQL ports once). Only questions about the *latest* release need Ensembl: pass the formal name
+and the release instead of calling :py:meth:`idtrack.API.resolve_organism`, which asks Ensembl REST for the
+latest release:
+
+.. code-block:: python
+
+    api.build_graph(organism_name="homo_sapiens", snapshot_release=115)  # offline once built
 
 Working with AnnData Objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -385,6 +410,14 @@ IDTrack integrates with AnnData for single-cell analysis workflows:
 
     # See the harmonization tutorial for complete workflows
     # :doc:`_notebooks/05_tutorial_harmonization`
+
+:py:meth:`idtrack.HarmonizeFeatures.unify_multiple_anndatas` merges the harmonised datasets without losing or
+rewriting anything by default: ``obs`` keeps every column of any dataset (``obs_join="outer"``; a dataset without a
+column has missing values there; ``obs_join="inner"`` keeps only the common columns, and ``obs_columns_to_keep``
+selects among them), every ``var`` column is kept (one column where the datasets agree on each feature, else one per
+dataset, ``<column>_<handle>``), layers, ``obsm``, ``obsp`` and ``uns`` entries that every dataset has are carried
+over, and ``X`` keeps its dtype. ``raw`` is dropped, because its features are not harmonised; keep raw counts in a
+layer.
 
 For complete AnnData harmonization workflows, see :doc:`_notebooks/05_tutorial_harmonization`.
 

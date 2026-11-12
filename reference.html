@@ -116,16 +116,19 @@
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.removed_conversion_failed_identifiers"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.removed_conversion_failed_identifiers</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.kept_conversion_failed_identifiers"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.kept_conversion_failed_identifiers</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.removed_inconsistent_identifier_matching"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.removed_inconsistent_identifier_matching</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._agreed_values"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures._agreed_values()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._default_graph_last_release"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures._default_graph_last_release()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._get_column_as_series"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures._get_column_as_series()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._graph_snapshots"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures._graph_snapshots()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures._initialize()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize_idt"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures._initialize_idt()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._joined_obs_columns"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures._joined_obs_columns()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._merge_harmonized_var"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures._merge_harmonized_var()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._resolve_organism_name"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures._resolve_organism_name()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._to_float"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures._to_float()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_but_consistent_identifiers"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.conversion_failed_but_consistent_identifiers</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.conversion_failed_identifiers"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.conversion_failed_identifiers</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.create_dataset_conversion_dataframe"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.create_dataset_conversion_dataframe()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.create_intersection_column_values"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.create_intersection_column_values()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.create_multiple_ensembl_dict"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.create_multiple_ensembl_dict()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.datataset_conversion_dataframe_issues"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.datataset_conversion_dataframe_issues</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.default_final_database"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.default_final_database()</span></code></a></li>
@@ -142,7 +145,11 @@
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas"><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.unify_multiple_anndatas()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#idtrack._harmonize_features._holding_missing"><code class="docutils literal notranslate"><span class="pre">_holding_missing()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#idtrack._harmonize_features._is_text"><code class="docutils literal notranslate"><span class="pre">_is_text()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#idtrack._harmonize_features._missing_like"><code class="docutils literal notranslate"><span class="pre">_missing_like()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager"><code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._core_index_kwargs"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._core_index_kwargs</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._create_relation_helper"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._create_relation_helper()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._determine_usecols_ids"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._determine_usecols_ids()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._download_table_from_ftp"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._download_table_from_ftp()</span></code></a></li>
@@ -153,6 +160,10 @@
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._ftp_schema_url"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._ftp_schema_url()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._get_core_db_index"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._get_core_db_index()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._get_core_db_index_from_ftp"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._get_core_db_index_from_ftp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._https_index"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._https_index()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._https_index_path"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._https_index_path()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._https_index_signature"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._https_index_signature()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._index_covers"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._index_covers()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._is_mysql_connection_failure"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._is_mysql_connection_failure()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._is_retryable_http_read_error"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._is_retryable_http_read_error()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._iter_exception_chain"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._iter_exception_chain()</span></code></a></li>
@@ -160,8 +171,10 @@
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._parse_apache_dir_listing_dirs"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._parse_apache_dir_listing_dirs()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._parse_apache_dir_listing_files"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._parse_apache_dir_listing_files()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._probe_mysql_core_schemas_by_port"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._probe_mysql_core_schemas_by_port()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._read_https_index"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._read_https_index()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._refresh_core_db_index_mysql"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._refresh_core_db_index_mysql()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._release_window"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._release_window()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager._write_https_index"><code class="docutils literal notranslate"><span class="pre">DatabaseManager._write_https_index()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.available_releases"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.available_releases</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.available_releases_all_assemblies"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.available_releases_all_assemblies</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.available_releases_no_save"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.available_releases_no_save</span></code></a></li>
@@ -177,9 +190,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.create_external_all"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_external_all()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.create_external_db"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_external_db()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.create_id_history"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_id_history()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.create_id_history_fixed"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_id_history_fixed()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.create_ids"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_ids()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.create_relation_archive"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_relation_archive()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.create_relation_current"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_relation_current()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.create_release_id"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_release_id()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.create_version_info"><code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_version_info()</span></code></a></li>
@@ -263,9 +274,13 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#idtrack._verify_organism.VerifyOrganism"><code class="docutils literal notranslate"><span class="pre">VerifyOrganism</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._verify_organism.VerifyOrganism._configured_formal_name"><code class="docutils literal notranslate"><span class="pre">VerifyOrganism._configured_formal_name()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._verify_organism.VerifyOrganism._species_tables"><code class="docutils literal notranslate"><span class="pre">VerifyOrganism._species_tables()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._verify_organism.VerifyOrganism.ensembl_release_dataframe"><code class="docutils literal notranslate"><span class="pre">VerifyOrganism.ensembl_release_dataframe</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._verify_organism.VerifyOrganism.fetch_organism_and_latest_release"><code class="docutils literal notranslate"><span class="pre">VerifyOrganism.fetch_organism_and_latest_release()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._verify_organism.VerifyOrganism.get_formal_name"><code class="docutils literal notranslate"><span class="pre">VerifyOrganism.get_formal_name()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._verify_organism.VerifyOrganism.get_latest_release"><code class="docutils literal notranslate"><span class="pre">VerifyOrganism.get_latest_release()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._verify_organism.VerifyOrganism.name_synonyms_dataframe"><code class="docutils literal notranslate"><span class="pre">VerifyOrganism.name_synonyms_dataframe</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._verify_organism.VerifyOrganism.normalize"><code class="docutils literal notranslate"><span class="pre">VerifyOrganism.normalize()</span></code></a></li>
 </ul>
 </li>
@@ -325,6 +340,9 @@
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._db.DB.first_version"><code class="docutils literal notranslate"><span class="pre">DB.first_version</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._db.DB.connection_timeout"><code class="docutils literal notranslate"><span class="pre">DB.connection_timeout</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._db.DB.reading_timeout"><code class="docutils literal notranslate"><span class="pre">DB.reading_timeout</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._db.DB.rest_attempts"><code class="docutils literal notranslate"><span class="pre">DB.rest_attempts</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._db.DB.rest_retry_wait"><code class="docutils literal notranslate"><span class="pre">DB.rest_retry_wait</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._db.DB.rest_species_cache_seconds"><code class="docutils literal notranslate"><span class="pre">DB.rest_species_cache_seconds</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._db.DB.ensembl_ftp_base"><code class="docutils literal notranslate"><span class="pre">DB.ensembl_ftp_base</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._db.DB.rest_server_api"><code class="docutils literal notranslate"><span class="pre">DB.rest_server_api</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._db.DB.rest_server_ext"><code class="docutils literal notranslate"><span class="pre">DB.rest_server_ext</span></code></a></li>
@@ -376,6 +394,12 @@
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._db.DB.release_range"><code class="docutils literal notranslate"><span class="pre">DB.release_range()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#idtrack._db.EnsemblRestError"><code class="docutils literal notranslate"><span class="pre">EnsemblRestError</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#idtrack._db.EnsemblSchemaError"><code class="docutils literal notranslate"><span class="pre">EnsemblSchemaError</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._db.EnsemblSchemaError.table"><code class="docutils literal notranslate"><span class="pre">EnsemblSchemaError.table</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#idtrack._db.EnsemblSchemaError.missing_columns"><code class="docutils literal notranslate"><span class="pre">EnsemblSchemaError.missing_columns</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#idtrack._ensembl_access.PortReachability"><code class="docutils literal notranslate"><span class="pre">PortReachability</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._ensembl_access.PortReachability._probe"><code class="docutils literal notranslate"><span class="pre">PortReachability._probe()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._ensembl_access.PortReachability.can_connect"><code class="docutils literal notranslate"><span class="pre">PortReachability.can_connect()</span></code></a></li>
@@ -387,6 +411,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#idtrack._ensembl_access.ensembl_access_mode"><code class="docutils literal notranslate"><span class="pre">ensembl_access_mode()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#idtrack._ensembl_access.reachability"><code class="docutils literal notranslate"><span class="pre">reachability</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#idtrack._ensembl_access.rest_get_json"><code class="docutils literal notranslate"><span class="pre">rest_get_json()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#idtrack._mysql_dump.MySQLDumpCSVStream"><code class="docutils literal notranslate"><span class="pre">MySQLDumpCSVStream</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._mysql_dump.MySQLDumpCSVStream._consume_line"><code class="docutils literal notranslate"><span class="pre">MySQLDumpCSVStream._consume_line()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#idtrack._mysql_dump.MySQLDumpCSVStream.read"><code class="docutils literal notranslate"><span class="pre">MySQLDumpCSVStream.read()</span></code></a></li>
@@ -1442,6 +1467,27 @@ resolution—happens lazily when the first harmonisation method is called.</p>
 </dd>
 </dl>
 <dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures._agreed_values">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">_agreed_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">per_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures._agreed_values"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures._agreed_values" title="Link to this definition"></a></dt>
+<dd><p>Combine aligned per-dataset values into one column, or return <code class="docutils literal notranslate"><span class="pre">None</span></code> when two datasets disagree.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>per_dataset</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Series</em><em>]</em>) – Values of one column per dataset, aligned to <em>index</em> (missing where a dataset has none).</p></li>
+<li><p><strong>index</strong> (<em>Index</em>) – The merged features.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>For each feature the value the datasets agree on (missing if none has one), or
+<code class="docutils literal notranslate"><span class="pre">None</span></code> if some feature has two different values.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[pandas.Series]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures._default_graph_last_release">
 <span class="sig-name descname"><span class="pre">_default_graph_last_release</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures._default_graph_last_release"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures._default_graph_last_release" title="Link to this definition"></a></dt>
 <dd><p>Return the newest graph snapshot of the organism, else the organism’s latest Ensembl release.</p>
@@ -1535,6 +1581,55 @@ subsequent look-ups always target <em>target_ensembl_release</em>.  Re-invocatio
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures._joined_obs_columns">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">_joined_obs_columns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frames</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_join</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_columns_to_keep</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures._joined_obs_columns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures._joined_obs_columns" title="Link to this definition"></a></dt>
+<dd><p>Return the <code class="docutils literal notranslate"><span class="pre">obs</span></code> columns of the merged object (see <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas" title="idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas"><code class="xref py py-meth docutils literal notranslate"><span class="pre">unify_multiple_anndatas()</span></code></a>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>frames</strong> (<em>list</em><em>[</em><em>DataFrame</em><em>]</em>) – <code class="docutils literal notranslate"><span class="pre">obs</span></code> of each harmonised dataset.</p></li>
+<li><p><strong>obs_join</strong> (<em>str</em>) – <code class="docutils literal notranslate"><span class="pre">&quot;outer&quot;</span></code> (columns of any dataset) or <code class="docutils literal notranslate"><span class="pre">&quot;inner&quot;</span></code> (columns of every dataset).</p></li>
+<li><p><strong>obs_columns_to_keep</strong> (<em>list</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>) – Optional selection among the joined columns.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The columns, in order of first appearance (or in the order of <em>obs_columns_to_keep</em>).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[str]</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If a selected name is not among the joined columns.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures._merge_harmonized_var">
+<span class="sig-name descname"><span class="pre">_merge_harmonized_var</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">var_frames</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_names</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures._merge_harmonized_var"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures._merge_harmonized_var" title="Link to this definition"></a></dt>
+<dd><p>Build the merged <code class="docutils literal notranslate"><span class="pre">var</span></code> of <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas" title="idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas"><code class="xref py py-meth docutils literal notranslate"><span class="pre">unify_multiple_anndatas()</span></code></a> (see its docstring for the rules).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>var_frames</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>DataFrame</em><em>]</em>) – <code class="docutils literal notranslate"><span class="pre">var</span></code> of each harmonised dataset (from <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.feature_harmonizer" title="idtrack._harmonize_features.HarmonizeFeatures.feature_harmonizer"><code class="xref py py-meth docutils literal notranslate"><span class="pre">feature_harmonizer()</span></code></a>), by handle.</p></li>
+<li><p><strong>var_names</strong> (<em>Index</em>) – Features of the merged object, in its order.</p></li>
+<li><p><strong>mode</strong> (<em>str</em>) – <code class="docutils literal notranslate"><span class="pre">&quot;union&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;intersect&quot;</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The merged <code class="docutils literal notranslate"><span class="pre">var</span></code>, indexed by <em>var_names</em>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If a feature has different final-database names in different datasets, or a generated
+    column name is also an input column.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures._resolve_organism_name">
 <span class="sig-name descname"><span class="pre">_resolve_organism_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">organism_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures._resolve_organism_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures._resolve_organism_name" title="Link to this definition"></a></dt>
 <dd><p>Return the Ensembl species name to use (see the <code class="docutils literal notranslate"><span class="pre">organism_name</span></code> argument).</p>
@@ -1544,6 +1639,29 @@ subsequent look-ups always target <em>target_ensembl_release</em>.  Re-invocatio
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures._to_float">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">_to_float</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">where</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures._to_float"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures._to_float" title="Link to this definition"></a></dt>
+<dd><p>Convert <em>series</em> to <code class="docutils literal notranslate"><span class="pre">float</span></code>; missing values stay missing, any other non-number raises.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>series</strong> (<em>Series</em>) – Values to convert.</p></li>
+<li><p><strong>where</strong> (<em>str</em>) – Name of the column, for the error message.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The values as <code class="docutils literal notranslate"><span class="pre">float</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.Series</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If a non-missing value is not a number.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1625,38 +1743,6 @@ single-Ensembl disambiguation step applied in later passes.</p></li>
     after processing.</p></li>
 <li><p><strong>ValueError</strong> – When malformed conversion entry.</p></li>
 </ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.create_intersection_column_values">
-<span class="sig-name descname"><span class="pre">create_intersection_column_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">adata_var</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures.create_intersection_column_values"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.create_intersection_column_values" title="Link to this definition"></a></dt>
-<dd><p>Flag features present in <strong>every</strong> study after harmonisation.</p>
-<p>The merged <code class="docutils literal notranslate"><span class="pre">.var</span></code> table produced by <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas" title="idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas"><code class="xref py py-meth docutils literal notranslate"><span class="pre">unify_multiple_anndatas()</span></code></a> contains one gene-symbol column per
-study, each named <code class="docutils literal notranslate"><span class="pre">f&quot;{self.converted_id_column}_{handle}&quot;</span></code> where <em>handle</em> is the dictionary key that
-identifies the originating dataset.  A cell in one of those columns holds the <em>gene symbol</em> originally
-reported by the study, or <a class="reference internal" href="#idtrack._db.DB.placeholder_na" title="idtrack._db.DB.placeholder_na"><code class="xref py py-data docutils literal notranslate"><span class="pre">idtrack._db.DB.placeholder_na</span></code></a> if the gene was absent or could not be
-mapped to the target namespace.</p>
-<p>This helper collapses the per-study presence/absence information into a single boolean <em>intersection</em> flag,
-later exposed to users as <code class="docutils literal notranslate"><span class="pre">adata.var[&quot;intersection&quot;]</span></code>.  A value of <code class="docutils literal notranslate"><span class="pre">1</span></code> indicates that the feature
-survived the <em>intersect</em> filter—i.e., it has a valid symbol in <strong>all</strong> studies—whereas <code class="docutils literal notranslate"><span class="pre">0</span></code> marks features
-missing from at least one dataset.  The resulting NumPy vector is inserted by the caller; this routine is
-intentionally pure and side-effect free.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>adata_var</strong> (<em>pandas.DataFrame</em>) – The <code class="docutils literal notranslate"><span class="pre">.var</span></code> table of the <em>already concatenated</em> <code class="xref py py-class docutils literal notranslate"><span class="pre">anndata.AnnData</span></code>
-object.  It must contain one or more columns whose names start with
-<code class="docutils literal notranslate"><span class="pre">f&quot;{self.converted_id_column}_&quot;</span></code>; each such column is assumed to encode the gene symbol for a
-particular study.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A 1-D array of <code class="docutils literal notranslate"><span class="pre">int</span></code> (values <code class="docutils literal notranslate"><span class="pre">0</span></code> or <code class="docutils literal notranslate"><span class="pre">1</span></code>) with <code class="docutils literal notranslate"><span class="pre">len(adata_var)</span></code> elements.  The
-<em>i</em>-th entry equals <code class="docutils literal notranslate"><span class="pre">1</span></code> if the <em>i</em>-th feature is present (non-
-<a class="reference internal" href="#idtrack._db.DB.placeholder_na" title="idtrack._db.DB.placeholder_na"><code class="xref py py-data docutils literal notranslate"><span class="pre">idtrack._db.DB.placeholder_na</span></code></a>) in <strong>every</strong> per-study symbol column; otherwise it is <code class="docutils literal notranslate"><span class="pre">0</span></code>.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>numpy.ndarray</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1782,11 +1868,12 @@ matrices.</p>
 <dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.feature_harmonizer">
 <span class="sig-name descname"><span class="pre">feature_harmonizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures.feature_harmonizer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.feature_harmonizer" title="Link to this definition"></a></dt>
 <dd><p>Convert one dataset’s feature space into the unified target namespace.</p>
-<p>This convenience wrapper reads a single <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> file, removes identifiers deemed unusable during
-<a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize" title="idtrack._harmonize_features.HarmonizeFeatures._initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_initialize()</span></code></a>, applies the conversion mapping from
-<a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.create_dataset_conversion_dataframe" title="idtrack._harmonize_features.HarmonizeFeatures.create_dataset_conversion_dataframe"><code class="xref py py-meth docutils literal notranslate"><span class="pre">create_dataset_conversion_dataframe()</span></code></a>, and returns a <em>new</em> <code class="xref py py-class docutils literal notranslate"><span class="pre">anndata.AnnData</span></code>
-object with harmonised features.  The function is intentionally side-effect-free: it never alters
-the source file, and large temporary matrices are deleted immediately to minimise memory usage.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> file is read completely, the features removed during <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures._initialize" title="idtrack._harmonize_features.HarmonizeFeatures._initialize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_initialize()</span></code></a> are dropped, and
+the feature axis is renamed with the mapping of <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.create_dataset_conversion_dataframe" title="idtrack._harmonize_features.HarmonizeFeatures.create_dataset_conversion_dataframe"><code class="xref py py-meth docutils literal notranslate"><span class="pre">create_dataset_conversion_dataframe()</span></code></a>. Everything
+else of the dataset is kept: <code class="docutils literal notranslate"><span class="pre">X</span></code>, <code class="docutils literal notranslate"><span class="pre">layers</span></code>, <code class="docutils literal notranslate"><span class="pre">obs</span></code>, <code class="docutils literal notranslate"><span class="pre">obsm</span></code>, <code class="docutils literal notranslate"><span class="pre">obsp</span></code> and <code class="docutils literal notranslate"><span class="pre">uns</span></code> as they are, and
+<code class="docutils literal notranslate"><span class="pre">varm</span></code>/<code class="docutils literal notranslate"><span class="pre">varp</span></code> subset to the kept features. <code class="docutils literal notranslate"><span class="pre">var</span></code> holds the input’s own columns (a column whose name is
+one of the conversion columns gets the suffix <code class="docutils literal notranslate"><span class="pre">&quot;_input&quot;</span></code>) after the conversion columns. <code class="docutils literal notranslate"><span class="pre">raw</span></code> is dropped
+(with a warning), because its features are not harmonised. The source file is never altered.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>dataset_name</strong> (<em>str</em>) – Key from <code class="xref py py-attr docutils literal notranslate"><span class="pre">data_h5ad_dict</span></code> identifying which dataset to load and
@@ -1794,8 +1881,9 @@ harmonise.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><ul class="simple">
-<li><p><strong>resulting_adata</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">anndata.AnnData</span></code>) - Dataset whose <code class="docutils literal notranslate"><span class="pre">var</span></code> now contains
-<code class="docutils literal notranslate"><span class="pre">_ENSEMBL_GENE_COLUMN</span></code> (matching Ensembl gene ID) as index and <code class="docutils literal notranslate"><span class="pre">self.final_database</span></code> as a column.</p></li>
+<li><p><strong>resulting_adata</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">anndata.AnnData</span></code>) - The dataset whose <code class="docutils literal notranslate"><span class="pre">var</span></code> index is the matched
+Ensembl gene ID (or the input name for features kept unconverted), with the columns
+<code class="docutils literal notranslate"><span class="pre">self.final_database</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;Query</span> <span class="pre">ID&quot;</span></code> (the input name) before the input’s <code class="docutils literal notranslate"><span class="pre">var</span></code> columns.</p></li>
 <li><p><strong>t0</strong> (int) - Number of features <em>before</em> filtering and harmonisation.</p></li>
 <li><p><strong>t1</strong> (int) - Number of features <em>after</em> the procedure (i.e., retained in
 <em>resulting_adata</em>).</p></li>
@@ -2011,117 +2099,126 @@ reproduce the algorithm’s decisions outside the class.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas">
-<span class="sig-name descname"><span class="pre">unify_multiple_anndatas</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'union'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_columns_to_keep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">numeric_var_columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">numeric_obs_columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">handle_anndata_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'handle_anndata'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures.unify_multiple_anndatas"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas" title="Link to this definition"></a></dt>
-<dd><p>Merge several study-specific <code class="xref py py-class docutils literal notranslate"><span class="pre">anndata.AnnData</span></code> objects into a single, consolidated dataset.</p>
-<p>This helper finalises the <em>feature-harmonisation</em> workflow.  Earlier stages ensure that every source study
-expresses its features (e.g. genes or proteins) in a consistent identifier namespace and that per-cell
-metadata follow a shared schema.  <em>unify_multiple_anndatas</em> takes those already normalised objects—stored in
-<code class="xref py py-attr docutils literal notranslate"><span class="pre">data_h5ad_dict</span></code>—and fuses them into one coherent <code class="xref py py-class docutils literal notranslate"><span class="pre">AnnData</span></code>
-ready for joint analysis (dimensionality reduction, batch correction, integrated clustering, etc.).</p>
-<p>Two strategies govern how the function reconciles mismatched feature sets:</p>
+<span class="sig-name descname"><span class="pre">unify_multiple_anndatas</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'union'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_join</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'outer'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obs_columns_to_keep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">numeric_var_columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">numeric_obs_columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">handle_anndata_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'handle_anndata'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#HarmonizeFeatures.unify_multiple_anndatas"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features.HarmonizeFeatures.unify_multiple_anndatas" title="Link to this definition"></a></dt>
+<dd><p>Merge the harmonised datasets of <code class="xref py py-attr docutils literal notranslate"><span class="pre">data_h5ad_dict</span></code> into one <code class="xref py py-class docutils literal notranslate"><span class="pre">AnnData</span></code>.</p>
+<p>Each dataset is harmonised with <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.feature_harmonizer" title="idtrack._harmonize_features.HarmonizeFeatures.feature_harmonizer"><code class="xref py py-meth docutils literal notranslate"><span class="pre">feature_harmonizer()</span></code></a> and all are concatenated along the cells in
+one <code class="xref py py-func docutils literal notranslate"><span class="pre">anndata.concat()</span></code>. By default nothing is lost, and values are never rewritten: text stays text,
+numbers stay numbers, and where a dataset has no value the result holds a missing value of the column’s
+kind (<code class="docutils literal notranslate"><span class="pre">NaN</span></code> for floats and text, <code class="docutils literal notranslate"><span class="pre">pd.NA</span></code> in a nullable integer or boolean column, <code class="docutils literal notranslate"><span class="pre">NaT</span></code> for times, a
+missing category for categoricals), never a placeholder string.</p>
 <ul class="simple">
-<li><dl class="simple">
-<dt><code class="docutils literal notranslate"><span class="pre">&quot;union&quot;</span></code> (default) preserves the superset of all identifiers.  If a particular study lacks a feature,</dt><dd><p>its expression values are imputed as exact zeros.  This choice maximises information retention at the
-cost of a sparse matrix with assay-dependent missingness.</p>
-</dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt><code class="docutils literal notranslate"><span class="pre">&quot;intersect&quot;</span></code> retains only the identifiers present in <em>every</em> study, implicitly discarding features</dt><dd><p>unique to a subset.  This yields a denser matrix that is easier to factorise but sacrifices potentially
-informative study-specific biology.</p>
-</dd>
-</dl>
-</li>
+<li><p><strong>Features.</strong> <code class="docutils literal notranslate"><span class="pre">&quot;union&quot;</span></code> (default) keeps every feature of any dataset; a dataset that lacks a feature
+gets zeros for it in <code class="docutils literal notranslate"><span class="pre">X</span></code> and in every layer. <code class="docutils literal notranslate"><span class="pre">&quot;intersect&quot;</span></code> keeps the features present in every
+dataset.</p></li>
+<li><p><strong>.obs.</strong> <code class="docutils literal notranslate"><span class="pre">obs_join=&quot;outer&quot;</span></code> (default) keeps every <code class="docutils literal notranslate"><span class="pre">obs</span></code> column of any dataset; in the cells of a dataset
+without the column it is missing (see above; an integer or boolean column becomes the nullable <code class="docutils literal notranslate"><span class="pre">Int</span></code>/
+<code class="docutils literal notranslate"><span class="pre">boolean</span></code> dtype so that it can hold the missing values). <code class="docutils literal notranslate"><span class="pre">obs_join=&quot;inner&quot;</span></code> keeps only the columns every
+dataset has. <em>obs_columns_to_keep</em>, if given, selects among the joined columns (in its order); a name that
+no dataset has, or (with <code class="docutils literal notranslate"><span class="pre">&quot;inner&quot;</span></code>) that not every dataset has, raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> naming it. Columns in
+<em>numeric_obs_columns</em> are converted to <code class="docutils literal notranslate"><span class="pre">float</span></code> (missing values allowed); other text columns become
+categorical (values unchanged). The column <em>handle_anndata_key</em> records the dataset of each cell
+(categorical, in the order of <code class="xref py py-attr docutils literal notranslate"><span class="pre">data_h5ad_dict</span></code>), and cells are named <code class="docutils literal notranslate"><span class="pre">f&quot;{handle}_{cell}&quot;</span></code>.</p></li>
+<li><p><strong>.var.</strong> <code class="docutils literal notranslate"><span class="pre">converted_id_column</span></code> holds the final-database name of each feature. In <code class="docutils literal notranslate"><span class="pre">&quot;union&quot;</span></code> mode the
+per-dataset columns <code class="docutils literal notranslate"><span class="pre">f&quot;{converted_id_column}_{handle}&quot;</span></code> (missing where the dataset lacks the feature)
+and an integer <code class="docutils literal notranslate"><span class="pre">&quot;intersection&quot;</span></code> column (1 if the feature is in every dataset) are added. Every <code class="docutils literal notranslate"><span class="pre">var</span></code>
+column of the inputs is kept. A column is kept as <strong>one</strong> column when, for every feature, the datasets
+that have a value for it agree; it then holds that value (missing only where no dataset has one). When
+two datasets give different values for the same feature, nothing is chosen: the column is kept <strong>per
+dataset</strong> as <code class="docutils literal notranslate"><span class="pre">f&quot;{column}_{handle}&quot;</span></code> for each dataset that has it, and no column <code class="docutils literal notranslate"><span class="pre">column</span></code> exists.
+Missing values follow the same kinds as in <code class="docutils literal notranslate"><span class="pre">obs</span></code>. Columns in <em>numeric_var_columns</em> are converted to
+<code class="docutils literal notranslate"><span class="pre">float</span></code>; other text columns become categorical (values unchanged).</p></li>
+<li><p><strong>layers, obsm, obsp, uns.</strong> Handled by <code class="xref py py-func docutils literal notranslate"><span class="pre">anndata.concat()</span></code>: a layer or <code class="docutils literal notranslate"><span class="pre">obsm</span></code> entry present in
+every dataset is concatenated (<code class="docutils literal notranslate"><span class="pre">obsp</span></code> block-diagonally), and an <code class="docutils literal notranslate"><span class="pre">uns</span></code> entry is kept when it is the same
+in every dataset. <code class="docutils literal notranslate"><span class="pre">varm</span></code> and <code class="docutils literal notranslate"><span class="pre">varp</span></code> are not carried into the merged object (they describe one
+dataset’s features), nor is <code class="docutils literal notranslate"><span class="pre">raw</span></code> (see <a class="reference internal" href="#idtrack._harmonize_features.HarmonizeFeatures.feature_harmonizer" title="idtrack._harmonize_features.HarmonizeFeatures.feature_harmonizer"><code class="xref py py-meth docutils literal notranslate"><span class="pre">feature_harmonizer()</span></code></a>).</p></li>
 </ul>
-<p>Beyond concatenating the main <code class="xref py py-attr docutils literal notranslate"><span class="pre">X</span></code> matrices, the routine also harmonises associated
-annotations:</p>
-<ul class="simple">
-<li><dl class="simple">
-<dt><strong>.var (feature annotations)</strong></dt><dd><p>All columns are outer-joined across studies.  Non-shared categorical values are unioned; numeric columns
-specified in <em>numeric_var_columns</em> are cast to floating point and NaNs inserted where data are missing.
-In <em>union</em> mode an additional boolean <code class="docutils literal notranslate"><span class="pre">&quot;intersection&quot;</span></code> column flags whether a feature survived the
-<em>intersect</em> filter, enabling fast subsetting later.</p>
-</dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt><strong>.obs (cell annotations)</strong></dt><dd><p>Each original column is kept if its name appears in <em>obs_columns_to_keep</em> <strong>or</strong> if it exists in every
-study.  Missing columns are created and populated with <code class="docutils literal notranslate"><span class="pre">pandas.NA</span></code>.  Columns listed in
-<em>numeric_obs_columns</em> are coerced to <code class="docutils literal notranslate"><span class="pre">float64</span></code>.  A new column named <em>handle_anndata_key</em> stores the
-handle (dictionary key) that identifies the originating study, making it trivial to stratify analyses.</p>
-</dd>
-</dl>
-</li>
-<li><dl class="simple">
-<dt><strong>.layers, .obsp, .varp, .uns</strong></dt><dd><p>This method uses <code class="xref py py-meth docutils literal notranslate"><span class="pre">anndata.AnnData.concat()</span></code> for this.</p>
-</dd>
-</dl>
-</li>
-</ul>
-<p>The implementation is mindful of scalability: concatenation leverages SciPy CSR/CSC sparse formats,
-avoiding densification, and streaming allocation prevents double memory use for extremely large datasets.</p>
+<p><code class="docutils literal notranslate"><span class="pre">X</span></code> keeps the common dtype of the inputs (e.g. <code class="docutils literal notranslate"><span class="pre">float32</span></code> stays <code class="docutils literal notranslate"><span class="pre">float32</span></code>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>mode</strong> (<em>Literal</em><em>[</em><em>&quot;union&quot;</em><em>, </em><em>&quot;intersect&quot;</em><em>]</em>) – Strategy for reconciling discordant feature sets.  <code class="docutils literal notranslate"><span class="pre">&quot;union&quot;</span></code>
-keeps every identifier observed across studies (padding absent entries with zeros); <code class="docutils literal notranslate"><span class="pre">&quot;intersect&quot;</span></code>
-restricts the result to identifiers common to <em>all</em> studies.  Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;union&quot;</span></code>.</p></li>
-<li><p><strong>obs_columns_to_keep</strong> (<em>list</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>) – Names of per-cell metadata columns that must survive the merge
-even if they appear in only a subset of studies (e.g. <em>cell_type</em>, <em>donor_age</em>).  When a column is
-missing from a particular study, it is inserted and filled with <code class="docutils literal notranslate"><span class="pre">pandas.NA</span></code>.  Provide an empty
-list to allow the routine to decide purely by intersection; <code class="docutils literal notranslate"><span class="pre">None</span></code> means “no user preference”.</p></li>
-<li><p><strong>numeric_var_columns</strong> (<em>set</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>) – Columns in <code class="docutils literal notranslate"><span class="pre">.var</span></code> that should retain numeric dtype.  The
-function validates that each specified column can be losslessly converted to floating point;
-otherwise it raises <code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code>.  Non-listed columns default to <code class="docutils literal notranslate"><span class="pre">category</span></code> dtype to
-conserve memory.  If <code class="docutils literal notranslate"><span class="pre">None</span></code> an empty set is assumed.</p></li>
-<li><p><strong>numeric_obs_columns</strong> (<em>set</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>) – Analogous to <em>numeric_var_columns</em> but applied to <code class="docutils literal notranslate"><span class="pre">.obs</span></code>.
-Conversions are performed <em>after</em> the table has been unioned, ensuring consistent dtype across the
-final concatenated frame.  If <code class="docutils literal notranslate"><span class="pre">None</span></code> an empty set is assumed.</p></li>
-<li><p><strong>handle_anndata_key</strong> (<em>str</em>) – Name of the column inserted into <code class="docutils literal notranslate"><span class="pre">.obs</span></code> that records the dictionary key of
-the source study.  This provenance tag facilitates stratified visualisation (e.g. UMAP coloured by
-batch) and downstream batch-correction utilities that expect a “batch” column.  Defaults to
-<code class="docutils literal notranslate"><span class="pre">&quot;handle_anndata&quot;</span></code>.</p></li>
+<li><p><strong>mode</strong> (<em>Literal</em><em>[</em><em>&quot;union&quot;</em><em>, </em><em>&quot;intersect&quot;</em><em>]</em>) – How to combine the feature sets (see above).</p></li>
+<li><p><strong>obs_join</strong> (<em>Literal</em><em>[</em><em>&quot;outer&quot;</em><em>, </em><em>&quot;inner&quot;</em><em>]</em>) – Which <code class="docutils literal notranslate"><span class="pre">obs</span></code> columns to keep: of any dataset (<code class="docutils literal notranslate"><span class="pre">&quot;outer&quot;</span></code>) or
+of every dataset (<code class="docutils literal notranslate"><span class="pre">&quot;inner&quot;</span></code>).</p></li>
+<li><p><strong>obs_columns_to_keep</strong> (<em>list</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>) – Restrict <code class="docutils literal notranslate"><span class="pre">obs</span></code> to these joined columns. <code class="docutils literal notranslate"><span class="pre">None</span></code> keeps all.</p></li>
+<li><p><strong>numeric_var_columns</strong> (<em>set</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>) – <code class="docutils literal notranslate"><span class="pre">var</span></code> columns to convert to <code class="docutils literal notranslate"><span class="pre">float</span></code>.</p></li>
+<li><p><strong>numeric_obs_columns</strong> (<em>set</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>) – <code class="docutils literal notranslate"><span class="pre">obs</span></code> columns to convert to <code class="docutils literal notranslate"><span class="pre">float</span></code>.</p></li>
+<li><p><strong>handle_anndata_key</strong> (<em>str</em>) – Name of the <code class="docutils literal notranslate"><span class="pre">obs</span></code> column that records the dataset of each cell. Defaults to
+<code class="docutils literal notranslate"><span class="pre">&quot;handle_anndata&quot;</span></code>; it must not be a column of any dataset.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>A fully merged expression matrix whose <code class="docutils literal notranslate"><span class="pre">.X</span></code> contains either the union or intersection</dt><dd><p>of all study features.  Index ordering follows the order in which studies were supplied, ensuring
-deterministic output for reproducible pipelines.  The result inherits sparse/dense representation from
-the first study unless <em>mode</em> forces feature padding, in which case CSR/CSC is chosen automatically to
-keep memory use in check.</p>
-</dd>
-</dl>
-</p>
+<dd class="field-even"><p>The merged object; cells in the order of <code class="xref py py-attr docutils literal notranslate"><span class="pre">data_h5ad_dict</span></code>, then of each file.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>anndata.AnnData</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>ValueError</strong> – If <em>mode</em> is not <code class="docutils literal notranslate"><span class="pre">&quot;union&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;intersect&quot;</span></code>; if any column listed in
-    <em>numeric_var_columns</em> or <em>numeric_obs_columns</em> fails numeric coercion; or if feature identifiers
-    clash across studies after harmonisation (e.g. two studies mapping different genes to the same ID).</p></li>
-<li><p><strong>AssertionError</strong> – If duplicate cell or feature indices are detected post-merge, a condition that would
-    break many Scanpy workflows and indicates upstream validation errors.</p></li>
-</ul>
+<dd class="field-even"><p><strong>ValueError</strong> – If <em>mode</em> or <em>obs_join</em> is not one of its values; if there is no dataset; if a name of
+    <em>obs_columns_to_keep</em> is not among the joined columns, <em>handle_anndata_key</em> is already an <code class="docutils literal notranslate"><span class="pre">obs</span></code>
+    column, or a numeric column is absent or holds a value that is not a number; if two cells get the
+    same name; if a generated <code class="docutils literal notranslate"><span class="pre">var</span></code> column name clashes with an input column; or if a feature gets
+    different final-database names in different datasets.</p>
 </dd>
 </dl>
-<p class="rubric">Notes</p>
-<p><em>Performance considerations</em>
-The operation is CPU-bound when aligning large sparse matrices.  For
-datasets exceeding ~1 million cells, empirical benchmarks show that running on Python 3.11 with MKL
-yields a 2-3x speed-up over Python 3.8 due to better sparse BLAS threading.  Provide pre-compressed
-datasets (<code class="docutils literal notranslate"><span class="pre">hdf5</span></code>, <code class="docutils literal notranslate"><span class="pre">zarr</span></code>) to further lower I/O overhead.</p>
-<p><em>Thread safety</em>
-The method is re-entrant but <strong>not</strong> thread-safe because it mutates the source
-<code class="xref py py-class docutils literal notranslate"><span class="pre">AnnData</span></code> objects in-place to reduce copying.  Invoke one instance per process or
-deep-copy the inputs beforehand if concurrent harmonisation is required.</p>
-<p><em>Extensibility</em>
-Sub-classes may override private hooks
-<code class="xref py py-meth docutils literal notranslate"><span class="pre">_before_concat()</span></code>, <code class="xref py py-meth docutils literal notranslate"><span class="pre">_after_concat()</span></code>, and <code class="xref py py-meth docutils literal notranslate"><span class="pre">_merge_uns()</span></code> to refine behaviour without
-re-implementing the full algorithm.</p>
 </dd></dl>
 
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._harmonize_features._holding_missing">
+<span class="sig-name descname"><span class="pre">_holding_missing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">series</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#_holding_missing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features._holding_missing" title="Link to this definition"></a></dt>
+<dd><p>Return <em>series</em> in a dtype that can hold missing values of its kind.</p>
+<p>Integers become the nullable <code class="docutils literal notranslate"><span class="pre">Int</span></code>/<code class="docutils literal notranslate"><span class="pre">UInt</span></code> dtype of the same width and booleans <code class="docutils literal notranslate"><span class="pre">boolean</span></code> (missing value
+<code class="docutils literal notranslate"><span class="pre">pd.NA</span></code>); every other dtype (float, text, categorical, datetime, nullable dtypes) already has a missing value
+and is returned unchanged.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>series</strong> (<em>Series</em>) – A column.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The column, in a dtype with a missing value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._harmonize_features._is_text">
+<span class="sig-name descname"><span class="pre">_is_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">series</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#_is_text"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features._is_text" title="Link to this definition"></a></dt>
+<dd><p>Return whether <em>series</em> holds text (<code class="docutils literal notranslate"><span class="pre">object</span></code> dtype, or a pandas string dtype).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>series</strong> (<em>Series</em>) – A column.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">True</span></code> for text.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._harmonize_features._missing_like">
+<span class="sig-name descname"><span class="pre">_missing_like</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">template</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_harmonize_features.html#_missing_like"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._harmonize_features._missing_like" title="Link to this definition"></a></dt>
+<dd><p>Return a column of missing values of the kind of <em>template</em> (see <a class="reference internal" href="#idtrack._harmonize_features._holding_missing" title="idtrack._harmonize_features._holding_missing"><code class="xref py py-func docutils literal notranslate"><span class="pre">_holding_missing()</span></code></a>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>template</strong> (<em>Series</em>) – A column of the same name in another dataset.</p></li>
+<li><p><strong>index</strong> (<em>Index</em>) – Index of the new column.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>All values missing (<code class="docutils literal notranslate"><span class="pre">NaN</span></code>, <code class="docutils literal notranslate"><span class="pre">pd.NA</span></code>, <code class="docutils literal notranslate"><span class="pre">NaT</span></code> or a missing category).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.Series</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py class" id="module-idtrack._database_manager">
@@ -2236,13 +2333,18 @@ assemblies that actually contain that release; otherwise to assemblies with a re
 <dd class="field-odd"><p>If <em>organism</em> is not in the organism table (<code class="xref py py-attr docutils literal notranslate"><span class="pre">idtrack.DB.supported_organisms</span></code>).</p>
 </dd>
 </dl>
+<dl class="py property">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._core_index_kwargs">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">_core_index_kwargs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._core_index_kwargs" title="Link to this definition"></a></dt>
+<dd><p>Keyword arguments of <a class="reference internal" href="#idtrack._database_manager.DatabaseManager._get_core_db_index" title="idtrack._database_manager.DatabaseManager._get_core_db_index"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_get_core_db_index()</span></code></a> for this manager (its repository and window end).</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._create_relation_helper">
 <span class="sig-name descname"><span class="pre">_create_relation_helper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._create_relation_helper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._create_relation_helper" title="Link to this definition"></a></dt>
 <dd><p>Convert an ID/version matrix into the canonical three-column relationship table.</p>
-<p>The helper is shared by <a class="reference internal" href="#idtrack._database_manager.DatabaseManager.create_relation_current" title="idtrack._database_manager.DatabaseManager.create_relation_current"><code class="xref py py-meth docutils literal notranslate"><span class="pre">DatabaseManager.create_relation_current()</span></code></a>
-and <a class="reference internal" href="#idtrack._database_manager.DatabaseManager.create_relation_archive" title="idtrack._database_manager.DatabaseManager.create_relation_archive"><code class="xref py py-meth docutils literal notranslate"><span class="pre">DatabaseManager.create_relation_archive()</span></code></a> and is not intended
-for direct use.  It validates the incoming frame, fixes inconsistent
+<p>The helper is used by <a class="reference internal" href="#idtrack._database_manager.DatabaseManager.create_relation_current" title="idtrack._database_manager.DatabaseManager.create_relation_current"><code class="xref py py-meth docutils literal notranslate"><span class="pre">DatabaseManager.create_relation_current()</span></code></a>
+and is not intended for direct use.  It validates the incoming frame, fixes inconsistent
 version numbers (via <a class="reference internal" href="#idtrack._database_manager.DatabaseManager.version_fix" title="idtrack._database_manager.DatabaseManager.version_fix"><code class="xref py py-meth docutils literal notranslate"><span class="pre">DatabaseManager.version_fix()</span></code></a> and
 <a class="reference internal" href="#idtrack._database_manager.DatabaseManager.version_fix_incomplete" title="idtrack._database_manager.DatabaseManager.version_fix_incomplete"><code class="xref py py-meth docutils literal notranslate"><span class="pre">DatabaseManager.version_fix_incomplete()</span></code></a>), converts missing
 translations to <code class="docutils literal notranslate"><span class="pre">NaN</span></code>-compatible floats, casts all stable-ID columns to
@@ -2398,7 +2500,7 @@ later joins (e.g., <code class="docutils literal notranslate"><span class="pre">
 
 <dl class="py method">
 <dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._get_core_db_index">
-<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">_get_core_db_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">organism</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_assembly</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._get_core_db_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._get_core_db_index" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">_get_core_db_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">organism</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_assembly</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local_repository</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">needed_up_to</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._get_core_db_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._get_core_db_index" title="Link to this definition"></a></dt>
 <dd><p>Return cached core-DB availability for an (organism, assembly) pair across all configured ports.</p>
 <p>The Ensembl public MySQL service can host the same assembly on multiple ports depending on release
 (e.g. <em>homo_sapiens</em> assembly 37). To support full-history workflows we build a small in-memory index:</p>
@@ -2413,12 +2515,18 @@ later joins (e.g., <code class="docutils literal notranslate"><span class="pre">
 <p>Both sources (the MySQL probe and the HTTPS scan) look for core databases named with the assembly’s
 <code class="docutils literal notranslate"><span class="pre">DbSuffix</span></code> and accept only releases inside its <code class="docutils literal notranslate"><span class="pre">ReleaseRange</span></code> (see <a class="reference internal" href="#idtrack._database_manager.DatabaseManager._release_window" title="idtrack._database_manager.DatabaseManager._release_window"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_release_window()</span></code></a>), so
 they return the same releases for an assembly. The index is cached per process and per version of the
-organism table.</p>
+organism table. The HTTPS part is also saved in <em>local_repository</em> (see <a class="reference internal" href="#idtrack._database_manager.DatabaseManager._https_index" title="idtrack._database_manager.DatabaseManager._https_index"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_https_index()</span></code></a>) and read
+from there when it covers the releases up to <em>needed_up_to</em>, so that no Ensembl REST call and no dump scan
+is needed for a window that ends at a release the saved scan already reached.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>organism</strong> (<em>str</em>) – Canonical Ensembl organism name (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;homo_sapiens&quot;</span></code>).</p></li>
 <li><p><strong>genome_assembly</strong> (<em>int</em>) – Assembly key of the organism table (e.g. <code class="docutils literal notranslate"><span class="pre">38</span></code> for GRCh38).</p></li>
+<li><p><strong>local_repository</strong> (<em>str</em><em> | </em><em>None</em>) – Folder of the caller’s cached tables, where the HTTPS index is saved; <code class="docutils literal notranslate"><span class="pre">None</span></code> keeps it
+in memory only.</p></li>
+<li><p><strong>needed_up_to</strong> (<em>int</em><em> | </em><em>None</em>) – Last release the caller needs (its <code class="docutils literal notranslate"><span class="pre">ignore_after</span></code>); <code class="docutils literal notranslate"><span class="pre">None</span></code> means the latest Ensembl
+release.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -2447,6 +2555,97 @@ organism table.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>dict[str, <em>Any</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._https_index">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">_https_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">organism</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_assembly</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ports</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local_repository</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">needed_up_to</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._https_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._https_index" title="Link to this definition"></a></dt>
+<dd><p>Return the HTTPS-dump index, from <em>local_repository</em> when a saved one covers the need, else scanned.</p>
+<p>The scan asks Ensembl REST for the latest release and probes the dump directory of every release, so a saved
+index is what lets a manager whose window ends at a known release (every graph built or loaded through
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.build_graph()</span></code>) work without the network once its tables and graph are on disk.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>organism</strong> (<em>str</em>) – Ensembl species name.</p></li>
+<li><p><strong>genome_assembly</strong> (<em>int</em>) – Assembly key of the organism table.</p></li>
+<li><p><strong>ports</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – Configured MySQL ports of the assembly.</p></li>
+<li><p><strong>local_repository</strong> (<em>str</em><em> | </em><em>None</em>) – Folder where the index is saved; <code class="docutils literal notranslate"><span class="pre">None</span></code> neither reads nor saves one.</p></li>
+<li><p><strong>needed_up_to</strong> (<em>int</em><em> | </em><em>None</em>) – Last release needed; <code class="docutils literal notranslate"><span class="pre">None</span></code> for the latest Ensembl release.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The HTTPS-dump index; <code class="docutils literal notranslate"><span class="pre">scanned_live</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code> when it was scanned in this call.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict[str, Any]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._https_index_path">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">_https_index_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">local_repository</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">organism</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_assembly</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._https_index_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._https_index_path" title="Link to this definition"></a></dt>
+<dd><p>Return the file in <em>local_repository</em> that keeps the HTTPS-dump index of one organism and assembly.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>local_repository</strong> (<em>str</em>)</p></li>
+<li><p><strong>organism</strong> (<em>str</em>)</p></li>
+<li><p><strong>genome_assembly</strong> (<em>int</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._https_index_signature">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">_https_index_signature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">organism</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_assembly</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ports</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._https_index_signature"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._https_index_signature" title="Link to this definition"></a></dt>
+<dd><p>Return the organism-table fields an HTTPS-dump index depends on (a saved index must match them).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>organism</strong> (<em>str</em>) – Ensembl species name.</p></li>
+<li><p><strong>genome_assembly</strong> (<em>int</em>) – Assembly key of the organism table.</p></li>
+<li><p><strong>ports</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – Configured MySQL ports of the assembly (releases are assigned to them).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Organism, assembly, core-database suffix, release window and ports.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict[str, Any]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._index_covers">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">_index_covers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">organism</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_assembly</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">needed_up_to</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._index_covers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._index_covers" title="Link to this definition"></a></dt>
+<dd><p>Return whether a core-DB index answers for every release up to <em>needed_up_to</em>.</p>
+<p>An index built from the network in this process always does. An index read from disk does when its scan
+reached <em>needed_up_to</em> (<code class="docutils literal notranslate"><span class="pre">None</span></code>: the latest Ensembl release, which only the network knows), or the end of
+the assembly’s release range: releases that existed at the scan cannot disappear, and releases after it are
+not needed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>index</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – A core-DB index (see <a class="reference internal" href="#idtrack._database_manager.DatabaseManager._get_core_db_index" title="idtrack._database_manager.DatabaseManager._get_core_db_index"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_get_core_db_index()</span></code></a>).</p></li>
+<li><p><strong>organism</strong> (<em>str</em>) – Ensembl species name.</p></li>
+<li><p><strong>genome_assembly</strong> (<em>int</em>) – Assembly key of the organism table.</p></li>
+<li><p><strong>needed_up_to</strong> (<em>int</em><em> | </em><em>None</em>) – Last release needed; <code class="docutils literal notranslate"><span class="pre">None</span></code> for the latest Ensembl release.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">True</span></code> if <em>index</em> can be used without scanning again.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
 </dd>
 </dl>
 </dd></dl>
@@ -2537,7 +2736,8 @@ organism table.</p>
 <span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">_probe_mysql_core_schemas_by_port</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">organism</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_assembly</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ports</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._probe_mysql_core_schemas_by_port"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._probe_mysql_core_schemas_by_port" title="Link to this definition"></a></dt>
 <dd><p>Return per-port core DB releases and schema names from the live Ensembl MySQL service.</p>
 <p>Only names of the assembly’s core databases (<code class="docutils literal notranslate"><span class="pre">DbSuffix</span></code>, optional patch letters) whose release lies in the
-assembly’s release window (<a class="reference internal" href="#idtrack._database_manager.DatabaseManager._release_window" title="idtrack._database_manager.DatabaseManager._release_window"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_release_window()</span></code></a>) are kept, exactly as on the HTTPS path. Ports that the
+assembly’s release window (<a class="reference internal" href="#idtrack._database_manager.DatabaseManager._release_window" title="idtrack._database_manager.DatabaseManager._release_window"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_release_window()</span></code></a>) are kept, exactly as on the HTTPS path. Ports that
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">idtrack.DB.mysql_port_assembly</span></code> reserves for another assembly are never queried. Ports that the
 process-wide <a class="reference internal" href="#idtrack._ensembl_access.reachability" title="idtrack._ensembl_access.reachability"><code class="xref py py-data docutils literal notranslate"><span class="pre">idtrack._ensembl_access.reachability</span></code></a> reports unusable (blocked, or <code class="docutils literal notranslate"><span class="pre">&quot;https&quot;</span></code>
 access mode) are skipped without a connection attempt.</p>
 <dl class="field-list simple">
@@ -2550,6 +2750,29 @@ access mode) are skipped without a connection attempt.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>tuple[dict[int, set[int]], dict[int, dict[int, str]], dict[int, Exception]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._read_https_index">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">_read_https_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">organism</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genome_assembly</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ports</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._read_https_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._read_https_index" title="Link to this definition"></a></dt>
+<dd><p>Read an index saved by <a class="reference internal" href="#idtrack._database_manager.DatabaseManager._write_https_index" title="idtrack._database_manager.DatabaseManager._write_https_index"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_write_https_index()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – The saved file.</p></li>
+<li><p><strong>organism</strong> (<em>str</em>) – Ensembl species name.</p></li>
+<li><p><strong>genome_assembly</strong> (<em>int</em>) – Assembly key of the organism table.</p></li>
+<li><p><strong>ports</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – Configured MySQL ports of the assembly.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The index, or <code class="docutils literal notranslate"><span class="pre">None</span></code> if the file is absent, unreadable, or was written for
+other organism-table settings.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[dict[str, Any]]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -2590,6 +2813,24 @@ agree on what an assembly is even where two assemblies share a core-database suf
 <li><p><strong>organism</strong> (<em>str</em>)</p></li>
 <li><p><strong>genome_assembly</strong> (<em>int</em>)</p></li>
 </ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager._write_https_index">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">_write_https_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ports</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager._write_https_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager._write_https_index" title="Link to this definition"></a></dt>
+<dd><p>Save an HTTPS-dump index next to the cached tables (written to a temporary file, then renamed).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – Destination file.</p></li>
+<li><p><strong>index</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – Index returned by <a class="reference internal" href="#idtrack._database_manager.DatabaseManager._get_core_db_index_from_ftp" title="idtrack._database_manager.DatabaseManager._get_core_db_index_from_ftp"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_get_core_db_index_from_ftp()</span></code></a>.</p></li>
+<li><p><strong>ports</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – Configured MySQL ports of the assembly.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -3023,9 +3264,12 @@ touches. <code class="docutils literal notranslate"><span class="pre">count</spa
 <dd class="field-odd"><p>pandas.DataFrame</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If <em>filter_mode</em> is not one of the accepted literals <strong>or</strong> if the YAML allow-list claims a
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – If <em>filter_mode</em> is not one of the accepted literals <strong>or</strong> if the YAML allow-list claims a
     database that is absent from the retrieved mappings—indicating the configuration and MySQL data are
-    out of sync.</p>
+    out of sync.</p></li>
+<li><p><a class="reference internal" href="#idtrack._db.EnsemblSchemaError" title="idtrack._db.EnsemblSchemaError"><strong>EnsemblSchemaError</strong></a> – If <code class="docutils literal notranslate"><span class="pre">identity_xref</span></code> lacks columns other than its identity columns.</p></li>
+</ul>
 </dd>
 </dl>
 <p class="rubric">Notes</p>
@@ -3079,43 +3323,6 @@ analyses.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager.create_id_history_fixed">
-<span class="sig-name descname"><span class="pre">create_id_history_fixed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">narrow</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inspect</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager.create_id_history_fixed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager.create_id_history_fixed" title="Link to this definition"></a></dt>
-<dd><p>Create a corrected ID-history table that repairs cyclic or duplicated version transitions (deprecated).</p>
-<p>Certain edge cases in the raw <code class="docutils literal notranslate"><span class="pre">idhistory</span></code> extraction—e.g. <em>Homo sapiens</em> <code class="docutils literal notranslate"><span class="pre">ENSG00000232423</span></code> at release 105—
-produce sequences like <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">→</span> <span class="pre">2,</span> <span class="pre">2</span> <span class="pre">→</span> <span class="pre">3,</span> <span class="pre">1</span> <span class="pre">→</span> <span class="pre">2</span></code> where an already retired version resurfaces later on.
-Such cycles violate the monotonic version semantics assumed by graph algorithms.  This helper rewrites the
-offending rows so that once a version is superseded it never reappears, transforming the above sequence into
-the logically consistent <code class="docutils literal notranslate"><span class="pre">3</span> <span class="pre">→</span> <span class="pre">2</span></code>.  The routine is retained for reproducibility but superseded by
-<a class="reference internal" href="#idtrack._database_manager.DatabaseManager.create_id_history" title="idtrack._database_manager.DatabaseManager.create_id_history"><code class="xref py py-meth docutils literal notranslate"><span class="pre">DatabaseManager.create_id_history()</span></code></a>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>narrow</strong> (<em>bool</em>) – Propagated to the underlying data fetch—when <code class="docutils literal notranslate"><span class="pre">True</span></code> start from the column-reduced
-<code class="docutils literal notranslate"><span class="pre">idhistory_narrow</span></code> view instead of the full table.</p></li>
-<li><p><strong>inspect</strong> (<em>bool</em>) – When <code class="docutils literal notranslate"><span class="pre">True</span></code> add diagnostic columns (e.g. <code class="docutils literal notranslate"><span class="pre">changed_old</span></code> and <code class="docutils literal notranslate"><span class="pre">changed_new</span></code>) to aid
-manual auditing of the corrections; when <code class="docutils literal notranslate"><span class="pre">False</span></code> return only the cleaned canonical schema.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>Corrected seven-column table <code class="docutils literal notranslate"><span class="pre">old_stable_id</span></code>, <code class="docutils literal notranslate"><span class="pre">old_version</span></code>, <code class="docutils literal notranslate"><span class="pre">new_stable_id</span></code>,</dt><dd><p><code class="docutils literal notranslate"><span class="pre">new_version</span></code>, <code class="docutils literal notranslate"><span class="pre">score</span></code>, <code class="docutils literal notranslate"><span class="pre">old_release</span></code>, <code class="docutils literal notranslate"><span class="pre">new_release</span></code>—ready for serialization and downstream use.</p>
-</dd>
-</dl>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>pandas.DataFrame</p>
-</dd>
-</dl>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>This function is deprecated and will be removed in a future major release once the core extractor fully
-addresses the ordering anomaly.</p>
-</div>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager.create_ids">
 <span class="sig-name descname"><span class="pre">create_ids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">form</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager.create_ids"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager.create_ids" title="Link to this definition"></a></dt>
 <dd><p>Retrieve and normalise raw Ensembl identifier records for the requested molecular form.</p>
@@ -3146,34 +3353,6 @@ Anything else triggers a <code class="xref py py-class docutils literal notransl
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>pandas.DataFrame</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="idtrack._database_manager.DatabaseManager.create_relation_archive">
-<span class="sig-name descname"><span class="pre">create_relation_archive</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_database_manager.html#DatabaseManager.create_relation_archive"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._database_manager.DatabaseManager.create_relation_archive" title="Link to this definition"></a></dt>
-<dd><p>Retrieve a cross-release gene-transcript-translation mapping table.</p>
-<p>This legacy helper pulls the Ensembl <code class="docutils literal notranslate"><span class="pre">gene_archive</span></code> table—spanning <em>all</em>
-releases for the current organism—via
-<a class="reference internal" href="#idtrack._database_manager.DatabaseManager.get_table" title="idtrack._database_manager.DatabaseManager.get_table"><code class="xref py py-meth docutils literal notranslate"><span class="pre">DatabaseManager.get_table()</span></code></a>, drops columns unrelated to identifier
-mapping, and passes the result to
-<a class="reference internal" href="#idtrack._database_manager.DatabaseManager._create_relation_helper" title="idtrack._database_manager.DatabaseManager._create_relation_helper"><code class="xref py py-meth docutils literal notranslate"><span class="pre">DatabaseManager._create_relation_helper()</span></code></a>.  <strong>Because the archive
-contains known gaps, the preferred workflow is to call</strong>
-<a class="reference internal" href="#idtrack._database_manager.DatabaseManager.create_relation_current" title="idtrack._database_manager.DatabaseManager.create_relation_current"><code class="xref py py-meth docutils literal notranslate"><span class="pre">DatabaseManager.create_relation_current()</span></code></a> <strong>once per release and
-concatenate the outputs.</strong></p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p><dl class="simple">
-<dt>Same schema as</dt><dd><p><a class="reference internal" href="#idtrack._database_manager.DatabaseManager.create_relation_current" title="idtrack._database_manager.DatabaseManager.create_relation_current"><code class="xref py py-meth docutils literal notranslate"><span class="pre">DatabaseManager.create_relation_current()</span></code></a>—<code class="docutils literal notranslate"><span class="pre">gene</span></code>,
-<code class="docutils literal notranslate"><span class="pre">transcript</span></code>, <code class="docutils literal notranslate"><span class="pre">translation</span></code>—but potentially with missing rows
-because Ensembl did not always back-populate older releases.</p>
-</dd>
-</dl>
-</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>pandas.DataFrame</p>
 </dd>
 </dl>
 </dd></dl>
@@ -3307,8 +3486,11 @@ entire table.  Column order is preserved.  An empty list is treated the same as 
 <dd class="field-odd"><p>pandas.DataFrame</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If any element of <em>usecols</em> is missing from <em>table_key</em>, or if the query returns
-    binary payloads that cannot be coerced into native Python types.</p>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference internal" href="#idtrack._db.EnsemblSchemaError" title="idtrack._db.EnsemblSchemaError"><strong>EnsemblSchemaError</strong></a> – If the release has no table <em>table_key</em>, or the table lacks an element of
+    <em>usecols</em> (<a class="reference internal" href="#idtrack._db.EnsemblSchemaError" title="idtrack._db.EnsemblSchemaError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack._db.EnsemblSchemaError</span></code></a>).</p></li>
+<li><p><strong>ValueError</strong> – If the query returns binary payloads that cannot be coerced into native Python types.</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -3412,7 +3594,6 @@ minimal network traffic.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">ids</span></code> — release-specific identifier table (no qualifier).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">externalcontent</span></code> — summary of per-database content.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">relationcurrent</span></code> — current gene/ID relationships.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">relationarchive</span></code> — historical gene/ID relationships across releases.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">idhistory</span></code> — full ID history; qualifier <code class="docutils literal notranslate"><span class="pre">narrow</span></code> restricts to current IDs.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">versioninfo</span></code> — version comparison across releases.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">availabledatabases</span></code> — names of the organism’s core databases (all releases and assemblies).</p></li>
@@ -5178,8 +5359,8 @@ calculations.</p>
 It contains the temporary directory to save the resultant graph.</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – <code class="docutils literal notranslate"><span class="pre">GraphMaker</span></code> has to be created with the latest release possible in <code class="docutils literal notranslate"><span class="pre">db_manager</span></code>. If not,
-    the exception is raised.</p>
+<dd class="field-even"><p><strong>ValueError</strong> – If the release of <code class="docutils literal notranslate"><span class="pre">db_manager</span></code> is not the newest release of its window. A graph is the
+    snapshot of the releases <code class="docutils literal notranslate"><span class="pre">ignore_before</span></code> to <code class="docutils literal notranslate"><span class="pre">ignore_after</span></code>; it is built from the newest of them.</p>
 </dd>
 </dl>
 <dl class="py method">
@@ -5405,27 +5586,26 @@ scientific name, assembly name or accession, or NCBI taxon ID—into the canonic
 case-insensitive on both sides. A query equal to a formal name (also written with spaces, e.g.
 <code class="docutils literal notranslate"><span class="pre">&quot;Macaca</span> <span class="pre">mulatta&quot;</span></code>) or to a taxon ID is never ambiguous: a taxon ID that Ensembl also gives to strains or
 breeds resolves to the species-level entry (<code class="docutils literal notranslate"><span class="pre">9823</span></code> → <code class="docutils literal notranslate"><span class="pre">sus_scrofa</span></code>). Any other synonym that several species
-share (<code class="docutils literal notranslate"><span class="pre">&quot;pig&quot;</span></code> is the common name of every pig breed) raises an error that lists the candidates.  Because the mapping is
-refreshed on every instantiation through a live call to the Ensembl REST API, downstream workflows in <em>idtrack</em>
-always rely on up-to-date metadata rather than a possibly stale local cache.</p>
+share (<code class="docutils literal notranslate"><span class="pre">&quot;pig&quot;</span></code> is the common name of every pig breed) raises an error that lists the candidates.</p>
+<p>The species list comes from one call to the Ensembl REST API per process and day (<code class="docutils literal notranslate"><span class="pre">/info/species</span></code>, see
+<a class="reference internal" href="#idtrack._ensembl_access.rest_get_json" title="idtrack._ensembl_access.rest_get_json"><code class="xref py py-func docutils literal notranslate"><span class="pre">idtrack._ensembl_access.rest_get_json()</span></code></a> and <code class="xref py py-attr docutils literal notranslate"><span class="pre">idtrack.DB.rest_species_cache_seconds</span></code>), made
+only when it is needed: the formal name of an organism
+configured in idtrack (<code class="xref py py-attr docutils literal notranslate"><span class="pre">idtrack.DB.supported_organisms</span></code>, also written with spaces) resolves without the
+network; synonyms, taxon IDs and the latest release need it.</p>
 <p>After construction the instance offers two high-level helpers:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">resolver</span> <span class="o">=</span> <span class="n">VerifyOrganism</span><span class="p">(</span><span class="s2">"human"</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">resolver</span><span class="o">.</span><span class="n">get_formal_name</span><span class="p">()</span>      <span class="c1"># 'homo_sapiens'</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">resolver</span><span class="o">.</span><span class="n">get_latest_release</span><span class="p">()</span>   <span class="c1"># 117  (example)</span>
 </pre></div>
 </div>
-<p>Both helpers are backed by two public dataframes created during initialisation:</p>
+<p>Both helpers are backed by two public dataframes, loaded on first use:</p>
 <ul class="simple">
-<li><p><code class="xref py py-attr docutils literal notranslate"><span class="pre">name_synonyms_dataframe</span></code> — maps every synonym returned by the REST service to the chosen
+<li><p><a class="reference internal" href="#idtrack._verify_organism.VerifyOrganism.name_synonyms_dataframe" title="idtrack._verify_organism.VerifyOrganism.name_synonyms_dataframe"><code class="xref py py-attr docutils literal notranslate"><span class="pre">name_synonyms_dataframe</span></code></a> — maps every synonym returned by the REST service to the chosen
 formal name and flags synonyms that are ambiguous across species.</p></li>
-<li><p><code class="xref py py-attr docutils literal notranslate"><span class="pre">ensembl_release_dataframe</span></code> — one-row table (indexed by <em>formal_name</em>) holding the latest
+<li><p><a class="reference internal" href="#idtrack._verify_organism.VerifyOrganism.ensembl_release_dataframe" title="idtrack._verify_organism.VerifyOrganism.ensembl_release_dataframe"><code class="xref py py-attr docutils literal notranslate"><span class="pre">ensembl_release_dataframe</span></code></a> — one-row table (indexed by <em>formal_name</em>) holding the latest
 Ensembl release number.</p></li>
 </ul>
-<p>Initialise the resolver and pre-fetch synonym/release tables from the Ensembl REST API.</p>
-<p>The constructor immediately invokes <a class="reference internal" href="#idtrack._verify_organism.VerifyOrganism.fetch_organism_and_latest_release" title="idtrack._verify_organism.VerifyOrganism.fetch_organism_and_latest_release"><code class="xref py py-meth docutils literal notranslate"><span class="pre">fetch_organism_and_latest_release()</span></code></a>, downloading
-the complete species list from <code class="docutils literal notranslate"><span class="pre">{DB.rest_server_api}{DB.rest_server_ext}</span></code> so that all subsequent look-ups run
-entirely in-memory.  Any exceptions raised during that fetch are allowed to propagate unchanged so that callers
-can handle network or data-quality issues explicitly.</p>
+<p>Initialise the resolver; nothing is fetched until a look-up needs the Ensembl species list.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>organism_query</strong> (<em>str</em><em> | </em><em>int</em>) – Organism identifier supplied by the user—common name (<code class="docutils literal notranslate"><span class="pre">&quot;human&quot;</span></code>),
@@ -5435,8 +5615,41 @@ stripped, lower-case string before processing.</p>
 </dd>
 </dl>
 <dl class="py method">
+<dt class="sig sig-object py" id="idtrack._verify_organism.VerifyOrganism._configured_formal_name">
+<span class="sig-name descname"><span class="pre">_configured_formal_name</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_verify_organism.html#VerifyOrganism._configured_formal_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._verify_organism.VerifyOrganism._configured_formal_name" title="Link to this definition"></a></dt>
+<dd><p>Return the query as the formal name of a configured organism (no network), else <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="idtrack._verify_organism.VerifyOrganism._species_tables">
+<span class="sig-name descname"><span class="pre">_species_tables</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_verify_organism.html#VerifyOrganism._species_tables"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._verify_organism.VerifyOrganism._species_tables" title="Link to this definition"></a></dt>
+<dd><p>Return the species tables of this process.</p>
+<p>They are fetched at the first need and again once they are older than
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">idtrack.DB.rest_species_cache_seconds</span></code>, so that a long-running process learns of a new release.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>See <a class="reference internal" href="#idtrack._verify_organism.VerifyOrganism.fetch_organism_and_latest_release" title="idtrack._verify_organism.VerifyOrganism.fetch_organism_and_latest_release"><code class="xref py py-meth docutils literal notranslate"><span class="pre">fetch_organism_and_latest_release()</span></code></a>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple[pandas.DataFrame, pandas.DataFrame]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="idtrack._verify_organism.VerifyOrganism.ensembl_release_dataframe">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">ensembl_release_dataframe</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">DataFrame</span></span><a class="headerlink" href="#idtrack._verify_organism.VerifyOrganism.ensembl_release_dataframe" title="Link to this definition"></a></dt>
+<dd><p>Latest Ensembl release of every species, indexed by formal name.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="idtrack._verify_organism.VerifyOrganism.fetch_organism_and_latest_release">
-<span class="sig-name descname"><span class="pre">fetch_organism_and_latest_release</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">connect_timeout</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">read_timeout</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_verify_organism.html#VerifyOrganism.fetch_organism_and_latest_release"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._verify_organism.VerifyOrganism.fetch_organism_and_latest_release" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">fetch_organism_and_latest_release</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_verify_organism.html#VerifyOrganism.fetch_organism_and_latest_release"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._verify_organism.VerifyOrganism.fetch_organism_and_latest_release" title="Link to this definition"></a></dt>
 <dd><p>Query the Ensembl REST API once and build lookup tables for species synonyms and latest releases.</p>
 <p>This internal utility performs a single call to <code class="docutils literal notranslate"><span class="pre">/info/species</span></code> on the Ensembl REST server, parses the
 returned JSON, and constructs two pandas dataframes:</p>
@@ -5453,28 +5666,20 @@ if the synonym belongs to more than one species).</p>
 </dl>
 </li>
 </ul>
-<p>Consolidating the REST query in one place avoids repeated network traffic and provides a cache-friendly
-structure for subsequent lookups.</p>
+<p>The request uses the timeouts and retries of <a class="reference internal" href="#idtrack._ensembl_access.rest_get_json" title="idtrack._ensembl_access.rest_get_json"><code class="xref py py-func docutils literal notranslate"><span class="pre">idtrack._ensembl_access.rest_get_json()</span></code></a>, whose
+<a class="reference internal" href="#idtrack._db.EnsemblRestError" title="idtrack._db.EnsemblRestError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack._db.EnsemblRestError</span></code></a> propagates when Ensembl does not answer
+(<code class="xref py py-attr docutils literal notranslate"><span class="pre">idtrack.DB.connection_timeout</span></code>, <code class="xref py py-attr docutils literal notranslate"><span class="pre">idtrack.DB.reading_timeout</span></code>,
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">idtrack.DB.rest_attempts</span></code>). <a class="reference internal" href="#idtrack._verify_organism.VerifyOrganism._species_tables" title="idtrack._verify_organism.VerifyOrganism._species_tables"><code class="xref py py-meth docutils literal notranslate"><span class="pre">_species_tables()</span></code></a> keeps the result for the process.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>connect_timeout</strong> (<em>int</em>) – Seconds to wait while establishing the TCP connection to the Ensembl server.</p></li>
-<li><p><strong>read_timeout</strong> (<em>int</em>) – Seconds to wait for the server to send the full response after the connection
-has been established.</p></li>
-</ul>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">(name_synonyms_df,</span> <span class="pre">latest_ensembl_releases_df)</span></code> as described above.</p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">(name_synonyms_df,</span> <span class="pre">latest_ensembl_releases_df)</span></code> as described above.</p>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple[pandas.DataFrame, pandas.DataFrame]</p>
 </dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tuple[pandas.DataFrame, pandas.DataFrame]</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>TimeoutError</strong> – If the combined <em>(connect_timeout, read_timeout)</em> limit is exceeded.</p></li>
-<li><p><strong>ValueError</strong> – If the JSON schema differs from the expected <code class="docutils literal notranslate"><span class="pre">{&quot;species&quot;:</span> <span class="pre">[...]}</span></code> structure or required
-    keys are missing.</p></li>
-</ul>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If the JSON schema differs from the expected <code class="docutils literal notranslate"><span class="pre">{&quot;species&quot;:</span> <span class="pre">[...]}</span></code> structure or required
+    keys are missing.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -5486,10 +5691,10 @@ has been established.</p></li>
 <p>Resolution, in this order (all comparisons on normalised, lower-case strings):</p>
 <ol class="arabic simple">
 <li><p>the query is a formal name (<code class="docutils literal notranslate"><span class="pre">&quot;homo_sapiens&quot;</span></code>), also with spaces or hyphens for underscores
-(<code class="docutils literal notranslate"><span class="pre">&quot;Macaca</span> <span class="pre">mulatta&quot;</span></code>);</p></li>
+(<code class="docutils literal notranslate"><span class="pre">&quot;Macaca</span> <span class="pre">mulatta&quot;</span></code>); for an organism configured in idtrack this needs no network;</p></li>
 <li><p>the query is a taxon ID: the organism with that ID, or—when Ensembl gives the ID to several strains or
 breeds—the species-level entry (the formal name of two words, <code class="docutils literal notranslate"><span class="pre">sus_scrofa</span></code> for <code class="docutils literal notranslate"><span class="pre">9823</span></code>);</p></li>
-<li><p>any other synonym of <code class="xref py py-data docutils literal notranslate"><span class="pre">name_synonyms_dataframe</span></code> (common names, display names,
+<li><p>any other synonym of <a class="reference internal" href="#idtrack._verify_organism.VerifyOrganism.name_synonyms_dataframe" title="idtrack._verify_organism.VerifyOrganism.name_synonyms_dataframe"><code class="xref py py-data docutils literal notranslate"><span class="pre">name_synonyms_dataframe</span></code></a> (common names, display names,
 assembly names and accessions, aliases), which must belong to exactly one organism.</p></li>
 </ol>
 <dl class="field-list simple">
@@ -5526,6 +5731,12 @@ genome build.</p>
 <dd class="field-even"><p>int</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="idtrack._verify_organism.VerifyOrganism.name_synonyms_dataframe">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">name_synonyms_dataframe</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">DataFrame</span></span><a class="headerlink" href="#idtrack._verify_organism.VerifyOrganism.name_synonyms_dataframe" title="Link to this definition"></a></dt>
+<dd><p>Synonym table of every Ensembl species (see <a class="reference internal" href="#idtrack._verify_organism.VerifyOrganism.fetch_organism_and_latest_release" title="idtrack._verify_organism.VerifyOrganism.fetch_organism_and_latest_release"><code class="xref py py-meth docutils literal notranslate"><span class="pre">fetch_organism_and_latest_release()</span></code></a>).</p>
 </dd></dl>
 
 <dl class="py method">
@@ -7370,10 +7581,47 @@ attributes directly. The organism table is the only part meant to change at run 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="idtrack._db.DB.reading_timeout">
 <span class="sig-name descname"><span class="pre">reading_timeout</span></span><a class="headerlink" href="#idtrack._db.DB.reading_timeout" title="Link to this definition"></a></dt>
-<dd><p>Socket read timeout in seconds applied to FTP and REST operations.</p>
+<dd><p>Socket read timeout in seconds applied to FTP and REST operations. Raise it (e.g.
+<code class="docutils literal notranslate"><span class="pre">idtrack.DB.reading_timeout</span> <span class="pre">=</span> <span class="pre">120</span></code>) on a network where Ensembl answers slowly.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="idtrack._db.DB.rest_attempts">
+<span class="sig-name descname"><span class="pre">rest_attempts</span></span><a class="headerlink" href="#idtrack._db.DB.rest_attempts" title="Link to this definition"></a></dt>
+<dd><p>Attempts of every Ensembl REST request (<a class="reference internal" href="#idtrack._ensembl_access.rest_get_json" title="idtrack._ensembl_access.rest_get_json"><code class="xref py py-func docutils literal notranslate"><span class="pre">idtrack._ensembl_access.rest_get_json()</span></code></a>):
+timeouts, connection errors and the HTTP statuses 429, 500, 502, 503 and 504 are retried.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="idtrack._db.DB.rest_retry_wait">
+<span class="sig-name descname"><span class="pre">rest_retry_wait</span></span><a class="headerlink" href="#idtrack._db.DB.rest_retry_wait" title="Link to this definition"></a></dt>
+<dd><p>Seconds before the second attempt; doubled before each further one (an HTTP
+<code class="docutils literal notranslate"><span class="pre">Retry-After</span></code> header is honoured when longer, up to 60 s).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="idtrack._db.DB.rest_species_cache_seconds">
+<span class="sig-name descname"><span class="pre">rest_species_cache_seconds</span></span><a class="headerlink" href="#idtrack._db.DB.rest_species_cache_seconds" title="Link to this definition"></a></dt>
+<dd><p>How long a process keeps the Ensembl species list (and with it the latest
+release of each species) before asking Ensembl REST again; one day by default.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
 </dd>
 </dl>
 </dd></dl>
@@ -7866,11 +8114,11 @@ assignment, as some tests do, is not seen by such references.)</p>
 <dd><p>Check the organism table and the symbol-database table for consistency.</p>
 <p>Rules: organism names are lower-case Ensembl production names; every organism has at least one assembly;
 assembly keys are positive integers; each entry carries <code class="docutils literal notranslate"><span class="pre">Ports</span></code> (known MySQL ports, see
-<a class="reference internal" href="#idtrack._db.DB.mysql_port_min_release" title="idtrack._db.DB.mysql_port_min_release"><code class="xref py py-attr docutils literal notranslate"><span class="pre">mysql_port_min_release</span></code></a>), <code class="docutils literal notranslate"><span class="pre">Priority</span></code> and <code class="docutils literal notranslate"><span class="pre">ReleaseRange</span></code>, plus optionally <code class="docutils literal notranslate"><span class="pre">Name</span></code> and
-<code class="docutils literal notranslate"><span class="pre">DbSuffix</span></code> and nothing else; priorities are unique per organism and start at 1; release ranges are
-<code class="docutils literal notranslate"><span class="pre">[first,</span> <span class="pre">last]</span></code> with <code class="docutils literal notranslate"><span class="pre">last</span></code> <code class="docutils literal notranslate"><span class="pre">None</span></code> or not smaller than <code class="docutils literal notranslate"><span class="pre">first</span></code>; entries of one organism that share a
-<code class="docutils literal notranslate"><span class="pre">DbSuffix</span></code> have non-overlapping release ranges; the symbol-database table names exactly the organisms of
-the organism table.</p>
+<a class="reference internal" href="#idtrack._db.DB.mysql_port_min_release" title="idtrack._db.DB.mysql_port_min_release"><code class="xref py py-attr docutils literal notranslate"><span class="pre">mysql_port_min_release</span></code></a>, and none that <code class="xref py py-attr docutils literal notranslate"><span class="pre">mysql_port_assembly</span></code> reserves for another
+assembly), <code class="docutils literal notranslate"><span class="pre">Priority</span></code> and <code class="docutils literal notranslate"><span class="pre">ReleaseRange</span></code>, plus optionally <code class="docutils literal notranslate"><span class="pre">Name</span></code> and <code class="docutils literal notranslate"><span class="pre">DbSuffix</span></code> and nothing else;
+priorities are unique per organism and start at 1; release ranges are <code class="docutils literal notranslate"><span class="pre">[first,</span> <span class="pre">last]</span></code> with <code class="docutils literal notranslate"><span class="pre">last</span></code>
+<code class="docutils literal notranslate"><span class="pre">None</span></code> or not smaller than <code class="docutils literal notranslate"><span class="pre">first</span></code>; entries of one organism that share a <code class="docutils literal notranslate"><span class="pre">DbSuffix</span></code> have
+non-overlapping release ranges; the symbol-database table names exactly the organisms of the organism table.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -8037,6 +8285,58 @@ omitted (<code class="docutils literal notranslate"><span class="pre">None</span
 
 </dd></dl>
 
+<dl class="py exception">
+<dt class="sig sig-object py" id="idtrack._db.EnsemblRestError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">EnsemblRestError</span></span><a class="reference internal" href="_modules/idtrack/_db.html#EnsemblRestError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._db.EnsemblRestError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ConnectionError</span></code></p>
+<p>Raised when Ensembl REST cannot be reached or does not give a usable answer after every attempt.</p>
+<p>The message names the URL, the attempts, the timeouts in force and how to change them
+(<a class="reference internal" href="#idtrack._db.DB.connection_timeout" title="idtrack._db.DB.connection_timeout"><code class="xref py py-attr docutils literal notranslate"><span class="pre">DB.connection_timeout</span></code></a>, <a class="reference internal" href="#idtrack._db.DB.reading_timeout" title="idtrack._db.DB.reading_timeout"><code class="xref py py-attr docutils literal notranslate"><span class="pre">DB.reading_timeout</span></code></a>, <a class="reference internal" href="#idtrack._db.DB.rest_attempts" title="idtrack._db.DB.rest_attempts"><code class="xref py py-attr docutils literal notranslate"><span class="pre">DB.rest_attempts</span></code></a>).</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="idtrack._db.EnsemblSchemaError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">EnsemblSchemaError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">missing_columns</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_db.html#EnsemblSchemaError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._db.EnsemblSchemaError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">LookupError</span></code></p>
+<p>Raised when an Ensembl core database has no such table, or the table lacks requested columns.</p>
+<p>It states a fact about the schema of one release (older releases keep stable ids in <code class="docutils literal notranslate"><span class="pre">&lt;form&gt;_stable_id</span></code>
+tables, and some columns were renamed), so callers may fall back to the older layout when they catch it. A
+failed download, a connection error or a failure to cache a table never raises it; those keep their own
+exception, so that a fallback cannot hide them.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>message</strong> (<em>str</em>)</p></li>
+<li><p><strong>table</strong> (<em>str</em>)</p></li>
+<li><p><strong>missing_columns</strong> (<em>tuple</em>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="idtrack._db.EnsemblSchemaError.table">
+<span class="sig-name descname"><span class="pre">table</span></span><a class="headerlink" href="#idtrack._db.EnsemblSchemaError.table" title="Link to this definition"></a></dt>
+<dd><p>Name of the table.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="idtrack._db.EnsemblSchemaError.missing_columns">
+<span class="sig-name descname"><span class="pre">missing_columns</span></span><a class="headerlink" href="#idtrack._db.EnsemblSchemaError.missing_columns" title="Link to this definition"></a></dt>
+<dd><p>Requested columns the table lacks; empty when the table itself is absent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[str, …]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<p>Record the table and the missing columns next to the message.</p>
+</dd></dl>
+
 <p id="module-idtrack._ensembl_access">How idtrack reaches Ensembl: the access mode and the per-process reachability of TCP ports.</p>
 <p>Ensembl serves the same core databases two ways: the public MySQL service (<code class="docutils literal notranslate"><span class="pre">ensembldb.ensembl.org</span></code>, ports 3306,
 5306 and 3337) and the MySQL dumps on <code class="docutils literal notranslate"><span class="pre">https://ftp.ensembl.org/pub/</span></code>. Many networks block the MySQL ports, and a
@@ -8048,6 +8348,9 @@ otherwise) or <code class="docutils literal notranslate"><span class="pre">&quot
 <li><p><a class="reference internal" href="#idtrack._ensembl_access.reachability" title="idtrack._ensembl_access.reachability"><code class="xref py py-data docutils literal notranslate"><span class="pre">reachability</span></code></a> (a <a class="reference internal" href="#idtrack._ensembl_access.PortReachability" title="idtrack._ensembl_access.PortReachability"><code class="xref py py-class docutils literal notranslate"><span class="pre">PortReachability</span></code></a>) probes a <code class="docutils literal notranslate"><span class="pre">(host,</span> <span class="pre">port)</span></code> once per process with a short
 timeout and remembers the answer. Every code path that would open a MySQL connection asks it first, and a
 connection that fails after a successful probe marks the port unreachable for the rest of the process.</p></li>
+<li><p><a class="reference internal" href="#idtrack._ensembl_access.rest_get_json" title="idtrack._ensembl_access.rest_get_json"><code class="xref py py-func docutils literal notranslate"><span class="pre">rest_get_json()</span></code></a> is the one way idtrack asks Ensembl REST: with the timeouts of
+<a class="reference internal" href="#idtrack._db.DB.connection_timeout" title="idtrack._db.DB.connection_timeout"><code class="xref py py-attr docutils literal notranslate"><span class="pre">idtrack._db.DB.connection_timeout</span></code></a> and <a class="reference internal" href="#idtrack._db.DB.reading_timeout" title="idtrack._db.DB.reading_timeout"><code class="xref py py-attr docutils literal notranslate"><span class="pre">idtrack._db.DB.reading_timeout</span></code></a>, retries, and an
+<a class="reference internal" href="#idtrack._db.EnsemblRestError" title="idtrack._db.EnsemblRestError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack._db.EnsemblRestError</span></code></a> that says what failed and what to change.</p></li>
 </ul>
 <p>The results do not depend on the mode: both paths read the same Ensembl tables.</p>
 <dl class="py class">
@@ -8191,6 +8494,33 @@ dumps, which costs speed but not correctness.</p>
 <dt class="sig sig-object py" id="idtrack._ensembl_access.reachability">
 <span class="sig-name descname"><span class="pre">reachability</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;idtrack._ensembl_access.PortReachability</span> <span class="pre">object&gt;</span></span><a class="headerlink" href="#idtrack._ensembl_access.reachability" title="Link to this definition"></a></dt>
 <dd><p>The process-wide reachability memory used by every idtrack code path that would open a MySQL connection.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="idtrack._ensembl_access.rest_get_json">
+<span class="sig-name descname"><span class="pre">rest_get_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">what</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/idtrack/_ensembl_access.html#rest_get_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#idtrack._ensembl_access.rest_get_json" title="Link to this definition"></a></dt>
+<dd><p>Return the decoded JSON of <code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">{DB.rest_server_api}{path}</span></code>, retrying transient failures.</p>
+<p>Every attempt uses the timeouts <code class="docutils literal notranslate"><span class="pre">(DB.connection_timeout,</span> <span class="pre">DB.reading_timeout)</span></code>. Timeouts, connection errors
+(including SSL and proxy errors) and the HTTP statuses 429, 500, 502, 503 and 504 are retried up to
+<a class="reference internal" href="#idtrack._db.DB.rest_attempts" title="idtrack._db.DB.rest_attempts"><code class="xref py py-attr docutils literal notranslate"><span class="pre">idtrack._db.DB.rest_attempts</span></code></a> attempts, waiting <a class="reference internal" href="#idtrack._db.DB.rest_retry_wait" title="idtrack._db.DB.rest_retry_wait"><code class="xref py py-attr docutils literal notranslate"><span class="pre">idtrack._db.DB.rest_retry_wait</span></code></a> seconds,
+doubled each time (or the server’s <code class="docutils literal notranslate"><span class="pre">Retry-After</span></code>, at most 60 s). Any other HTTP status is not retried.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – Path and query of the REST resource, e.g. <code class="docutils literal notranslate"><span class="pre">&quot;/info/species?&quot;</span></code>.</p></li>
+<li><p><strong>what</strong> (<em>str</em>) – What is asked, for the error message (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;the</span> <span class="pre">list</span> <span class="pre">of</span> <span class="pre">species&quot;</span></code>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The decoded JSON payload.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Any</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#idtrack._db.EnsemblRestError" title="idtrack._db.EnsemblRestError"><strong>EnsemblRestError</strong></a> – If no attempt gives a successful answer with valid JSON.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <p id="module-idtrack._mysql_dump">Read Ensembl’s MySQL table dumps (<code class="docutils literal notranslate"><span class="pre">&lt;table&gt;.txt.gz</span></code>) exactly as MySQL would load them.</p>

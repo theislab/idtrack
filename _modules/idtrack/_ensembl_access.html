@@ -114,6 +114,9 @@
 <span class="sd">* :py:data:`reachability` (a :py:class:`PortReachability`) probes a ``(host, port)`` once per process with a short</span>
 <span class="sd">  timeout and remembers the answer. Every code path that would open a MySQL connection asks it first, and a</span>
 <span class="sd">  connection that fails after a successful probe marks the port unreachable for the rest of the process.</span>
+<span class="sd">* :py:func:`rest_get_json` is the one way idtrack asks Ensembl REST: with the timeouts of</span>
+<span class="sd">  :py:attr:`idtrack._db.DB.connection_timeout` and :py:attr:`idtrack._db.DB.reading_timeout`, retries, and an</span>
+<span class="sd">  :py:class:`idtrack._db.EnsemblRestError` that says what failed and what to change.</span>
 
 <span class="sd">The results do not depend on the mode: both paths read the same Ensembl tables.</span>
 <span class="sd">"""</span>
@@ -122,9 +125,80 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span><span class="p">,</span> <span class="n">EnsemblRestError</span>
+
+<span class="c1"># HTTP statuses after which a REST request is tried again (rate limit and transient server errors).</span>
+<span class="n">_REST_RETRY_STATUSES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="mi">429</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="mi">502</span><span class="p">,</span> <span class="mi">503</span><span class="p">,</span> <span class="mi">504</span><span class="p">})</span>
+
+
+<div class="viewcode-block" id="rest_get_json">
+<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.rest_get_json">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">rest_get_json</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">what</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the decoded JSON of ``GET {DB.rest_server_api}{path}``, retrying transient failures.</span>
+
+<span class="sd">    Every attempt uses the timeouts ``(DB.connection_timeout, DB.reading_timeout)``. Timeouts, connection errors</span>
+<span class="sd">    (including SSL and proxy errors) and the HTTP statuses 429, 500, 502, 503 and 504 are retried up to</span>
+<span class="sd">    :py:attr:`idtrack._db.DB.rest_attempts` attempts, waiting :py:attr:`idtrack._db.DB.rest_retry_wait` seconds,</span>
+<span class="sd">    doubled each time (or the server's ``Retry-After``, at most 60 s). Any other HTTP status is not retried.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        path: Path and query of the REST resource, e.g. ``"/info/species?"``.</span>
+<span class="sd">        what: What is asked, for the error message (e.g. ``"the list of species"``).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Any: The decoded JSON payload.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        EnsemblRestError: If no attempt gives a successful answer with valid JSON.</span>
+<span class="sd">    """</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">rest_server_api</span><span class="si">}{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span>
+    <span class="n">attempts</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">rest_attempts</span><span class="p">))</span>
+    <span class="n">timeout</span> <span class="o">=</span> <span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_timeout</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">reading_timeout</span><span class="p">)</span>
+    <span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"ensembl_access"</span><span class="p">)</span>
+    <span class="n">failure</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">last_exc</span><span class="p">:</span> <span class="ne">BaseException</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">with</span> <span class="n">requests</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">attempts</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">wait</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">rest_retry_wait</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">**</span> <span class="p">(</span><span class="n">attempt</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">"Content-Type"</span><span class="p">:</span> <span class="s2">"application/json"</span><span class="p">},</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+                        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="n">EnsemblRestError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Ensembl REST answered </span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2"> at </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2"> with invalid JSON."</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+                    <span class="n">status</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">)</span>
+                    <span class="n">failure</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"HTTP </span><span class="si">{</span><span class="n">status</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">reason</span><span class="si">}</span><span class="s2">"</span>
+                    <span class="k">if</span> <span class="n">status</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_REST_RETRY_STATUSES</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">EnsemblRestError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Ensembl REST refused </span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2"> at </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">failure</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+                    <span class="n">retry_after</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Retry-After"</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">retry_after</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">str</span><span class="p">(</span><span class="n">retry_after</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                        <span class="n">wait</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">wait</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">retry_after</span><span class="p">),</span> <span class="mf">60.0</span><span class="p">))</span>
+            <span class="k">except</span> <span class="p">(</span><span class="n">requests</span><span class="o">.</span><span class="n">Timeout</span><span class="p">,</span> <span class="n">requests</span><span class="o">.</span><span class="n">ConnectionError</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="n">last_exc</span> <span class="o">=</span> <span class="n">exc</span>
+                <span class="n">failure</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">exc</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span>
+            <span class="k">if</span> <span class="n">attempt</span> <span class="o">&lt;</span> <span class="n">attempts</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="s2">"Ensembl REST did not answer </span><span class="si">%s</span><span class="s2"> (attempt </span><span class="si">%d</span><span class="s2">/</span><span class="si">%d</span><span class="s2">: </span><span class="si">%s</span><span class="s2">); retrying in </span><span class="si">%.1f</span><span class="s2"> s."</span><span class="p">,</span>
+                    <span class="n">what</span><span class="p">,</span>
+                    <span class="n">attempt</span><span class="p">,</span>
+                    <span class="n">attempts</span><span class="p">,</span>
+                    <span class="n">failure</span><span class="p">,</span>
+                    <span class="n">wait</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">wait</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="n">EnsemblRestError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"Ensembl REST did not answer </span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2"> at </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2"> after </span><span class="si">{</span><span class="n">attempts</span><span class="si">}</span><span class="s2"> attempt(s) with connect timeout "</span>
+        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">timeout</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> s and read timeout </span><span class="si">{</span><span class="n">timeout</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> s; last failure: </span><span class="si">{</span><span class="n">failure</span><span class="si">}</span><span class="s2">. On a slow network raise the "</span>
+        <span class="s2">"timeouts, e.g. `idtrack.DB.reading_timeout = 120` (and `idtrack.DB.rest_attempts`); behind a proxy set "</span>
+        <span class="s2">"HTTPS_PROXY. Check https://rest.ensembl.org/info/ping from this machine."</span>
+    <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">last_exc</span></div>
+
 
 
 <div class="viewcode-block" id="ensembl_access_mode">
@@ -191,7 +265,7 @@
 
 <div class="viewcode-block" id="PortReachability.can_connect">
 <a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.PortReachability.can_connect">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">can_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">timeout_s</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">can_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">timeout_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return whether ``(host, port)`` accepts TCP connections, probing it only the first time.</span>
 
 <span class="sd">        Args:</span>
@@ -244,7 +318,7 @@
 
 <div class="viewcode-block" id="PortReachability.mark_unreachable">
 <a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.PortReachability.mark_unreachable">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">mark_unreachable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">mark_unreachable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Record that ``(host, port)`` failed, so that it is not tried again in this process.</span>
 
 <span class="sd">        The mark lasts until :py:meth:`reset`; a transient failure therefore also sends later tables to the HTTPS</span>

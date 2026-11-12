@@ -188,7 +188,7 @@ your workflow.</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><strong>Python</strong></p></td>
-<td><p>3.9 or later (3.11 recommended)</p></td>
+<td><p>3.12 to 3.15</p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>Operating Systems</strong></p></td>
 <td><p>Linux, macOS (Intel and Apple Silicon), Windows</p></td>
@@ -232,7 +232,7 @@ Mamba for installs. Use <code class="docutils literal notranslate"><span class="
 </div>
 <p><strong>Install IDTrack with Mamba</strong>:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Option<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">(</span>recommended<span class="o">)</span>:<span class="w"> </span>create<span class="w"> </span>an<span class="w"> </span>isolated<span class="w"> </span>environment<span class="w"> </span><span class="k">in</span><span class="w"> </span>one<span class="w"> </span><span class="nb">command</span>
-<span class="gp">$ </span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.11<span class="w"> </span>idtrack
+<span class="gp">$ </span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.13<span class="w"> </span>idtrack
 <span class="gp">$ </span>conda<span class="w"> </span>activate<span class="w"> </span>idtrack-env
 
 <span class="gp"># </span>Option<span class="w"> </span><span class="m">2</span>:<span class="w"> </span>install<span class="w"> </span>into<span class="w"> </span>your<span class="w"> </span>currently<span class="w"> </span>active<span class="w"> </span>conda<span class="w"> </span>environment
@@ -310,8 +310,8 @@ was created <em>after</em> installing HDF5. Creating a fresh environment often r
 easier to manage your installation.</p>
 <section id="using-mamba-fastest">
 <h3>Using Mamba (fastest)<a class="headerlink" href="#using-mamba-fastest" title="Link to this heading"></a></h3>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Create<span class="w"> </span>a<span class="w"> </span>new<span class="w"> </span>environment<span class="w"> </span>with<span class="w"> </span>Python<span class="w"> </span><span class="m">3</span>.11
-<span class="gp">$ </span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.11
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Create<span class="w"> </span>a<span class="w"> </span>new<span class="w"> </span>environment<span class="w"> </span>with<span class="w"> </span>Python<span class="w"> </span><span class="m">3</span>.13
+<span class="gp">$ </span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.13
 
 <span class="gp"># </span>Activate<span class="w"> </span>the<span class="w"> </span>environment
 <span class="gp">$ </span>conda<span class="w"> </span>activate<span class="w"> </span>idtrack-env
@@ -323,8 +323,8 @@ easier to manage your installation.</p>
 </section>
 <section id="using-conda">
 <h3>Using conda<a class="headerlink" href="#using-conda" title="Link to this heading"></a></h3>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Create<span class="w"> </span>a<span class="w"> </span>new<span class="w"> </span>environment<span class="w"> </span>with<span class="w"> </span>Python<span class="w"> </span><span class="m">3</span>.11
-<span class="gp">$ </span>conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.11
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Create<span class="w"> </span>a<span class="w"> </span>new<span class="w"> </span>environment<span class="w"> </span>with<span class="w"> </span>Python<span class="w"> </span><span class="m">3</span>.13
+<span class="gp">$ </span>conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.13
 
 <span class="gp"># </span>Activate<span class="w"> </span>the<span class="w"> </span>environment
 <span class="gp">$ </span>conda<span class="w"> </span>activate<span class="w"> </span>idtrack-env
@@ -479,6 +479,22 @@ short probe per process, not one per table, and a port whose connection fails is
 process (the tables then come over HTTPS; this costs only speed).</p>
 <p>If you route IDTrack through an SSH tunnel with <code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.ConnectionBridge</span></code>, starting and stopping
 the bridge forgets the probe results, so the ports are probed again through the new route.</p>
+<p><strong>Slow networks, timeouts and retries.</strong> Every request to Ensembl REST (organism names and the latest release)
+waits <code class="docutils literal notranslate"><span class="pre">idtrack.DB.connection_timeout</span></code> seconds to connect (default 15) and <code class="docutils literal notranslate"><span class="pre">idtrack.DB.reading_timeout</span></code>
+seconds for the answer (default 60; it also applies to the HTTPS dumps), and is tried
+<code class="docutils literal notranslate"><span class="pre">idtrack.DB.rest_attempts</span></code> times (default 3) when it times out, the connection fails, or Ensembl answers 429
+or 5xx. When every attempt fails, <a class="reference internal" href="reference.html#idtrack._db.EnsemblRestError" title="idtrack._db.EnsemblRestError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack._db.EnsemblRestError</span></code></a> names the URL, the timeouts and what
+to change. On a network where Ensembl answers slowly, raise the timeouts before the first call:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+
+<span class="n">idtrack</span><span class="o">.</span><span class="n">DB</span><span class="o">.</span><span class="n">reading_timeout</span> <span class="o">=</span> <span class="mi">120</span>
+<span class="n">idtrack</span><span class="o">.</span><span class="n">DB</span><span class="o">.</span><span class="n">rest_attempts</span> <span class="o">=</span> <span class="mi">5</span>
+</pre></div>
+</div>
+<p>The network is needed only to download, and to learn which release is the latest: the formal name of a
+supported organism (<code class="docutils literal notranslate"><span class="pre">&quot;homo_sapiens&quot;</span></code>, also <code class="docutils literal notranslate"><span class="pre">&quot;Homo</span> <span class="pre">sapiens&quot;</span></code>) resolves without it, and a graph or harmonization
+run whose tables and graph are on disk runs offline (see <a class="reference internal" href="usage.html#reusing-built-graphs"><span class="std std-ref">Reusing Built Graphs</span></a>). An HTTPS proxy is honoured
+through <code class="docutils literal notranslate"><span class="pre">HTTPS_PROXY</span></code>.</p>
 </section>
 <section id="optional-dependencies">
 <h2>Optional Dependencies<a class="headerlink" href="#optional-dependencies" title="Link to this heading"></a></h2>
@@ -517,7 +533,7 @@ the bridge forgets the probe results, so the ports are probed again through the 
 <p>This usually indicates an HDF5 binary compatibility issue. The most reliable fix is to
 use conda-forge (Mamba or conda):</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Create<span class="w"> </span>a<span class="w"> </span>fresh<span class="w"> </span>environment<span class="w"> </span>with<span class="w"> </span>Mamba
-<span class="gp">$ </span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.11<span class="w"> </span>idtrack<span class="w"> </span>-c<span class="w"> </span>conda-forge
+<span class="gp">$ </span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.13<span class="w"> </span>idtrack<span class="w"> </span>-c<span class="w"> </span>conda-forge
 <span class="gp">$ </span>conda<span class="w"> </span>activate<span class="w"> </span>idtrack-env
 </pre></div>
 </div>

@@ -105,7 +105,7 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
@@ -153,11 +153,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"api"</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger_configured</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">local_repository</span> <span class="o">=</span> <span class="n">local_repository</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">track</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Track</span><span class="p">,</span> <span class="n">TrackTests</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">track</span><span class="p">:</span> <span class="n">Track</span> <span class="o">|</span> <span class="n">TrackTests</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
 <div class="viewcode-block" id="API._require_track">
 <a class="viewcode-back" href="../../reference.html#idtrack._api.API._require_track">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_require_track</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Track</span><span class="p">,</span> <span class="n">TrackTests</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_require_track</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Track</span> <span class="o">|</span> <span class="n">TrackTests</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return the active tracker or raise a clear error if the graph is not built yet."""</span>
         <span class="n">track</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"track"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">track</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -217,7 +217,7 @@
 
 <div class="viewcode-block" id="API.resolve_organism">
 <a class="viewcode-back" href="../../reference.html#idtrack._api.API.resolve_organism">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">resolve_organism</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tentative_organism_name</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">resolve_organism</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tentative_organism_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""Normalize a tentative organism name and fetch the latest supported Ensembl release.</span>
 
 <span class="sd">        This shields callers from Ensembl naming quirks by resolving a user-provided synonym (e.g. common name,</span>
@@ -249,8 +249,8 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">organism_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">snapshot_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-        <span class="n">genome_assembly</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">ignore_before</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">genome_assembly</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">ignore_before</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"DatabaseManager"</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Create a database manager configured for an organism and a release-bounded snapshot.</span>
 
@@ -304,7 +304,7 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">organism_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">snapshot_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-        <span class="n">genome_assembly</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">genome_assembly</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">return_test</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">calculate_caches</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -358,9 +358,9 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">convert_identifier</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-        <span class="n">from_release</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">to_release</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">final_database</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">from_release</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">to_release</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">final_database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">strategy</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"all"</span><span class="p">,</span> <span class="s2">"best"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"best"</span><span class="p">,</span>
         <span class="n">explain</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
@@ -472,7 +472,7 @@
         <span class="p">)</span>
         <span class="n">target_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">({</span><span class="n">i</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">final_ids_together</span><span class="p">})</span>
 
-        <span class="n">final_database_conv_</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">final_database_conv_</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
             <span class="p">{</span><span class="n">cnt</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"final_conversion"</span><span class="p">][</span><span class="s2">"final_database"</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">cnt</span><span class="p">}</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">no_corresponding</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">no_conversion</span>
             <span class="k">else</span> <span class="p">{</span><span class="kc">None</span><span class="p">}</span>
@@ -481,7 +481,7 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Expected exactly one final database, got: </span><span class="si">{</span><span class="n">final_database_conv_</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="n">final_database_conv</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">final_database_conv_</span><span class="p">))</span>
 
-        <span class="n">final_conf_</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">final_conf_</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span> <span class="o">|</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
             <span class="p">{</span><span class="n">cnt</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">"final_conversion"</span><span class="p">][</span><span class="s2">"final_conversion_confidence"</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">cnt</span><span class="p">}</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">no_corresponding</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">no_conversion</span>
             <span class="k">else</span> <span class="p">{</span><span class="kc">None</span><span class="p">}</span>
@@ -726,7 +726,7 @@
 <a class="viewcode-back" href="../../reference.html#idtrack._api.API.infer_identifier_source">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">infer_identifier_source</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">id_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"assembly_ensembl_release"</span><span class="p">,</span> <span class="n">report_only_winner</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]]:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">"""Infer the most likely source (database/assembly/release) for a heterogeneous identifier list.</span>
 
 <span class="sd">        This helper estimates which origin best explains the given IDs so users can pick a sensible graph configuration</span>

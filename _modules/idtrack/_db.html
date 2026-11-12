@@ -106,7 +106,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
 
@@ -128,7 +128,14 @@
 <span class="sd">        first_version (int): Default version assumed when an ID lacks an explicit version component.</span>
 
 <span class="sd">        connection_timeout (int): TCP connect timeout in seconds used by both FTP and REST clients.</span>
-<span class="sd">        reading_timeout  (int): Socket read timeout in seconds applied to FTP and REST operations.</span>
+<span class="sd">        reading_timeout  (int): Socket read timeout in seconds applied to FTP and REST operations. Raise it (e.g.</span>
+<span class="sd">            ``idtrack.DB.reading_timeout = 120``) on a network where Ensembl answers slowly.</span>
+<span class="sd">        rest_attempts (int): Attempts of every Ensembl REST request (:py:func:`idtrack._ensembl_access.rest_get_json`):</span>
+<span class="sd">            timeouts, connection errors and the HTTP statuses 429, 500, 502, 503 and 504 are retried.</span>
+<span class="sd">        rest_retry_wait (float): Seconds before the second attempt; doubled before each further one (an HTTP</span>
+<span class="sd">            ``Retry-After`` header is honoured when longer, up to 60 s).</span>
+<span class="sd">        rest_species_cache_seconds (float): How long a process keeps the Ensembl species list (and with it the latest</span>
+<span class="sd">            release of each species) before asking Ensembl REST again; one day by default.</span>
 
 <span class="sd">        ensembl_ftp_base (str): Hostname of the Ensembl public FTP mirror.</span>
 <span class="sd">        rest_server_api (str): Root URL of the Ensembl REST API.</span>
@@ -210,8 +217,11 @@
 
     <span class="c1"># FTP and REST API Timeouts. It’s a good practice to set connect timeouts to slightly larger than a multiple of 3,</span>
     <span class="c1"># which is the default TCP packet retransmission window.</span>
-    <span class="n">connection_timeout</span> <span class="o">=</span> <span class="mi">12</span>
-    <span class="n">reading_timeout</span> <span class="o">=</span> <span class="mi">12</span>
+    <span class="n">connection_timeout</span> <span class="o">=</span> <span class="mi">15</span>
+    <span class="n">reading_timeout</span> <span class="o">=</span> <span class="mi">60</span>
+    <span class="n">rest_attempts</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="n">rest_retry_wait</span> <span class="o">=</span> <span class="mf">2.0</span>
+    <span class="n">rest_species_cache_seconds</span> <span class="o">=</span> <span class="mf">86400.0</span>
 
     <span class="c1"># FTP server from which the above databases will be downloaded.</span>
     <span class="n">ensembl_ftp_base</span> <span class="o">=</span> <span class="s2">"ftp.ensembl.org"</span>
@@ -230,12 +240,20 @@
         <span class="mi">5306</span><span class="p">:</span> <span class="mi">48</span><span class="p">,</span>  <span class="c1"># mirror of 3306 (redundancy / load balancing; should serve equivalent core schemas)</span>
         <span class="mi">3337</span><span class="p">:</span> <span class="mi">79</span><span class="p">,</span>
     <span class="p">}</span>
+    <span class="c1"># Ports that serve one assembly only: {port: (organism, assembly key)}. 3337 is Ensembl's GRCh37 archive, and</span>
+    <span class="c1"># human GRCh37 is the one parallel assembly Ensembl maintains there. The archive also carries other assemblies</span>
+    <span class="c1"># forward as frozen copies under its later release numbers (rhesus MMUL_1 as `macaca_mulatta_core_79_10` to</span>
+    <span class="c1"># `_99_10`, where the main servers have Mmul_8.0.1 from 86 and Mmul_10 from 98; pig Sscrofa10.2 after its last</span>
+    <span class="c1"># release 89; mouse GRCm38 likewise). Those copies are not annotation of the releases their names say and are</span>
+    <span class="c1"># not part of a graph: an assembly's releases are those of the main servers and of the HTTPS dumps, which agree.</span>
+    <span class="c1"># The validator lets only the owning assembly list such a port, and the MySQL discovery never reads it for another.</span>
+    <span class="n">mysql_port_assembly</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">3337</span><span class="p">:</span> <span class="p">(</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="mi">37</span><span class="p">)}</span>
     <span class="c1"># Connect timeout for the first (and only) TCP probe of a MySQL port in a process.</span>
     <span class="n">mysql_probe_timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span>
 
     <span class="c1"># Access mode: "auto" (MySQL where reachable, HTTPS dumps otherwise) or "https" (never touch MySQL).</span>
     <span class="c1"># `None` means: read the environment variable `IDTRACK_ENSEMBL_ACCESS`, else "auto".</span>
-    <span class="n">ensembl_access</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">ensembl_access</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">ensembl_access_env_var</span> <span class="o">=</span> <span class="s2">"IDTRACK_ENSEMBL_ACCESS"</span>
     <span class="n">ensembl_access_modes</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"auto"</span><span class="p">,</span> <span class="s2">"https"</span><span class="p">)</span>
 
@@ -260,13 +278,16 @@
         <span class="c1">#   and beyond". Both discovery paths (MySQL and HTTPS dumps) only accept releases inside it. Releases before</span>
         <span class="c1">#   48 are out of reach regardless (`mysql_port_min_release`).</span>
         <span class="c1"># - "Ports" are the MySQL ports to try in preference order; DatabaseManager picks the first port that</span>
-        <span class="c1">#   contains the requested release. "Priority" orders the assemblies of an organism (1 = preferred, newest).</span>
+        <span class="c1">#   contains the requested release. A port of `mysql_port_assembly` may be listed only by its assembly.</span>
+        <span class="c1">#   "Priority" orders the assemblies of an organism (1 = preferred, newest).</span>
         <span class="c1"># - "Name" is the assembly name as Ensembl gives it (`assembly.default` in the core database's `meta`</span>
-        <span class="c1">#   table); it is informative only.</span>
+        <span class="c1">#   table). idtrack does not read it at run time; the live MySQL tests check it against every core database</span>
+        <span class="c1">#   the table attributes to the assembly.</span>
         <span class="s2">"homo_sapiens"</span><span class="p">:</span> <span class="p">{</span>
             <span class="c1"># GRCh38 (Ensembl release 76+; primary assembly since release 76)</span>
             <span class="mi">38</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"GRCh38"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">76</span><span class="p">,</span> <span class="kc">None</span><span class="p">]},</span>
-            <span class="c1"># GRCh37 (Ensembl release 55+; archive since release 76)</span>
+            <span class="c1"># GRCh37 (Ensembl release 55+; archive since release 76): the one parallel assembly Ensembl maintains,</span>
+            <span class="c1"># on its archive port 3337 (`mysql_port_assembly`).</span>
             <span class="c1"># - MySQL port 3337 hosts GRCh37 **release 79 onwards** (archive service).</span>
             <span class="c1"># - Some GRCh37 schemas can also appear on the main ports (3306/5306) for select releases; keep them</span>
             <span class="c1">#   as fallbacks for environments where 3337 is unreachable.</span>
@@ -282,8 +303,7 @@
             <span class="c1"># GRCm39 (Ensembl release 103+; clean handoff from GRCm38 at release 103)</span>
             <span class="mi">39</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"GRCm39"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">103</span><span class="p">,</span> <span class="kc">None</span><span class="p">]},</span>
             <span class="c1"># GRCm38 (Ensembl release 68–102)</span>
-            <span class="c1"># - Port 3337 also hosts a subset of GRCm38 releases (archive mirror); keep it as a fallback.</span>
-            <span class="mi">38</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"GRCm38"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">,</span> <span class="mi">3337</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">68</span><span class="p">,</span> <span class="mi">102</span><span class="p">]},</span>
+            <span class="mi">38</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"GRCm38"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">68</span><span class="p">,</span> <span class="mi">102</span><span class="p">]},</span>
             <span class="c1"># NCBIM37 (Ensembl release 48–67; clean handoff to GRCm38 at release 68)</span>
             <span class="c1"># - Early releases can carry a patch-letter suffix (e.g. `..._37a`) and are handled by DatabaseManager.</span>
             <span class="mi">37</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"NCBIM37"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">48</span><span class="p">,</span> <span class="mi">67</span><span class="p">]},</span>
@@ -292,8 +312,7 @@
             <span class="c1"># Sscrofa11.1 (Ensembl release 90+; clean handoff from Sscrofa10.2 at release 90)</span>
             <span class="mi">111</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"Sscrofa11.1"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">90</span><span class="p">,</span> <span class="kc">None</span><span class="p">]},</span>
             <span class="c1"># Sscrofa10.2 (archive) — Ensembl release 67–89</span>
-            <span class="c1"># - Port 3337 hosts later archive releases (79–99); keep it as a fallback when present.</span>
-            <span class="mi">102</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"Sscrofa10.2"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">,</span> <span class="mi">3337</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">67</span><span class="p">,</span> <span class="mi">89</span><span class="p">]},</span>
+            <span class="mi">102</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"Sscrofa10.2"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">67</span><span class="p">,</span> <span class="mi">89</span><span class="p">]},</span>
             <span class="c1"># Sscrofa9 (historic; clean handoff to Sscrofa10.2 at release 67)</span>
             <span class="c1"># - Ensembl FTP contains releases 56–66 under directory names like</span>
             <span class="c1">#   `sus_scrofa_core_&lt;release&gt;_9&lt;patch&gt;` (e.g. `sus_scrofa_core_60_9d`).</span>
@@ -302,7 +321,7 @@
         <span class="p">},</span>
         <span class="s2">"macaca_mulatta"</span><span class="p">:</span> <span class="p">{</span>
             <span class="c1"># Rhesus macaque. Clean handoffs: MMUL_1 up to 85, Mmul_8.0.1 86–97, Mmul_10 from 98 (one assembly per</span>
-            <span class="c1"># release in the dump listings). Ports 3306/5306 serve releases 48+; 3337 hosts only the GRCh37 archive.</span>
+            <span class="c1"># release in the dump listings). Ports 3306/5306 serve releases 48+ (3337: see `mysql_port_assembly`).</span>
             <span class="c1"># Mmul_10 (Ensembl release 98+)</span>
             <span class="mi">10</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"Mmul_10"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">98</span><span class="p">,</span> <span class="kc">None</span><span class="p">]},</span>
             <span class="c1"># Mmul_8.0.1 (Ensembl release 86–97)</span>
@@ -406,11 +425,11 @@
 
 <span class="sd">        Rules: organism names are lower-case Ensembl production names; every organism has at least one assembly;</span>
 <span class="sd">        assembly keys are positive integers; each entry carries ``Ports`` (known MySQL ports, see</span>
-<span class="sd">        :py:attr:`mysql_port_min_release`), ``Priority`` and ``ReleaseRange``, plus optionally ``Name`` and</span>
-<span class="sd">        ``DbSuffix`` and nothing else; priorities are unique per organism and start at 1; release ranges are</span>
-<span class="sd">        ``[first, last]`` with ``last`` ``None`` or not smaller than ``first``; entries of one organism that share a</span>
-<span class="sd">        ``DbSuffix`` have non-overlapping release ranges; the symbol-database table names exactly the organisms of</span>
-<span class="sd">        the organism table.</span>
+<span class="sd">        :py:attr:`mysql_port_min_release`, and none that :py:attr:`mysql_port_assembly` reserves for another</span>
+<span class="sd">        assembly), ``Priority`` and ``ReleaseRange``, plus optionally ``Name`` and ``DbSuffix`` and nothing else;</span>
+<span class="sd">        priorities are unique per organism and start at 1; release ranges are ``[first, last]`` with ``last``</span>
+<span class="sd">        ``None`` or not smaller than ``first``; entries of one organism that share a ``DbSuffix`` have</span>
+<span class="sd">        non-overlapping release ranges; the symbol-database table names exactly the organisms of the organism table.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            table: Candidate value of :py:attr:`assembly_mysqlport_priority`.</span>
@@ -457,6 +476,14 @@
                 <span class="k">if</span> <span class="n">unknown_ports</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                         <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: unknown MySQL ports </span><span class="si">{</span><span class="n">unknown_ports</span><span class="si">}</span><span class="s2">; known: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">mysql_port_min_release</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
+                    <span class="p">)</span>
+                <span class="n">foreign_ports</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+                    <span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">ports</span> <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">mysql_port_assembly</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="n">key</span><span class="p">))</span> <span class="o">!=</span> <span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">foreign_ports</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: MySQL ports </span><span class="si">{</span><span class="n">foreign_ports</span><span class="si">}</span><span class="s2"> serve only "</span>
+                        <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="p">[</span><span class="bp">cls</span><span class="o">.</span><span class="n">mysql_port_assembly</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">foreign_ports</span><span class="p">]</span><span class="si">}</span><span class="s2"> (see `DB.mysql_port_assembly`)."</span>
                     <span class="p">)</span>
 
                 <span class="n">priority</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"Priority"</span><span class="p">]</span>
@@ -552,7 +579,7 @@
         <span class="bp">cls</span><span class="p">,</span>
         <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">assemblies</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
-        <span class="n">symbol_databases</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">symbol_databases</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Add an organism to the organism table, or replace its entry, and recompute the derived attributes.</span>
 
@@ -636,7 +663,7 @@
 <div class="viewcode-block" id="DB.release_range">
 <a class="viewcode-back" href="../../reference.html#idtrack._db.DB.release_range">[docs]</a>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">release_range</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">release_range</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""Return the configured ``(first, last)`` release of an assembly; ``last`` is ``None`` when open-ended."""</span>
         <span class="n">first</span><span class="p">,</span> <span class="n">last</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_assembly_entry</span><span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="n">assembly</span><span class="p">)[</span><span class="s2">"ReleaseRange"</span><span class="p">]</span>
         <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">first</span><span class="p">),</span> <span class="p">(</span><span class="kc">None</span> <span class="k">if</span> <span class="n">last</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">int</span><span class="p">(</span><span class="n">last</span><span class="p">))</span></div>
@@ -645,7 +672,7 @@
 <div class="viewcode-block" id="DB.assembly_name">
 <a class="viewcode-back" href="../../reference.html#idtrack._db.DB.assembly_name">[docs]</a>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">assembly_name</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">assembly_name</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return Ensembl's name of an assembly (e.g. ``"Mmul_10"``), or ``None`` if the table does not give one."""</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_assembly_entry</span><span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="n">assembly</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Name"</span><span class="p">)</span></div>
 
@@ -687,7 +714,7 @@
 <div class="viewcode-block" id="DB.assembly_for_core_db">
 <a class="viewcode-back" href="../../reference.html#idtrack._db.DB.assembly_for_core_db">[docs]</a>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">assembly_for_core_db</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">db_suffix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">assembly_for_core_db</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">db_suffix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return the assembly key whose ``DbSuffix`` and ``ReleaseRange`` match a core database, else ``None``.</span>
 
 <span class="sd">        Args:</span>
@@ -720,183 +747,44 @@
     <span class="k">pass</span>
 
 
-<span class="n">MISSING_VALUES</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">"na"</span><span class="p">,</span>
-    <span class="s2">"NA"</span><span class="p">,</span>
-    <span class="s2">"Na"</span><span class="p">,</span>
-    <span class="s2">"n/a"</span><span class="p">,</span>
-    <span class="s2">"N/A"</span><span class="p">,</span>
-    <span class="s2">"n.a."</span><span class="p">,</span>
-    <span class="s2">"N.A."</span><span class="p">,</span>
-    <span class="s2">"na."</span><span class="p">,</span>
-    <span class="s2">"Na."</span><span class="p">,</span>
-    <span class="s2">"NA."</span><span class="p">,</span>
-    <span class="s2">"n-a"</span><span class="p">,</span>
-    <span class="s2">"N-A"</span><span class="p">,</span>
-    <span class="s2">"Na-"</span><span class="p">,</span>
-    <span class="s2">"NA-"</span><span class="p">,</span>
-    <span class="s2">"n_a"</span><span class="p">,</span>
-    <span class="s2">"N_A"</span><span class="p">,</span>
-    <span class="s2">"Na_"</span><span class="p">,</span>
-    <span class="s2">"NA_"</span><span class="p">,</span>
-    <span class="s2">"none"</span><span class="p">,</span>
-    <span class="s2">"None"</span><span class="p">,</span>
-    <span class="s2">"NONE"</span><span class="p">,</span>
-    <span class="s2">"non"</span><span class="p">,</span>
-    <span class="s2">"Non"</span><span class="p">,</span>
-    <span class="s2">"NON"</span><span class="p">,</span>
-    <span class="s2">"void"</span><span class="p">,</span>
-    <span class="s2">"Void"</span><span class="p">,</span>
-    <span class="s2">"VOID"</span><span class="p">,</span>
-    <span class="s2">"blank"</span><span class="p">,</span>
-    <span class="s2">"Blank"</span><span class="p">,</span>
-    <span class="s2">"BLANK"</span><span class="p">,</span>
-    <span class="s2">"omitted"</span><span class="p">,</span>
-    <span class="s2">"Omitted"</span><span class="p">,</span>
-    <span class="s2">"OMITTED"</span><span class="p">,</span>
-    <span class="s2">"NaN"</span><span class="p">,</span>
-    <span class="s2">"nan"</span><span class="p">,</span>
-    <span class="s2">"Nan"</span><span class="p">,</span>
-    <span class="s2">"NAN"</span><span class="p">,</span>
-    <span class="s2">"-"</span><span class="p">,</span>
-    <span class="s2">"_"</span><span class="p">,</span>
-    <span class="s2">"--"</span><span class="p">,</span>
-    <span class="s2">"__"</span><span class="p">,</span>
-    <span class="s2">"---"</span><span class="p">,</span>
-    <span class="s2">"___"</span><span class="p">,</span>
-    <span class="s2">"null"</span><span class="p">,</span>
-    <span class="s2">"Null"</span><span class="p">,</span>
-    <span class="s2">"NULL"</span><span class="p">,</span>
-    <span class="s2">"nil"</span><span class="p">,</span>
-    <span class="s2">"Nil"</span><span class="p">,</span>
-    <span class="s2">"NIL"</span><span class="p">,</span>
-    <span class="s2">"undefined"</span><span class="p">,</span>
-    <span class="s2">"Undefined"</span><span class="p">,</span>
-    <span class="s2">"UnDefined"</span><span class="p">,</span>
-    <span class="s2">"UNDEFINED"</span><span class="p">,</span>
-    <span class="s2">"unassigned"</span><span class="p">,</span>
-    <span class="s2">"Unassigned"</span><span class="p">,</span>
-    <span class="s2">"UnAssigned"</span><span class="p">,</span>
-    <span class="s2">"UNASSIGNED"</span><span class="p">,</span>
-    <span class="s2">"unspecified"</span><span class="p">,</span>
-    <span class="s2">"Unspecified"</span><span class="p">,</span>
-    <span class="s2">"UNSPECIFIED"</span><span class="p">,</span>
-    <span class="s2">""</span><span class="p">,</span>
-    <span class="s2">" "</span><span class="p">,</span>
-    <span class="s2">"  "</span><span class="p">,</span>
-    <span class="s2">"   "</span><span class="p">,</span>
-    <span class="s2">"    "</span><span class="p">,</span>
-    <span class="s2">"."</span><span class="p">,</span>
-    <span class="s2">".."</span><span class="p">,</span>
-    <span class="s2">"..."</span><span class="p">,</span>
-    <span class="s2">"...."</span><span class="p">,</span>
-    <span class="s2">"?"</span><span class="p">,</span>
-    <span class="s2">"??"</span><span class="p">,</span>
-    <span class="s2">"???"</span><span class="p">,</span>
-    <span class="s2">"????"</span><span class="p">,</span>
-    <span class="s2">"missing"</span><span class="p">,</span>
-    <span class="s2">"Missing"</span><span class="p">,</span>
-    <span class="s2">"MISSING"</span><span class="p">,</span>
-    <span class="s2">"absent"</span><span class="p">,</span>
-    <span class="s2">"Absent"</span><span class="p">,</span>
-    <span class="s2">"ABSENT"</span><span class="p">,</span>
-    <span class="s2">"EMPTY"</span><span class="p">,</span>
-    <span class="s2">"empty"</span><span class="p">,</span>
-    <span class="s2">"Empty"</span><span class="p">,</span>
-    <span class="s2">"not available"</span><span class="p">,</span>
-    <span class="s2">"Not Available"</span><span class="p">,</span>
-    <span class="s2">"NOT AVAILABLE"</span><span class="p">,</span>
-    <span class="s2">"notavailable"</span><span class="p">,</span>
-    <span class="s2">"NotAvailable"</span><span class="p">,</span>
-    <span class="s2">"NOTAVAILABLE"</span><span class="p">,</span>
-    <span class="s2">"unknown"</span><span class="p">,</span>
-    <span class="s2">"Unknown"</span><span class="p">,</span>
-    <span class="s2">"UnKnown"</span><span class="p">,</span>
-    <span class="s2">"UNKNOWN"</span><span class="p">,</span>
-    <span class="s2">"not known"</span><span class="p">,</span>
-    <span class="s2">"Not Known"</span><span class="p">,</span>
-    <span class="s2">"NOT KNOWN"</span><span class="p">,</span>
-    <span class="s2">"notknown"</span><span class="p">,</span>
-    <span class="s2">"NotKnown"</span><span class="p">,</span>
-    <span class="s2">"NOTKNOWN"</span><span class="p">,</span>
-    <span class="s2">"undisclosed"</span><span class="p">,</span>
-    <span class="s2">"Undisclosed"</span><span class="p">,</span>
-    <span class="s2">"UNDISCLOSED"</span><span class="p">,</span>
-    <span class="s2">"not disclosed"</span><span class="p">,</span>
-    <span class="s2">"Not Disclosed"</span><span class="p">,</span>
-    <span class="s2">"NOT DISCLOSED"</span><span class="p">,</span>
-    <span class="s2">"notdisclosed"</span><span class="p">,</span>
-    <span class="s2">"NotDisclosed"</span><span class="p">,</span>
-    <span class="s2">"NOTDISCLOSED"</span><span class="p">,</span>
-    <span class="s2">"not applicable"</span><span class="p">,</span>
-    <span class="s2">"Not Applicable"</span><span class="p">,</span>
-    <span class="s2">"NOT APPLICABLE"</span><span class="p">,</span>
-    <span class="s2">"notapplicable"</span><span class="p">,</span>
-    <span class="s2">"NotApplicable"</span><span class="p">,</span>
-    <span class="s2">"NOTAPPLICABLE"</span><span class="p">,</span>
-    <span class="s2">"to be filled"</span><span class="p">,</span>
-    <span class="s2">"To Be Filled"</span><span class="p">,</span>
-    <span class="s2">"TO BE FILLED"</span><span class="p">,</span>
-    <span class="s2">"to be determined"</span><span class="p">,</span>
-    <span class="s2">"To Be Determined"</span><span class="p">,</span>
-    <span class="s2">"TO BE DETERMINED"</span><span class="p">,</span>
-    <span class="s2">"tbd"</span><span class="p">,</span>
-    <span class="s2">"TBD"</span><span class="p">,</span>
-    <span class="s2">"tba"</span><span class="p">,</span>
-    <span class="s2">"TBA"</span><span class="p">,</span>
-    <span class="s2">"n.k."</span><span class="p">,</span>
-    <span class="s2">"N.K."</span><span class="p">,</span>
-    <span class="s2">"n.k"</span><span class="p">,</span>
-    <span class="s2">"N.K"</span><span class="p">,</span>
-    <span class="s2">"n/k"</span><span class="p">,</span>
-    <span class="s2">"N/K"</span><span class="p">,</span>
-    <span class="s2">"n/k/a"</span><span class="p">,</span>
-    <span class="s2">"N/K/A"</span><span class="p">,</span>
-    <span class="s2">"n.d."</span><span class="p">,</span>
-    <span class="s2">"N.D."</span><span class="p">,</span>
-    <span class="s2">"n.d"</span><span class="p">,</span>
-    <span class="s2">"N.D"</span><span class="p">,</span>
-    <span class="s2">"n/d"</span><span class="p">,</span>
-    <span class="s2">"N/D"</span><span class="p">,</span>
-    <span class="s2">"n/d/a"</span><span class="p">,</span>
-    <span class="s2">"N/D/A"</span><span class="p">,</span>
-    <span class="s2">"n.a.p."</span><span class="p">,</span>
-    <span class="s2">"N.A.P."</span><span class="p">,</span>
-    <span class="s2">"n.a.p"</span><span class="p">,</span>
-    <span class="s2">"N.A.P"</span><span class="p">,</span>
-    <span class="s2">"n/a/p"</span><span class="p">,</span>
-    <span class="s2">"N/A/P"</span><span class="p">,</span>
-    <span class="s2">"n/a/p/a"</span><span class="p">,</span>
-    <span class="s2">"N/A/P/A"</span><span class="p">,</span>
-    <span class="s2">"xx"</span><span class="p">,</span>
-    <span class="s2">"XX"</span><span class="p">,</span>
-    <span class="s2">"x"</span><span class="p">,</span>
-    <span class="s2">"X"</span><span class="p">,</span>
-    <span class="s2">"xxx"</span><span class="p">,</span>
-    <span class="s2">"XXX"</span><span class="p">,</span>
-    <span class="s2">"xxxx"</span><span class="p">,</span>
-    <span class="s2">"XXXX"</span><span class="p">,</span>
-    <span class="s2">"N/M"</span><span class="p">,</span>
-    <span class="s2">"n/m"</span><span class="p">,</span>
-    <span class="s2">"N.M."</span><span class="p">,</span>
-    <span class="s2">"n.m."</span><span class="p">,</span>
-    <span class="s2">"n.m"</span><span class="p">,</span>
-    <span class="s2">"N.M"</span><span class="p">,</span>
-    <span class="s2">"N/C"</span><span class="p">,</span>
-    <span class="s2">"n/c"</span><span class="p">,</span>
-    <span class="s2">"N.C."</span><span class="p">,</span>
-    <span class="s2">"n.c."</span><span class="p">,</span>
-    <span class="s2">"n.c"</span><span class="p">,</span>
-    <span class="s2">"N.C"</span><span class="p">,</span>
-    <span class="s2">"n.s."</span><span class="p">,</span>
-    <span class="s2">"N.S."</span><span class="p">,</span>
-    <span class="s2">"n.s"</span><span class="p">,</span>
-    <span class="s2">"N.S"</span><span class="p">,</span>
-    <span class="s2">"n/s"</span><span class="p">,</span>
-    <span class="s2">"N/S"</span><span class="p">,</span>
-    <span class="s2">"n/s/a"</span><span class="p">,</span>
-    <span class="s2">"N/S/A"</span><span class="p">,</span>
-<span class="p">]</span>
+<div class="viewcode-block" id="EnsemblRestError">
+<a class="viewcode-back" href="../../reference.html#idtrack._db.EnsemblRestError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">EnsemblRestError</span><span class="p">(</span><span class="ne">ConnectionError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Raised when Ensembl REST cannot be reached or does not give a usable answer after every attempt.</span>
+
+<span class="sd">    The message names the URL, the attempts, the timeouts in force and how to change them</span>
+<span class="sd">    (:py:attr:`DB.connection_timeout`, :py:attr:`DB.reading_timeout`, :py:attr:`DB.rest_attempts`).</span>
+<span class="sd">    """</span></div>
+
+
+
+<div class="viewcode-block" id="EnsemblSchemaError">
+<a class="viewcode-back" href="../../reference.html#idtrack._db.EnsemblSchemaError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">EnsemblSchemaError</span><span class="p">(</span><span class="ne">LookupError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Raised when an Ensembl core database has no such table, or the table lacks requested columns.</span>
+
+<span class="sd">    It states a fact about the schema of one release (older releases keep stable ids in ``&lt;form&gt;_stable_id``</span>
+<span class="sd">    tables, and some columns were renamed), so callers may fall back to the older layout when they catch it. A</span>
+<span class="sd">    failed download, a connection error or a failure to cache a table never raises it; those keep their own</span>
+<span class="sd">    exception, so that a fallback cannot hide them.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        table (str): Name of the table.</span>
+<span class="sd">        missing_columns (tuple[str, ...]): Requested columns the table lacks; empty when the table itself is absent.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">table</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">missing_columns</span><span class="p">:</span> <span class="nb">tuple</span> <span class="o">=</span> <span class="p">()):</span>
+<span class="w">        </span><span class="sd">"""Record the table and the missing columns next to the message."""</span>
+        <span class="c1"># All arguments go to the base class, so that pickling and copying rebuild the same exception.</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">table</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">missing_columns</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">message</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span> <span class="o">=</span> <span class="n">table</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">missing_columns</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">missing_columns</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the message alone (the base class would show all arguments)."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">message</span></div>
+
 </pre></div>
 
            </div>

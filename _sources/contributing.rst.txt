@@ -76,7 +76,7 @@ Bug Report Template
 
     ## Environment
     - IDTrack version: 0.0.x (run `python -c "import idtrack; print(idtrack.__version__)"`)
-    - Python version: 3.11.x (run `python --version`)
+    - Python version: 3.12.x (run `python --version`)
     - OS: Ubuntu 22.04 / macOS 14.x / Windows 11
 
     ## Description
@@ -132,7 +132,7 @@ Before setting up your development environment, ensure you have:
     * - Requirement
       - Details
     * - **Python**
-      - 3.9 or later (3.11 recommended)
+      - 3.12 to 3.15
     * - **Git**
       - For version control
     * - **Pandoc**
@@ -262,7 +262,7 @@ Run tests with a specific Python version:
 
 .. code-block:: console
 
-    $ nox --session=tests --python=3.11
+    $ nox --session=tests --python=3.12
 
 Run Tests Directly with pytest
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -568,9 +568,10 @@ from it. Rhesus and cynomolgus macaque were added this way. The recipe:
    The key equals Ensembl's code where that is unambiguous. Where Ensembl reuses a code for two assemblies of
    the organism (rhesus ``_10`` is MMUL_1 up to 85 and Mmul_10 from 98), the earlier assembly gets its own key
    and names the shared code in ``DbSuffix``; their ``ReleaseRange`` values must not overlap. ``Ports`` are the
-   public MySQL ports in preference order (3306 and 5306 serve release 48 onwards; 3337 hosts the GRCh37
-   archive); ``Priority`` 1 is the preferred, newest assembly. Add the organism's symbol databases to
-   ``DB.symbol_databases`` (e.g. ``("VGNC Symbol", "HGNC Symbol")``). The table is validated at import.
+   public MySQL ports in preference order (3306 and 5306 serve release 48 onwards; 3337 is the GRCh37 archive
+   and may be listed for human GRCh37 only, see ``DB.mysql_port_assembly``); ``Priority`` 1 is the preferred, newest
+   assembly. Add the organism's symbol databases to ``DB.symbol_databases`` (e.g. ``("VGNC Symbol", "HGNC
+   Symbol")``). The table is validated at import.
 
 3. **Try it without editing the package.** ``idtrack.DB.register_organism(name, assemblies,
    symbol_databases)`` adds the same entry for the running Python session, validates it, and recomputes

@@ -274,7 +274,7 @@ under the <a class="reference external" href="https://opensource.org/licenses/BS
 <h3>Bug Report Template<a class="headerlink" href="#bug-report-template" title="Link to this heading"></a></h3>
 <div class="highlight-markdown notranslate"><div class="highlight"><pre><span></span><span class="gu">## Environment</span>
 <span class="k">-</span><span class="w"> </span>IDTrack version: 0.0.x (run <span class="sb">`python -c "import idtrack; print(idtrack.__version__)"`</span>)
-<span class="k">-</span><span class="w"> </span>Python version: 3.11.x (run <span class="sb">`python --version`</span>)
+<span class="k">-</span><span class="w"> </span>Python version: 3.12.x (run <span class="sb">`python --version`</span>)
 <span class="k">-</span><span class="w"> </span>OS: Ubuntu 22.04 / macOS 14.x / Windows 11
 
 <span class="gu">## Description</span>
@@ -333,7 +333,7 @@ This allows maintainers to discuss the approach and avoid duplicate effort.</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><strong>Python</strong></p></td>
-<td><p>3.9 or later (3.11 recommended)</p></td>
+<td><p>3.12 to 3.15</p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>Git</strong></p></td>
 <td><p>For version control</p></td>
@@ -451,7 +451,7 @@ themselves when Ensembl is not reachable):</p>
 </pre></div>
 </div>
 <p>Run tests with a specific Python version:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox<span class="w"> </span>--session<span class="o">=</span>tests<span class="w"> </span>--python<span class="o">=</span><span class="m">3</span>.11
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nox<span class="w"> </span>--session<span class="o">=</span>tests<span class="w"> </span>--python<span class="o">=</span><span class="m">3</span>.12
 </pre></div>
 </div>
 </section>
@@ -749,9 +749,10 @@ assembly (a clean handoff) or note where two overlap (as human GRCh37 and GRCh38
 <p>The key equals Ensembl’s code where that is unambiguous. Where Ensembl reuses a code for two assemblies of
 the organism (rhesus <code class="docutils literal notranslate"><span class="pre">_10</span></code> is MMUL_1 up to 85 and Mmul_10 from 98), the earlier assembly gets its own key
 and names the shared code in <code class="docutils literal notranslate"><span class="pre">DbSuffix</span></code>; their <code class="docutils literal notranslate"><span class="pre">ReleaseRange</span></code> values must not overlap. <code class="docutils literal notranslate"><span class="pre">Ports</span></code> are the
-public MySQL ports in preference order (3306 and 5306 serve release 48 onwards; 3337 hosts the GRCh37
-archive); <code class="docutils literal notranslate"><span class="pre">Priority</span></code> 1 is the preferred, newest assembly. Add the organism’s symbol databases to
-<code class="docutils literal notranslate"><span class="pre">DB.symbol_databases</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">(&quot;VGNC</span> <span class="pre">Symbol&quot;,</span> <span class="pre">&quot;HGNC</span> <span class="pre">Symbol&quot;)</span></code>). The table is validated at import.</p>
+public MySQL ports in preference order (3306 and 5306 serve release 48 onwards; 3337 is the GRCh37 archive
+and may be listed for human GRCh37 only, see <code class="docutils literal notranslate"><span class="pre">DB.mysql_port_assembly</span></code>); <code class="docutils literal notranslate"><span class="pre">Priority</span></code> 1 is the preferred, newest
+assembly. Add the organism’s symbol databases to <code class="docutils literal notranslate"><span class="pre">DB.symbol_databases</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">(&quot;VGNC</span> <span class="pre">Symbol&quot;,</span> <span class="pre">&quot;HGNC</span>
+<span class="pre">Symbol&quot;)</span></code>). The table is validated at import.</p>
 </li>
 <li><p><strong>Try it without editing the package.</strong> <code class="docutils literal notranslate"><span class="pre">idtrack.DB.register_organism(name,</span> <span class="pre">assemblies,</span>
 <span class="pre">symbol_databases)</span></code> adds the same entry for the running Python session, validates it, and recomputes

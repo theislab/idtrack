@@ -104,12 +104,12 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._ensembl_access</span><span class="w"> </span><span class="kn">import</span> <span class="n">rest_get_json</span>
 
 
 <div class="viewcode-block" id="VerifyOrganism">
@@ -123,9 +123,13 @@
 <span class="sd">    case-insensitive on both sides. A query equal to a formal name (also written with spaces, e.g.</span>
 <span class="sd">    ``"Macaca mulatta"``) or to a taxon ID is never ambiguous: a taxon ID that Ensembl also gives to strains or</span>
 <span class="sd">    breeds resolves to the species-level entry (``9823`` → ``sus_scrofa``). Any other synonym that several species</span>
-<span class="sd">    share (``"pig"`` is the common name of every pig breed) raises an error that lists the candidates.  Because the mapping is</span>
-<span class="sd">    refreshed on every instantiation through a live call to the Ensembl REST API, downstream workflows in *idtrack*</span>
-<span class="sd">    always rely on up-to-date metadata rather than a possibly stale local cache.</span>
+<span class="sd">    share (``"pig"`` is the common name of every pig breed) raises an error that lists the candidates.</span>
+
+<span class="sd">    The species list comes from one call to the Ensembl REST API per process and day (``/info/species``, see</span>
+<span class="sd">    :py:func:`idtrack._ensembl_access.rest_get_json` and :py:attr:`idtrack.DB.rest_species_cache_seconds`), made</span>
+<span class="sd">    only when it is needed: the formal name of an organism</span>
+<span class="sd">    configured in idtrack (:py:attr:`idtrack.DB.supported_organisms`, also written with spaces) resolves without the</span>
+<span class="sd">    network; synonyms, taxon IDs and the latest release need it.</span>
 
 <span class="sd">    After construction the instance offers two high-level helpers::</span>
 
@@ -133,7 +137,7 @@
 <span class="sd">        &gt;&gt;&gt; resolver.get_formal_name()      # 'homo_sapiens'</span>
 <span class="sd">        &gt;&gt;&gt; resolver.get_latest_release()   # 117  (example)</span>
 
-<span class="sd">    Both helpers are backed by two public dataframes created during initialisation:</span>
+<span class="sd">    Both helpers are backed by two public dataframes, loaded on first use:</span>
 
 <span class="sd">    * :py:attr:`~VerifyOrganism.name_synonyms_dataframe` — maps every synonym returned by the REST service to the chosen</span>
 <span class="sd">      formal name and flags synonyms that are ambiguous across species.</span>
@@ -141,13 +145,11 @@
 <span class="sd">      Ensembl release number.</span>
 <span class="sd">    """</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">organism_query</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]):</span>
-<span class="w">        </span><span class="sd">"""Initialise the resolver and pre-fetch synonym/release tables from the Ensembl REST API.</span>
+    <span class="c1"># Species tables per REST URL with the time they were fetched; shared by the instances of a process.</span>
+    <span class="n">_species_cache</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{}</span>
 
-<span class="sd">        The constructor immediately invokes :py:meth:`~VerifyOrganism.fetch_organism_and_latest_release`, downloading</span>
-<span class="sd">        the complete species list from ``{DB.rest_server_api}{DB.rest_server_ext}`` so that all subsequent look-ups run</span>
-<span class="sd">        entirely in-memory.  Any exceptions raised during that fetch are allowed to propagate unchanged so that callers</span>
-<span class="sd">        can handle network or data-quality issues explicitly.</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">organism_query</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Initialise the resolver; nothing is fetched until a look-up needs the Ensembl species list.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            organism_query (str | int): Organism identifier supplied by the user—common name (``"human"``),</span>
@@ -157,12 +159,46 @@
 <span class="sd">        """</span>
         <span class="c1"># Instance attributes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"verify_organism"</span><span class="p">)</span>
-
-        <span class="c1"># Fetch the latest information from the Ensembl resources regarding</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">organism_query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">organism_query</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">name_synonyms_dataframe</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release_dataframe</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fetch_organism_and_latest_release</span><span class="p">(</span>
-            <span class="n">connect_timeout</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_timeout</span><span class="p">,</span> <span class="n">read_timeout</span><span class="o">=</span><span class="n">DB</span><span class="o">.</span><span class="n">reading_timeout</span>
-        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">name_synonyms_dataframe</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Synonym table of every Ensembl species (see :py:meth:`fetch_organism_and_latest_release`)."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_species_tables</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">ensembl_release_dataframe</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Latest Ensembl release of every species, indexed by formal name."""</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_species_tables</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+
+<div class="viewcode-block" id="VerifyOrganism._species_tables">
+<a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism._species_tables">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_species_tables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""Return the species tables of this process.</span>
+
+<span class="sd">        They are fetched at the first need and again once they are older than</span>
+<span class="sd">        :py:attr:`idtrack.DB.rest_species_cache_seconds`, so that a long-running process learns of a new release.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple[pandas.DataFrame, pandas.DataFrame]: See :py:meth:`fetch_organism_and_latest_release`.</span>
+<span class="sd">        """</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">rest_server_api</span> <span class="o">+</span> <span class="n">DB</span><span class="o">.</span><span class="n">rest_server_ext</span>
+        <span class="n">cached</span> <span class="o">=</span> <span class="n">VerifyOrganism</span><span class="o">.</span><span class="n">_species_cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cached</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="n">cached</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="nb">float</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">rest_species_cache_seconds</span><span class="p">):</span>
+            <span class="n">cached</span> <span class="o">=</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">fetch_organism_and_latest_release</span><span class="p">())</span>
+            <span class="n">VerifyOrganism</span><span class="o">.</span><span class="n">_species_cache</span><span class="p">[</span><span class="n">url</span><span class="p">]</span> <span class="o">=</span> <span class="n">cached</span>
+        <span class="k">return</span> <span class="n">cached</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="VerifyOrganism._configured_formal_name">
+<a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism._configured_formal_name">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_configured_formal_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the query as the formal name of a configured organism (no network), else ``None``."""</span>
+        <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">organism_query</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[\s\-]+"</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism_query</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">supported_organisms</span><span class="p">:</span>
+                <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
 
 <div class="viewcode-block" id="VerifyOrganism.get_latest_release">
 <a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism.get_latest_release">[docs]</a>
@@ -185,7 +221,7 @@
 <div class="viewcode-block" id="VerifyOrganism.normalize">
 <a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism.normalize">[docs]</a>
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return the matching key of a query or synonym: ``str(value)``, stripped and lower-cased."""</span>
         <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span></div>
 
@@ -198,7 +234,7 @@
 <span class="sd">        Resolution, in this order (all comparisons on normalised, lower-case strings):</span>
 
 <span class="sd">        1. the query is a formal name (``"homo_sapiens"``), also with spaces or hyphens for underscores</span>
-<span class="sd">           (``"Macaca mulatta"``);</span>
+<span class="sd">           (``"Macaca mulatta"``); for an organism configured in idtrack this needs no network;</span>
 <span class="sd">        2. the query is a taxon ID: the organism with that ID, or—when Ensembl gives the ID to several strains or</span>
 <span class="sd">           breeds—the species-level entry (the formal name of two words, ``sus_scrofa`` for ``9823``);</span>
 <span class="sd">        3. any other synonym of :py:data:`~VerifyOrganism.name_synonyms_dataframe` (common names, display names,</span>
@@ -212,6 +248,10 @@
 <span class="sd">            ValueError: If the query matches more than one organism (an ambiguous synonym); the message lists the</span>
 <span class="sd">                candidates.</span>
 <span class="sd">        """</span>
+        <span class="n">configured</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_configured_formal_name</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">configured</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">configured</span>
+
         <span class="n">query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism_query</span>
         <span class="n">cm</span> <span class="o">=</span> <span class="s2">"Please inspect 'name_synonyms_dataframe' variable of this instance for troubleshooting."</span>
         <span class="n">formal_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ensembl_release_dataframe</span><span class="o">.</span><span class="n">index</span>
@@ -243,9 +283,7 @@
 
 <div class="viewcode-block" id="VerifyOrganism.fetch_organism_and_latest_release">
 <a class="viewcode-back" href="../../reference.html#idtrack._verify_organism.VerifyOrganism.fetch_organism_and_latest_release">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_organism_and_latest_release</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">connect_timeout</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">read_timeout</span><span class="p">:</span> <span class="nb">int</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_organism_and_latest_release</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""Query the Ensembl REST API once and build lookup tables for species synonyms and latest releases.</span>
 
 <span class="sd">        This internal utility performs a single call to ``/info/species`` on the Ensembl REST server, parses the</span>
@@ -257,40 +295,24 @@
 <span class="sd">        * ``latest_ensembl_releases_df`` - indexed by ``formal_name`` and holding a single ``ensembl_release``</span>
 <span class="sd">            integer column.</span>
 
-<span class="sd">        Consolidating the REST query in one place avoids repeated network traffic and provides a cache-friendly</span>
-<span class="sd">        structure for subsequent lookups.</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            connect_timeout (int): Seconds to wait while establishing the TCP connection to the Ensembl server.</span>
-<span class="sd">            read_timeout (int): Seconds to wait for the server to send the full response after the connection</span>
-<span class="sd">                has been established.</span>
+<span class="sd">        The request uses the timeouts and retries of :py:func:`idtrack._ensembl_access.rest_get_json`, whose</span>
+<span class="sd">        :py:class:`idtrack._db.EnsemblRestError` propagates when Ensembl does not answer</span>
+<span class="sd">        (:py:attr:`idtrack.DB.connection_timeout`, :py:attr:`idtrack.DB.reading_timeout`,</span>
+<span class="sd">        :py:attr:`idtrack.DB.rest_attempts`). :py:meth:`_species_tables` keeps the result for the process.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            tuple[pandas.DataFrame, pandas.DataFrame]:</span>
 <span class="sd">                ``(name_synonyms_df, latest_ensembl_releases_df)`` as described above.</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            TimeoutError: If the combined *(connect_timeout, read_timeout)* limit is exceeded.</span>
 <span class="sd">            ValueError: If the JSON schema differs from the expected ``{"species": [...]}`` structure or required</span>
 <span class="sd">                keys are missing.</span>
 <span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Ensembl Rest API query to get the organism names and associated releases."</span><span class="p">)</span>
-
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">with</span> <span class="n">requests</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>  <span class="c1"># Create a session</span>
-                <span class="k">with</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-                    <span class="n">DB</span><span class="o">.</span><span class="n">rest_server_api</span> <span class="o">+</span> <span class="n">DB</span><span class="o">.</span><span class="n">rest_server_ext</span><span class="p">,</span>
-                    <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s2">"Content-Type"</span><span class="p">:</span> <span class="s2">"application/json"</span><span class="p">},</span>
-                    <span class="n">timeout</span><span class="o">=</span><span class="p">(</span><span class="n">connect_timeout</span><span class="p">,</span> <span class="n">read_timeout</span><span class="p">),</span>
-                <span class="p">)</span> <span class="k">as</span> <span class="n">r</span><span class="p">:</span>  <span class="c1"># Connect to the REST API.</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="n">r</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
-                        <span class="c1"># If everything is not fine regarding the response, raise an error.</span>
-                        <span class="n">r</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
-                    <span class="n">decoded_results</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s2">"species"</span><span class="p">]</span>  <span class="c1"># Otherwise decode the json into a dictionary.</span>
-
-        <span class="k">except</span> <span class="p">(</span><span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ReadTimeout</span><span class="p">,</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ConnectTimeout</span><span class="p">)</span> <span class="k">as</span> <span class="n">esc</span><span class="p">:</span>
-            <span class="c1"># Raise an exception if it takes too long to get the data from Ensembl REST API.</span>
-            <span class="k">raise</span> <span class="ne">TimeoutError</span><span class="p">(</span><span class="s2">"Internet connection is slow or server does not respond!"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">esc</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="n">rest_get_json</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">rest_server_ext</span><span class="p">,</span> <span class="n">what</span><span class="o">=</span><span class="s2">"the list of species"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"species"</span><span class="p">),</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unexpected Ensembl REST payload for </span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">rest_server_ext</span><span class="si">!r}</span><span class="s2">: no 'species' list."</span><span class="p">)</span>
+        <span class="n">decoded_results</span> <span class="o">=</span> <span class="n">payload</span><span class="p">[</span><span class="s2">"species"</span><span class="p">]</span>
 
         <span class="c1"># Process the resulting response.</span>
         <span class="n">name_synonyms</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[]</span>
