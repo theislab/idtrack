@@ -147,8 +147,12 @@ def test_database_that_the_graph_does_not_hold_is_refused_with_what_is_valid(sel
             f"`from_database`={source!r} is not a database of the loaded graph on genome assembly {assembly} "
         )
         assert str(refused.value).endswith(f"valid: {sorted(sources)}.")
-    report = run(own_genes, DB.nts_ensembl["gene"])  # what is valid still runs
-    assert report["ids"]["from"] and report["conversion"]
+    # what is valid still runs: every id drawn gets one outcome (which ids convert depends on the draw: not asserted)
+    report = run(own_genes, DB.nts_ensembl["gene"])
+    stopped = [the_id for the_id, _ in report["history_voyage_failed_gracefully"]]
+    outcomes = [*report["conversion"], *report["lost_item"], *stopped]
+    assert report["ids"]["from"] and sorted(outcomes) == report["ids"]["from"]
+    assert not report["query_not_in_the_graph"] and not report["history_voyage_failed_unknown"]
 
     forms = tests.graph.external_database_connection_form
     checkable = sorted(d for d in world.api.list_external_databases() if forms[d] == "gene" and "::" not in d)
