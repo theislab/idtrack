@@ -113,17 +113,17 @@ instead of silently forcing a single answer.</p>
 <h2>What makes IDTrack different<a class="headerlink" href="#what-makes-idtrack-different" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p><strong>Time-aware mapping</strong>: treat Ensembl releases as a “time axis” and travel forward/backward through identifier history.</p></li>
-<li><p><strong>Assembly-aware mapping</strong>: harmonize identifiers across genome builds (e.g. GRCh37 ↔ GRCh38) and respect external databases that are assembly-scoped.</p></li>
-<li><p><strong>Snapshot boundary for reproducibility</strong>: build a release-bounded graph snapshot so results are stable and repeatable.</p></li>
+<li><p><strong>Assembly-aware mapping</strong>: identifiers of earlier genome builds (e.g. GRCh37) convert to the build Ensembl maintains at the target release, and external databases are read for the assembly they belong to.</p></li>
+<li><p><strong>Snapshot boundary for reproducibility</strong>: build a release-bounded graph snapshot; the same snapshot gives the same answers in every run.</p></li>
 <li><p><strong>Explicit external database opt-in</strong>: choose which external namespaces participate via a small, editable YAML contract.</p></li>
-<li><p><strong>Transparency over coercion</strong>: conversions are naturally classified as <strong>1→0</strong> (no match), <strong>1→1</strong> (clean), or <strong>1→n</strong> (ambiguous).</p></li>
-<li><p><strong>Scale-ready workflows</strong>: caching and snapshot reuse make repeated conversions and multi-dataset harmonization practical.</p></li>
+<li><p><strong>Transparency over coercion</strong>: conversions are classified as <strong>1→0</strong> (no match), <strong>1→1</strong> (clean), or <strong>1→n</strong> (ambiguous); an answer shared by several equally supported genes is returned as a tie, and every result says how the identifier was read.</p></li>
+<li><p><strong>Fast once built</strong>: a graph built once loads from disk in 1 to 5 seconds into 0.26 to 1.14 GB of memory, without network, and a conversion takes 0.2 to 0.3 ms at the median (measured for the five supported organisms; see the Quickstart).</p></li>
 </ul>
 </section>
 <section id="who-is-it-for">
 <h2>Who is it for?<a class="headerlink" href="#who-is-it-for" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p>Wet-lab researchers who need a reliable, step-by-step path from “my gene list is old” to “my analysis is reproducible”.</p></li>
+<li><p>Wet-lab researchers who need a step-by-step path from “my gene list is old” to “my analysis is reproducible”.</p></li>
 <li><p>Bioinformaticians who want release-pinned, auditable conversions in notebooks, pipelines, and integration workflows.</p></li>
 <li><p>Atlas builders / integrators who need to harmonize gene identifiers across many cohorts (different Ensembl releases, symbols, and external IDs), keep an explicit audit trail of what mapped/failed/was ambiguous, and ship a release-pinned, reproducible feature space for downstream integration and publication.</p></li>
 </ul>
@@ -137,11 +137,33 @@ instead of silently forcing a single answer.</p>
 <li><p><strong>Cross-database interoperability</strong> when collaborators use different identifier conventions.</p></li>
 </ul>
 </section>
+<section id="installation-and-a-first-conversion">
+<h2>Installation and a first conversion<a class="headerlink" href="#installation-and-a-first-conversion" title="Link to this heading"></a></h2>
+<p>IDTrack runs on Python 3.12 to 3.15 and supports human, mouse, pig, rhesus macaque and cynomolgus macaque.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"git+https://github.com/theislab/idtrack.git@main"</span><span class="w">   </span><span class="c1"># or: the code of the main branch</span>
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
+
+<span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="s2">"./idtrack_cache"</span><span class="p">)</span>
+<span class="c1"># Built from Ensembl's tables the first time (about 2 hours for human), loaded from disk in seconds afterwards.</span>
+<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s2">"homo_sapiens"</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="mi">115</span><span class="p">)</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s2">"TP53"</span><span class="p">)</span>  <span class="c1"># to the snapshot release</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">"target_id"</span><span class="p">])</span>                <span class="c1"># ['ENSG00000141510.20']</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="s2">"ENSG00000141510"</span><span class="p">,</span> <span class="n">from_release</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="s2">"HGNC Symbol"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">"target_id"</span><span class="p">])</span>                <span class="c1"># ['TP53']</span>
+</pre></div>
+</div>
+</section>
 <section id="start-here">
 <h2>Start here<a class="headerlink" href="#start-here" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p><a class="reference internal" href="tutorials.html"><span class="doc">Tutorials</span></a> — the full tutorial suite (Part 0 → Part 7); primary learning resource</p></li>
 <li><p><a class="reference internal" href="usage.html"><span class="doc">Quickstart</span></a> — a minimal quickstart</p></li>
+<li><p><a class="reference internal" href="installation.html"><span class="doc">Installation</span></a> — installation, Ensembl access (MySQL or HTTPS), troubleshooting</p></li>
+<li><p><a class="reference internal" href="changes.html"><span class="doc">Changes</span></a> — what changed, and what a user of an earlier version must do</p></li>
 </ul>
 <div class="toctree-wrapper compound">
 </div>

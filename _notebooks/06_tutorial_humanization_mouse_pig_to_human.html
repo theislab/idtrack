@@ -134,7 +134,7 @@
   <a class="idtrack-notebook-download" href="../_sources/_notebooks/06_tutorial_humanization_mouse_pig_to_human.ipynb">Download notebook</a>
 </div><section id="Part-6-—-Cross-Species-Workflows:-Humanization">
 <h1>Part 6 — Cross-Species Workflows: Humanization<a class="headerlink" href="#Part-6-—-Cross-Species-Workflows:-Humanization" title="Link to this heading"></a></h1>
-<p><em>Last updated:</em> 2026-01-08</p>
+<p><em>Last updated:</em> 2026-11-12</p>
 <p>This tutorial shows a practical <strong>humanization</strong> workflow: mapping mouse/pig genes into a human gene space so you can run human-centric downstream analyses (pathways, marker lists, integration, annotation).</p>
 <p><strong>Learning objectives</strong></p>
 <ul class="simple">
@@ -185,7 +185,7 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">idtrack[ortholog]</span></code></p></li>
 <li><p>or <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">idtrack[all-external]</span></code></p></li>
 </ul>
-<p>If you don’t install these extras, the ortholog steps will raise a helpful error.</p>
+<p>If you don’t install these extras, the ortholog steps below are skipped with a message. The embedding features of section 6.1.4 also need <code class="docutils literal notranslate"><span class="pre">torch</span></code> and <code class="docutils literal notranslate"><span class="pre">transformers</span></code> (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">idtrack[embeddings]</span></code>); with them installed, a protein language model is downloaded from Hugging Face on first use, and without them those features are left empty.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>1
 </pre></div>
@@ -227,19 +227,20 @@ Ortholog utilities available: True
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 
-<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'./idtrack_cache'</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'idtrack_cache'</span><span class="p">))</span>
 <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="n">api_mouse</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
 <span class="n">api_mouse</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
 
 <span class="n">mouse_name</span><span class="p">,</span> <span class="n">mouse_latest</span> <span class="o">=</span> <span class="n">api_mouse</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'mouse'</span><span class="p">)</span>
-<span class="n">api_mouse</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">mouse_name</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">mouse_latest</span><span class="p">)</span>
+<span class="n">MOUSE_SNAPSHOT</span> <span class="o">=</span> <span class="mi">115</span>  <span class="c1"># pinned (mouse_latest is Ensembl's newest release)</span>
+<span class="n">api_mouse</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">mouse_name</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">MOUSE_SNAPSHOT</span><span class="p">)</span>
 
 <span class="n">mouse_query</span> <span class="o">=</span> <span class="s1">'Trp53'</span>  <span class="c1"># example MGI symbol; replace with your gene</span>
 <span class="n">mouse_to_ensembl</span> <span class="o">=</span> <span class="n">api_mouse</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span>
     <span class="n">mouse_query</span><span class="p">,</span>
-    <span class="n">to_release</span><span class="o">=</span><span class="n">mouse_latest</span><span class="p">,</span>
+    <span class="n">to_release</span><span class="o">=</span><span class="n">MOUSE_SNAPSHOT</span><span class="p">,</span>
     <span class="n">final_database</span><span class="o">=</span><span class="s1">'base_ensembl_gene'</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="n">mouse_to_ensembl</span>
@@ -251,19 +252,7 @@ Ortholog utilities available: True
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2026-01-17 14:57:40 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
-2026-01-17 14:58:05 INFO:database_manager: Using assembly-specific release range for mus_musculus assembly 39: releases 103-115 (from config [103, None])
-2026-01-17 14:58:55 INFO:graph_maker: The graph is being read: /ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache/graph_mus_musculus_min48_max115_narrow.pickle
-2026-01-17 15:01:06 INFO:the_graph: Cached properties being calculated: available_genome_assemblies
-2026-01-17 15:01:06 INFO:the_graph: Cached properties being calculated: combined_edges
-2026-01-17 15:02:36 INFO:the_graph: Cached properties being calculated: combined_edges_genes
-2026-01-17 15:04:36 INFO:the_graph: Cached properties being calculated: combined_edges_assembly_specific_genes
-2026-01-17 15:04:44 INFO:the_graph: Cached properties being calculated: lower_chars_graph
-2026-01-17 15:04:47 INFO:the_graph: Cached properties being calculated: get_active_ranges_of_id
-2026-01-17 15:06:36 INFO:the_graph: Cached properties being calculated: available_external_databases
-2026-01-17 15:06:41 INFO:the_graph: Cached properties being calculated: available_external_databases_assembly
-2026-01-17 15:06:46 INFO:the_graph: Cached properties being calculated: node_trios
-2026-01-17 15:08:37 INFO:the_graph: Cached properties being calculated: hyperconnective_nodes
+2026-11-12 15:22:50 INFO:idtrack._verify_organism: Ensembl Rest API query to get the organism names and associated releases.
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -272,17 +261,33 @@ Ortholog utilities available: True
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;target_id&#39;: [&#39;ENSMUSG00000059552&#39;],
- &#39;last_node&#39;: [(&#39;ENSMUSG00000059552.14&#39;, &#39;ENSMUSG00000059552&#39;)],
+{&#39;query_id&#39;: &#39;Trp53&#39;,
+ &#39;graph_id&#39;: &#39;Trp53&#39;,
+ &#39;match&#39;: &#39;exact&#39;,
+ &#39;known_versions&#39;: [],
+ &#39;from_release&#39;: 115,
+ &#39;from_release_inferred&#39;: True,
+ &#39;from_release_given&#39;: None,
+ &#39;from_release_fallback&#39;: False,
+ &#39;from_databases&#39;: [&#39;MGI Symbol&#39;,
+  &#39;NCBI gene (formerly Entrezgene)&#39;,
+  &#39;UniProtKB Gene Name&#39;],
+ &#39;to_release&#39;: 115,
+ &#39;strategy&#39;: &#39;best&#39;,
  &#39;final_database&#39;: &#39;base_ensembl_gene&#39;,
- &#39;graph_id&#39;: &#39;TRP53&#39;,
- &#39;query_id&#39;: &#39;Trp53&#39;,
+ &#39;target_id&#39;: [&#39;ENSMUSG00000059552&#39;],
+ &#39;last_node&#39;: [[&#39;ENSMUSG00000059552.14&#39;, &#39;ENSMUSG00000059552&#39;]],
+ &#39;ambiguous&#39;: False,
+ &#39;tie&#39;: False,
+ &#39;alternative_locus_genes&#39;: [],
  &#39;no_corresponding&#39;: False,
  &#39;no_conversion&#39;: False,
- &#39;no_target&#39;: False}
+ &#39;no_target&#39;: False,
+ &#39;no_target_genes&#39;: [],
+ &#39;error&#39;: None}
 </pre></div></div>
 </div>
-<p>Take one of the returned <code class="docutils literal notranslate"><span class="pre">target_id</span></code> entries as your mouse Ensembl gene ID. If you get multiple candidates, you are in a 1→n case — you may need to decide how to handle it.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">target_id</span></code> entry is your mouse Ensembl gene ID (without version, because of <code class="docutils literal notranslate"><span class="pre">final_database='base_ensembl_gene'</span></code>). If you get several, you are in a 1→n case (<code class="docutils literal notranslate"><span class="pre">tie=True</span></code> when they are equal in all evidence) — you may need to decide how to handle it; the first entry is the first of the best answer in a fixed order (by gene id), not a choice by evidence.</p>
 </section>
 <section id="6.1.2.2-Find-human-ortholog(s)-(ortholog-utilities)">
 <h3>6.1.2.2 Find human ortholog(s) (ortholog utilities)<a class="headerlink" href="#6.1.2.2-Find-human-ortholog(s)-(ortholog-utilities)" title="Link to this heading"></a></h3>
@@ -292,15 +297,15 @@ Ortholog utilities available: True
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">human_ensembl_gene_ids</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">mouse_ensembl_gene_id</span> <span class="o">=</span> <span class="n">mouse_to_ensembl</span><span class="p">[</span><span class="s1">'target_id'</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">mouse_to_ensembl</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'target_id'</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
 
-<span class="k">if</span> <span class="ow">not</span> <span class="n">mouse_to_ensembl</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'target_id'</span><span class="p">):</span>
+<span class="k">if</span> <span class="n">mouse_ensembl_gene_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'No mouse Ensembl gene ID found; check your input ID and mouse graph/YAML.'</span><span class="p">)</span>
 <span class="k">elif</span> <span class="ow">not</span> <span class="n">ORTHOLOG_OK</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'Ortholog utilities are not available (install extras: `pip install idtrack[ortholog]`).'</span><span class="p">)</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_ortholog_table</span><span class="p">,</span> <span class="n">get_ortholog_ids_for_species</span>
 
-    <span class="n">mouse_ensembl_gene_id</span> <span class="o">=</span> <span class="n">mouse_to_ensembl</span><span class="p">[</span><span class="s1">'target_id'</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># choose one</span>
     <span class="n">ortholog_df</span> <span class="o">=</span> <span class="n">get_ortholog_table</span><span class="p">(</span><span class="n">mouse_ensembl_gene_id</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="n">human_ensembl_gene_ids</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">get_ortholog_ids_for_species</span><span class="p">(</span><span class="n">ortholog_df</span><span class="p">,</span> <span class="n">target_species</span><span class="o">=</span><span class="s1">'human'</span><span class="p">))</span>
@@ -314,10 +319,8 @@ Ortholog utilities available: True
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-15:10:53 - INFO - Getting species ID for gene ENSMUSG00000059552 from Bgee
-2026-01-17 15:10:53 INFO:gget.utils: Getting species ID for gene ENSMUSG00000059552 from Bgee
-15:10:53 - INFO - Getting orthologs for gene ENSMUSG00000059552 from Bgee
-2026-01-17 15:10:53 INFO:gget.utils: Getting orthologs for gene ENSMUSG00000059552 from Bgee
+15:22:53 - INFO - Getting species ID for gene ENSMUSG00000059552 from Bgee
+15:22:53 - INFO - Getting orthologs for gene ENSMUSG00000059552 from Bgee
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -344,37 +347,27 @@ Ortholog utilities available: True
     <span class="n">api_human</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
 
     <span class="n">human_name</span><span class="p">,</span> <span class="n">human_latest</span> <span class="o">=</span> <span class="n">api_human</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'human'</span><span class="p">)</span>
-    <span class="n">api_human</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">human_name</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">human_latest</span><span class="p">)</span>
+    <span class="n">HUMAN_SNAPSHOT</span> <span class="o">=</span> <span class="mi">115</span>  <span class="c1"># pinned</span>
+    <span class="n">api_human</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">human_name</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">HUMAN_SNAPSHOT</span><span class="p">)</span>
 
     <span class="c1"># Convert all candidate orthologs (if many-to-many, you will see it here)</span>
     <span class="n">human_results</span> <span class="o">=</span> <span class="n">api_human</span><span class="o">.</span><span class="n">convert_identifier_multiple</span><span class="p">(</span>
         <span class="nb">list</span><span class="p">(</span><span class="n">human_ensembl_gene_ids</span><span class="p">),</span>
-        <span class="n">to_release</span><span class="o">=</span><span class="n">human_latest</span><span class="p">,</span>
+        <span class="n">to_release</span><span class="o">=</span><span class="n">HUMAN_SNAPSHOT</span><span class="p">,</span>
         <span class="n">final_database</span><span class="o">=</span><span class="s1">'HGNC Symbol'</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="n">human_results</span>
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">human_results</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s1">'query_id'</span><span class="p">],</span> <span class="s1">'-&gt;'</span><span class="p">,</span> <span class="n">r</span><span class="p">[</span><span class="s1">'target_id'</span><span class="p">],</span> <span class="s1">'| tie:'</span><span class="p">,</span> <span class="n">r</span><span class="p">[</span><span class="s1">'tie'</span><span class="p">])</span>
 <br/></pre></div>
 </div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area stderr docutils container">
+<div class="output_area docutils container">
 <div class="highlight"><pre>
-2026-01-17 15:10:54 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
-2026-01-17 15:11:18 INFO:database_manager: Using assembly-specific release range for homo_sapiens assembly 38: releases 76-115 (from config [76, None])
-2026-01-17 15:12:13 INFO:graph_maker: The graph is being read: /ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache/graph_homo_sapiens_min48_max115_narrow.pickle
-2026-01-17 15:16:21 INFO:the_graph: Cached properties being calculated: available_genome_assemblies
-2026-01-17 15:16:21 INFO:the_graph: Cached properties being calculated: combined_edges
-2026-01-17 15:17:43 INFO:the_graph: Cached properties being calculated: combined_edges_genes
-2026-01-17 15:20:47 INFO:the_graph: Cached properties being calculated: combined_edges_assembly_specific_genes
-2026-01-17 15:20:52 INFO:the_graph: Cached properties being calculated: lower_chars_graph
-2026-01-17 15:20:55 INFO:the_graph: Cached properties being calculated: get_active_ranges_of_id
-2026-01-17 15:22:21 INFO:the_graph: Cached properties being calculated: available_external_databases
-2026-01-17 15:22:26 INFO:the_graph: Cached properties being calculated: available_external_databases_assembly
-2026-01-17 15:22:30 INFO:the_graph: Cached properties being calculated: node_trios
-2026-01-17 15:23:35 INFO:the_graph: Cached properties being calculated: hyperconnective_nodes
-100%|█████████████████████████████████████████████| 1/1 [00:00&lt;00:00, 10.34it/s, ID:ENSG00000141510]
+ENSG00000141510 -&gt; [&#39;TP53&#39;] | tie: False
 </pre></div></div>
 </div>
 </section>
@@ -382,59 +375,56 @@ Ortholog utilities available: True
 <h3>6.1.3 Step-by-step: pig → human (same pattern)<a class="headerlink" href="#6.1.3-Step-by-step:-pig-→-human-(same-pattern)" title="Link to this heading"></a></h3>
 <p>Replace <code class="docutils literal notranslate"><span class="pre">api_mouse</span></code> with a pig API instance and start from your pig identifiers. Many pig pipelines start from Ensembl IDs or Entrez IDs; adjust <code class="docutils literal notranslate"><span class="pre">final_database</span></code> accordingly.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">api_pig</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
 <span class="n">api_pig</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
 
-<span class="n">pig_name</span><span class="p">,</span> <span class="n">pig_latest</span> <span class="o">=</span> <span class="n">api_pig</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'sus_scrofa'</span><span class="p">)</span>
-<span class="n">api_pig</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">pig_name</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">pig_latest</span><span class="p">)</span>
+<span class="n">pig_name</span><span class="p">,</span> <span class="n">pig_latest</span> <span class="o">=</span> <span class="n">api_pig</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'pig'</span><span class="p">)</span>  <span class="c1"># 'pig' is sus_scrofa</span>
+<span class="n">PIG_SNAPSHOT</span> <span class="o">=</span> <span class="mi">115</span>  <span class="c1"># pinned</span>
+<span class="n">api_pig</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">pig_name</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">PIG_SNAPSHOT</span><span class="p">)</span>
 
 <span class="n">pig_query</span> <span class="o">=</span> <span class="s1">'TP53'</span>  <span class="c1"># example; replace with your pig gene symbol or ID</span>
 <span class="n">pig_to_ensembl</span> <span class="o">=</span> <span class="n">api_pig</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span>
     <span class="n">pig_query</span><span class="p">,</span>
-    <span class="n">to_release</span><span class="o">=</span><span class="n">pig_latest</span><span class="p">,</span>
+    <span class="n">to_release</span><span class="o">=</span><span class="n">PIG_SNAPSHOT</span><span class="p">,</span>
     <span class="n">final_database</span><span class="o">=</span><span class="s1">'base_ensembl_gene'</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="n">pig_to_ensembl</span>
 <br/></pre></div>
 </div>
 </div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-2026-01-17 15:26:45 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
-2026-01-17 15:27:10 INFO:database_manager: Using assembly-specific release range for sus_scrofa assembly 111: releases 90-115 (from config [90, None])
-2026-01-17 15:28:02 INFO:graph_maker: The graph is being read: /ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache/graph_sus_scrofa_min48_max115_narrow.pickle
-2026-01-17 15:28:18 INFO:the_graph: Cached properties being calculated: available_genome_assemblies
-2026-01-17 15:28:18 INFO:the_graph: Cached properties being calculated: combined_edges
-2026-01-17 15:28:33 INFO:the_graph: Cached properties being calculated: combined_edges_genes
-2026-01-17 15:31:27 INFO:the_graph: Cached properties being calculated: combined_edges_assembly_specific_genes
-2026-01-17 15:31:28 INFO:the_graph: Cached properties being calculated: lower_chars_graph
-2026-01-17 15:31:29 INFO:the_graph: Cached properties being calculated: get_active_ranges_of_id
-2026-01-17 15:31:51 INFO:the_graph: Cached properties being calculated: available_external_databases
-2026-01-17 15:31:52 INFO:the_graph: Cached properties being calculated: available_external_databases_assembly
-2026-01-17 15:31:53 INFO:the_graph: Cached properties being calculated: node_trios
-2026-01-17 15:32:08 INFO:the_graph: Cached properties being calculated: hyperconnective_nodes
-</pre></div></div>
-</div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
 </pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;target_id&#39;: [&#39;ENSSSCG00000017950&#39;],
- &#39;last_node&#39;: [(&#39;ENSSSCG00000017950.5&#39;, &#39;ENSSSCG00000017950&#39;)],
- &#39;final_database&#39;: &#39;base_ensembl_gene&#39;,
+{&#39;query_id&#39;: &#39;TP53&#39;,
  &#39;graph_id&#39;: &#39;TP53&#39;,
- &#39;query_id&#39;: &#39;TP53&#39;,
+ &#39;match&#39;: &#39;exact&#39;,
+ &#39;known_versions&#39;: [],
+ &#39;from_release&#39;: 115,
+ &#39;from_release_inferred&#39;: True,
+ &#39;from_release_given&#39;: None,
+ &#39;from_release_fallback&#39;: False,
+ &#39;from_databases&#39;: [&#39;NCBI gene (formerly Entrezgene)&#39;,
+  &#39;UniProtKB Gene Name&#39;,
+  &#39;VGNC Symbol&#39;],
+ &#39;to_release&#39;: 115,
+ &#39;strategy&#39;: &#39;best&#39;,
+ &#39;final_database&#39;: &#39;base_ensembl_gene&#39;,
+ &#39;target_id&#39;: [&#39;ENSSSCG00000017950&#39;],
+ &#39;last_node&#39;: [[&#39;ENSSSCG00000017950.5&#39;, &#39;ENSSSCG00000017950&#39;]],
+ &#39;ambiguous&#39;: False,
+ &#39;tie&#39;: False,
+ &#39;alternative_locus_genes&#39;: [],
  &#39;no_corresponding&#39;: False,
  &#39;no_conversion&#39;: False,
- &#39;no_target&#39;: False}
+ &#39;no_target&#39;: False,
+ &#39;no_target_genes&#39;: [],
+ &#39;error&#39;: None}
 </pre></div></div>
 </div>
 <p>From here, reuse the same ortholog + human conversion steps as in the mouse section.</p>
@@ -443,13 +433,17 @@ Ortholog utilities available: True
 <h3>6.1.4 Advanced: choose among multiple ortholog candidates<a class="headerlink" href="#6.1.4-Advanced:-choose-among-multiple-ortholog-candidates" title="Link to this heading"></a></h3>
 <p>When you have multiple orthologs, IDTrack can optionally compute additional features for ranking. This is for advanced use and requires extra dependencies.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>7
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Example (advanced): compute sequence-based alignment features for each ortholog candidate</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers</span><span class="w"> </span><span class="kn">import</span> <span class="n">align_ortholog_pair_with_features</span>
+<span class="k">if</span> <span class="n">mouse_ensembl_gene_id</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">ORTHOLOG_OK</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'Skipped: no mouse Ensembl gene ID, or the ortholog utilities are not installed.'</span><span class="p">)</span>
+    <span class="n">features</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._external_mappers</span><span class="w"> </span><span class="kn">import</span> <span class="n">align_ortholog_pair_with_features</span>
 
-<span class="n">features</span> <span class="o">=</span> <span class="n">align_ortholog_pair_with_features</span><span class="p">(</span><span class="n">mouse_ensembl_gene_id</span><span class="p">,</span> <span class="n">target_species</span><span class="o">=</span><span class="s1">'human'</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">features</span> <span class="o">=</span> <span class="n">align_ortholog_pair_with_features</span><span class="p">(</span><span class="n">mouse_ensembl_gene_id</span><span class="p">,</span> <span class="n">target_species</span><span class="o">=</span><span class="s1">'human'</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="n">features</span>
 <br/></pre></div>
 </div>
@@ -459,10 +453,8 @@ Ortholog utilities available: True
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-15:32:11 - INFO - Getting species ID for gene ENSMUSG00000059552 from Bgee
-2026-01-17 15:32:11 INFO:gget.utils: Getting species ID for gene ENSMUSG00000059552 from Bgee
-15:32:11 - INFO - Getting orthologs for gene ENSMUSG00000059552 from Bgee
-2026-01-17 15:32:11 INFO:gget.utils: Getting orthologs for gene ENSMUSG00000059552 from Bgee
+15:22:59 - INFO - Getting species ID for gene ENSMUSG00000059552 from Bgee
+15:22:59 - INFO - Getting orthologs for gene ENSMUSG00000059552 from Bgee
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -478,8 +470,7 @@ Ortholog utilities available: True
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-15:32:13 - INFO - Requesting amino acid sequence of the canonical transcript ENSMUST00000108658 of gene ENSMUSG00000059552 from UniProt.
-2026-01-17 15:32:13 INFO:gget.utils: Requesting amino acid sequence of the canonical transcript ENSMUST00000108658 of gene ENSMUSG00000059552 from UniProt.
+15:23:26 - INFO - Requesting amino acid sequence of the canonical transcript ENSMUST00000108658 of gene ENSMUSG00000059552 from UniProt.
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -495,28 +486,24 @@ Ortholog utilities available: True
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-15:32:15 - INFO - Requesting amino acid sequence of the canonical transcript ENST00000269305 of gene ENSG00000141510 from UniProt.
-2026-01-17 15:32:15 INFO:gget.utils: Requesting amino acid sequence of the canonical transcript ENST00000269305 of gene ENSG00000141510 from UniProt.
-15:32:15 - INFO - MUSCLE compiled.
-2026-01-17 15:32:15 INFO:gget.utils: MUSCLE compiled.
-15:32:15 - INFO - MUSCLE aligning...
-2026-01-17 15:32:15 INFO:gget.utils: MUSCLE aligning...
+15:23:56 - INFO - Requesting amino acid sequence of the canonical transcript ENST00000269305 of gene ENSG00000141510 from UniProt.
+15:23:56 - INFO - MUSCLE compiled.
+15:23:56 - INFO - MUSCLE aligning...
 
-muscle 5.2.linux64 [00617b]  1056Gb RAM, 96 cores
+muscle 5.2.linux64 [00617b]  791Gb RAM, 32 cores
 Built Apr 13 2022 00:43:46
 (C) Copyright 2004-2021 Robert C. Edgar.
 https://drive5.com
 
 Input: 2 seqs, avg length 392, max 393
 
-00:00 7.8Mb  CPU has 96 cores, defaulting to 20 threads
+00:00 7.9Mb  CPU has 32 cores, defaulting to 20 threads
 
-WARNING: Max OMP threads 2
+WARNING: Max OMP threads 16
 
-00:00 16Mb    100.0% Calc posteriors
-00:00 16Mb    100.0% UPGMA5
-15:32:15 - INFO - MUSCLE alignment complete. Alignment time: 0.1 seconds
-2026-01-17 15:32:15 INFO:gget.utils: MUSCLE alignment complete. Alignment time: 0.1 seconds
+00:00 134Mb   100.0% Calc posteriors
+00:00 134Mb   100.0% UPGMA5
+15:23:56 - INFO - MUSCLE alignment complete. Alignment time: 0.05 seconds
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -524,46 +511,82 @@ WARNING: Max OMP threads 2
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-
-
-ENSMUSG00000059552
-         <span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">I</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">W</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">I</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-white-intense-bg">-</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-white-intense-bg">-</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-white-intense-bg">-</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-white-intense-bg">-</span><span class="ansi-black-fg ansi-white-intense-bg">-</span><span class="ansi-black-fg ansi-white-intense-bg">-</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-black-fg ansi-green-intense-bg">T</span>
-ENSG00000141510
-         <span class="ansi-black-fg ansi-white-intense-bg">-</span><span class="ansi-black-fg ansi-white-intense-bg">-</span><span class="ansi-black-fg ansi-white-intense-bg">-</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">W</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">I</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">W</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span>
-
-
-ENSMUSG00000059552
-         <span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">W</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">W</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span>
-ENSG00000141510
-         <span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">W</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">W</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span>
-
-
-ENSMUSG00000059552
-         <span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">I</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">I</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">I</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span>
-ENSG00000141510
-         <span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">I</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">I</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">I</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span>
-
-
-ENSMUSG00000059552
-         <span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">I</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">I</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">I</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span>
-ENSG00000141510
-         <span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">I</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">I</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">I</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-magenta-intense-bg">C</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span>
-
-
-ENSMUSG00000059552
-         <span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">I</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">V</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span>
-ENSG00000141510
-         <span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-cyan-intense-bg">Y</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">I</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-black-fg ansi-green-intense-bg">N</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">A</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-green-intense-bg">Q</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-red-intense-bg">R</span><span class="ansi-black-fg ansi-cyan-intense-bg">H</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">L</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">M</span><span class="ansi-white-intense-fg ansi-blue-intense-bg">F</span><span class="ansi-white-intense-fg ansi-red-intense-bg">K</span><span class="ansi-black-fg ansi-green-intense-bg">T</span><span class="ansi-white-intense-fg ansi-magenta-bg">E</span><span class="ansi-white-intense-fg ansi-red-bg">G</span><span class="ansi-black-fg ansi-yellow-intense-bg">P</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span><span class="ansi-black-fg ansi-green-intense-bg">S</span><span class="ansi-white-intense-fg ansi-magenta-bg">D</span>
-[WARN] MUSCLE failed for ENSG00000141510: &#39;NoneType&#39; object has no attribute &#39;splitlines&#39;
+[WARN] Failed to compute embeddings for ENSG00000141510: transformers / torch not installed. Install them or call align_ortholog_pair_with_features(..., embedding_model_name=None).
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>7
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
 </pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{}
+{&#39;ENSG00000141510&#39;: {&#39;query_id&#39;: &#39;ENSMUSG00000059552&#39;,
+  &#39;target_id&#39;: &#39;ENSG00000141510&#39;,
+  &#39;target_species&#39;: &#39;human&#39;,
+  &#39;target_species_canonical&#39;: &#39;hsapiens&#39;,
+  &#39;target_species_genus&#39;: &#39;Homo&#39;,
+  &#39;target_species_species&#39;: &#39;sapiens&#39;,
+  &#39;alignment_aligned_query&#39;: &#39;MTAMEESQSDISLELPLSQETFSGLWKLLPPEDIL-PSP-HCMDDLLL-PQDVEEFFE---GPSEALRVSGAPAAQDPVTETPGPVAPAPATPWPLSSFVPSQKTYQGNYGFHLGFLQSGTAKSVMCTYSPPLNKLFCQLAKTCPVQLWVSATPPAGSRVRAMAIYKKSQHMTEVVRRCPHHERCSDGDGLAPPQHLIRVEGNLYPEYLEDRQTFRHSVVVPYEPPEAGSEYTTIHYKYMCNSSCMGGMNRRPILTIITLEDSSGNLLGRDSFEVRVCACPGRDRRTEEENFRKKEVLCPELPPGSAKRALPTCTSASPPQKKKPLDGEYFTLKIRGRKRFEMFRELNEALELKDAHATEESGDSRAHSSYLKTKKGQSTSRHKKTMVKKVGPDSD&#39;,
+  &#39;alignment_aligned_target&#39;: &#39;---MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAPTPAAPAPAPSWPLSSSVPSQKTYQGSYGFRLGFLHSGTAKSVTCTYSPALNKMFCQLAKTCPVQLWVDSTPPPGTRVRAMAIYKQSQHMTEVVRRCPHHERCSDSDGLAPPQHLIRVEGNLRVEYLDDRNTFRHSVVVPYEPPEVGSDCTTIHYNYMCNSSCMGGMNRRPILTIITLEDSSGNLLGRNSFEVRVCACPGRDRRTEEENLRKKGEPHHELPPGSTKRALPNNTSSSPQPKKKPLDGEYFTLQIRGRERFEMFRELNEALELKDAQAGKEPGGSRAHSSHLKSKKGQSTSRHKKLMFKTEGPDSD&#39;,
+  &#39;alignment_aligned_fasta&#39;: &#39;&gt;ENSMUSG00000059552\nMTAMEESQSDISLELPLSQETFSGLWKLLPPEDIL-PSP-HCMDDLLL-PQDVEEFFE---GPSEALRVSGAPAAQDPVT\nETPGPVAPAPATPWPLSSFVPSQKTYQGNYGFHLGFLQSGTAKSVMCTYSPPLNKLFCQLAKTCPVQLWVSATPPAGSRV\nRAMAIYKKSQHMTEVVRRCPHHERCSDGDGLAPPQHLIRVEGNLYPEYLEDRQTFRHSVVVPYEPPEAGSEYTTIHYKYM\nCNSSCMGGMNRRPILTIITLEDSSGNLLGRDSFEVRVCACPGRDRRTEEENFRKKEVLCPELPPGSAKRALPTCTSASPP\nQKKKPLDGEYFTLKIRGRKRFEMFRELNEALELKDAHATEESGDSRAHSSYLKTKKGQSTSRHKKTMVKKVGPDSD\n&gt;ENSG00000141510\n---MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAP\nAAPTPAAPAPAPSWPLSSSVPSQKTYQGSYGFRLGFLHSGTAKSVTCTYSPALNKMFCQLAKTCPVQLWVDSTPPPGTRV\nRAMAIYKQSQHMTEVVRRCPHHERCSDSDGLAPPQHLIRVEGNLRVEYLDDRNTFRHSVVVPYEPPEVGSDCTTIHYNYM\nCNSSCMGGMNRRPILTIITLEDSSGNLLGRNSFEVRVCACPGRDRRTEEENLRKKGEPHHELPPGSTKRALPNNTSSSPQ\nPKKKPLDGEYFTLQIRGRERFEMFRELNEALELKDAQAGKEPGGSRAHSSHLKSKKGQSTSRHKKLMFKTEGPDSD\n&#39;,
+  &#39;score_alignment_length&#39;: 396.0,
+  &#39;score_identity_fraction&#39;: 0.7676767676767676,
+  &#39;score_positive_fraction&#39;: 0.8232323232323232,
+  &#39;score_very_negative_fraction&#39;: 0.015151515151515152,
+  &#39;score_gap_fraction_query&#39;: 0.015151515151515152,
+  &#39;score_gap_fraction_target&#39;: 0.007575757575757576,
+  &#39;score_gap_openings_query&#39;: 4.0,
+  &#39;score_gap_openings_target&#39;: 1.0,
+  &#39;score_seq1_coverage&#39;: 1.0,
+  &#39;score_seq2_coverage&#39;: 1.0,
+  &#39;score_blosum62_sum&#39;: 1599.0,
+  &#39;score_blosum62_mean&#39;: 4.037878787878788,
+  &#39;score_composition_l2_distance&#39;: 0.03280929173960127,
+  &#39;composition_diff_vector&#39;: [0.0004697592483852084,
+   0.0053239381483656326,
+   -0.007300841651986689,
+   0.005715404188686629,
+   0.005343511450381679,
+   0.0030142885104717174,
+   -0.002329222939909961,
+   0.0027206889802309647,
+   0.010647876296731265,
+   0.00831865335682129,
+   -0.002329222939909961,
+   -0.015110589156390682,
+   -0.01706791935799569,
+   -0.0022705030338618162,
+   -0.0046192992757878165,
+   -0.006948522215697792,
+   0.005558817772558233,
+   0.005480524564494028,
+   -0.002485809356038364,
+   0.007868467410452145],
+  &#39;compdiff_A&#39;: 0.0004697592483852084,
+  &#39;compdiff_C&#39;: 0.0053239381483656326,
+  &#39;compdiff_D&#39;: -0.007300841651986689,
+  &#39;compdiff_E&#39;: 0.005715404188686629,
+  &#39;compdiff_F&#39;: 0.005343511450381679,
+  &#39;compdiff_G&#39;: 0.0030142885104717174,
+  &#39;compdiff_H&#39;: -0.002329222939909961,
+  &#39;compdiff_I&#39;: 0.0027206889802309647,
+  &#39;compdiff_K&#39;: 0.010647876296731265,
+  &#39;compdiff_L&#39;: 0.00831865335682129,
+  &#39;compdiff_M&#39;: -0.002329222939909961,
+  &#39;compdiff_N&#39;: -0.015110589156390682,
+  &#39;compdiff_P&#39;: -0.01706791935799569,
+  &#39;compdiff_Q&#39;: -0.0022705030338618162,
+  &#39;compdiff_R&#39;: -0.0046192992757878165,
+  &#39;compdiff_S&#39;: -0.006948522215697792,
+  &#39;compdiff_T&#39;: 0.005558817772558233,
+  &#39;compdiff_V&#39;: 0.005480524564494028,
+  &#39;compdiff_W&#39;: -0.002485809356038364,
+  &#39;compdiff_Y&#39;: 0.007868467410452145,
+  &#39;emb_model&#39;: None,
+  &#39;emb_dim&#39;: None,
+  &#39;emb_cosine&#39;: None,
+  &#39;emb_euclid&#39;: None,
+  &#39;emb_diff&#39;: None}}
 </pre></div></div>
 </div>
 </section>
@@ -588,7 +611,7 @@ ENSG00000141510
 </ol>
 <p>A practical output format is a tidy table with one row per input gene and explicit columns for provenance. The next cell shows a minimal schema you can reuse.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>8
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>7
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Example: a tidy, audit-friendly mapping table schema</span>
@@ -627,7 +650,7 @@ ENSG00000141510
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>8
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>7
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -678,8 +701,8 @@ ENSG00000141510
       <td>sus_scrofa</td>
       <td>Ensembl Gene ID</td>
       <td>ENSSSCG00000000001</td>
-      <td>None</td>
-      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
       <td>[]</td>
       <td>None</td>
       <td>None</td>

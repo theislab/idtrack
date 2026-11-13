@@ -112,7 +112,9 @@
 
 <span class="sd">- It does **not** modify system-wide proxy configuration.</span>
 <span class="sd">- It only affects the current interpreter (one Python process / one Jupyter kernel).</span>
-<span class="sd">- It is reversible via :py:meth:`idtrack.ConnectionBridge.stop` and also cleaned up best-effort at interpreter exit.</span>
+<span class="sd">- It is reversible via :py:meth:`idtrack.ConnectionBridge.stop` (or :py:meth:`idtrack.ConnectionBridge.stop_all`)</span>
+<span class="sd">  and also cleaned up best-effort at interpreter exit. It stays active until then, also when the object that started</span>
+<span class="sd">  it is no longer referenced (``idtrack.ConnectionBridge(proxy_port=1080).start()`` works as written).</span>
 <span class="sd">"""</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -125,12 +127,11 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._ensembl_access</span><span class="w"> </span><span class="kn">import</span> <span class="n">reachability</span>
 
 
 <div class="viewcode-block" id="ConnectionBridge">
-<a class="viewcode-back" href="../../reference.html#idtrack._connection_bridge.ConnectionBridge">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ConnectionBridge">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ConnectionBridge</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Route this Python process' outgoing TCP connections through an SSH-provided SOCKS proxy.</span>
 
@@ -161,14 +162,18 @@
 <span class="sd">    ``start()`` monkeypatches :py:data:`socket.socket` to :py:class:`socks.socksocket` (PySocks) and optionally sets the</span>
 <span class="sd">    environment variables ``ALL_PROXY`` and ``all_proxy`` so subprocesses spawned from this process inherit the proxy.</span>
 
-<span class="sd">    A private, process-wide :py:class:`~idtrack._connection_bridge.ConnectionBridge._BridgeState` singleton stores the</span>
+<span class="sd">    A private, process-wide :py:class:`~idtrack.ConnectionBridge._BridgeState` singleton stores the</span>
 <span class="sd">    original socket class, environment variables, and PySocks default proxy to ensure :py:meth:`stop` can restore the</span>
 <span class="sd">    prior state precisely. The singleton also implements a simple reference counter so multiple</span>
 <span class="sd">    :py:class:`~idtrack.ConnectionBridge` instances can share the same active bridge.</span>
 
 <span class="sd">    Notes:</span>
 <span class="sd">        - The bridge affects only the current Python process (one Jupyter kernel). Closing the Python process/kernel</span>
-<span class="sd">          automatically removes the monkeypatch.</span>
+<span class="sd">          automatically removes the monkeypatch. It is not undone when the instance is garbage-collected:</span>
+<span class="sd">          :py:meth:`stop` of the instance (or the end of its ``with`` block), :py:meth:`stop_all` or the end of the</span>
+<span class="sd">          process undo it.</span>
+<span class="sd">        - The ``with ConnectionBridge(...):`` form raises :py:class:`ConnectionError` when the connectivity check fails,</span>
+<span class="sd">          so the block never runs unbridged.</span>
 <span class="sd">        - To avoid surprises, call :py:meth:`start` **before** the first network access in your program.</span>
 <span class="sd">        - Status messages are emitted via the logger named ``"connection_bridge"`` and, when ``verbose=True``, printed</span>
 <span class="sd">          to stdout for immediate visibility in notebooks.</span>
@@ -193,6 +198,8 @@
         <span class="n">original_env</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="n">original_socks_proxy</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="n">atexit_registered</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="c1"># Incremented by `stop_all`, so that instances started before it count as stopped.</span>
+        <span class="n">generation</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
 
     <span class="n">_STATE</span> <span class="o">=</span> <span class="n">_BridgeState</span><span class="p">()</span>
     <span class="n">_LOCK</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span>
@@ -217,7 +224,7 @@
 <span class="sd">            proxy_port: Effective proxy port for this instance.</span>
 <span class="sd">            set_env_proxy: Whether this instance sets proxy environment variables when activating the bridge.</span>
 <span class="sd">        """</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"connection_bridge"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">proxy_host</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">proxy_host</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">proxy_port</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">proxy_port</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">set_env_proxy</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">set_env_proxy</span><span class="p">)</span>
@@ -229,7 +236,7 @@
         <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_started</span><span class="p">)</span>
 
 <div class="viewcode-block" id="ConnectionBridge._require_pysocks">
-<a class="viewcode-back" href="../../reference.html#idtrack._connection_bridge.ConnectionBridge._require_pysocks">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ConnectionBridge._require_pysocks">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_require_pysocks</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Import and return the PySocks module (import name: ``socks``).</span>
@@ -248,7 +255,7 @@
 
 
 <div class="viewcode-block" id="ConnectionBridge._format_proxy_url">
-<a class="viewcode-back" href="../../reference.html#idtrack._connection_bridge.ConnectionBridge._format_proxy_url">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ConnectionBridge._format_proxy_url">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_format_proxy_url</span><span class="p">(</span><span class="n">host</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return a SOCKS proxy URL suitable for environment variables."""</span>
@@ -256,12 +263,12 @@
 
 
 <div class="viewcode-block" id="ConnectionBridge._emit_global">
-<a class="viewcode-back" href="../../reference.html#idtrack._connection_bridge.ConnectionBridge._emit_global">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ConnectionBridge._emit_global">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_emit_global</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Emit a message without requiring an instance (used by ``atexit`` cleanup)."""</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"connection_bridge"</span><span class="p">)</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
                 <span class="nb">print</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
@@ -271,7 +278,7 @@
 
 
 <div class="viewcode-block" id="ConnectionBridge._emit">
-<a class="viewcode-back" href="../../reference.html#idtrack._connection_bridge.ConnectionBridge._emit">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ConnectionBridge._emit">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">_emit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Emit a status message via the instance logger and (optionally) stdout."""</span>
         <span class="k">try</span><span class="p">:</span>
@@ -285,39 +292,66 @@
 
 
 <div class="viewcode-block" id="ConnectionBridge._restore_socks_default_proxy">
-<a class="viewcode-back" href="../../reference.html#idtrack._connection_bridge.ConnectionBridge._restore_socks_default_proxy">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ConnectionBridge._restore_socks_default_proxy">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_restore_socks_default_proxy</span><span class="p">(</span><span class="n">socks_module</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">original_proxy</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Restore the PySocks default proxy configuration (best effort)."""</span>
-        <span class="k">if</span> <span class="n">original_proxy</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">socks_module</span><span class="o">.</span><span class="n">set_default_proxy</span><span class="p">()</span>
-            <span class="k">return</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">original_proxy</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
-            <span class="n">socks_module</span><span class="o">.</span><span class="n">set_default_proxy</span><span class="p">(</span><span class="o">*</span><span class="n">original_proxy</span><span class="p">)</span>
-            <span class="k">return</span>
-        <span class="n">socks_module</span><span class="o">.</span><span class="n">set_default_proxy</span><span class="p">()</span></div>
+<span class="w">        </span><span class="sd">"""Restore the PySocks default proxy exactly as it was saved.</span>
+
+<span class="sd">        The saved value is put back as it is (:py:func:`socks.get_default_proxy` returns credentials as bytes, which</span>
+<span class="sd">        :py:func:`socks.set_default_proxy` would try to encode again).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            socks_module: The imported PySocks module.</span>
+<span class="sd">            original_proxy: The value saved by :py:meth:`start`.</span>
+<span class="sd">        """</span>
+        <span class="n">socks_module</span><span class="o">.</span><span class="n">socksocket</span><span class="o">.</span><span class="n">default_proxy</span> <span class="o">=</span> <span class="n">original_proxy</span></div>
+
+
+<div class="viewcode-block" id="ConnectionBridge._restore_state">
+<a class="viewcode-back" href="../../reference.html#idtrack.ConnectionBridge._restore_state">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_restore_state</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">ConnectionBridge</span><span class="o">.</span><span class="n">_BridgeState</span><span class="p">,</span> <span class="n">socks</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Undo the process-wide changes recorded in *state* and clear it (the caller holds the lock)."""</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">original_socket_cls</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">socket</span><span class="o">.</span><span class="n">socket</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">original_socket_cls</span>  <span class="c1"># type: ignore[misc]</span>
+            <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">original_env</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">original_env</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="k">if</span> <span class="n">socks</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_restore_socks_default_proxy</span><span class="p">(</span><span class="n">socks</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">original_socks_proxy</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">active_count</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">original_socket_cls</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">original_env</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">original_socks_proxy</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="c1"># The route to Ensembl changed back: forget which MySQL ports were (un)reachable.</span>
+            <span class="n">reachability</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="ConnectionBridge._atexit_cleanup">
-<a class="viewcode-back" href="../../reference.html#idtrack._connection_bridge.ConnectionBridge._atexit_cleanup">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ConnectionBridge._atexit_cleanup">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_atexit_cleanup</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Best-effort cleanup hook registered via :py:mod:`atexit`."""</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">ConnectionBridge</span><span class="o">.</span><span class="n">_force_disable_bridge</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">ConnectionBridge</span><span class="o">.</span><span class="n">stop_all</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="c1"># Never block interpreter shutdown.</span>
             <span class="k">return</span></div>
 
 
-<div class="viewcode-block" id="ConnectionBridge._force_disable_bridge">
-<a class="viewcode-back" href="../../reference.html#idtrack._connection_bridge.ConnectionBridge._force_disable_bridge">[docs]</a>
+<div class="viewcode-block" id="ConnectionBridge.stop_all">
+<a class="viewcode-back" href="../../reference.html#idtrack.ConnectionBridge.stop_all">[docs]</a>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_force_disable_bridge</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Disable the bridge regardless of which instance started it (best-effort).</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stop_all</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Disable the bridge for the whole process, whichever instances started it.</span>
 
-<span class="sd">        This method is used by the ``atexit`` hook and by unit tests to ensure a clean process state. It intentionally</span>
-<span class="sd">        bypasses instance-level bookkeeping (e.g. ``self._started`` flags).</span>
+<span class="sd">        Every instance that started the bridge counts as stopped afterwards. Used by the ``atexit`` hook, and the way</span>
+<span class="sd">        to end a bridge whose starting instance is not at hand (e.g. ``ConnectionBridge(proxy_port=1080).start()``).</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            verbose: If ``True``, print a status message to stdout.</span>
@@ -332,33 +366,14 @@
             <span class="n">state</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_STATE</span>
             <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">active_count</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">return</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">generation</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_restore_state</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">socks</span><span class="p">)</span>
 
-            <span class="n">state</span><span class="o">.</span><span class="n">active_count</span> <span class="o">=</span> <span class="mi">0</span>
-
-            <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">original_socket_cls</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">socket</span><span class="o">.</span><span class="n">socket</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">original_socket_cls</span>  <span class="c1"># type: ignore[misc]</span>
-
-            <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">original_env</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">original_env</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
-
-            <span class="k">if</span> <span class="n">socks</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="bp">cls</span><span class="o">.</span><span class="n">_restore_socks_default_proxy</span><span class="p">(</span><span class="n">socks</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">original_socks_proxy</span><span class="p">)</span>
-
-            <span class="n">state</span><span class="o">.</span><span class="n">original_socket_cls</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="n">state</span><span class="o">.</span><span class="n">original_env</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="n">state</span><span class="o">.</span><span class="n">original_socks_proxy</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="c1"># The route to Ensembl changed back: forget which MySQL ports were (un)reachable.</span>
-            <span class="n">reachability</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
-
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_emit_global</span><span class="p">(</span><span class="s2">"[idtrack] ConnectionBridge disabled (atexit/test cleanup)."</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span></div>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_emit_global</span><span class="p">(</span><span class="s2">"[idtrack] ConnectionBridge disabled for the whole process."</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="ConnectionBridge.start">
-<a class="viewcode-back" href="../../reference.html#idtrack._connection_bridge.ConnectionBridge.start">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ConnectionBridge.start">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">test</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Enable the bridge for the current Python process.</span>
 
@@ -420,6 +435,7 @@
                 <span class="n">state</span><span class="o">.</span><span class="n">atexit_registered</span> <span class="o">=</span> <span class="kc">True</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">_started</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_generation</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">generation</span>
             <span class="c1"># The route to Ensembl changed: forget which MySQL ports were (un)reachable.</span>
             <span class="n">reachability</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
 
@@ -442,7 +458,7 @@
 
 
 <div class="viewcode-block" id="ConnectionBridge.test_connection">
-<a class="viewcode-back" href="../../reference.html#idtrack._connection_bridge.ConnectionBridge.test_connection">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ConnectionBridge.test_connection">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">test_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">timeout_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">15.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Verify connectivity to Ensembl services through the active bridge.</span>
 
@@ -486,12 +502,13 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_emit</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[idtrack] ConnectionBridge check OK (Ensembl REST): </span><span class="si">{</span><span class="n">payload</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">port</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="p">((</span><span class="mi">3306</span><span class="p">,</span> <span class="s2">"3306"</span><span class="p">),</span> <span class="p">(</span><span class="mi">3337</span><span class="p">,</span> <span class="s2">"3337/GRCh37"</span><span class="p">)):</span>
-            <span class="c1"># Probed through the process-wide reachability memory, so the answer is the one IDTrack then uses.</span>
-            <span class="k">if</span> <span class="n">reachability</span><span class="o">.</span><span class="n">can_connect</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">mysql_host</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">port</span><span class="p">),</span> <span class="n">timeout_s</span><span class="o">=</span><span class="mf">10.0</span><span class="p">):</span>
+            <span class="c1"># Asked through the process-wide reachability memory, so the answer is the one IDTrack then uses; in the</span>
+            <span class="c1"># "https" access mode MySQL is not used and not probed.</span>
+            <span class="k">if</span> <span class="n">reachability</span><span class="o">.</span><span class="n">mysql_port_usable</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">port</span><span class="p">)):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_emit</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[idtrack] ConnectionBridge check OK (Ensembl MySQL </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">): reachable"</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_emit</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">"[idtrack] ConnectionBridge check WARN (Ensembl MySQL </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">): not reachable "</span>
+                    <span class="sa">f</span><span class="s2">"[idtrack] ConnectionBridge check WARN (Ensembl MySQL </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">): not reachable or not used "</span>
                     <span class="s2">"(IDTrack works via the HTTPS dumps instead)."</span><span class="p">,</span>
                     <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">,</span>
                     <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">,</span>
@@ -501,7 +518,7 @@
 
 
 <div class="viewcode-block" id="ConnectionBridge.stop">
-<a class="viewcode-back" href="../../reference.html#idtrack._connection_bridge.ConnectionBridge.stop">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ConnectionBridge.stop">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Disable the bridge and restore normal networking for this process.</span>
 
@@ -520,7 +537,8 @@
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_LOCK</span><span class="p">:</span>
             <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_STATE</span>
 
-            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_started</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_started</span> <span class="ow">or</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"_generation"</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">generation</span><span class="p">)</span> <span class="o">!=</span> <span class="n">state</span><span class="o">.</span><span class="n">generation</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_started</span> <span class="o">=</span> <span class="kc">False</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_emit</span><span class="p">(</span><span class="s2">"[idtrack] ConnectionBridge already stopped."</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
                 <span class="k">return</span>
 
@@ -529,45 +547,32 @@
             <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">active_count</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_emit</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[idtrack] ConnectionBridge still active (refcount=</span><span class="si">{</span><span class="n">state</span><span class="o">.</span><span class="n">active_count</span><span class="si">}</span><span class="s2">)."</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
                 <span class="k">return</span>
-
-            <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">original_socket_cls</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">socket</span><span class="o">.</span><span class="n">socket</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">original_socket_cls</span>  <span class="c1"># type: ignore[misc]</span>
-
-            <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">original_env</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">original_env</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                    <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
-
-            <span class="k">if</span> <span class="n">socks</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_restore_socks_default_proxy</span><span class="p">(</span><span class="n">socks</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">original_socks_proxy</span><span class="p">)</span>
-
-            <span class="n">state</span><span class="o">.</span><span class="n">original_socket_cls</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="n">state</span><span class="o">.</span><span class="n">original_env</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="n">state</span><span class="o">.</span><span class="n">original_socks_proxy</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="c1"># The route to Ensembl changed back: forget which MySQL ports were (un)reachable.</span>
-            <span class="n">reachability</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">_restore_state</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">socks</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_emit</span><span class="p">(</span><span class="s2">"[idtrack] ConnectionBridge disabled: normal networking restored."</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ConnectionBridge</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Enter a context manager that keeps the bridge enabled for the enclosed block."""</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="w">        </span><span class="sd">"""Enter a context manager that keeps the bridge enabled for the enclosed block.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            ConnectionBridge: This instance.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ConnectionError: If the connectivity check fails (the bridge is then already disabled again), so that the</span>
+<span class="sd">                block never runs with normal networking by mistake.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ConnectionError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"ConnectionBridge through </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">proxy_host</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">proxy_port</span><span class="si">}</span><span class="s2"> does not reach Ensembl REST. Ensure the "</span>
+                <span class="s2">"SSH session is established from your local machine (`ssh -R 1080 user@server`) and that the SOCKS port "</span>
+                <span class="s2">"is listening on the server (`ss -tlnp | grep 1080`)."</span>
+            <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc_type</span><span class="p">,</span> <span class="n">exc</span><span class="p">,</span> <span class="n">tb</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Exit the context manager and disable the bridge (best-effort)."""</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
-<span class="w">        </span><span class="sd">"""Best-effort safety net: stop the bridge when this instance is garbage-collected."""</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"_started"</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-            <span class="k">return</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span></div>
 
 </pre></div>
 

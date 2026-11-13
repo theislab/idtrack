@@ -96,7 +96,7 @@ The goal is to make results *interpretable* without requiring graph theory or da
       A numbered snapshot of Ensembl reference data (e.g., release 114). In IDTrack, releases define the **time axis**.
 
    Snapshot release (snapshot boundary)
-      The release you choose as the **upper time boundary** for a graph snapshot. It makes conversions reproducible: the same inputs and the same snapshot boundary should yield the same outputs.
+      The release you choose as the **upper time boundary** for a graph snapshot. It makes conversions reproducible: the same inputs, the same snapshot boundary and the same external YAML give the same outputs (a graph file records what it was built from and is checked when it is loaded).
 
    Backbone namespace
       The Ensembl “core” identifier spaces that carry historical relationships across releases (e.g., Ensembl gene IDs). Backbone edges enable time-travel mapping across releases.
@@ -111,7 +111,7 @@ The goal is to make results *interpretable* without requiring graph theory or da
       The genome build context for an organism (e.g., human GRCh38 vs GRCh37). Assemblies can affect which releases are reachable and which identifiers are valid.
 
    Graph snapshot
-      A precomputed mapping graph built for a specific organism and snapshot release (and often multiple assemblies). It is stored on disk under your local repository so it can be reused across sessions.
+      A precomputed mapping graph built for a specific organism and snapshot release, holding all the organism's assemblies of its release window. It is stored on disk under your local repository (one ``.npz`` file) and loads in seconds, without network, in later sessions.
 
    Identifier drift
       The fact that identifiers change across releases (retirements, merges, splits, version changes) and differ across databases. Drift is the core reason conversions must be time-aware.
@@ -120,13 +120,13 @@ The goal is to make results *interpretable* without requiring graph theory or da
       The three conversion outcome families: no mapping, unique mapping, or ambiguous mapping with multiple valid targets. IDTrack reports these explicitly rather than silently forcing a single answer.
 
    Strategy (best vs all)
-      A conversion policy. ``strategy='best'`` returns a single preferred target; ``strategy='all'`` returns all plausible targets so you can handle ambiguity explicitly.
+      A conversion policy. ``strategy='best'`` returns the best answer: one target, or the targets that are equal in all evidence, as a tie (``tie=True``) in a fixed order; ``strategy='all'`` returns all targets reached, best first, so you can handle ambiguity explicitly.
 
    Explainability payload
-      Optional structured information returned alongside a conversion result that helps you audit *why* a mapping happened (paths, intermediate nodes, decisions).
+      Optional structured information returned alongside a conversion result (``explain=True``: ``the_path``) that helps you audit *why* a mapping happened: the gene the identifier was read as, the bridges through external identifiers, Ensembl's mapping scores and the edges walked.
 
    Hyperconnected node
-      An identifier that connects to many other identifiers (common in some external namespaces). These can explode the search space; IDTrack uses safeguards so “promiscuous” nodes do not dominate results.
+      An external identifier that more than five genes carry in the same release (RFAM families, snoRNA names, shared accessions). It names a kind of gene, not a gene, so IDTrack never uses it as a bridge between genes and does not count it as annotation of a gene; it can still be queried and returned.
 
    Local repository (cache directory)
-      A writable directory where IDTrack stores downloads, derived tables, and graph snapshots. You can set it via the ``IDTRACK_LOCAL_REPO`` environment variable.
+      A directory where IDTrack stores downloaded and derived tables and graph files (``local_repository`` of :py:class:`idtrack.API`). The tutorials take it from the ``IDTRACK_LOCAL_REPO`` environment variable. A read-only one serves the tables and graphs it holds.

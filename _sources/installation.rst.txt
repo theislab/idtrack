@@ -29,83 +29,53 @@ Before installing IDTrack, ensure your system meets these requirements:
     * - **Operating Systems**
       - Linux, macOS (Intel and Apple Silicon), Windows
     * - **Memory**
-      - Minimum 4 GB RAM (8 GB recommended for large graphs)
+      - Using a graph: 0.26 GB (cynomolgus) to 1.14 GB (human) after loading, plus your data. Building a graph:
+        0.6 GB (cynomolgus) to 4.5 GB (human) at the peak. See :ref:`time-and-memory`.
     * - **Disk Space**
-      - About 130-240 MB per cached Ensembl release of an organism (raw and processed tables); a full
-        multi-release graph build caches tens of GB (about 20 GB for one human assembly)
+      - The tables a graph is built from stay in the local repository: 0.27 GB (cynomolgus), 0.65 GB (pig and
+        rhesus), 2.1 GB (mouse), 5.3 GB (human) for a graph of snapshot release 115, plus the graph file itself
+        (47 MB to 345 MB).
     * - **Network**
-      - HTTPS access to ``ftp.ensembl.org`` and ``rest.ensembl.org`` for the initial downloads; the Ensembl
-        MySQL ports are optional (see :ref:`ensembl-access`)
+      - HTTPS access to ``ftp.ensembl.org`` and ``rest.ensembl.org`` to build a graph (and for
+        :py:meth:`idtrack.API.resolve_organism` to learn the latest release); the Ensembl MySQL ports are optional
+        (see :ref:`ensembl-access`). Loading a graph that is on disk needs no network.
 
 .. note::
 
-    **Apple Silicon users (M1/M2/M3/M4):** If you install via pip/venv, install HDF5 first (or use conda-forge).
+    **Apple Silicon users (M1/M2/M3/M4):** If ``h5py`` fails to install or import, install HDF5 first.
     See the :ref:`apple-silicon` section below.
 
 
-Quick Install with Mamba (Recommended)
---------------------------------------
+Install with pip
+----------------
 
-We recommend `Mamba <https://mamba.readthedocs.io/>`_ for the fastest and most reliable
-installation experience. Mamba is a drop-in replacement for conda with significantly
-faster dependency resolution.
-
-.. note::
-
-    Environment activation is handled by conda’s shell integration, even if you use
-    Mamba for installs. Use ``conda activate <env>`` after creating an environment.
-
-**Install Mamba** (if you don't have it):
+IDTrack is published on PyPI (it is not on conda-forge or bioconda). Install it into a fresh environment:
 
 .. code-block:: console
 
-    # Option 1: Install Miniforge (includes Mamba) - recommended
-    # Download from https://github.com/conda-forge/miniforge
+    $ python -m venv idtrack-env
+    $ source idtrack-env/bin/activate      # Windows: idtrack-env\Scripts\activate
+    $ pip install idtrack
 
-    # Option 2: Install Mamba into existing conda
-    $ conda install -n base -c conda-forge mamba
-
-**Install IDTrack with Mamba**:
+or into a conda/mamba environment, with pip:
 
 .. code-block:: console
 
-    # Option 1 (recommended): create an isolated environment in one command
-    $ mamba create -n idtrack-env -c conda-forge python=3.13 idtrack
+    $ mamba create -n idtrack-env -c conda-forge python=3.13
     $ conda activate idtrack-env
+    $ pip install idtrack
 
-    # Option 2: install into your currently active conda environment
-    $ mamba install -c conda-forge idtrack
+.. important::
 
-.. tip::
+    The release on PyPI, 0.0.5, is older than the version these pages describe: the changes listed under
+    "Unreleased" in :doc:`changes` are not in it, and it reads neither the graphs nor the table cache of this version
+    (nor this version its). Until the next release, install this version from GitHub:
 
-    **Why Mamba?** Mamba resolves dependencies 10-100x faster than conda and handles
-    complex scientific packages (HDF5, NumPy, SciPy) more reliably. If you encounter
-    issues with other installation methods, try Mamba first.
+    .. code-block:: console
 
+        $ pip install "git+https://github.com/theislab/idtrack.git@main"
 
-Alternative Installation Methods
---------------------------------
-
-.. tab-set::
-
-    .. tab-item:: Using conda
-
-        .. code-block:: console
-
-            $ conda install -c conda-forge idtrack
-
-    .. tab-item:: Using pip
-
-        If you prefer pip or are working in a virtual environment:
-
-        .. code-block:: console
-
-            $ pip install idtrack
-
-        .. warning::
-
-            Pip installation may fail on some systems due to HDF5 compilation requirements.
-            If you encounter errors, use Mamba/conda instead or install HDF5 first.
+    ``idtrack.__version__`` does not tell the two apart before then (both say 0.0.5).
 
 
 .. _apple-silicon:
@@ -113,11 +83,9 @@ Alternative Installation Methods
 Apple Silicon (M1/M2/M3/M4) Setup
 ---------------------------------
 
-Apple Silicon Macs require HDF5 to be installed before IDTrack. This is because the
-``h5py`` and ``pytables`` packages (used for efficient data caching) need pre-compiled
-HDF5 binaries that match the ARM64 architecture. When installing via pip, these binaries
-may not be available or may fail to compile. Installing HDF5 through Mamba/conda ensures
-compatible ARM64 binaries are used. This is a one-time setup.
+IDTrack stores its tables with ``h5py``, which needs HDF5. When pip finds no pre-built ``h5py`` wheel for your
+Python and machine, it compiles ``h5py`` against an installed HDF5; installing HDF5 through conda-forge or Homebrew
+first gives it one. This is a one-time setup.
 
 **Step 1: Install HDF5**
 
@@ -138,7 +106,7 @@ Choose one of these methods:
 
 .. code-block:: console
 
-    $ mamba install -c conda-forge idtrack
+    $ pip install idtrack
 
 **Verification:**
 
@@ -156,35 +124,21 @@ Creating a Dedicated Environment (Recommended)
 ----------------------------------------------
 
 Using a dedicated environment is a good practice for any Python project and makes it
-easier to manage your installation.
+easier to manage your installation. IDTrack runs on Python 3.12 to 3.15.
 
-Using Mamba (fastest)
-~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: console
-
-    # Create a new environment with Python 3.13
-    $ mamba create -n idtrack-env python=3.13
-
-    # Activate the environment
-    $ conda activate idtrack-env
-
-    # Install IDTrack
-    $ mamba install -c conda-forge idtrack
-
-Using conda
-~~~~~~~~~~~
+Using Mamba or conda
+~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: console
 
     # Create a new environment with Python 3.13
-    $ conda create -n idtrack-env python=3.13
+    $ mamba create -n idtrack-env -c conda-forge python=3.13    # or: conda create ...
 
     # Activate the environment
     $ conda activate idtrack-env
 
-    # Install IDTrack
-    $ conda install -c conda-forge idtrack
+    # Install IDTrack (from PyPI, with pip)
+    $ pip install idtrack
 
 Using venv + pip
 ~~~~~~~~~~~~~~~~
@@ -249,7 +203,7 @@ and testing tools.
 Alternative: Install from Tarball
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For users who want a specific release without cloning the repository:
+For users who want the code of the ``main`` branch without cloning the repository:
 
 .. code-block:: console
 
@@ -337,15 +291,15 @@ the attribute ``idtrack.DB.ensembl_access`` (which wins when set):
 
     idtrack.DB.ensembl_access = "https"  # or "auto"
 
-**What differs between the modes:** both read the same Ensembl tables, with the same rows and values: the
-dump reader decodes MySQL's escaping (tabs, newlines and backslashes inside fields, ``NULL``) so that each
-row holds what the MySQL server returns. One difference remains in the raw tables: over HTTPS, column types
-are inferred from the text, so a text column that holds only digit strings is read as numbers (e.g. the
-``old_release`` and ``new_release`` columns of ``mapping_session``), as it was before this access-mode setting
-existed. The HTTPS path downloads whole compressed tables, so it is slower per table than a MySQL query
-(seconds to a minute per large table), but it needs no open port. In ``auto`` mode a blocked port costs one
-short probe per process, not one per table, and a port whose connection fails is not tried again in that
-process (the tables then come over HTTPS; this costs only speed).
+**What differs between the modes:** nothing in the tables: both read the same Ensembl tables, with the same rows,
+values and column types. The dump reader decodes MySQL's escaping (tabs, newlines and backslashes inside fields,
+``NULL``) so that each row holds what the MySQL server returns, and takes the column types from the table
+definitions of the dump, so a text column of digit strings stays text. The HTTPS path downloads whole compressed
+tables, so it is slower per table than a MySQL query (seconds to a minute per large table), but it needs no open port.
+In ``auto`` mode a blocked port costs one short probe per process, not one per table, and a port whose connection
+fails is not tried again for ten minutes (then after twice as long, up to a day; the tables come over HTTPS meanwhile,
+with a warning; this costs only speed). A query or data error of the MySQL server is raised, not answered over
+HTTPS.
 
 If you route IDTrack through an SSH tunnel with :py:class:`idtrack.ConnectionBridge`, starting and stopping
 the bridge forgets the probe results, so the ports are probed again through the new route.
@@ -354,8 +308,10 @@ the bridge forgets the probe results, so the ports are probed again through the 
 waits ``idtrack.DB.connection_timeout`` seconds to connect (default 15) and ``idtrack.DB.reading_timeout``
 seconds for the answer (default 60; it also applies to the HTTPS dumps), and is tried
 ``idtrack.DB.rest_attempts`` times (default 3) when it times out, the connection fails, or Ensembl answers 429
-or 5xx. When every attempt fails, :py:class:`idtrack._db.EnsemblRestError` names the URL, the timeouts and what
-to change. On a network where Ensembl answers slowly, raise the timeouts before the first call:
+or 5xx. When every attempt fails, :py:class:`idtrack.EnsemblRestError` (a :py:class:`ConnectionError`) names the
+URL, the timeouts and what to change; a download of the dumps that keeps failing raises
+:py:class:`idtrack.EnsemblDownloadError` (also a :py:class:`ConnectionError`), and a release that cannot be listed
+is an error, never read as "Ensembl has no such release". On a network where Ensembl answers slowly, raise the timeouts before the first call:
 
 .. code-block:: python
 
@@ -364,10 +320,12 @@ to change. On a network where Ensembl answers slowly, raise the timeouts before 
     idtrack.DB.reading_timeout = 120
     idtrack.DB.rest_attempts = 5
 
-The network is needed only to download, and to learn which release is the latest: the formal name of a
-supported organism (``"homo_sapiens"``, also ``"Homo sapiens"``) resolves without it, and a graph or harmonization
-run whose tables and graph are on disk runs offline (see :ref:`reusing-built-graphs`). An HTTPS proxy is honoured
-through ``HTTPS_PROXY``.
+The network is needed only to download, and to learn which release is the latest: the formal name, the short name
+and the assembly names of a supported organism (``"homo_sapiens"``, ``"Homo sapiens"``, ``"human"``, ``"GRCh38"``)
+resolve without it, and a graph file on disk loads and converts without it (see :ref:`reusing-built-graphs`), as does
+a harmonization whose graph is on disk. The local repository may be read-only: it then serves the tables and graphs
+it holds, and a table that would have to be computed raises :py:class:`PermissionError` naming the folder. An HTTPS
+proxy is honoured through ``HTTPS_PROXY``.
 
 
 Optional Dependencies
@@ -397,6 +355,19 @@ For cross-species ortholog analysis with sequence alignment:
 
     $ pip install "idtrack[ortholog]"
 
+Protein Embeddings
+~~~~~~~~~~~~~~~~~~
+
+:py:func:`idtrack._external_mappers._ortholog.align_ortholog_pair_with_features` can add protein-language-model embedding
+features to an ortholog alignment. They need ``torch`` and ``transformers``; with them installed, the model named by
+``embedding_model_name`` (``facebook/esm2_t12_35M_UR50D`` by default) is downloaded from Hugging Face on first use.
+Without them, or with ``embedding_model_name=None``, those features are left empty (with ``verbose=True`` a warning says why) and the
+other alignment features are computed.
+
+.. code-block:: console
+
+    $ pip install "idtrack[embeddings]"
+
 All Optional Dependencies
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -415,20 +386,13 @@ Common Installation Issues
 
 **HDF5 / h5py import errors**
 
-This usually indicates an HDF5 binary compatibility issue. The most reliable fix is to
-use conda-forge (Mamba or conda):
+This usually indicates an HDF5 binary compatibility issue. Install ``h5py`` from conda-forge in a fresh environment,
+then IDTrack with pip:
 
 .. code-block:: console
 
-    # Create a fresh environment with Mamba
-    $ mamba create -n idtrack-env python=3.13 idtrack -c conda-forge
+    $ mamba create -n idtrack-env -c conda-forge python=3.13 h5py
     $ conda activate idtrack-env
-
-If you must use pip, install HDF5 dependencies first:
-
-.. code-block:: console
-
-    $ mamba install -c conda-forge hdf5
     $ pip install idtrack
 
 **SSL Certificate errors during download**
@@ -454,15 +418,6 @@ If IDTrack encounters SSL errors when downloading external databases:
     $ python -m venv idtrack-env
     $ source idtrack-env/bin/activate
     $ pip install idtrack
-
-**Slow dependency resolution with conda**
-
-Switch to Mamba for significantly faster installation:
-
-.. code-block:: console
-
-    $ conda install -n base -c conda-forge mamba
-    $ mamba install -c conda-forge idtrack
 
 
 Getting Help

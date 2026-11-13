@@ -7,7 +7,7 @@
    "source": [
     "# Part 0 — Conceptual Foundation\n",
     "\n",
-    "*Last updated:* 2026-01-08\n",
+    "*Last updated:* 2026-11-12\n",
     "\n",
     "This section builds the mental model you need **before touching code**. It is written for **wet-lab researchers** and **bioinformaticians** who want reliable, reproducible identifier conversion across Ensembl releases and external databases.\n",
     "\n",
@@ -109,6 +109,7 @@
     "\n",
     "This matters because it makes results **reproducible**:\n",
     "- same snapshot boundary + same external YAML → same graph → same conversions\n",
+    "- IDTrack checks this for you: a graph file records the external databases and the organism table it was built from, and loading it for another selection is an error, never a silent substitute\n",
     "\n",
     "A practical metaphor: you are doing \"time travel\" in a museum that you *freeze in time*. The outside world (newer releases) keeps changing, but your museum exhibits do not.\n"
    ]
@@ -124,8 +125,7 @@
     "Instead, you explicitly opt in via a small YAML file (the **external YAML**).\n",
     "\n",
     "Why? Because including everything would:\n",
-    "- make the graph huge\n",
-    "- slow down path-finding\n",
+    "- make the graph and the downloads larger\n",
     "- increase ambiguity (many-to-many relationships)\n",
     "\n",
     "So the workflow is:\n",
@@ -171,16 +171,17 @@
     "Why this matters in practice: two datasets can use the “same kind of identifiers” but still be anchored to different builds\n",
     "because they were annotated with different GTFs or reference packages. That is a very common atlas-building situation.\n",
     "\n",
-    "IDTrack treats assemblies as a first-class part of the graph. A snapshot is not only “release-bounded in time” — it can also be\n",
+    "IDTrack treats assemblies as a first-class part of the graph. A snapshot is not only “release-bounded in time” — it is also\n",
     "**multi-assembly**:\n",
     "\n",
-    "- nodes/edges carry assembly context where needed\n",
-    "- the path-finder can move across **releases** and across **assemblies** to reach a unified target space\n",
-    "- some external databases are only present (or only reliable) on specific assembly/release combinations, so having multiple assemblies\n",
-    "  available can increase connectivity\n",
+    "- nodes/edges carry assembly context where needed: an external id is linked to a gene for the assemblies and releases at which\n",
+    "  Ensembl lists the link\n",
+    "- a conversion follows, at each release, the assembly Ensembl maintained at that release (human: NCBI36 to release 54, GRCh37 to\n",
+    "  75, GRCh38 from 76), so identifiers of an older build convert to the build of your target release\n",
+    "- ids of a build Ensembl kept beside the maintained one (human GRCh37 after release 75) are in the graph as ids to convert from\n",
     "\n",
-    "In most projects you choose a single **target** (a snapshot boundary + a primary assembly for output), and use IDTrack to bring mixed\n",
-    "inputs into that target in a reproducible way.\n",
+    "In most projects you choose a single **target** (a snapshot boundary and a target release), and use IDTrack to bring mixed inputs into\n",
+    "that target in a reproducible way.\n",
     "\n",
     "\n",
     "Human is the main case where two assemblies are actively supported in parallel (GRCh38 + GRCh37). Mouse, pig and the two macaques are *clean-handoff* species (one maintained assembly per release), but older assemblies still matter for legacy datasets."
@@ -227,13 +228,13 @@
     "\n",
     "IDTrack assumes you have:\n",
     "- a writable **local repository folder** (cache + graphs + YAML configs)\n",
-    "- network access the first time you build a graph (REST + HTTPS/FTP dumps; later runs reuse the cache)\n",
-    "- enough disk space (graphs and cached tables can be large)\n",
+    "- network access the first time you build a graph (REST + HTTPS/FTP dumps); loading a graph that is on disk needs none\n",
+    "- enough disk space for the tables a graph is built from (0.3 GB for cynomolgus to 5.3 GB for human, for snapshot 115)\n",
     "\n",
     "IDTrack can:\n",
     "- time-travel identifiers across Ensembl releases inside a chosen snapshot boundary\n",
     "- optionally hop into external namespaces you explicitly enabled\n",
-    "- surface ambiguity (1→n) instead of hiding it\n",
+    "- surface ambiguity (1→n) instead of hiding it, and return genes that are equal in all evidence as a tie\n",
     "\n",
     "IDTrack cannot magically fix upstream ambiguity:\n",
     "- if Ensembl history says a gene split into multiple descendants, the correct answer may be **1→n**\n",
@@ -245,7 +246,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 3,
+   "execution_count": 1,
    "id": "b5e06b65",
    "metadata": {},
    "outputs": [
@@ -254,7 +255,7 @@
      "output_type": "stream",
      "text": [
       "IDTrack version: 0.0.5\n",
-      "Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache\n"
+      "Local repository: idtrack_cache\n"
      ]
     }
    ],
@@ -267,7 +268,7 @@
     "\n",
     "import idtrack\n",
     "\n",
-    "LOCAL_REPOSITORY = Path(os.environ.get('IDTRACK_LOCAL_REPO', './idtrack_cache')).resolve()\n",
+    "LOCAL_REPOSITORY = Path(os.environ.get('IDTRACK_LOCAL_REPO', 'idtrack_cache'))\n",
     "LOCAL_REPOSITORY.mkdir(parents=True, exist_ok=True)\n",
     "\n",
     "api = idtrack.API(local_repository=str(LOCAL_REPOSITORY))\n",
@@ -290,7 +291,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 4,
+   "execution_count": 2,
    "id": "f911dcbf",
    "metadata": {},
    "outputs": [
@@ -298,30 +299,16 @@
      "name": "stderr",
      "output_type": "stream",
      "text": [
-      "2026-01-09 21:31:06 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.\n",
-      "2026-01-09 21:31:07 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.\n"
+      "2026-11-12 15:14:48 INFO:idtrack._verify_organism: Ensembl Rest API query to get the organism names and associated releases.\n"
      ]
     },
     {
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "'human' -> 'homo_sapiens' (latest Ensembl release: 115)\n"
-     ]
-    },
-    {
-     "name": "stderr",
-     "output_type": "stream",
-     "text": [
-      "2026-01-09 21:31:07 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.\n"
-     ]
-    },
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "'mus musculus' -> 'mus_musculus' (latest Ensembl release: 115)\n",
-      "'sus scrofa' -> 'sus_scrofa' (latest Ensembl release: 115)\n"
+      "'human' -> 'homo_sapiens' (latest Ensembl release: 116)\n",
+      "'mus musculus' -> 'mus_musculus' (latest Ensembl release: 116)\n",
+      "'sus scrofa' -> 'sus_scrofa' (latest Ensembl release: 116)\n"
      ]
     }
    ],
@@ -345,8 +332,10 @@
     "- `'sus scrofa' -> 'sus_scrofa'`\n",
     "- `'Macaca mulatta'` or `9544` -> `'macaca_mulatta'`\n",
     "\n",
-    "Matching is case-insensitive. Species names and taxon IDs always resolve; a common name shared by several Ensembl species\n",
-    "(e.g. `'pig'`, which every pig breed in Ensembl carries) raises an error that lists the candidates.\n",
+    "Matching is case-insensitive. Species names, taxon IDs and the short names `'human'`, `'mouse'`, `'pig'`, `'rhesus'` and\n",
+    "`'cynomolgus'` always resolve (`'pig'` is `sus_scrofa`, although Ensembl also lists every pig breed under that common name); another\n",
+    "common name shared by several Ensembl species raises an error that lists the candidates. The latest release is the newest one\n",
+    "Ensembl serves today: the tutorials pin the snapshot release instead (Part 3).\n",
     "\n",
     "From now on, the tutorials use the **formal Ensembl names** (snake_case).\n"
    ]
@@ -364,9 +353,8 @@
     "4. **Run self-tests / sanity checks** (initialization tests)\n",
     "5. **Human API deep dive** (Part 4)\n",
     "6. **Harmonization tutorial (HLCA-style)** (Part 5)\n",
-    "7. **HLCA experiments case study** (Part 5, advanced)\n",
-    "8. **Cross-species humanization** (Part 6, advanced)\n",
-    "9. **Advanced topics** (Part 7)\n"
+    "7. **Cross-species humanization** (Part 6, advanced)\n",
+    "8. **Advanced topics** (Part 7)\n"
    ]
   },
   {
@@ -380,13 +368,12 @@
     "\n",
     "1. **Permissions**: is your local repository writable?\n",
     "2. **Network**: first-time runs need to reach Ensembl services (REST + HTTPS/FTP dumps; MySQL is optional).\n",
-    "3. **Disk space**: building graphs can use multiple GB.\n",
-    "4. **Snapshot boundary + assemblies**: the snapshot release must exist for the organism and the chosen primary assembly. Older assemblies have\n",
-    "   different release coverage; a multi-assembly snapshot can still include them when they exist within the release window.\n",
+    "3. **Disk space**: the tables of a graph take 0.3 GB (cynomolgus) to 5.3 GB (human) for snapshot 115.\n",
+    "4. **Snapshot boundary**: the snapshot release must be a release of the organism in Ensembl (and in IDTrack's organism table);\n",
+    "   the graph covers every release from the organism's first release in IDTrack up to it, on all its assemblies.\n",
     "5. **External YAML**: every supported organism ships a default; a `*_externals_modified.yml` in your local repository overrides it.\n",
     "   If a graph build warns that releases have no entry in the YAML, extend the file (Part 2, section 2.6).\n",
-    "6. **Blocked MySQL ports**: set `IDTRACK_ENSEMBL_ACCESS=https` to skip MySQL entirely (same rows and values; over HTTPS a text\n",
-    "   column holding only digit strings is read as numbers).\n",
+    "6. **Blocked MySQL ports**: set `IDTRACK_ENSEMBL_ACCESS=https` to skip MySQL entirely (the same tables, rows and values).\n",
     "\n",
     "> **Tip:** For a deeper checklist (including diagnostics helpers), see Part 7.3 in `07_advanced_topics.ipynb`.\n"
    ]

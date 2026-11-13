@@ -131,7 +131,7 @@
   <a class="idtrack-notebook-download" href="../_sources/_notebooks/01_installation_guide.ipynb">Download notebook</a>
 </div><section id="Part-1-—-Environment-Setup-&amp;-Installation">
 <h1>Part 1 — Environment Setup &amp; Installation<a class="headerlink" href="#Part-1-—-Environment-Setup-&-Installation" title="Link to this heading"></a></h1>
-<p><em>Last updated:</em> 2026-01-08</p>
+<p><em>Last updated:</em> 2026-11-12</p>
 <p>This tutorial gets you from <strong>“I have Python”</strong> to <strong>“IDTrack imports and has a working local cache directory”</strong>.</p>
 <p><strong>Learning objectives</strong></p>
 <ul class="simple">
@@ -155,8 +155,8 @@
 <section id="Step-1-—-Create-an-isolated-environment">
 <h3>Step 1 — Create an isolated environment<a class="headerlink" href="#Step-1-—-Create-an-isolated-environment" title="Link to this heading"></a></h3>
 <p><strong>Option A: conda/mamba</strong></p>
-<p>Create and activate a clean environment (example uses Python 3.11):</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.11<span class="w"> </span>-y
+<p>Create and activate a clean environment (IDTrack runs on Python 3.12 to 3.15; the example uses 3.13):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.13<span class="w"> </span>-y
 mamba<span class="w"> </span>activate<span class="w"> </span>idtrack
 </pre></div>
 </div>
@@ -173,8 +173,12 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
 </section>
 <section id="Step-2-—-Install-IDTrack">
 <h3>Step 2 — Install IDTrack<a class="headerlink" href="#Step-2-—-Install-IDTrack" title="Link to this heading"></a></h3>
-<p>If you are installing from PyPI:</p>
+<p>If you are installing from PyPI (IDTrack is not on conda-forge; install it with pip in either environment):</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
+</pre></div>
+</div>
+<p>The release on PyPI, 0.0.5, is older than the version these tutorials describe (see “Changes” in the documentation). Until the next release, install the version of the tutorials from GitHub:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"git+https://github.com/theislab/idtrack.git@main"</span>
 </pre></div>
 </div>
 <p>If you are working from a cloned repository (developer install):</p>
@@ -192,7 +196,7 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
 <div><p><strong>Expected result:</strong> If installation succeeded, you will see an IDTrack version. If it failed, you will see a helpful error message (and the notebook continues).</p>
 </div></blockquote>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>1
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">platform</span>
@@ -200,14 +204,14 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Python:'</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">version</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'Executable:'</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Platform:'</span><span class="p">,</span> <span class="n">platform</span><span class="o">.</span><span class="n">platform</span><span class="p">())</span>
 
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 
     <span class="nb">print</span><span class="p">(</span><span class="s1">'idtrack version:'</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">idtrack</span><span class="p">,</span> <span class="s1">'__version__'</span><span class="p">,</span> <span class="s1">'unknown'</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'idtrack package path:'</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">idtrack</span><span class="o">.</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+    <span class="n">in_site_packages</span> <span class="o">=</span> <span class="s1">'site-packages'</span> <span class="ow">in</span> <span class="n">Path</span><span class="p">(</span><span class="n">idtrack</span><span class="o">.</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parts</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'idtrack imported from:'</span><span class="p">,</span> <span class="s1">'an installed package'</span> <span class="k">if</span> <span class="n">in_site_packages</span> <span class="k">else</span> <span class="s1">'a source checkout'</span><span class="p">)</span>
     <span class="n">IDTRACK_OK</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'idtrack import failed -&gt;'</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
@@ -221,11 +225,10 @@ python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </sp
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Python: 3.11.12
-Executable: /Users/kemalinecik/tools/apps/mamba/envs/idtrack_dev_env/bin/python
-Platform: macOS-15.7.2-arm64-arm-64bit
+Python: 3.13.18
+Platform: Linux-6.12.0-211.47.1.el10_2.x86_64-x86_64-with-glibc2.39
 idtrack version: 0.0.5
-idtrack package path: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/idtrack/__init__.py
+idtrack imported from: a source checkout
 </pre></div></div>
 </div>
 </section>
@@ -248,13 +251,13 @@ idtrack package path: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/idtra
 <div><p><strong>Expected result:</strong> You should see <code class="docutils literal notranslate"><span class="pre">OK</span></code> and the resolved path.</p>
 </div></blockquote>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>2
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
-<span class="n">local_repo</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'./idtrack_cache'</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">local_repo</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'idtrack_cache'</span><span class="p">))</span>
 <span class="n">local_repo</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="n">test_file</span> <span class="o">=</span> <span class="n">local_repo</span> <span class="o">/</span> <span class="s1">'_idtrack_write_test.txt'</span>
@@ -270,7 +273,7 @@ idtrack package path: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/idtra
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache
+Local repository: idtrack_cache
 Write test: OK
 </pre></div></div>
 </div>
@@ -286,7 +289,7 @@ Write test: OK
 <div><p><strong>Note:</strong> Some institutions block outbound MySQL ports. IDTrack can still work via the HTTPS/FTP MySQL dumps when MySQL is unreachable (slower but functional).</p>
 </div></blockquote>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>3
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
@@ -324,9 +327,9 @@ Write test: OK
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 Ensembl REST: 200 {&#34;ping&#34;:1}
-Ensembl MySQL: OK (ensembldb.ensembl.org:3306)
-Ensembl MySQL: OK (ensembldb.ensembl.org:5306)
-Ensembl MySQL: OK (ensembldb.ensembl.org:3337)
+Ensembl MySQL: not reachable (ensembldb.ensembl.org:3306) -&gt; TimeoutError
+Ensembl MySQL: not reachable (ensembldb.ensembl.org:5306) -&gt; TimeoutError
+Ensembl MySQL: not reachable (ensembldb.ensembl.org:3337) -&gt; TimeoutError
 </pre></div></div>
 </div>
 </section>
@@ -347,7 +350,7 @@ Ensembl MySQL: OK (ensembldb.ensembl.org:3337)
 <li><p><strong>``ImportError: … h5py …`` (often on macOS):</strong> install <code class="docutils literal notranslate"><span class="pre">hdf5</span></code> via conda, then reinstall <code class="docutils literal notranslate"><span class="pre">h5py</span></code>.</p></li>
 <li><p><strong>REST works but MySQL ports fail:</strong> this is common; IDTrack will fall back to HTTPS/FTP dumps. If you want live-MySQL speed, you may need outbound ports <code class="docutils literal notranslate"><span class="pre">3306/5306</span></code> (and <code class="docutils literal notranslate"><span class="pre">3337</span></code> only for the human GRCh37 archive).</p></li>
 <li><p><strong>Permission errors in the cache directory:</strong> choose a different <code class="docutils literal notranslate"><span class="pre">IDTRACK_LOCAL_REPO</span></code> you can write to.</p></li>
-<li><p><strong>Slow first run:</strong> normal. The first build populates caches; later runs reuse them.</p></li>
+<li><p><strong>Slow first run:</strong> normal. The first build of a graph downloads Ensembl’s tables of every release (from about 6 minutes for cynomolgus to 2 hours for human); later runs load the graph file in a few seconds.</p></li>
 </ul>
 </section>
 </section>

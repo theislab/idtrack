@@ -68,12 +68,10 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorials.html">Tutorials</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#system-requirements">System Requirements</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#quick-install-with-mamba-recommended">Quick Install with Mamba (Recommended)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#alternative-installation-methods">Alternative Installation Methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#install-with-pip">Install with pip</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#apple-silicon-m1-m2-m3-m4-setup">Apple Silicon (M1/M2/M3/M4) Setup</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#creating-a-dedicated-environment-recommended">Creating a Dedicated Environment (Recommended)</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#using-mamba-fastest">Using Mamba (fastest)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#using-conda">Using conda</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#using-mamba-or-conda">Using Mamba or conda</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#using-venv-pip">Using venv + pip</a></li>
 </ul>
 </li>
@@ -88,6 +86,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#optional-dependencies">Optional Dependencies</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#external-mapping-backends">External Mapping Backends</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#ortholog-analysis">Ortholog Analysis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#protein-embeddings">Protein Embeddings</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#all-optional-dependencies">All Optional Dependencies</a></li>
 </ul>
 </li>
@@ -138,39 +137,38 @@ your workflow.</p>
 <nav class="contents local" id="contents">
 <ul class="simple">
 <li><p><a class="reference internal" href="#system-requirements" id="id2">System Requirements</a></p></li>
-<li><p><a class="reference internal" href="#quick-install-with-mamba-recommended" id="id3">Quick Install with Mamba (Recommended)</a></p></li>
-<li><p><a class="reference internal" href="#alternative-installation-methods" id="id4">Alternative Installation Methods</a></p></li>
-<li><p><a class="reference internal" href="#apple-silicon-m1-m2-m3-m4-setup" id="id5">Apple Silicon (M1/M2/M3/M4) Setup</a></p></li>
-<li><p><a class="reference internal" href="#creating-a-dedicated-environment-recommended" id="id6">Creating a Dedicated Environment (Recommended)</a></p>
+<li><p><a class="reference internal" href="#install-with-pip" id="id3">Install with pip</a></p></li>
+<li><p><a class="reference internal" href="#apple-silicon-m1-m2-m3-m4-setup" id="id4">Apple Silicon (M1/M2/M3/M4) Setup</a></p></li>
+<li><p><a class="reference internal" href="#creating-a-dedicated-environment-recommended" id="id5">Creating a Dedicated Environment (Recommended)</a></p>
 <ul>
-<li><p><a class="reference internal" href="#using-mamba-fastest" id="id7">Using Mamba (fastest)</a></p></li>
-<li><p><a class="reference internal" href="#using-conda" id="id8">Using conda</a></p></li>
-<li><p><a class="reference internal" href="#using-venv-pip" id="id9">Using venv + pip</a></p></li>
+<li><p><a class="reference internal" href="#using-mamba-or-conda" id="id6">Using Mamba or conda</a></p></li>
+<li><p><a class="reference internal" href="#using-venv-pip" id="id7">Using venv + pip</a></p></li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#development-installation" id="id10">Development Installation</a></p>
+<li><p><a class="reference internal" href="#development-installation" id="id8">Development Installation</a></p>
 <ul>
-<li><p><a class="reference internal" href="#prerequisites" id="id11">Prerequisites</a></p></li>
-<li><p><a class="reference internal" href="#clone-and-install" id="id12">Clone and Install</a></p></li>
-<li><p><a class="reference internal" href="#alternative-install-from-tarball" id="id13">Alternative: Install from Tarball</a></p></li>
+<li><p><a class="reference internal" href="#prerequisites" id="id9">Prerequisites</a></p></li>
+<li><p><a class="reference internal" href="#clone-and-install" id="id10">Clone and Install</a></p></li>
+<li><p><a class="reference internal" href="#alternative-install-from-tarball" id="id11">Alternative: Install from Tarball</a></p></li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#verifying-your-installation" id="id14">Verifying Your Installation</a></p></li>
-<li><p><a class="reference internal" href="#network-access-mysql-or-https" id="id15">Network Access: MySQL or HTTPS</a></p></li>
-<li><p><a class="reference internal" href="#optional-dependencies" id="id16">Optional Dependencies</a></p>
+<li><p><a class="reference internal" href="#verifying-your-installation" id="id12">Verifying Your Installation</a></p></li>
+<li><p><a class="reference internal" href="#network-access-mysql-or-https" id="id13">Network Access: MySQL or HTTPS</a></p></li>
+<li><p><a class="reference internal" href="#optional-dependencies" id="id14">Optional Dependencies</a></p>
 <ul>
-<li><p><a class="reference internal" href="#external-mapping-backends" id="id17">External Mapping Backends</a></p></li>
-<li><p><a class="reference internal" href="#ortholog-analysis" id="id18">Ortholog Analysis</a></p></li>
-<li><p><a class="reference internal" href="#all-optional-dependencies" id="id19">All Optional Dependencies</a></p></li>
+<li><p><a class="reference internal" href="#external-mapping-backends" id="id15">External Mapping Backends</a></p></li>
+<li><p><a class="reference internal" href="#ortholog-analysis" id="id16">Ortholog Analysis</a></p></li>
+<li><p><a class="reference internal" href="#protein-embeddings" id="id17">Protein Embeddings</a></p></li>
+<li><p><a class="reference internal" href="#all-optional-dependencies" id="id18">All Optional Dependencies</a></p></li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#troubleshooting" id="id20">Troubleshooting</a></p>
+<li><p><a class="reference internal" href="#troubleshooting" id="id19">Troubleshooting</a></p>
 <ul>
-<li><p><a class="reference internal" href="#common-installation-issues" id="id21">Common Installation Issues</a></p></li>
-<li><p><a class="reference internal" href="#getting-help" id="id22">Getting Help</a></p></li>
+<li><p><a class="reference internal" href="#common-installation-issues" id="id20">Common Installation Issues</a></p></li>
+<li><p><a class="reference internal" href="#getting-help" id="id21">Getting Help</a></p></li>
 </ul>
 </li>
-<li><p><a class="reference internal" href="#what-s-next" id="id23">What’s Next?</a></p></li>
+<li><p><a class="reference internal" href="#what-s-next" id="id22">What’s Next?</a></p></li>
 </ul>
 </nav>
 <section id="system-requirements">
@@ -194,90 +192,57 @@ your workflow.</p>
 <td><p>Linux, macOS (Intel and Apple Silicon), Windows</p></td>
 </tr>
 <tr class="row-even"><td><p><strong>Memory</strong></p></td>
-<td><p>Minimum 4 GB RAM (8 GB recommended for large graphs)</p></td>
+<td><p>Using a graph: 0.26 GB (cynomolgus) to 1.14 GB (human) after loading, plus your data. Building a graph:
+0.6 GB (cynomolgus) to 4.5 GB (human) at the peak. See <a class="reference internal" href="usage.html#time-and-memory"><span class="std std-ref">Time and Memory</span></a>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>Disk Space</strong></p></td>
-<td><p>About 130-240 MB per cached Ensembl release of an organism (raw and processed tables); a full
-multi-release graph build caches tens of GB (about 20 GB for one human assembly)</p></td>
+<td><p>The tables a graph is built from stay in the local repository: 0.27 GB (cynomolgus), 0.65 GB (pig and
+rhesus), 2.1 GB (mouse), 5.3 GB (human) for a graph of snapshot release 115, plus the graph file itself
+(47 MB to 345 MB).</p></td>
 </tr>
 <tr class="row-even"><td><p><strong>Network</strong></p></td>
-<td><p>HTTPS access to <code class="docutils literal notranslate"><span class="pre">ftp.ensembl.org</span></code> and <code class="docutils literal notranslate"><span class="pre">rest.ensembl.org</span></code> for the initial downloads; the Ensembl
-MySQL ports are optional (see <a class="reference internal" href="#ensembl-access"><span class="std std-ref">Network Access: MySQL or HTTPS</span></a>)</p></td>
+<td><p>HTTPS access to <code class="docutils literal notranslate"><span class="pre">ftp.ensembl.org</span></code> and <code class="docutils literal notranslate"><span class="pre">rest.ensembl.org</span></code> to build a graph (and for
+<a class="reference internal" href="reference.html#idtrack.API.resolve_organism" title="idtrack.API.resolve_organism"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.resolve_organism()</span></code></a> to learn the latest release); the Ensembl MySQL ports are optional
+(see <a class="reference internal" href="#ensembl-access"><span class="std std-ref">Network Access: MySQL or HTTPS</span></a>). Loading a graph that is on disk needs no network.</p></td>
 </tr>
 </tbody>
 </table>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p><strong>Apple Silicon users (M1/M2/M3/M4):</strong> If you install via pip/venv, install HDF5 first (or use conda-forge).
+<p><strong>Apple Silicon users (M1/M2/M3/M4):</strong> If <code class="docutils literal notranslate"><span class="pre">h5py</span></code> fails to install or import, install HDF5 first.
 See the <a class="reference internal" href="#apple-silicon"><span class="std std-ref">Apple Silicon (M1/M2/M3/M4) Setup</span></a> section below.</p>
 </div>
 </section>
-<section id="quick-install-with-mamba-recommended">
-<h2>Quick Install with Mamba (Recommended)<a class="headerlink" href="#quick-install-with-mamba-recommended" title="Link to this heading"></a></h2>
-<p>We recommend <a class="reference external" href="https://mamba.readthedocs.io/">Mamba</a> for the fastest and most reliable
-installation experience. Mamba is a drop-in replacement for conda with significantly
-faster dependency resolution.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Environment activation is handled by conda’s shell integration, even if you use
-Mamba for installs. Use <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">&lt;env&gt;</span></code> after creating an environment.</p>
-</div>
-<p><strong>Install Mamba</strong> (if you don’t have it):</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Option<span class="w"> </span><span class="m">1</span>:<span class="w"> </span>Install<span class="w"> </span>Miniforge<span class="w"> </span><span class="o">(</span>includes<span class="w"> </span>Mamba<span class="o">)</span><span class="w"> </span>-<span class="w"> </span>recommended
-<span class="gp"># </span>Download<span class="w"> </span>from<span class="w"> </span>https://github.com/conda-forge/miniforge
-
-<span class="gp"># </span>Option<span class="w"> </span><span class="m">2</span>:<span class="w"> </span>Install<span class="w"> </span>Mamba<span class="w"> </span>into<span class="w"> </span>existing<span class="w"> </span>conda
-<span class="gp">$ </span>conda<span class="w"> </span>install<span class="w"> </span>-n<span class="w"> </span>base<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>mamba
+<section id="install-with-pip">
+<h2>Install with pip<a class="headerlink" href="#install-with-pip" title="Link to this heading"></a></h2>
+<p>IDTrack is published on PyPI (it is not on conda-forge or bioconda). Install it into a fresh environment:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>idtrack-env
+<span class="gp">$ </span><span class="nb">source</span><span class="w"> </span>idtrack-env/bin/activate<span class="w">      </span><span class="c1"># Windows: idtrack-env\Scripts\activate</span>
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
 </pre></div>
 </div>
-<p><strong>Install IDTrack with Mamba</strong>:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Option<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">(</span>recommended<span class="o">)</span>:<span class="w"> </span>create<span class="w"> </span>an<span class="w"> </span>isolated<span class="w"> </span>environment<span class="w"> </span><span class="k">in</span><span class="w"> </span>one<span class="w"> </span><span class="nb">command</span>
-<span class="gp">$ </span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.13<span class="w"> </span>idtrack
+<p>or into a conda/mamba environment, with pip:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.13
 <span class="gp">$ </span>conda<span class="w"> </span>activate<span class="w"> </span>idtrack-env
-
-<span class="gp"># </span>Option<span class="w"> </span><span class="m">2</span>:<span class="w"> </span>install<span class="w"> </span>into<span class="w"> </span>your<span class="w"> </span>currently<span class="w"> </span>active<span class="w"> </span>conda<span class="w"> </span>environment
-<span class="gp">$ </span>mamba<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>idtrack
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
 </pre></div>
 </div>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p><strong>Why Mamba?</strong> Mamba resolves dependencies 10-100x faster than conda and handles
-complex scientific packages (HDF5, NumPy, SciPy) more reliably. If you encounter
-issues with other installation methods, try Mamba first.</p>
-</div>
-</section>
-<section id="alternative-installation-methods">
-<h2>Alternative Installation Methods<a class="headerlink" href="#alternative-installation-methods" title="Link to this heading"></a></h2>
-<div class="sd-tab-set docutils">
-<input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
-<label aria-controls="sd-tab-item-0-content" class="sd-tab-label" for="sd-tab-item-0">
-Using conda</label><div class="sd-tab-content docutils" id="sd-tab-item-0-content">
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>idtrack
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>The release on PyPI, 0.0.5, is older than the version these pages describe: the changes listed under
+“Unreleased” in <a class="reference internal" href="changes.html"><span class="doc">Changes</span></a> are not in it, and it reads neither the graphs nor the table cache of this version
+(nor this version its). Until the next release, install this version from GitHub:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"git+https://github.com/theislab/idtrack.git@main"</span>
 </pre></div>
 </div>
-</div>
-<input id="sd-tab-item-1" name="sd-tab-set-0" type="radio">
-<label aria-controls="sd-tab-item-1-content" class="sd-tab-label" for="sd-tab-item-1">
-Using pip</label><div class="sd-tab-content docutils" id="sd-tab-item-1-content">
-<p>If you prefer pip or are working in a virtual environment:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
-</pre></div>
-</div>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Pip installation may fail on some systems due to HDF5 compilation requirements.
-If you encounter errors, use Mamba/conda instead or install HDF5 first.</p>
-</div>
-</div>
+<p><code class="docutils literal notranslate"><span class="pre">idtrack.__version__</span></code> does not tell the two apart before then (both say 0.0.5).</p>
 </div>
 </section>
 <section id="apple-silicon-m1-m2-m3-m4-setup">
 <span id="apple-silicon"></span><h2>Apple Silicon (M1/M2/M3/M4) Setup<a class="headerlink" href="#apple-silicon-m1-m2-m3-m4-setup" title="Link to this heading"></a></h2>
-<p>Apple Silicon Macs require HDF5 to be installed before IDTrack. This is because the
-<code class="docutils literal notranslate"><span class="pre">h5py</span></code> and <code class="docutils literal notranslate"><span class="pre">pytables</span></code> packages (used for efficient data caching) need pre-compiled
-HDF5 binaries that match the ARM64 architecture. When installing via pip, these binaries
-may not be available or may fail to compile. Installing HDF5 through Mamba/conda ensures
-compatible ARM64 binaries are used. This is a one-time setup.</p>
+<p>IDTrack stores its tables with <code class="docutils literal notranslate"><span class="pre">h5py</span></code>, which needs HDF5. When pip finds no pre-built <code class="docutils literal notranslate"><span class="pre">h5py</span></code> wheel for your
+Python and machine, it compiles <code class="docutils literal notranslate"><span class="pre">h5py</span></code> against an installed HDF5; installing HDF5 through conda-forge or Homebrew
+first gives it one. This is a one-time setup.</p>
 <p><strong>Step 1: Install HDF5</strong></p>
 <p>Choose one of these methods:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Method<span class="w"> </span><span class="m">1</span>:<span class="w"> </span>Using<span class="w"> </span>Mamba<span class="w"> </span><span class="o">(</span>recommended<span class="o">)</span>
@@ -291,7 +256,7 @@ compatible ARM64 binaries are used. This is a one-time setup.</p>
 </pre></div>
 </div>
 <p><strong>Step 2: Install IDTrack</strong></p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>mamba<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>idtrack
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
 </pre></div>
 </div>
 <p><strong>Verification:</strong></p>
@@ -307,30 +272,17 @@ was created <em>after</em> installing HDF5. Creating a fresh environment often r
 <section id="creating-a-dedicated-environment-recommended">
 <h2>Creating a Dedicated Environment (Recommended)<a class="headerlink" href="#creating-a-dedicated-environment-recommended" title="Link to this heading"></a></h2>
 <p>Using a dedicated environment is a good practice for any Python project and makes it
-easier to manage your installation.</p>
-<section id="using-mamba-fastest">
-<h3>Using Mamba (fastest)<a class="headerlink" href="#using-mamba-fastest" title="Link to this heading"></a></h3>
+easier to manage your installation. IDTrack runs on Python 3.12 to 3.15.</p>
+<section id="using-mamba-or-conda">
+<h3>Using Mamba or conda<a class="headerlink" href="#using-mamba-or-conda" title="Link to this heading"></a></h3>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Create<span class="w"> </span>a<span class="w"> </span>new<span class="w"> </span>environment<span class="w"> </span>with<span class="w"> </span>Python<span class="w"> </span><span class="m">3</span>.13
-<span class="gp">$ </span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.13
+<span class="gp">$ </span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.13<span class="w">    </span><span class="c1"># or: conda create ...</span>
 
 <span class="gp"># </span>Activate<span class="w"> </span>the<span class="w"> </span>environment
 <span class="gp">$ </span>conda<span class="w"> </span>activate<span class="w"> </span>idtrack-env
 
-<span class="gp"># </span>Install<span class="w"> </span>IDTrack
-<span class="gp">$ </span>mamba<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>idtrack
-</pre></div>
-</div>
-</section>
-<section id="using-conda">
-<h3>Using conda<a class="headerlink" href="#using-conda" title="Link to this heading"></a></h3>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Create<span class="w"> </span>a<span class="w"> </span>new<span class="w"> </span>environment<span class="w"> </span>with<span class="w"> </span>Python<span class="w"> </span><span class="m">3</span>.13
-<span class="gp">$ </span>conda<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.13
-
-<span class="gp"># </span>Activate<span class="w"> </span>the<span class="w"> </span>environment
-<span class="gp">$ </span>conda<span class="w"> </span>activate<span class="w"> </span>idtrack-env
-
-<span class="gp"># </span>Install<span class="w"> </span>IDTrack
-<span class="gp">$ </span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>idtrack
+<span class="gp"># </span>Install<span class="w"> </span>IDTrack<span class="w"> </span><span class="o">(</span>from<span class="w"> </span>PyPI,<span class="w"> </span>with<span class="w"> </span>pip<span class="o">)</span>
+<span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
 </pre></div>
 </div>
 </section>
@@ -385,7 +337,7 @@ and testing tools.</p>
 </section>
 <section id="alternative-install-from-tarball">
 <h3>Alternative: Install from Tarball<a class="headerlink" href="#alternative-install-from-tarball" title="Link to this heading"></a></h3>
-<p>For users who want a specific release without cloning the repository:</p>
+<p>For users who want the code of the <code class="docutils literal notranslate"><span class="pre">main</span></code> branch without cloning the repository:</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>curl<span class="w"> </span>-OJL<span class="w"> </span>https://github.com/theislab/idtrack/tarball/main
 <span class="gp">$ </span>tar<span class="w"> </span>-xzf<span class="w"> </span>theislab-idtrack-*.tar.gz
 <span class="gp">$ </span><span class="nb">cd</span><span class="w"> </span>theislab-idtrack-*
@@ -468,33 +420,37 @@ from the HTTPS dumps.</p></td>
 <span class="n">idtrack</span><span class="o">.</span><span class="n">DB</span><span class="o">.</span><span class="n">ensembl_access</span> <span class="o">=</span> <span class="s2">"https"</span>  <span class="c1"># or "auto"</span>
 </pre></div>
 </div>
-<p><strong>What differs between the modes:</strong> both read the same Ensembl tables, with the same rows and values: the
-dump reader decodes MySQL’s escaping (tabs, newlines and backslashes inside fields, <code class="docutils literal notranslate"><span class="pre">NULL</span></code>) so that each
-row holds what the MySQL server returns. One difference remains in the raw tables: over HTTPS, column types
-are inferred from the text, so a text column that holds only digit strings is read as numbers (e.g. the
-<code class="docutils literal notranslate"><span class="pre">old_release</span></code> and <code class="docutils literal notranslate"><span class="pre">new_release</span></code> columns of <code class="docutils literal notranslate"><span class="pre">mapping_session</span></code>), as it was before this access-mode setting
-existed. The HTTPS path downloads whole compressed tables, so it is slower per table than a MySQL query
-(seconds to a minute per large table), but it needs no open port. In <code class="docutils literal notranslate"><span class="pre">auto</span></code> mode a blocked port costs one
-short probe per process, not one per table, and a port whose connection fails is not tried again in that
-process (the tables then come over HTTPS; this costs only speed).</p>
-<p>If you route IDTrack through an SSH tunnel with <code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.ConnectionBridge</span></code>, starting and stopping
+<p><strong>What differs between the modes:</strong> nothing in the tables: both read the same Ensembl tables, with the same rows,
+values and column types. The dump reader decodes MySQL’s escaping (tabs, newlines and backslashes inside fields,
+<code class="docutils literal notranslate"><span class="pre">NULL</span></code>) so that each row holds what the MySQL server returns, and takes the column types from the table
+definitions of the dump, so a text column of digit strings stays text. The HTTPS path downloads whole compressed
+tables, so it is slower per table than a MySQL query (seconds to a minute per large table), but it needs no open port.
+In <code class="docutils literal notranslate"><span class="pre">auto</span></code> mode a blocked port costs one short probe per process, not one per table, and a port whose connection
+fails is not tried again for ten minutes (then after twice as long, up to a day; the tables come over HTTPS meanwhile,
+with a warning; this costs only speed). A query or data error of the MySQL server is raised, not answered over
+HTTPS.</p>
+<p>If you route IDTrack through an SSH tunnel with <a class="reference internal" href="reference.html#idtrack.ConnectionBridge" title="idtrack.ConnectionBridge"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.ConnectionBridge</span></code></a>, starting and stopping
 the bridge forgets the probe results, so the ports are probed again through the new route.</p>
 <p><strong>Slow networks, timeouts and retries.</strong> Every request to Ensembl REST (organism names and the latest release)
 waits <code class="docutils literal notranslate"><span class="pre">idtrack.DB.connection_timeout</span></code> seconds to connect (default 15) and <code class="docutils literal notranslate"><span class="pre">idtrack.DB.reading_timeout</span></code>
 seconds for the answer (default 60; it also applies to the HTTPS dumps), and is tried
 <code class="docutils literal notranslate"><span class="pre">idtrack.DB.rest_attempts</span></code> times (default 3) when it times out, the connection fails, or Ensembl answers 429
-or 5xx. When every attempt fails, <a class="reference internal" href="reference.html#idtrack._db.EnsemblRestError" title="idtrack._db.EnsemblRestError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack._db.EnsemblRestError</span></code></a> names the URL, the timeouts and what
-to change. On a network where Ensembl answers slowly, raise the timeouts before the first call:</p>
+or 5xx. When every attempt fails, <a class="reference internal" href="reference.html#idtrack.EnsemblRestError" title="idtrack.EnsemblRestError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.EnsemblRestError</span></code></a> (a <code class="xref py py-class docutils literal notranslate"><span class="pre">ConnectionError</span></code>) names the
+URL, the timeouts and what to change; a download of the dumps that keeps failing raises
+<a class="reference internal" href="reference.html#idtrack.EnsemblDownloadError" title="idtrack.EnsemblDownloadError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.EnsemblDownloadError</span></code></a> (also a <code class="xref py py-class docutils literal notranslate"><span class="pre">ConnectionError</span></code>), and a release that cannot be listed
+is an error, never read as “Ensembl has no such release”. On a network where Ensembl answers slowly, raise the timeouts before the first call:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 
 <span class="n">idtrack</span><span class="o">.</span><span class="n">DB</span><span class="o">.</span><span class="n">reading_timeout</span> <span class="o">=</span> <span class="mi">120</span>
 <span class="n">idtrack</span><span class="o">.</span><span class="n">DB</span><span class="o">.</span><span class="n">rest_attempts</span> <span class="o">=</span> <span class="mi">5</span>
 </pre></div>
 </div>
-<p>The network is needed only to download, and to learn which release is the latest: the formal name of a
-supported organism (<code class="docutils literal notranslate"><span class="pre">&quot;homo_sapiens&quot;</span></code>, also <code class="docutils literal notranslate"><span class="pre">&quot;Homo</span> <span class="pre">sapiens&quot;</span></code>) resolves without it, and a graph or harmonization
-run whose tables and graph are on disk runs offline (see <a class="reference internal" href="usage.html#reusing-built-graphs"><span class="std std-ref">Reusing Built Graphs</span></a>). An HTTPS proxy is honoured
-through <code class="docutils literal notranslate"><span class="pre">HTTPS_PROXY</span></code>.</p>
+<p>The network is needed only to download, and to learn which release is the latest: the formal name, the short name
+and the assembly names of a supported organism (<code class="docutils literal notranslate"><span class="pre">&quot;homo_sapiens&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Homo</span> <span class="pre">sapiens&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;human&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;GRCh38&quot;</span></code>)
+resolve without it, and a graph file on disk loads and converts without it (see <a class="reference internal" href="usage.html#reusing-built-graphs"><span class="std std-ref">Reusing Built Graphs</span></a>), as does
+a harmonization whose graph is on disk. The local repository may be read-only: it then serves the tables and graphs
+it holds, and a table that would have to be computed raises <code class="xref py py-class docutils literal notranslate"><span class="pre">PermissionError</span></code> naming the folder. An HTTPS
+proxy is honoured through <code class="docutils literal notranslate"><span class="pre">HTTPS_PROXY</span></code>.</p>
 </section>
 <section id="optional-dependencies">
 <h2>Optional Dependencies<a class="headerlink" href="#optional-dependencies" title="Link to this heading"></a></h2>
@@ -517,6 +473,17 @@ through <code class="docutils literal notranslate"><span class="pre">HTTPS_PROXY
 </pre></div>
 </div>
 </section>
+<section id="protein-embeddings">
+<h3>Protein Embeddings<a class="headerlink" href="#protein-embeddings" title="Link to this heading"></a></h3>
+<p><a class="reference internal" href="reference/external_mappers.html#idtrack._external_mappers._ortholog.align_ortholog_pair_with_features" title="idtrack._external_mappers._ortholog.align_ortholog_pair_with_features"><code class="xref py py-func docutils literal notranslate"><span class="pre">idtrack._external_mappers._ortholog.align_ortholog_pair_with_features()</span></code></a> can add protein-language-model embedding
+features to an ortholog alignment. They need <code class="docutils literal notranslate"><span class="pre">torch</span></code> and <code class="docutils literal notranslate"><span class="pre">transformers</span></code>; with them installed, the model named by
+<code class="docutils literal notranslate"><span class="pre">embedding_model_name</span></code> (<code class="docutils literal notranslate"><span class="pre">facebook/esm2_t12_35M_UR50D</span></code> by default) is downloaded from Hugging Face on first use.
+Without them, or with <code class="docutils literal notranslate"><span class="pre">embedding_model_name=None</span></code>, those features are left empty (with <code class="docutils literal notranslate"><span class="pre">verbose=True</span></code> a warning says why) and the
+other alignment features are computed.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"idtrack[embeddings]"</span>
+</pre></div>
+</div>
+</section>
 <section id="all-optional-dependencies">
 <h3>All Optional Dependencies<a class="headerlink" href="#all-optional-dependencies" title="Link to this heading"></a></h3>
 <p>Install all optional dependencies at once:</p>
@@ -530,15 +497,10 @@ through <code class="docutils literal notranslate"><span class="pre">HTTPS_PROXY
 <section id="common-installation-issues">
 <h3>Common Installation Issues<a class="headerlink" href="#common-installation-issues" title="Link to this heading"></a></h3>
 <p><strong>HDF5 / h5py import errors</strong></p>
-<p>This usually indicates an HDF5 binary compatibility issue. The most reliable fix is to
-use conda-forge (Mamba or conda):</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp"># </span>Create<span class="w"> </span>a<span class="w"> </span>fresh<span class="w"> </span>environment<span class="w"> </span>with<span class="w"> </span>Mamba
-<span class="gp">$ </span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.13<span class="w"> </span>idtrack<span class="w"> </span>-c<span class="w"> </span>conda-forge
+<p>This usually indicates an HDF5 binary compatibility issue. Install <code class="docutils literal notranslate"><span class="pre">h5py</span></code> from conda-forge in a fresh environment,
+then IDTrack with pip:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>mamba<span class="w"> </span>create<span class="w"> </span>-n<span class="w"> </span>idtrack-env<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.13<span class="w"> </span>h5py
 <span class="gp">$ </span>conda<span class="w"> </span>activate<span class="w"> </span>idtrack-env
-</pre></div>
-</div>
-<p>If you must use pip, install HDF5 dependencies first:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>mamba<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>hdf5
 <span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
 </pre></div>
 </div>
@@ -559,12 +521,6 @@ use conda-forge (Mamba or conda):</p>
 <span class="gp">$ </span>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>idtrack-env
 <span class="gp">$ </span><span class="nb">source</span><span class="w"> </span>idtrack-env/bin/activate
 <span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>idtrack
-</pre></div>
-</div>
-<p><strong>Slow dependency resolution with conda</strong></p>
-<p>Switch to Mamba for significantly faster installation:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>conda<span class="w"> </span>install<span class="w"> </span>-n<span class="w"> </span>base<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>mamba
-<span class="gp">$ </span>mamba<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>idtrack
 </pre></div>
 </div>
 </section>

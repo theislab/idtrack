@@ -139,7 +139,7 @@
   <a class="idtrack-notebook-download" href="../_sources/_notebooks/05_tutorial_harmonization.ipynb">Download notebook</a>
 </div><section id="Part-5-—-Real-World-Experiments:-Harmonization">
 <h1>Part 5 — Real-World Experiments: Harmonization<a class="headerlink" href="#Part-5-—-Real-World-Experiments:-Harmonization" title="Link to this heading"></a></h1>
-<p><em>Last updated:</em> 2026-01-08</p>
+<p><em>Last updated:</em> 2026-11-12</p>
 <p>This tutorial shows how to use IDTrack for <strong>real-world dataset harmonization</strong>.</p>
 <p>You will learn:</p>
 <ul class="simple">
@@ -173,9 +173,17 @@
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>1
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load notebook utilities (collapsible output magic for tutorials)</span>
-<span class="o">%</span><span class="k">load_ext</span> _notebook_utils
-<br/></pre></div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load notebook utilities (collapsible output magic for tutorials). `_notebook_utils.py` sits next to the notebooks in</span>
+<span class="c1"># IDTrack's repository; a notebook downloaded on its own runs without it and shows the logs as they come.</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">get_ipython</span><span class="p">()</span><span class="o">.</span><span class="n">run_line_magic</span><span class="p">(</span><span class="s1">'load_ext'</span><span class="p">,</span> <span class="s1">'_notebook_utils'</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">ModuleNotFoundError</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">IPython.core.magic</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_cell_magic</span>
+
+    <span class="nd">@register_cell_magic</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">collapse</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">cell</span><span class="p">):</span>
+        <span class="n">get_ipython</span><span class="p">()</span><span class="o">.</span><span class="n">run_cell</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span>
+</pre></div>
 </div>
 </div>
 <div class="nbinput docutils container">
@@ -195,7 +203,7 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 
-<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'./idtrack_cache'</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'idtrack_cache'</span><span class="p">))</span>
 <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="nb">print</span><span class="p">(</span><span class="s1">'IDTrack local repository:'</span><span class="p">,</span> <span class="n">LOCAL_REPOSITORY</span><span class="p">)</span>
@@ -207,7 +215,7 @@
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-IDTrack local repository: /ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache
+IDTrack local repository: idtrack_cache
 </pre></div></div>
 </div>
 </section>
@@ -248,19 +256,21 @@ IDTrack local repository: /ictstr01/home/icb/kemal.inecik/work/codes/idtrack/doc
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-(PosixPath(&#39;/ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache/toy_harmonization_demo/toy_A_symbols.h5ad&#39;),
- PosixPath(&#39;/ictstr01/home/icb/kemal.inecik/work/codes/idtrack/docs/_notebooks/idtrack_cache/toy_harmonization_demo/toy_B_mixed.h5ad&#39;))
+(PosixPath(&#39;idtrack_cache/toy_harmonization_demo/toy_A_symbols.h5ad&#39;),
+ PosixPath(&#39;idtrack_cache/toy_harmonization_demo/toy_B_mixed.h5ad&#39;))
 </pre></div></div>
 </div>
 <section id="5.1.1-Run-the-harmonizer">
 <h3>5.1.1 Run the harmonizer<a class="headerlink" href="#5.1.1-Run-the-harmonizer" title="Link to this heading"></a></h3>
-<p>IDTrack provides <code class="docutils literal notranslate"><span class="pre">idtrack.HarmonizeFeatures</span></code>.</p>
+<p>IDTrack provides <code class="docutils literal notranslate"><span class="pre">idtrack.HarmonizeFeatures</span></code>. Its constructor converts every feature of every dataset (the results are stored as one JSON file per dataset in <code class="docutils literal notranslate"><span class="pre">project_local_repository</span></code> and reused when nothing they depend on changed).</p>
 <p>Key parameters (interpretation):</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">idtrack_local_repository</span></code>: where your built graph snapshot lives</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">graph_last_ensembl_release</span></code>: which snapshot release the graph contains (must match your build)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">target_ensembl_release</span></code>: the release you want to harmonize <em>to</em></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">final_database</span></code>: what you want to keep as feature IDs (HGNC, Ensembl, …)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">final_database</span></code>: the database whose names are reported beside each gene (HGNC, MGI, …); the features themselves are Ensembl genes</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">source_releases</span></code> / <code class="docutils literal notranslate"><span class="pre">source_databases</span></code> (optional, per dataset): the release a dataset was annotated with, and the database its feature names are ids of; nothing is inferred on your behalf</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">api</span></code> (optional): an <code class="docutils literal notranslate"><span class="pre">idtrack.API</span></code> whose graph is already loaded</p></li>
 </ul>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
@@ -279,17 +289,17 @@ data_h5ad_dict = {
 project_out = toy_dir / 'outputs'
 project_out.mkdir(parents=True, exist_ok=True)
 
-organism_name, latest_release = idtrack.API(str(LOCAL_REPOSITORY)).resolve_organism('human')
+SNAPSHOT_RELEASE = 115  # the snapshot of the graph built in Part 3 (pinned)
 
 harmonizer = idtrack.HarmonizeFeatures(
     project_name='toy_demo',
     data_h5ad_dict=data_h5ad_dict,
     project_local_repository=str(project_out),
     idtrack_local_repository=str(LOCAL_REPOSITORY),
-    target_ensembl_release=latest_release,
+    target_ensembl_release=SNAPSHOT_RELEASE,
     final_database='HGNC Symbol',
-    organism_name=organism_name,
-    graph_last_ensembl_release=latest_release,
+    organism_name='homo_sapiens',
+    graph_last_ensembl_release=SNAPSHOT_RELEASE,
     verbose_level=1,
 )
 
@@ -301,10 +311,7 @@ harmonizer
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area rendered_html docutils container">
-<details class="idtrack-collapse" open>
-<summary>Click to show conversion logs</summary>
-<pre class="idtrack-collapse-content"><span class="stderr">2026-01-17 19:15:44 ERROR:ipykernel.comm: No such comm target registered: jupyter.widget.control</span></pre>
-</details></div>
+<!-- empty output --></div>
 </div>
 <div class="nboutput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
@@ -312,7 +319,7 @@ harmonizer
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;idtrack._harmonize_features.HarmonizeFeatures at 0x7f326447b190&gt;
+&lt;idtrack._harmonize_features.HarmonizeFeatures at 0x7fe047eda3c0&gt;
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -321,7 +328,8 @@ harmonizer
 <div class="output_area rendered_html docutils container">
 <details class="idtrack-collapse">
 <summary>Click to show conversion logs</summary>
-<pre class="idtrack-collapse-content">(no output)</pre>
+<pre class="idtrack-collapse-content"><span class="stderr">toy_A: 100%|#########################################################| 5/5 [00:00&lt;00:00, 453.39it/s]
+toy_B: 100%|##########################################################| 4/4 [00:00&lt;00:00, 12.82it/s]</span></pre>
 </details></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -329,36 +337,169 @@ harmonizer
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;idtrack._harmonize_features.HarmonizeFeatures at 0x7f326447b190&gt;
+&lt;idtrack._harmonize_features.HarmonizeFeatures at 0x7fe047eda3c0&gt;
 </pre></div></div>
 </div>
 </section>
 <section id="5.1.2-Inspect-what-happened">
 <h3>5.1.2 Inspect what happened<a class="headerlink" href="#5.1.2-Inspect-what-happened" title="Link to this heading"></a></h3>
-<p>Useful things to look at:</p>
-<ul class="simple">
-<li><p>which identifiers failed conversion</p></li>
-<li><p>which identifiers were ambiguous</p></li>
-<li><p>per-dataset result pickle files written under <code class="docutils literal notranslate"><span class="pre">project_local_repository</span></code></p></li>
-</ul>
+<p><code class="docutils literal notranslate"><span class="pre">conversion_report()</span></code> has one row per input feature of every dataset: how it was converted (<code class="docutils literal notranslate"><span class="pre">status</span></code>: <code class="docutils literal notranslate"><span class="pre">converted</span></code>, <code class="docutils literal notranslate"><span class="pre">converted_no_final_id</span></code>, <code class="docutils literal notranslate"><span class="pre">ambiguous</span></code>, <code class="docutils literal notranslate"><span class="pre">no_conversion</span></code>, <code class="docutils literal notranslate"><span class="pre">not_in_graph</span></code>, <code class="docutils literal notranslate"><span class="pre">error</span></code>), why (<code class="docutils literal notranslate"><span class="pre">reason</span></code>), the gene (<code class="docutils literal notranslate"><span class="pre">ensembl_gene</span></code>) and its name in the final database (<code class="docutils literal notranslate"><span class="pre">final_id</span></code>). <code class="docutils literal notranslate"><span class="pre">own</span></code> says whether the feature names its gene itself (its stable id or one of its final-database names): when two features of one dataset reach the same gene, that is the one kept as the
+gene’s feature (<code class="docutils literal notranslate"><span class="pre">merge=&quot;flag&quot;</span></code>, the default).</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">'Conversion failed (any dataset):'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">harmonizer</span><span class="o">.</span><span class="n">conversion_failed_identifiers</span><span class="p">))[:</span><span class="mi">20</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'Conversion failed but consistent:'</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">harmonizer</span><span class="o">.</span><span class="n">conversion_failed_but_consistent_identifiers</span><span class="p">))[:</span><span class="mi">20</span><span class="p">])</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'Converted IDs with multiple Ensembl possibilities (collapsed):'</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">harmonizer</span><span class="o">.</span><span class="n">multiple_ensembl_dict</span><span class="p">)[:</span><span class="mi">10</span><span class="p">])</span>
-<br/></pre></div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">report</span> <span class="o">=</span> <span class="n">harmonizer</span><span class="o">.</span><span class="n">conversion_report</span><span class="p">()</span>
+<span class="n">display</span><span class="p">(</span><span class="n">report</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">'dataset'</span><span class="p">)[</span><span class="s1">'status'</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">unstack</span><span class="p">(</span><span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+</pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>dataset</th>
+      <th>query_id</th>
+      <th>status</th>
+      <th>reason</th>
+      <th>ensembl_gene</th>
+      <th>final_id</th>
+      <th>final_id_alternatives</th>
+      <th>own</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>toy_A</td>
+      <td>TP53</td>
+      <td>converted</td>
+      <td>None</td>
+      <td>ENSG00000141510.20</td>
+      <td>TP53</td>
+      <td>None</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>toy_A</td>
+      <td>BRCA1</td>
+      <td>converted</td>
+      <td>None</td>
+      <td>ENSG00000012048.27</td>
+      <td>BRCA1</td>
+      <td>None</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>toy_A</td>
+      <td>BRCA2</td>
+      <td>converted</td>
+      <td>None</td>
+      <td>ENSG00000139618.19</td>
+      <td>BRCA2</td>
+      <td>None</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>toy_A</td>
+      <td>BRAF</td>
+      <td>converted</td>
+      <td>None</td>
+      <td>ENSG00000157764.15</td>
+      <td>BRAF</td>
+      <td>None</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>toy_A</td>
+      <td>KRAS</td>
+      <td>converted</td>
+      <td>None</td>
+      <td>ENSG00000133703.15</td>
+      <td>KRAS</td>
+      <td>None</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>toy_B</td>
+      <td>TP53</td>
+      <td>converted</td>
+      <td>NaN</td>
+      <td>ENSG00000141510.20</td>
+      <td>TP53</td>
+      <td>None</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>toy_B</td>
+      <td>ENSG00000141510</td>
+      <td>converted</td>
+      <td>NaN</td>
+      <td>ENSG00000141510.20</td>
+      <td>TP53</td>
+      <td>None</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>toy_B</td>
+      <td>BRCA1</td>
+      <td>converted</td>
+      <td>NaN</td>
+      <td>ENSG00000012048.27</td>
+      <td>BRCA1</td>
+      <td>None</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>toy_B</td>
+      <td>NOT_A_REAL_GENE</td>
+      <td>not_in_graph</td>
+      <td>not found in the graph</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>False</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Conversion failed (any dataset): [&#39;ENSG00000141510&#39;, &#39;NOT_A_REAL_GENE&#39;]
-Conversion failed but consistent: []
-Converted IDs with multiple Ensembl possibilities (collapsed): [&#39;TP53&#39;, &#39;BRCA1&#39;, &#39;BRCA2&#39;, &#39;BRAF&#39;, &#39;KRAS&#39;]
+status   converted  not_in_graph
+dataset
+toy_A            5             0
+toy_B            3             1
 </pre></div></div>
 </div>
 </section>
@@ -370,8 +511,10 @@ Converted IDs with multiple Ensembl possibilities (collapsed): [&#39;TP53&#39;, 
 <li><p><code class="docutils literal notranslate"><span class="pre">mode='union'</span></code> (default): keep the union of all features (missing genes become zeros)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">mode='intersect'</span></code>: keep only features present in every dataset</p></li>
 </ul>
+<p>Each converted gene is one feature, named by its Ensembl gene id at the target release; <code class="docutils literal notranslate"><span class="pre">var['converted_id']</span></code> holds its HGNC symbol (missing for a gene without one: the column never holds an Ensembl id). Nothing is dropped silently: features that are not converted keep their input names, and every feature has <code class="docutils literal notranslate"><span class="pre">idtrack_status</span></code> and <code class="docutils literal notranslate"><span class="pre">idtrack_reason</span></code> (per dataset in the merged object). Two features of one dataset on one gene are summed with <code class="docutils literal notranslate"><span class="pre">merge='sum'</span></code> (for counts) or, by default
+(<code class="docutils literal notranslate"><span class="pre">merge='flag'</span></code>), the one that names the gene is kept as the gene’s feature and the others are flagged <code class="docutils literal notranslate"><span class="pre">unconverted_merge_partner</span></code> (when several name the gene, as <code class="docutils literal notranslate"><span class="pre">TP53</span></code> and <code class="docutils literal notranslate"><span class="pre">ENSG00000141510</span></code> in <code class="docutils literal notranslate"><span class="pre">toy_B</span></code> do, all are flagged and the gene has no feature of that dataset); <code class="docutils literal notranslate"><span class="pre">keep_unconverted=False</span></code> leaves the unconverted features out.</p>
 <p>The merge loses no cell metadata: every <code class="docutils literal notranslate"><span class="pre">obs</span></code> column of any dataset is kept as it is (datasets without a column get missing values there; <code class="docutils literal notranslate"><span class="pre">obs_join='inner'</span></code> keeps only the columns all datasets have, and <code class="docutils literal notranslate"><span class="pre">obs_columns_to_keep</span></code> selects among them), and so are layers, <code class="docutils literal notranslate"><span class="pre">obsm</span></code>, <code class="docutils literal notranslate"><span class="pre">obsp</span></code>, shared <code class="docutils literal notranslate"><span class="pre">uns</span></code> entries and every input <code class="docutils literal notranslate"><span class="pre">var</span></code> column (one column where the datasets agree, else one per dataset). The column <code class="docutils literal notranslate"><span class="pre">handle_anndata</span></code> records the dataset of each cell. <code class="docutils literal notranslate"><span class="pre">raw</span></code> is dropped, because
-its features are not harmonised. (The stored outputs of the HLCA cells below predate this and list only <code class="docutils literal notranslate"><span class="pre">handle_anndata</span></code> in <code class="docutils literal notranslate"><span class="pre">obs</span></code>.)</p>
+its features are not harmonised.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
 </pre></div>
@@ -382,6 +525,7 @@ its features are not harmonised. (The stored outputs of the HLCA cells below pre
 
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Union shape:'</span><span class="p">,</span> <span class="n">unified_union</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Intersect shape:'</span><span class="p">,</span> <span class="n">unified_intersect</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">unified_union</span><span class="o">.</span><span class="n">var</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -390,8 +534,8 @@ its features are not harmonised. (The stored outputs of the HLCA cells below pre
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|█████████████████████████████████████████████████████████| 2/2 [00:01&lt;00:00,  1.73it/s, dataset=toy_B, study_var=2, union_var=5, dbh=2]
-100%|█████████████████████████████████████████████████████████| 2/2 [00:00&lt;00:00,  4.91it/s, dataset=toy_B, study_var=2, union_var=5, dbh=2]
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:00&lt;00:00, 30.03it/s]
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:00&lt;00:00, 62.26it/s]
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -399,17 +543,178 @@ its features are not harmonised. (The stored outputs of the HLCA cells below pre
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Union shape: (110, 5)
-Intersect shape: (110, 2)
+Union shape: (110, 8)
+Intersect shape: (110, 1)
 </pre></div></div>
 </div>
-<div class="nboutput nblast docutils container">
+<div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
 
 </pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>converted_id</th>
+      <th>matching_ensembl_gene</th>
+      <th>HGNC Symbol_alternatives</th>
+      <th>Query ID_toy_A</th>
+      <th>Query ID_toy_B</th>
+      <th>idtrack_status_toy_A</th>
+      <th>idtrack_status_toy_B</th>
+      <th>idtrack_reason_toy_A</th>
+      <th>idtrack_reason_toy_B</th>
+      <th>converted_id_toy_A</th>
+      <th>converted_id_toy_B</th>
+      <th>intersection</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>ENSG00000012048.27</th>
+      <td>BRCA1</td>
+      <td>ENSG00000012048.27</td>
+      <td>NaN</td>
+      <td>BRCA1</td>
+      <td>BRCA1</td>
+      <td>converted</td>
+      <td>converted</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>BRCA1</td>
+      <td>BRCA1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>ENSG00000133703.15</th>
+      <td>KRAS</td>
+      <td>ENSG00000133703.15</td>
+      <td>NaN</td>
+      <td>KRAS</td>
+      <td>NaN</td>
+      <td>converted</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>KRAS</td>
+      <td>NaN</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>ENSG00000139618.19</th>
+      <td>BRCA2</td>
+      <td>ENSG00000139618.19</td>
+      <td>NaN</td>
+      <td>BRCA2</td>
+      <td>NaN</td>
+      <td>converted</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>BRCA2</td>
+      <td>NaN</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>ENSG00000141510</th>
+      <td>NaN</td>
+      <td>ENSG00000141510.20</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>ENSG00000141510</td>
+      <td>NaN</td>
+      <td>unconverted_merge_partner</td>
+      <td>NaN</td>
+      <td>shares the gene ENSG00000141510.20 with: TP53;...</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>ENSG00000141510.20</th>
+      <td>TP53</td>
+      <td>ENSG00000141510.20</td>
+      <td>NaN</td>
+      <td>TP53</td>
+      <td>NaN</td>
+      <td>converted</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>TP53</td>
+      <td>NaN</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>ENSG00000157764.15</th>
+      <td>BRAF</td>
+      <td>ENSG00000157764.15</td>
+      <td>NaN</td>
+      <td>BRAF</td>
+      <td>NaN</td>
+      <td>converted</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>BRAF</td>
+      <td>NaN</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>NOT_A_REAL_GENE</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NOT_A_REAL_GENE</td>
+      <td>NaN</td>
+      <td>unconverted_not_in_graph</td>
+      <td>NaN</td>
+      <td>not found in the graph</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>TP53</th>
+      <td>NaN</td>
+      <td>ENSG00000141510.20</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>TP53</td>
+      <td>NaN</td>
+      <td>unconverted_merge_partner</td>
+      <td>NaN</td>
+      <td>shares the gene ENSG00000141510.20 with: TP53;...</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
 </div>
 <p>At HLCA scale, <code class="docutils literal notranslate"><span class="pre">union</span></code> can create a very large feature matrix. If you plan to run memory-heavy models, consider starting with <code class="docutils literal notranslate"><span class="pre">intersect</span></code> or filtering genes first.</p>
 </section>
@@ -420,11 +725,11 @@ Intersect shape: (110, 2)
 <p>Practical best practices:</p>
 <ul class="simple">
 <li><p><strong>Start by harmonizing into a stable backbone</strong> (usually Ensembl gene IDs). Convert to symbols only for reporting.</p></li>
-<li><p><strong>Treat 1→n mappings as real biology/data ambiguity</strong>, not as a nuisance. Decide a policy:</p>
+<li><p><strong>Treat 1→n mappings as real biology/data ambiguity</strong>, not as a nuisance. The harmonizer keeps an ambiguous feature under its input name with status <code class="docutils literal notranslate"><span class="pre">unconverted_ambiguous</span></code> and the genes in its reason; decide a policy for them:</p>
 <ul>
-<li><p>drop ambiguous features</p></li>
-<li><p>keep all candidates (inflates feature space)</p></li>
-<li><p>collapse to a single representative (requires an explicit rule)</p></li>
+<li><p>drop ambiguous features (<code class="docutils literal notranslate"><span class="pre">keep_unconverted=False</span></code> drops every unconverted feature)</p></li>
+<li><p>keep them as they are (the default)</p></li>
+<li><p>resolve them with knowledge the graph does not have (the source release or database of a dataset: <code class="docutils literal notranslate"><span class="pre">source_releases</span></code>, <code class="docutils literal notranslate"><span class="pre">source_databases</span></code>)</p></li>
 </ul>
 </li>
 <li><p><strong>Pilot first</strong>: run harmonization on a small subset and inspect diagnostics before scaling up.</p></li>
@@ -445,13 +750,13 @@ Intersect shape: (110, 2)
 <li><p>many datasets (often <em>multiple files per study</em>)</p></li>
 <li><p>large gene lists (tens of thousands of identifiers)</p></li>
 <li><p>choosing a snapshot release (what you harmonize <em>to</em>)</p></li>
-<li><p>disk for intermediate artifacts (pickles/logs)</p></li>
+<li><p>disk for intermediate artifacts (the JSON result cache, one file per dataset)</p></li>
 </ul>
 </section>
 <section id="5.2.2-HLCA-datasets-used-in-this-tutorial">
 <h3>5.2.2 HLCA datasets used in this tutorial<a class="headerlink" href="#5.2.2-HLCA-datasets-used-in-this-tutorial" title="Link to this heading"></a></h3>
 <p>HLCA <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> files are not shipped with IDTrack. In this tutorial we simply <em>point to existing files</em> (no downloads).</p>
-<p>The next cell defines a curated HLCA list (study → list of <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> paths). If you’re running this notebook on a different system, edit <code class="docutils literal notranslate"><span class="pre">base_path</span></code> in the next cell to match where the HLCA data lives.</p>
+<p>The next cell defines a curated HLCA list (study → list of <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> paths). Set the environment variable <code class="docutils literal notranslate"><span class="pre">HLCA_BASE_PATH</span></code> to the folder that holds the HLCA data (<code class="docutils literal notranslate"><span class="pre">HLCA_reproducibility/data</span></code>), or edit <code class="docutils literal notranslate"><span class="pre">base_path</span></code> in the next cell.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>7
 </pre></div>
@@ -460,7 +765,7 @@ Intersect shape: (110, 2)
 <span class="c1">#</span>
 <span class="c1"># This notebook is meant to be easy to follow: edit *one* string if your HLCA data lives elsewhere.</span>
 
-<span class="n">base_path</span> <span class="o">=</span> <span class="s1">'/lustre/groups/ml01/projects/2023_HLCA_LSikkema/HLCA_reproducibility/data'</span>
+<span class="n">base_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'HLCA_BASE_PATH'</span><span class="p">,</span> <span class="s1">'/path/to/HLCA_reproducibility/data'</span><span class="p">)</span>
 <span class="n">dset0_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base_path</span><span class="p">,</span> <span class="s1">'HLCA_extended/extension_datasets/ready/full'</span><span class="p">)</span>
 <span class="n">dset1_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base_path</span><span class="p">,</span> <span class="s1">'HLCA_extended/extension_datasets/raw'</span><span class="p">)</span>
 
@@ -508,7 +813,7 @@ Intersect shape: (110, 2)
     <span class="s1">'Schultze_unpubl'</span><span class="p">:</span> <span class="p">[</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">dset0_dir</span><span class="si">}</span><span class="s1">/schultze_unpubl.h5ad'</span><span class="p">],</span>
 <span class="p">}</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s1">'HLCA data root:'</span><span class="p">,</span> <span class="n">base_path</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'HLCA data root found:'</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">base_path</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Studies in curated list:'</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">hlca_adata_dict</span><span class="p">))</span>
 <br/></pre></div>
 </div>
@@ -518,7 +823,7 @@ Intersect shape: (110, 2)
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-HLCA data root: /lustre/groups/ml01/projects/2023_HLCA_LSikkema/HLCA_reproducibility/data
+HLCA data root found: True
 Studies in curated list: 27
 </pre></div></div>
 </div>
@@ -587,15 +892,15 @@ Missing files: 0
 
     <span class="n">p</span> <span class="o">=</span> <span class="n">paths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">exists</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
-    <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">study</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">exists</span><span class="p">,</span> <span class="s1">''</span><span class="p">))</span>
+    <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">study</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">p</span><span class="p">),</span> <span class="n">exists</span><span class="p">,</span> <span class="s1">''</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">exists</span><span class="p">:</span>
         <span class="n">data_h5ad_dict_hlca_tutorial</span><span class="p">[</span><span class="n">study</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span>
 
-<span class="n">hlca_tutorial_status</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">'study'</span><span class="p">,</span> <span class="s1">'path'</span><span class="p">,</span> <span class="s1">'exists'</span><span class="p">,</span> <span class="s1">'note'</span><span class="p">])</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">'study'</span><span class="p">)</span>
+<span class="n">hlca_tutorial_status</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">'study'</span><span class="p">,</span> <span class="s1">'file'</span><span class="p">,</span> <span class="s1">'exists'</span><span class="p">,</span> <span class="s1">'note'</span><span class="p">])</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">'study'</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Tutorial datasets found:'</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_h5ad_dict_hlca_tutorial</span><span class="p">),</span> <span class="s1">'/'</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">HLCA_TUTORIAL_STUDIES</span><span class="p">))</span>
 
 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_h5ad_dict_hlca_tutorial</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'</span><span class="se">\n</span><span class="s1">No tutorial HLCA files found. Edit `base_path` in section 5.2.2 (or update the paths) and re-run.'</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'</span><span class="se">\n</span><span class="s1">No tutorial HLCA files found. Set HLCA_BASE_PATH (section 5.2.2) and re-run.'</span><span class="p">)</span>
 
 <span class="n">hlca_tutorial_status</span>
 <br/></pre></div>
@@ -632,7 +937,7 @@ Tutorial datasets found: 4 / 4
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>path</th>
+      <th>file</th>
       <th>exists</th>
       <th>note</th>
     </tr>
@@ -646,25 +951,25 @@ Tutorial datasets found: 4 / 4
   <tbody>
     <tr>
       <th>Kaminski_2020</th>
-      <td>/lustre/groups/ml01/projects/2023_HLCA_LSikkem...</td>
+      <td>adams.h5ad</td>
       <td>True</td>
       <td></td>
     </tr>
     <tr>
       <th>Meyer_2021</th>
-      <td>/lustre/groups/ml01/projects/2023_HLCA_LSikkem...</td>
+      <td>meyer_2021.h5ad</td>
       <td>True</td>
       <td></td>
     </tr>
     <tr>
       <th>MeyerNikolic_unpubl</th>
-      <td>/lustre/groups/ml01/projects/2023_HLCA_LSikkem...</td>
+      <td>meyer_nikolic_unpubl.h5ad</td>
       <td>True</td>
       <td></td>
     </tr>
     <tr>
       <th>Barbry_unpubl</th>
-      <td>/lustre/groups/ml01/projects/2023_HLCA_LSikkem...</td>
+      <td>barbry.h5ad</td>
       <td>True</td>
       <td></td>
     </tr>
@@ -679,7 +984,7 @@ Tutorial datasets found: 4 / 4
 <ul class="simple">
 <li><p>load/build the human graph snapshot (cached in your local repository)</p></li>
 <li><p>run identifier conversion for each dataset</p></li>
-<li><p>write per-dataset mapping results as pickles under the project output directory</p></li>
+<li><p>write per-dataset conversion results as JSON files under the project output directory</p></li>
 </ul>
 <p>This cell is wrapped in a collapsible block because conversion logs can be long.</p>
 <p>Note on outputs: when you build a merged AnnData (section 5.2.6), <code class="docutils literal notranslate"><span class="pre">.var_names</span></code> are <strong>Ensembl gene IDs</strong>. Mapped HGNC symbols are stored in <code class="docutils literal notranslate"><span class="pre">.var['converted_id']</span></code> for readable reporting.</p>
@@ -698,21 +1003,14 @@ Tutorial datasets found: 4 / 4
 # Note: this is best run on a workstation/server because it can download/build caches on first run.
 
 if not data_h5ad_dict_hlca_tutorial:
-    print('No tutorial datasets found; skipping harmonization. Edit `base_path` in section 5.2.2 (or update the paths) and re-run.')
+    print('No tutorial datasets found; skipping harmonization. Set HLCA_BASE_PATH (section 5.2.2) and re-run.')
     harmonizer_hlca = None
 else:
-    project_out_hlca = (LOCAL_REPOSITORY / 'hlca_tutorial_outputs').resolve()
+    project_out_hlca = LOCAL_REPOSITORY / 'hlca_tutorial_outputs'
     project_out_hlca.mkdir(parents=True, exist_ok=True)
 
-    # Resolve the organism and pick a snapshot boundary
-    api = idtrack.API(local_repository=str(LOCAL_REPOSITORY))
-    organism_name, latest_release = api.resolve_organism('human')
-
-    # Option A (default): always use the latest release available in your graph
-    TARGET_RELEASE = latest_release
-
-    # Option B (recommended for pipelines/papers): pin the release explicitly
-    # TARGET_RELEASE = 110
+    # The snapshot of the human graph of Part 3, and the release to harmonize to (pinned; any release of the graph works)
+    TARGET_RELEASE = 115
 
     harmonizer_hlca = idtrack.HarmonizeFeatures(
         project_name='hlca_tutorial',
@@ -721,8 +1019,8 @@ else:
         idtrack_local_repository=str(LOCAL_REPOSITORY),
         target_ensembl_release=TARGET_RELEASE,
         final_database='HGNC Symbol',
-        organism_name=organism_name,
-        graph_last_ensembl_release=TARGET_RELEASE,
+        organism_name='homo_sapiens',
+        graph_last_ensembl_release=115,
         verbose_level=1,
     )
 <br/></pre></div>
@@ -740,7 +1038,10 @@ else:
 <div class="output_area rendered_html docutils container">
 <details class="idtrack-collapse">
 <summary>Click to show conversion logs</summary>
-<pre class="idtrack-collapse-content">(no output)</pre>
+<pre class="idtrack-collapse-content"><span class="stderr">Kaminski_2020: 100%|########################################| 45947/45947 [00:29&lt;00:00, 1539.47it/s]
+Meyer_2021: 100%|############################################| 20922/20922 [00:23&lt;00:00, 889.88it/s]
+MeyerNikolic_unpubl: 100%|###################################| 33582/33582 [00:34&lt;00:00, 968.63it/s]
+Barbry_unpubl: 100%|#########################################| 16859/16859 [00:20&lt;00:00, 838.47it/s]</span></pre>
 </details></div>
 </div>
 </section>
@@ -752,9 +1053,9 @@ else:
 <li><p>how many identifiers mapped cleanly (1→1)</p></li>
 <li><p>how many failed (1→0)</p></li>
 <li><p>how many were ambiguous (1→n)</p></li>
-<li><p>how many HGNC targets were actually <strong>fallbacks</strong> (no symbol available at the snapshot)</p></li>
+<li><p>how many HGNC targets were actually <strong>fallbacks</strong> (the gene has no HGNC symbol at the snapshot, so the target is its Ensembl id)</p></li>
 </ul>
-<p>We keep the output as small tables so it is easy to read in a tutorial notebook.</p>
+<p><code class="docutils literal notranslate"><span class="pre">harmonizer.matchings</span></code> holds the conversion of every feature (the results of <code class="docutils literal notranslate"><span class="pre">API.convert_identifier</span></code>), and <code class="docutils literal notranslate"><span class="pre">conversion_report()</span></code> the status of every feature. We keep the output as small tables so it is easy to read in a tutorial notebook.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>11
 </pre></div>
@@ -764,7 +1065,7 @@ else:
 <span class="k">if</span> <span class="s1">'harmonizer_hlca'</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">globals</span><span class="p">()</span> <span class="ow">or</span> <span class="n">harmonizer_hlca</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'HLCA harmonizer not created; run section 5.2.4 first.'</span><span class="p">)</span>
 <span class="k">else</span><span class="p">:</span>
-    <span class="n">matchings_by_dataset</span> <span class="o">=</span> <span class="n">harmonizer_hlca</span><span class="o">.</span><span class="n">get_idtrack_matchings_for_all_datasets</span><span class="p">()</span>
+    <span class="n">matchings_by_dataset</span> <span class="o">=</span> <span class="n">harmonizer_hlca</span><span class="o">.</span><span class="n">matchings</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_summarize_matchings</span><span class="p">(</span><span class="n">matchings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
         <span class="n">c</span> <span class="o">=</span> <span class="p">{</span>
@@ -823,10 +1124,14 @@ else:
         <span class="s1">'failure_rate'</span><span class="p">,</span>
     <span class="p">]]</span>
     <span class="n">display</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+
+    <span class="c1"># The status of every input feature, per dataset</span>
+    <span class="n">report</span> <span class="o">=</span> <span class="n">harmonizer_hlca</span><span class="o">.</span><span class="n">conversion_report</span><span class="p">()</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">'dataset'</span><span class="p">)[</span><span class="s1">'status'</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span><span class="o">.</span><span class="n">unstack</span><span class="p">(</span><span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
 <br/></pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
+<div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area rendered_html docutils container">
@@ -873,46 +1178,120 @@ else:
     <tr>
       <th>Barbry_unpubl</th>
       <td>16859</td>
-      <td>15721</td>
-      <td>1095</td>
-      <td>4</td>
-      <td>12</td>
-      <td>27</td>
-      <td>0.998398</td>
-      <td>0.001602</td>
+      <td>15247</td>
+      <td>1558</td>
+      <td>9</td>
+      <td>0</td>
+      <td>45</td>
+      <td>0.997331</td>
+      <td>0.002669</td>
     </tr>
     <tr>
       <th>Kaminski_2020</th>
       <td>45947</td>
-      <td>34808</td>
-      <td>11002</td>
-      <td>19</td>
-      <td>19</td>
-      <td>99</td>
-      <td>0.997845</td>
-      <td>0.002155</td>
+      <td>34281</td>
+      <td>11382</td>
+      <td>36</td>
+      <td>0</td>
+      <td>248</td>
+      <td>0.994602</td>
+      <td>0.005398</td>
     </tr>
     <tr>
       <th>MeyerNikolic_unpubl</th>
       <td>33582</td>
-      <td>27722</td>
-      <td>5689</td>
-      <td>22</td>
-      <td>23</td>
-      <td>126</td>
-      <td>0.996248</td>
-      <td>0.003752</td>
+      <td>25443</td>
+      <td>7883</td>
+      <td>28</td>
+      <td>0</td>
+      <td>228</td>
+      <td>0.993211</td>
+      <td>0.006789</td>
     </tr>
     <tr>
       <th>Meyer_2021</th>
       <td>20922</td>
-      <td>20591</td>
-      <td>312</td>
-      <td>1</td>
+      <td>20498</td>
+      <td>383</td>
+      <td>19</td>
       <td>0</td>
-      <td>18</td>
-      <td>0.999140</td>
-      <td>0.000860</td>
+      <td>22</td>
+      <td>0.998948</td>
+      <td>0.001052</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>status</th>
+      <th>ambiguous</th>
+      <th>converted</th>
+      <th>converted_no_final_id</th>
+      <th>no_conversion</th>
+      <th>not_in_graph</th>
+    </tr>
+    <tr>
+      <th>dataset</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Barbry_unpubl</th>
+      <td>29</td>
+      <td>15227</td>
+      <td>1558</td>
+      <td>38</td>
+      <td>7</td>
+    </tr>
+    <tr>
+      <th>Kaminski_2020</th>
+      <td>104</td>
+      <td>34213</td>
+      <td>11382</td>
+      <td>248</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>MeyerNikolic_unpubl</th>
+      <td>64</td>
+      <td>25407</td>
+      <td>7883</td>
+      <td>160</td>
+      <td>68</td>
+    </tr>
+    <tr>
+      <th>Meyer_2021</th>
+      <td>53</td>
+      <td>20464</td>
+      <td>383</td>
+      <td>22</td>
+      <td>0</td>
     </tr>
   </tbody>
 </table>
@@ -927,7 +1306,7 @@ else:
 <li><p><code class="docutils literal notranslate"><span class="pre">mode='union'</span></code>: keep the union of genes (missing genes become zeros; wider matrix)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">mode='intersect'</span></code>: keep only genes shared by <em>all</em> datasets (stricter; narrower matrix)</p></li>
 </ul>
-<p>Feature naming reminder: <code class="docutils literal notranslate"><span class="pre">.var_names</span></code> are Ensembl gene IDs and <code class="docutils literal notranslate"><span class="pre">.var['converted_id']</span></code> holds the HGNC symbol.</p>
+<p>Feature naming reminder: <code class="docutils literal notranslate"><span class="pre">.var_names</span></code> are Ensembl gene IDs (unconverted features keep their input names) and <code class="docutils literal notranslate"><span class="pre">.var['converted_id']</span></code> holds the HGNC symbol.</p>
 <p>This step loads the datasets into memory, so run it on a workstation/server.</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>12
@@ -1007,14 +1386,14 @@ else:
     <tr>
       <th>union</th>
       <td>774178</td>
-      <td>47188</td>
-      <td>1.000000</td>
+      <td>50491</td>
+      <td>1.00000</td>
     </tr>
     <tr>
       <th>intersect</th>
       <td>774178</td>
-      <td>13405</td>
-      <td>0.284076</td>
+      <td>13421</td>
+      <td>0.26581</td>
     </tr>
   </tbody>
 </table>
@@ -1026,41 +1405,13 @@ else:
 <div class="output_area rendered_html docutils container">
 <details class="idtrack-collapse">
 <summary>Click to show merge logs</summary>
-<pre class="idtrack-collapse-content">Genes present in all datasets (from union .var[&#x27;intersection&#x27;]): 13405
-<span class="stderr">
-  0%|                                                                                                                 | 0/4 [00:00&lt;?, ?it/s]
-  0%|                                                  | 0/4 [00:10&lt;?, ?it/s, dataset=Kaminski_2020, study_var=43939, union_var=0, dbh=2008]
-  0%|                                                  | 0/4 [00:10&lt;?, ?it/s, dataset=Kaminski_2020, study_var=43939, union_var=0, dbh=2008]
- 25%|##########5                               | 1/4 [00:12&lt;00:38, 12.91s/it, dataset=Kaminski_2020, study_var=43939, union_var=0, dbh=2008]
- 25%|##########5                               | 1/4 [00:16&lt;00:38, 12.91s/it, dataset=Meyer_2021, study_var=20517, union_var=43939, dbh=405]
- 25%|##########5                               | 1/4 [00:16&lt;00:38, 12.91s/it, dataset=Meyer_2021, study_var=20517, union_var=43939, dbh=405]
- 50%|#####################                     | 2/4 [00:30&lt;00:31, 15.58s/it, dataset=Meyer_2021, study_var=20517, union_var=43939, dbh=405]
- 50%|################                | 2/4 [00:38&lt;00:31, 15.58s/it, dataset=MeyerNikolic_unpubl, study_var=30727, union_var=44641, dbh=2855]
- 50%|################                | 2/4 [00:38&lt;00:31, 15.58s/it, dataset=MeyerNikolic_unpubl, study_var=30727, union_var=44641, dbh=2855]
- 75%|########################        | 3/4 [01:00&lt;00:22, 22.21s/it, dataset=MeyerNikolic_unpubl, study_var=30727, union_var=44641, dbh=2855]
- 75%|#############################2         | 3/4 [01:08&lt;00:22, 22.21s/it, dataset=Barbry_unpubl, study_var=16251, union_var=46761, dbh=608]
- 75%|#############################2         | 3/4 [01:08&lt;00:22, 22.21s/it, dataset=Barbry_unpubl, study_var=16251, union_var=46761, dbh=608]
-100%|#######################################| 4/4 [01:39&lt;00:00, 28.79s/it, dataset=Barbry_unpubl, study_var=16251, union_var=46761, dbh=608]
-100%|#######################################| 4/4 [01:39&lt;00:00, 24.83s/it, dataset=Barbry_unpubl, study_var=16251, union_var=46761, dbh=608]
-
-  0%|                                                                                                                 | 0/4 [00:00&lt;?, ?it/s]
-  0%|                                                  | 0/4 [00:09&lt;?, ?it/s, dataset=Kaminski_2020, study_var=43939, union_var=0, dbh=2008]
-  0%|                                                  | 0/4 [00:09&lt;?, ?it/s, dataset=Kaminski_2020, study_var=43939, union_var=0, dbh=2008]
- 25%|##########5                               | 1/4 [00:12&lt;00:36, 12.08s/it, dataset=Kaminski_2020, study_var=43939, union_var=0, dbh=2008]
- 25%|##########5                               | 1/4 [00:14&lt;00:36, 12.08s/it, dataset=Meyer_2021, study_var=20517, union_var=43939, dbh=405]
- 25%|##########5                               | 1/4 [00:14&lt;00:36, 12.08s/it, dataset=Meyer_2021, study_var=20517, union_var=43939, dbh=405]
- 50%|#####################                     | 2/4 [00:27&lt;00:28, 14.12s/it, dataset=Meyer_2021, study_var=20517, union_var=43939, dbh=405]
- 50%|################                | 2/4 [00:35&lt;00:28, 14.12s/it, dataset=MeyerNikolic_unpubl, study_var=30727, union_var=19815, dbh=2855]
- 50%|################                | 2/4 [00:35&lt;00:28, 14.12s/it, dataset=MeyerNikolic_unpubl, study_var=30727, union_var=19815, dbh=2855]
- 75%|########################        | 3/4 [00:45&lt;00:16, 16.00s/it, dataset=MeyerNikolic_unpubl, study_var=30727, union_var=19815, dbh=2855]
- 75%|#############################2         | 3/4 [00:52&lt;00:16, 16.00s/it, dataset=Barbry_unpubl, study_var=16251, union_var=19815, dbh=608]
- 75%|#############################2         | 3/4 [00:52&lt;00:16, 16.00s/it, dataset=Barbry_unpubl, study_var=16251, union_var=19815, dbh=608]
-100%|#######################################| 4/4 [01:18&lt;00:00, 22.73s/it, dataset=Barbry_unpubl, study_var=16251, union_var=19815, dbh=608]
-100%|#######################################| 4/4 [01:18&lt;00:00, 19.73s/it, dataset=Barbry_unpubl, study_var=16251, union_var=19815, dbh=608]</span></pre>
+<pre class="idtrack-collapse-content">Genes present in all datasets (from union .var[&#x27;intersection&#x27;]): 13421
+<span class="stderr">100%|#########################################################################################################| 4/4 [00:44&lt;00:00, 11.04s/it]
+100%|#########################################################################################################| 4/4 [00:30&lt;00:00,  7.67s/it]</span></pre>
 </details></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>14
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>13
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">display</span><span class="p">(</span><span class="n">hlca_union</span><span class="p">)</span>
@@ -1073,9 +1424,10 @@ else:
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-AnnData object with n_obs × n_vars = 774178 × 47188
-    obs: &#39;handle_anndata&#39;
-    var: &#39;converted_id_Kaminski_2020&#39;, &#39;converted_id_Meyer_2021&#39;, &#39;converted_id_MeyerNikolic_unpubl&#39;, &#39;converted_id_Barbry_unpubl&#39;, &#39;converted_id&#39;, &#39;intersection&#39;
+AnnData object with n_obs × n_vars = 774178 × 50491
+    obs: &#39;nUMI&#39;, &#39;nGene&#39;, &#39;CellType_Category&#39;, &#39;Subclass_Cell_Identity&#39;, &#39;dataset&#39;, &#39;study&#39;, &#39;original_celltype_ann&#39;, &#39;condition&#39;, &#39;subject_ID&#39;, &#39;sample&#39;, &#39;institute&#39;, &#39;study_PI&#39;, &#39;sample_ID&#39;, &#39;library_ID&#39;, &#39;subject_ID_published&#39;, &#39;subject_developmental_state&#39;, &#39;age_years&#39;, &#39;sex&#39;, &#39;ethnicity_1&#39;, &#39;smoking_status&#39;, &#39;smoking_history&#39;, &#39;bmi&#39;, &#39;disease_lung_known&#39;, &#39;subject_type&#39;, &#39;cause_of_death&#39;, &#39;sample_type&#39;, &#39;anatomical_region_level1&#39;, &#39;anatomical_region_level3&#39;, &#39;protocol_tissue_dissociation&#39;, &#39;biological_unit&#39;, &#39;library_platform&#39;, &#39;strand_sequence&#39;, &#39;cell_enrichment&#39;, &#39;sequencing_platform&#39;, &#39;reference_genome&#39;, &#39;reference_genome_ensembl_release&#39;, &#39;reads_processing&#39;, &#39;sample_collection_year&#39;, &#39;disease_status&#39;, &#39;treatment_status&#39;, &#39;sample_status&#39;, &#39;sample_cultured&#39;, &#39;cell_number_loaded&#39;, &#39;cell_viability_percentage&#39;, &#39;comments&#39;, &#39;disease_condition&#39;, &#39;library_construction_batch&#39;, &#39;ethnicity_free_text&#39;, &#39;handle_anndata&#39;
+    var: &#39;converted_id&#39;, &#39;matching_ensembl_gene&#39;, &#39;HGNC Symbol_alternatives&#39;, &#39;Query ID_Kaminski_2020&#39;, &#39;Query ID_Meyer_2021&#39;, &#39;Query ID_MeyerNikolic_unpubl&#39;, &#39;Query ID_Barbry_unpubl&#39;, &#39;idtrack_status_Kaminski_2020&#39;, &#39;idtrack_status_Meyer_2021&#39;, &#39;idtrack_status_MeyerNikolic_unpubl&#39;, &#39;idtrack_status_Barbry_unpubl&#39;, &#39;idtrack_reason_Kaminski_2020&#39;, &#39;idtrack_reason_Meyer_2021&#39;, &#39;idtrack_reason_MeyerNikolic_unpubl&#39;, &#39;idtrack_reason_Barbry_unpubl&#39;, &#39;converted_id_Kaminski_2020&#39;, &#39;converted_id_Meyer_2021&#39;, &#39;converted_id_MeyerNikolic_unpubl&#39;, &#39;converted_id_Barbry_unpubl&#39;, &#39;intersection&#39;, &#39;ensembl&#39;, &#39;symbol&#39;, &#39;mt_Meyer_2021&#39;, &#39;mt_Barbry_unpubl&#39;, &#39;gene_ids-0&#39;, &#39;n_cells-0&#39;, &#39;n_cells_by_counts-0&#39;, &#39;mean_counts-0&#39;, &#39;pct_dropout_by_counts-0&#39;, &#39;total_counts-0&#39;, &#39;gene_ids-1&#39;, &#39;n_cells-1&#39;, &#39;n_cells_by_counts-1&#39;, &#39;mean_counts-1&#39;, &#39;pct_dropout_by_counts-1&#39;, &#39;total_counts-1&#39;, &#39;feature_types-1&#39;, &#39;n_cells&#39;, &#39;gene_ids_MeyerNikolic_unpubl&#39;, &#39;gene_ids_Barbry_unpubl&#39;, &#39;mito&#39;, &#39;ribo_MeyerNikolic_unpubl&#39;, &#39;ribo_Barbry_unpubl&#39;, &#39;sarscov2&#39;, &#39;feature_types&#39;, &#39;genome&#39;
+    layers: None (.X)
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1083,9 +1435,10 @@ AnnData object with n_obs × n_vars = 774178 × 47188
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-AnnData object with n_obs × n_vars = 774178 × 13405
-    obs: &#39;handle_anndata&#39;
-    var: &#39;converted_id&#39;
+AnnData object with n_obs × n_vars = 774178 × 13421
+    obs: &#39;nUMI&#39;, &#39;nGene&#39;, &#39;CellType_Category&#39;, &#39;Subclass_Cell_Identity&#39;, &#39;dataset&#39;, &#39;study&#39;, &#39;original_celltype_ann&#39;, &#39;condition&#39;, &#39;subject_ID&#39;, &#39;sample&#39;, &#39;institute&#39;, &#39;study_PI&#39;, &#39;sample_ID&#39;, &#39;library_ID&#39;, &#39;subject_ID_published&#39;, &#39;subject_developmental_state&#39;, &#39;age_years&#39;, &#39;sex&#39;, &#39;ethnicity_1&#39;, &#39;smoking_status&#39;, &#39;smoking_history&#39;, &#39;bmi&#39;, &#39;disease_lung_known&#39;, &#39;subject_type&#39;, &#39;cause_of_death&#39;, &#39;sample_type&#39;, &#39;anatomical_region_level1&#39;, &#39;anatomical_region_level3&#39;, &#39;protocol_tissue_dissociation&#39;, &#39;biological_unit&#39;, &#39;library_platform&#39;, &#39;strand_sequence&#39;, &#39;cell_enrichment&#39;, &#39;sequencing_platform&#39;, &#39;reference_genome&#39;, &#39;reference_genome_ensembl_release&#39;, &#39;reads_processing&#39;, &#39;sample_collection_year&#39;, &#39;disease_status&#39;, &#39;treatment_status&#39;, &#39;sample_status&#39;, &#39;sample_cultured&#39;, &#39;cell_number_loaded&#39;, &#39;cell_viability_percentage&#39;, &#39;comments&#39;, &#39;disease_condition&#39;, &#39;library_construction_batch&#39;, &#39;ethnicity_free_text&#39;, &#39;handle_anndata&#39;
+    var: &#39;converted_id&#39;, &#39;matching_ensembl_gene&#39;, &#39;HGNC Symbol_alternatives&#39;, &#39;Query ID_Kaminski_2020&#39;, &#39;Query ID_Meyer_2021&#39;, &#39;Query ID_MeyerNikolic_unpubl&#39;, &#39;Query ID_Barbry_unpubl&#39;, &#39;idtrack_status_Kaminski_2020&#39;, &#39;idtrack_status_Meyer_2021&#39;, &#39;idtrack_status_MeyerNikolic_unpubl&#39;, &#39;idtrack_status_Barbry_unpubl&#39;, &#39;idtrack_reason_Kaminski_2020&#39;, &#39;idtrack_reason_Meyer_2021&#39;, &#39;idtrack_reason_MeyerNikolic_unpubl&#39;, &#39;idtrack_reason_Barbry_unpubl&#39;, &#39;ensembl&#39;, &#39;symbol&#39;, &#39;mt_Meyer_2021&#39;, &#39;mt_Barbry_unpubl&#39;, &#39;gene_ids-0&#39;, &#39;n_cells-0&#39;, &#39;n_cells_by_counts-0&#39;, &#39;mean_counts-0&#39;, &#39;pct_dropout_by_counts-0&#39;, &#39;total_counts-0&#39;, &#39;gene_ids-1&#39;, &#39;n_cells-1&#39;, &#39;n_cells_by_counts-1&#39;, &#39;mean_counts-1&#39;, &#39;pct_dropout_by_counts-1&#39;, &#39;total_counts-1&#39;, &#39;feature_types-1&#39;, &#39;n_cells&#39;, &#39;gene_ids_MeyerNikolic_unpubl&#39;, &#39;gene_ids_Barbry_unpubl&#39;, &#39;mito&#39;, &#39;ribo_MeyerNikolic_unpubl&#39;, &#39;ribo_Barbry_unpubl&#39;, &#39;sarscov2&#39;, &#39;feature_types&#39;, &#39;genome&#39;
+    layers: None (.X)
 </pre></div></div>
 </div>
 </section>
@@ -1106,9 +1459,9 @@ AnnData object with n_obs × n_vars = 774178 × 13405
 <li><p>Only then convert into presentation-friendly labels (HGNC symbols) if needed.</p></li>
 </ol>
 <p>The next cell demonstrates a small, realistic “mixed identifier” rescue using the human API.</p>
-<p><strong>Tip:</strong> Legacy data rescue often involves older releases <em>and</em> older assemblies. The default human snapshot is multi-assembly and can map GRCh37-derived identifiers into your chosen snapshot/primary assembly. Only rebuild with <code class="docutils literal notranslate"><span class="pre">genome_assembly=37</span></code> if your downstream reference is GRCh37 and you want outputs anchored to that build (see Part 3).</p>
+<p><strong>Tip:</strong> Legacy data rescue often involves older releases <em>and</em> older assemblies. The human graph is multi-assembly: GRCh37 (and NCBI36) identifiers convert to the release you choose, on the assembly Ensembl maintained at that release (GRCh38 from release 76; GRCh37 for a target release from 55 to 75).</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>13
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>14
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Legacy rescue demo (human)</span>
@@ -1116,8 +1469,8 @@ AnnData object with n_obs × n_vars = 774178 × 13405
 <span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
 <span class="n">api</span><span class="o">.</span><span class="n">configure_logger</span><span class="p">()</span>
 
-<span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'human'</span><span class="p">)</span>
-<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">latest_release</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="mi">115</span>
+<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s1">'homo_sapiens'</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
 
 <span class="n">legacy_ids</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s1">'TP53'</span><span class="p">,</span>                <span class="c1"># HGNC symbol (common)</span>
@@ -1129,45 +1482,51 @@ AnnData object with n_obs × n_vars = 774178 × 13405
 <span class="p">]</span>
 
 <span class="c1"># Convert into Ensembl gene IDs at the snapshot boundary (stable backbone)</span>
-<span class="n">results</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier_multiple</span><span class="p">(</span><span class="n">legacy_ids</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">latest_release</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">strategy</span><span class="o">=</span><span class="s1">'all'</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier_multiple</span><span class="p">(</span><span class="n">legacy_ids</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">final_database</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">strategy</span><span class="o">=</span><span class="s1">'all'</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="n">summary</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">classify_multiple_conversion</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
 <span class="n">api</span><span class="o">.</span><span class="n">print_binned_conversion</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span>
 
-<span class="c1"># Show a couple of raw results for inspection</span>
-<span class="n">results</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span>
+<span class="c1"># Show how each was read and what it became</span>
+<span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'query_id'</span><span class="p">]</span><span class="si">:</span><span class="s2">&lt;16</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'target_id'</span><span class="p">]</span><span class="si">}</span><span class="s2"> | read as </span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'graph_id'</span><span class="p">]</span><span class="si">!r}</span><span class="s2"> (</span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'match'</span><span class="p">]</span><span class="si">}</span><span class="s2">), "</span>
+          <span class="sa">f</span><span class="s2">"copies on alternative loci: </span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'alternative_locus_genes'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-11-12 23:18:36 INFO:idtrack._api:
+IDTrack conversion summary:
+  Total processed: 6
+  1→0: 1 (16.7%)
+  1→1: 5 (83.3%)
+    Changed only: 3 (60.0%)
+    Alternative targets: 0 (0.0%)
+    Rest: 2 (40.0%)
+  1→n: 0 (0.0%)
+    Changed only: 0 (0.0%)
+    Alternative targets: 0 (0.0%)
+  Diagnostics:
+    no_corresponding: 1
+    no_conversion:   0
+    no_target:       0
+    errors:          0
+</pre></div></div>
+</div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>13
-</pre></div>
+<div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-[{&#39;target_id&#39;: [&#39;ENSG00000141510.20&#39;],
-  &#39;last_node&#39;: [(&#39;ENSG00000141510.20&#39;, &#39;ENSG00000141510.20&#39;)],
-  &#39;final_database&#39;: &#39;ensembl_gene&#39;,
-  &#39;graph_id&#39;: &#39;TP53&#39;,
-  &#39;query_id&#39;: &#39;TP53&#39;,
-  &#39;no_corresponding&#39;: False,
-  &#39;no_conversion&#39;: False,
-  &#39;no_target&#39;: False},
- {&#39;target_id&#39;: [&#39;LRG_321.1&#39;],
-  &#39;last_node&#39;: [(&#39;LRG_321.1&#39;, &#39;LRG_321.1&#39;)],
-  &#39;final_database&#39;: &#39;ensembl_gene&#39;,
-  &#39;graph_id&#39;: &#39;P53&#39;,
-  &#39;query_id&#39;: &#39;P53&#39;,
-  &#39;no_corresponding&#39;: False,
-  &#39;no_conversion&#39;: False,
-  &#39;no_target&#39;: False},
- {&#39;target_id&#39;: [&#39;ENSG00000141510.20&#39;],
-  &#39;last_node&#39;: [(&#39;ENSG00000141510.20&#39;, &#39;ENSG00000141510.20&#39;)],
-  &#39;final_database&#39;: &#39;ensembl_gene&#39;,
-  &#39;graph_id&#39;: &#39;ENSG00000141510&#39;,
-  &#39;query_id&#39;: &#39;ENSG00000141510&#39;,
-  &#39;no_corresponding&#39;: False,
-  &#39;no_conversion&#39;: False,
-  &#39;no_target&#39;: False}]
+TP53             -&gt; [&#39;ENSG00000141510.20&#39;] | read as &#39;TP53&#39; (exact), copies on alternative loci: [&#39;LRG_321.1&#39;]
+P53              -&gt; [&#39;ENSG00000141510.20&#39;] | read as &#39;synonym_id::P53&#39; (synonym:exact), copies on alternative loci: [&#39;LRG_321.1&#39;]
+ENSG00000141510  -&gt; [&#39;ENSG00000141510.20&#39;] | read as &#39;ENSG00000141510&#39; (exact), copies on alternative loci: []
+ENSG00000139618  -&gt; [&#39;ENSG00000139618.19&#39;] | read as &#39;ENSG00000139618&#39; (exact), copies on alternative loci: []
+BRCA1            -&gt; [&#39;ENSG00000012048.27&#39;] | read as &#39;BRCA1&#39; (exact), copies on alternative loci: [&#39;LRG_292.1&#39;]
+NOT_A_REAL_GENE  -&gt; [] | read as None (None), copies on alternative loci: []
 </pre></div></div>
 </div>
 </section>

@@ -109,16 +109,19 @@
 <span class="sd">blocked port costs a full connect timeout every time it is tried. This module makes that cost a one-off:</span>
 
 <span class="sd">* :py:func:`ensembl_access_mode` returns the access mode, ``"auto"`` (MySQL where its port answers, the HTTPS dumps</span>
-<span class="sd">  otherwise) or ``"https"`` (MySQL is never touched), from :py:attr:`idtrack._db.DB.ensembl_access` or the</span>
+<span class="sd">  otherwise) or ``"https"`` (MySQL is never touched), from :py:attr:`idtrack.DB.ensembl_access` or the</span>
 <span class="sd">  ``IDTRACK_ENSEMBL_ACCESS`` environment variable.</span>
 <span class="sd">* :py:data:`reachability` (a :py:class:`PortReachability`) probes a ``(host, port)`` once per process with a short</span>
 <span class="sd">  timeout and remembers the answer. Every code path that would open a MySQL connection asks it first, and a</span>
 <span class="sd">  connection that fails after a successful probe marks the port unreachable for the rest of the process.</span>
-<span class="sd">* :py:func:`rest_get_json` is the one way idtrack asks Ensembl REST: with the timeouts of</span>
-<span class="sd">  :py:attr:`idtrack._db.DB.connection_timeout` and :py:attr:`idtrack._db.DB.reading_timeout`, retries, and an</span>
-<span class="sd">  :py:class:`idtrack._db.EnsemblRestError` that says what failed and what to change.</span>
+<span class="sd">* :py:func:`rest_get_json` is the one way idtrack asks Ensembl REST, and :py:func:`https_get` the one way it reads</span>
+<span class="sd">  the HTTPS dumps: both with the timeouts of :py:attr:`idtrack.DB.connection_timeout` and</span>
+<span class="sd">  :py:attr:`idtrack.DB.reading_timeout`, the same retries, and an error that says what failed and what to change</span>
+<span class="sd">  (:py:class:`idtrack.EnsemblRestError`, :py:class:`EnsemblDownloadError`). :py:func:`https_get` tells "absent"</span>
+<span class="sd">  (HTTP 404 or 410 from a server that answered) apart from "unknown" (time-out, connection error, 429, 5xx), which is</span>
+<span class="sd">  retried and, if it stays unknown, raised: a failed request is never read as "does not exist".</span>
 
-<span class="sd">The results do not depend on the mode: both paths read the same Ensembl tables.</span>
+<span class="sd">The results do not depend on the mode: both paths read the same Ensembl tables, with the same column types.</span>
 <span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -135,15 +138,114 @@
 <span class="c1"># HTTP statuses after which a REST request is tried again (rate limit and transient server errors).</span>
 <span class="n">_REST_RETRY_STATUSES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="mi">429</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="mi">502</span><span class="p">,</span> <span class="mi">503</span><span class="p">,</span> <span class="mi">504</span><span class="p">})</span>
 
+<span class="c1"># HTTP statuses that mean "this resource does not exist" from a server that answered.</span>
+<span class="n">_ABSENT_STATUSES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="mi">404</span><span class="p">,</span> <span class="mi">410</span><span class="p">})</span>
+
+
+<div class="viewcode-block" id="EnsemblDownloadError">
+<a class="viewcode-back" href="../../reference.html#idtrack.EnsemblDownloadError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">EnsemblDownloadError</span><span class="p">(</span><span class="ne">ConnectionError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A file of Ensembl's HTTPS dumps could not be read: the server did not answer, or answered with an error.</span>
+
+<span class="sd">    Raised after :py:attr:`idtrack.DB.rest_attempts` attempts; never raised for a file that does not exist</span>
+<span class="sd">    (:py:func:`https_get` returns ``None`` then).</span>
+<span class="sd">    """</span></div>
+
+
+
+<span class="n">_sessions</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">local</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="_session">
+<a class="viewcode-back" href="../../reference.html#idtrack._session">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_session</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">requests</span><span class="o">.</span><span class="n">Session</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the :py:class:`requests.Session` of the calling thread (connections to Ensembl are reused)."""</span>
+    <span class="n">session</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">_sessions</span><span class="p">,</span> <span class="s2">"session"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">session</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">session</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span>
+        <span class="n">_sessions</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">session</span>
+    <span class="k">return</span> <span class="n">session</span></div>
+
+
+
+<div class="viewcode-block" id="https_get">
+<a class="viewcode-back" href="../../reference.html#idtrack.https_get">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">https_get</span><span class="p">(</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">what</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">stream</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">headers</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">requests</span><span class="o">.</span><span class="n">Response</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the answer to ``GET url``, ``None`` if the file does not exist, retrying transient failures.</span>
+
+<span class="sd">    The policy is that of :py:func:`rest_get_json`: timeouts ``(DB.connection_timeout, DB.reading_timeout)``;</span>
+<span class="sd">    timeouts, connection errors and the statuses 429, 500, 502, 503 and 504 are retried up to</span>
+<span class="sd">    :py:attr:`idtrack.DB.rest_attempts` attempts with doubling waits (or the server's ``Retry-After``, at most</span>
+<span class="sd">    60 s). HTTP 404 and 410 mean the file does not exist. The connection is reused within a thread.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        url: The URL.</span>
+<span class="sd">        what: What is asked, for the log and the error message.</span>
+<span class="sd">        stream: Return before the body is read (the caller reads and closes the response); otherwise the body is</span>
+<span class="sd">            read and the connection released.</span>
+<span class="sd">        headers: Extra request headers.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Optional[requests.Response]: The successful response, or ``None`` for an absent file.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        EnsemblDownloadError: If no attempt gives an answer, or the server answers with another error status.</span>
+<span class="sd">    """</span>
+    <span class="n">attempts</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">rest_attempts</span><span class="p">))</span>
+    <span class="n">timeout</span> <span class="o">=</span> <span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_timeout</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">reading_timeout</span><span class="p">)</span>
+    <span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+    <span class="n">failure</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">last_exc</span><span class="p">:</span> <span class="ne">BaseException</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">session</span> <span class="o">=</span> <span class="n">_session</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">attempts</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">wait</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">rest_retry_wait</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">**</span> <span class="p">(</span><span class="n">attempt</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">stream</span><span class="p">:</span>
+                    <span class="n">_</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">content</span>
+                <span class="k">return</span> <span class="n">response</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">status</span> <span class="ow">in</span> <span class="n">_ABSENT_STATUSES</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span>
+            <span class="n">failure</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"HTTP </span><span class="si">{</span><span class="n">status</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">reason</span><span class="si">}</span><span class="s2">"</span>
+            <span class="k">if</span> <span class="n">status</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_REST_RETRY_STATUSES</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">EnsemblDownloadError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Ensembl refused </span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2"> at </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">failure</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+            <span class="n">retry_after</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Retry-After"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">retry_after</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">str</span><span class="p">(</span><span class="n">retry_after</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                <span class="n">wait</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">wait</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">retry_after</span><span class="p">),</span> <span class="mf">60.0</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">RequestException</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="n">last_exc</span> <span class="o">=</span> <span class="n">exc</span>
+            <span class="n">failure</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">exc</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span>
+        <span class="k">if</span> <span class="n">attempt</span> <span class="o">&lt;</span> <span class="n">attempts</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">"Ensembl did not answer </span><span class="si">%s</span><span class="s2"> (attempt </span><span class="si">%d</span><span class="s2">/</span><span class="si">%d</span><span class="s2">: </span><span class="si">%s</span><span class="s2">); retrying in </span><span class="si">%.1f</span><span class="s2"> s."</span><span class="p">,</span>
+                <span class="n">what</span><span class="p">,</span>
+                <span class="n">attempt</span><span class="p">,</span>
+                <span class="n">attempts</span><span class="p">,</span>
+                <span class="n">failure</span><span class="p">,</span>
+                <span class="n">wait</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">wait</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="n">EnsemblDownloadError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">"Ensembl did not answer </span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2"> at </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2"> after </span><span class="si">{</span><span class="n">attempts</span><span class="si">}</span><span class="s2"> attempt(s) with connect timeout </span><span class="si">{</span><span class="n">timeout</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> s and "</span>
+        <span class="sa">f</span><span class="s2">"read timeout </span><span class="si">{</span><span class="n">timeout</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> s; last failure: </span><span class="si">{</span><span class="n">failure</span><span class="si">}</span><span class="s2">. On a slow network raise the timeouts, e.g. "</span>
+        <span class="s2">"`idtrack.DB.reading_timeout = 120` (and `idtrack.DB.rest_attempts`); behind a proxy set HTTPS_PROXY."</span>
+    <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">last_exc</span></div>
+
+
 
 <div class="viewcode-block" id="rest_get_json">
-<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.rest_get_json">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.rest_get_json">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">rest_get_json</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">what</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Return the decoded JSON of ``GET {DB.rest_server_api}{path}``, retrying transient failures.</span>
 
 <span class="sd">    Every attempt uses the timeouts ``(DB.connection_timeout, DB.reading_timeout)``. Timeouts, connection errors</span>
 <span class="sd">    (including SSL and proxy errors) and the HTTP statuses 429, 500, 502, 503 and 504 are retried up to</span>
-<span class="sd">    :py:attr:`idtrack._db.DB.rest_attempts` attempts, waiting :py:attr:`idtrack._db.DB.rest_retry_wait` seconds,</span>
+<span class="sd">    :py:attr:`idtrack.DB.rest_attempts` attempts, waiting :py:attr:`idtrack.DB.rest_retry_wait` seconds,</span>
 <span class="sd">    doubled each time (or the server's ``Retry-After``, at most 60 s). Any other HTTP status is not retried.</span>
 
 <span class="sd">    Args:</span>
@@ -159,7 +261,7 @@
     <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">DB</span><span class="o">.</span><span class="n">rest_server_api</span><span class="si">}{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span>
     <span class="n">attempts</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">rest_attempts</span><span class="p">))</span>
     <span class="n">timeout</span> <span class="o">=</span> <span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">connection_timeout</span><span class="p">,</span> <span class="n">DB</span><span class="o">.</span><span class="n">reading_timeout</span><span class="p">)</span>
-    <span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"ensembl_access"</span><span class="p">)</span>
+    <span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
     <span class="n">failure</span> <span class="o">=</span> <span class="s2">""</span>
     <span class="n">last_exc</span><span class="p">:</span> <span class="ne">BaseException</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">with</span> <span class="n">requests</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
@@ -202,18 +304,18 @@
 
 
 <div class="viewcode-block" id="ensembl_access_mode">
-<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.ensembl_access_mode">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ensembl_access_mode">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">ensembl_access_mode</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Return the active Ensembl access mode.</span>
 
-<span class="sd">    :py:attr:`idtrack._db.DB.ensembl_access` wins when it is set; otherwise the environment variable named by</span>
-<span class="sd">    :py:attr:`idtrack._db.DB.ensembl_access_env_var` (``IDTRACK_ENSEMBL_ACCESS``) is read; otherwise ``"auto"``.</span>
+<span class="sd">    :py:attr:`idtrack.DB.ensembl_access` wins when it is set; otherwise the environment variable named by</span>
+<span class="sd">    :py:attr:`idtrack.DB.ensembl_access_env_var` (``IDTRACK_ENSEMBL_ACCESS``) is read; otherwise ``"auto"``.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        str: ``"auto"`` or ``"https"``.</span>
 
 <span class="sd">    Raises:</span>
-<span class="sd">        ValueError: If the configured value is not one of :py:attr:`idtrack._db.DB.ensembl_access_modes`.</span>
+<span class="sd">        ValueError: If the configured value is not one of :py:attr:`idtrack.DB.ensembl_access_modes`.</span>
 <span class="sd">    """</span>
     <span class="n">value</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">ensembl_access</span>
     <span class="n">source</span> <span class="o">=</span> <span class="s2">"DB.ensembl_access"</span>
@@ -232,27 +334,59 @@
 
 
 <div class="viewcode-block" id="PortReachability">
-<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.PortReachability">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.PortReachability">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">PortReachability</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Remember, for the life of the process, whether a TCP ``(host, port)`` accepts connections.</span>
+<span class="w">    </span><span class="sd">"""Remember, per process, whether a TCP ``(host, port)`` accepts connections.</span>
 
 <span class="sd">    The first question about a ``(host, port)`` opens one TCP connection with a short timeout</span>
-<span class="sd">    (:py:attr:`idtrack._db.DB.mysql_probe_timeout` unless given); every later question is answered from memory.</span>
+<span class="sd">    (:py:attr:`idtrack.DB.mysql_probe_timeout` unless given); later questions are answered from memory.</span>
 <span class="sd">    :py:meth:`mark_unreachable` records a failure observed elsewhere: a MySQL connection that fails after a</span>
-<span class="sd">    successful probe (refused, dropped or lost during a query) marks the port unreachable for the rest of the</span>
-<span class="sd">    process, even if the failure was transient. This only costs speed: the tables are then read from the HTTPS dumps,</span>
-<span class="sd">    which hold the same rows. :py:meth:`reset` forgets everything, which is needed only when the network route changes</span>
-<span class="sd">    inside a process (as :py:class:`idtrack.ConnectionBridge` does when it starts or stops).</span>
+<span class="sd">    successful probe (refused, dropped or lost during a query) marks the port unreachable. A "reachable" answer is</span>
+<span class="sd">    kept for the life of the process; an "unreachable" one expires, so that a long-running process does not stay on</span>
+<span class="sd">    the slower HTTPS dumps for days after one network blip: after :py:attr:`retry_after_seconds` (10 minutes) the</span>
+<span class="sd">    port is probed again, and every further failure doubles the wait, up to :py:attr:`max_retry_after_seconds` (one</span>
+<span class="sd">    day). The memory is process-wide, so parallel requests do not each wait for a probe. Unreachable ports only cost</span>
+<span class="sd">    speed: the tables are then read from the HTTPS dumps, which hold the same rows. :py:meth:`reset` forgets</span>
+<span class="sd">    everything, which is needed when the network route changes inside a process (as</span>
+<span class="sd">    :py:class:`idtrack.ConnectionBridge` does when it starts or stops).</span>
 <span class="sd">    """</span>
+
+    <span class="c1">#: Seconds after a first failure before the port is probed again.</span>
+    <span class="n">retry_after_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">600.0</span>
+    <span class="c1">#: Upper bound of the doubling wait between probes of a port that keeps failing.</span>
+    <span class="n">max_retry_after_seconds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">86400.0</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Create an empty reachability memory."""</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># (host, port) -&gt; (answer, time of the answer, number of consecutive failures)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"ensembl_access"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PortReachability._remembered">
+<a class="viewcode-back" href="../../reference.html#idtrack.PortReachability._remembered">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_remembered</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the remembered answer for *key*, or ``None`` when there is none or an "unreachable" one expired."""</span>
+        <span class="n">entry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">entry</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">answer</span><span class="p">,</span> <span class="n">when</span><span class="p">,</span> <span class="n">failures</span> <span class="o">=</span> <span class="n">entry</span>
+        <span class="k">if</span> <span class="n">answer</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="n">wait</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">retry_after_seconds</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">**</span> <span class="nb">max</span><span class="p">(</span><span class="n">failures</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_retry_after_seconds</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span> <span class="k">if</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="n">when</span> <span class="o">&lt;</span> <span class="n">wait</span> <span class="k">else</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="PortReachability._record">
+<a class="viewcode-back" href="../../reference.html#idtrack.PortReachability._record">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">answer</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Store an answer (the caller holds the lock)."""</span>
+        <span class="n">failures</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">answer</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">answer</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">(),</span> <span class="n">failures</span><span class="p">)</span></div>
+
 
 <div class="viewcode-block" id="PortReachability._probe">
-<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.PortReachability._probe">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.PortReachability._probe">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_probe</span><span class="p">(</span><span class="n">host</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">timeout_s</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Open and close one TCP connection; return whether it succeeded."""</span>
@@ -264,7 +398,7 @@
 
 
 <div class="viewcode-block" id="PortReachability.can_connect">
-<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.PortReachability.can_connect">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.PortReachability.can_connect">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">can_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">timeout_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return whether ``(host, port)`` accepts TCP connections, probing it only the first time.</span>
 
@@ -272,24 +406,28 @@
 <span class="sd">            host: Host name.</span>
 <span class="sd">            port: TCP port.</span>
 <span class="sd">            timeout_s: Connect timeout of the probe in seconds; defaults to</span>
-<span class="sd">                :py:attr:`idtrack._db.DB.mysql_probe_timeout`.</span>
+<span class="sd">                :py:attr:`idtrack.DB.mysql_probe_timeout`.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            bool: The remembered (or freshly probed) answer.</span>
 <span class="sd">        """</span>
         <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">host</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">port</span><span class="p">))</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
-            <span class="n">known</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="n">known</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remembered</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">known</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">known</span>
         <span class="n">timeout</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">mysql_probe_timeout</span> <span class="k">if</span> <span class="n">timeout_s</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">timeout_s</span><span class="p">)</span>
         <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_probe</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">timeout</span><span class="p">)</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
             <span class="c1"># Another thread may have answered meanwhile; the first answer stands.</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+            <span class="n">known</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remembered</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">known</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_record</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">known</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">result</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                <span class="s2">"</span><span class="si">%s</span><span class="s2">:</span><span class="si">%d</span><span class="s2"> does not accept connections (probe timeout </span><span class="si">%.1f</span><span class="s2"> s); it is not tried again in this process."</span><span class="p">,</span>
+                <span class="s2">"</span><span class="si">%s</span><span class="s2">:</span><span class="si">%d</span><span class="s2"> does not accept connections (probe timeout </span><span class="si">%.1f</span><span class="s2"> s); it is not tried again for a while."</span><span class="p">,</span>
                 <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                 <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
                 <span class="n">timeout</span><span class="p">,</span>
@@ -298,15 +436,15 @@
 
 
 <div class="viewcode-block" id="PortReachability.mysql_port_usable">
-<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.PortReachability.mysql_port_usable">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.PortReachability.mysql_port_usable">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">mysql_port_usable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return whether the Ensembl MySQL service may be used on ``port``.</span>
 
 <span class="sd">        In ``"https"`` mode this is always ``False`` and nothing is probed; in ``"auto"`` mode it is</span>
-<span class="sd">        :py:meth:`can_connect` for :py:attr:`idtrack._db.DB.mysql_host`.</span>
+<span class="sd">        :py:meth:`can_connect` for :py:attr:`idtrack.DB.mysql_host`.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            port: MySQL port of :py:attr:`idtrack._db.DB.mysql_host`.</span>
+<span class="sd">            port: MySQL port of :py:attr:`idtrack.DB.mysql_host`.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            bool: ``True`` if a MySQL connection should be attempted.</span>
@@ -317,12 +455,12 @@
 
 
 <div class="viewcode-block" id="PortReachability.mark_unreachable">
-<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.PortReachability.mark_unreachable">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.PortReachability.mark_unreachable">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">mark_unreachable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Record that ``(host, port)`` failed, so that it is not tried again in this process.</span>
+<span class="w">        </span><span class="sd">"""Record that ``(host, port)`` failed, so that it is not tried again for a while (see the class docstring).</span>
 
-<span class="sd">        The mark lasts until :py:meth:`reset`; a transient failure therefore also sends later tables to the HTTPS</span>
-<span class="sd">        dumps, which costs speed but not correctness.</span>
+<span class="sd">        A transient failure therefore sends later tables to the HTTPS dumps for that while, which costs speed but not</span>
+<span class="sd">        correctness.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            host: Host name.</span>
@@ -331,11 +469,11 @@
 <span class="sd">        """</span>
         <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">host</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">port</span><span class="p">))</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
-            <span class="n">was</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">was</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remembered</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_record</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">was</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">False</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
-                <span class="s2">"</span><span class="si">%s</span><span class="s2">:</span><span class="si">%d</span><span class="s2"> failed</span><span class="si">%s</span><span class="s2">; using the HTTPS dumps instead for the rest of this process."</span><span class="p">,</span>
+                <span class="s2">"</span><span class="si">%s</span><span class="s2">:</span><span class="si">%d</span><span class="s2"> failed</span><span class="si">%s</span><span class="s2">; using the HTTPS dumps instead for a while."</span><span class="p">,</span>
                 <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                 <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
                 <span class="sa">f</span><span class="s2">" (</span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">)"</span> <span class="k">if</span> <span class="n">reason</span> <span class="k">else</span> <span class="s2">""</span><span class="p">,</span>
@@ -343,15 +481,15 @@
 
 
 <div class="viewcode-block" id="PortReachability.known">
-<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.PortReachability.known">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.PortReachability.known">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">known</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""Return a copy of the remembered answers (for inspection and tests)."""</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
-            <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="p">)</span></div>
+            <span class="k">return</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">answer</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="p">(</span><span class="n">answer</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_known</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span></div>
 
 
 <div class="viewcode-block" id="PortReachability.reset">
-<a class="viewcode-back" href="../../reference.html#idtrack._ensembl_access.PortReachability.reset">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.PortReachability.reset">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Forget every remembered answer (the next question probes again)."""</span>
         <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>

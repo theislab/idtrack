@@ -354,74 +354,70 @@
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Align two AA sequences via gget.muscle.</span>
 
+<span class="sd">    ``gget.muscle`` returns nothing: it writes the alignment as aligned FASTA to the file named by ``out`` (without</span>
+<span class="sd">    ``out`` it only prints a coloured view of it). The two sequences are therefore written to a temporary folder,</span>
+<span class="sd">    aligned into a file beside them, and the file is read back.</span>
+
 <span class="sd">    Args:</span>
 <span class="sd">        seq1: Amino-acid sequence for the first protein.</span>
 <span class="sd">        seq2: Amino-acid sequence for the second protein.</span>
-<span class="sd">        name1: Sequence name for the first protein (used in FASTA headers).</span>
-<span class="sd">        name2: Sequence name for the second protein (used in FASTA headers).</span>
+<span class="sd">        name1: Sequence name for the first protein (used in FASTA headers; no white space).</span>
+<span class="sd">        name2: Sequence name for the second protein (used in FASTA headers; no white space).</span>
 <span class="sd">        super5: Whether to enable MUSCLE super5 mode.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        tuple[str, str, str]: ``(aligned_seq1, aligned_seq2, raw_clustal_text)``.</span>
+<span class="sd">        tuple[str, str, str]: ``(aligned_seq1, aligned_seq2, aligned_fasta_text)``: the two sequences with gaps, of</span>
+<span class="sd">        equal length, and the alignment as MUSCLE wrote it.</span>
 
 <span class="sd">    Raises:</span>
-<span class="sd">        RuntimeError: If MUSCLE output cannot be parsed or does not contain the expected sequence names.</span>
+<span class="sd">        RuntimeError: If MUSCLE wrote no alignment, or the alignment does not hold the two sequence names.</span>
 <span class="sd">    """</span>
-    <span class="n">fasta_text</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"&gt;</span><span class="si">{</span><span class="n">name1</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">seq1</span><span class="si">}</span><span class="se">\n</span><span class="s2">&gt;</span><span class="si">{</span><span class="n">name2</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">seq2</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span>
-
-    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="s2">"w"</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s2">".fa"</span><span class="p">,</span> <span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="n">fh</span><span class="o">.</span><span class="n">name</span>
-        <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">fasta_text</span><span class="p">)</span>
-
     <span class="n">gget</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_require_ortholog_deps</span><span class="p">()</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">clustal</span> <span class="o">=</span> <span class="n">gget</span><span class="o">.</span><span class="n">muscle</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">super5</span><span class="o">=</span><span class="n">super5</span><span class="p">)</span>
-    <span class="k">finally</span><span class="p">:</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
-            <span class="k">pass</span>
+    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">"idtrack_muscle_"</span><span class="p">)</span> <span class="k">as</span> <span class="n">folder</span><span class="p">:</span>
+        <span class="n">fasta_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="s2">"pair.fa"</span><span class="p">)</span>
+        <span class="n">aligned_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">folder</span><span class="p">,</span> <span class="s2">"pair.afa"</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fasta_path</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+            <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">"&gt;</span><span class="si">{</span><span class="n">name1</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">seq1</span><span class="si">}</span><span class="se">\n</span><span class="s2">&gt;</span><span class="si">{</span><span class="n">name2</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">seq2</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">gget</span><span class="o">.</span><span class="n">muscle</span><span class="p">(</span><span class="n">fasta_path</span><span class="p">,</span> <span class="n">super5</span><span class="o">=</span><span class="n">super5</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">aligned_path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">aligned_path</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"MUSCLE wrote no alignment for </span><span class="si">{</span><span class="n">name1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name2</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">aligned_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+            <span class="n">aligned_fasta</span> <span class="o">=</span> <span class="n">fh</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
 
-    <span class="n">aligned</span> <span class="o">=</span> <span class="n">parse_clustal_alignment</span><span class="p">(</span><span class="n">clustal</span><span class="p">)</span>
+    <span class="n">aligned</span> <span class="o">=</span> <span class="n">parse_aligned_fasta</span><span class="p">(</span><span class="n">aligned_fasta</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">name1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">aligned</span> <span class="ow">or</span> <span class="n">name2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">aligned</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Could not find </span><span class="si">{</span><span class="n">name1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name2</span><span class="si">}</span><span class="s2"> sequences in MUSCLE output."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">aligned</span><span class="p">[</span><span class="n">name1</span><span class="p">])</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">aligned</span><span class="p">[</span><span class="n">name2</span><span class="p">]):</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"MUSCLE output for </span><span class="si">{</span><span class="n">name1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name2</span><span class="si">}</span><span class="s2"> holds sequences of unequal aligned length."</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">aligned</span><span class="p">[</span><span class="n">name1</span><span class="p">],</span> <span class="n">aligned</span><span class="p">[</span><span class="n">name2</span><span class="p">],</span> <span class="n">clustal</span></div>
+    <span class="k">return</span> <span class="n">aligned</span><span class="p">[</span><span class="n">name1</span><span class="p">],</span> <span class="n">aligned</span><span class="p">[</span><span class="n">name2</span><span class="p">],</span> <span class="n">aligned_fasta</span></div>
 
 
 
-<div class="viewcode-block" id="parse_clustal_alignment">
-<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog.parse_clustal_alignment">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">parse_clustal_alignment</span><span class="p">(</span><span class="n">clustal_text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">"""Parse a minimal ClustalW/MUSCLE text alignment.</span>
+<div class="viewcode-block" id="parse_aligned_fasta">
+<a class="viewcode-back" href="../../../reference/external_mappers.html#idtrack._external_mappers._ortholog.parse_aligned_fasta">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_aligned_fasta</span><span class="p">(</span><span class="n">fasta_text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Parse an aligned FASTA text (``.afa``), as MUSCLE writes it.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        clustal_text: Raw ClustalW/MUSCLE text output.</span>
+<span class="sd">        fasta_text: The text: per sequence a header line ``&gt;name ...`` and one or more lines of residues and gaps.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        Mapping of ``{sequence_name: aligned_sequence}``.</span>
+<span class="sd">        Mapping of ``{sequence_name: aligned_sequence}``; the name is the header up to the first white space.</span>
 <span class="sd">    """</span>
     <span class="n">seqs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
-
-    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">clustal_text</span><span class="o">.</span><span class="n">splitlines</span><span class="p">():</span>
-        <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">fasta_text</span><span class="o">.</span><span class="n">splitlines</span><span class="p">():</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="p">:</span>
             <span class="k">continue</span>
-        <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"CLUSTAL"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"MUSCLE"</span><span class="p">):</span>
-            <span class="k">continue</span>
-
-        <span class="n">parts</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="k">continue</span>
-        <span class="n">name</span><span class="p">,</span> <span class="n">frag</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-
-        <span class="c1"># Skip consensus lines of just *:. etc.</span>
-        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">c</span> <span class="ow">in</span> <span class="s2">"*:."</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">name</span><span class="p">):</span>
-            <span class="k">continue</span>
-
-        <span class="n">seqs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">frag</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">frags</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">frags</span> <span class="ow">in</span> <span class="n">seqs</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span></div>
+        <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"&gt;"</span><span class="p">):</span>
+            <span class="n">fields</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">fields</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">fields</span> <span class="k">else</span> <span class="s2">""</span>
+            <span class="n">seqs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="k">elif</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">seqs</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">parts</span> <span class="ow">in</span> <span class="n">seqs</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span></div>
 
 
 
@@ -721,7 +717,7 @@
 
         <span class="c1"># MUSCLE alignment</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">aligned_q</span><span class="p">,</span> <span class="n">aligned_t</span><span class="p">,</span> <span class="n">clustal</span> <span class="o">=</span> <span class="n">run_muscle_pairwise</span><span class="p">(</span>
+            <span class="n">aligned_q</span><span class="p">,</span> <span class="n">aligned_t</span><span class="p">,</span> <span class="n">aligned_fasta</span> <span class="o">=</span> <span class="n">run_muscle_pairwise</span><span class="p">(</span>
                 <span class="n">query_seq_aa</span><span class="p">,</span>
                 <span class="n">target_seq_aa</span><span class="p">,</span>
                 <span class="n">name1</span><span class="o">=</span><span class="n">query_ensembl_id</span><span class="p">,</span>
@@ -776,7 +772,7 @@
             <span class="s2">"target_species_species"</span><span class="p">:</span> <span class="n">species</span><span class="p">,</span>
             <span class="s2">"alignment_aligned_query"</span><span class="p">:</span> <span class="n">aligned_q</span><span class="p">,</span>
             <span class="s2">"alignment_aligned_target"</span><span class="p">:</span> <span class="n">aligned_t</span><span class="p">,</span>
-            <span class="s2">"alignment_raw_clustal"</span><span class="p">:</span> <span class="n">clustal</span><span class="p">,</span>
+            <span class="s2">"alignment_aligned_fasta"</span><span class="p">:</span> <span class="n">aligned_fasta</span><span class="p">,</span>
         <span class="p">}</span>
 
         <span class="c1"># Scalar alignment scores</span>

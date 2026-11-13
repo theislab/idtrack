@@ -130,7 +130,7 @@
   <a class="idtrack-notebook-download" href="../_sources/_notebooks/99_initialization_test.ipynb">Download notebook</a>
 </div><section id="Appendix-—-Self-tests-&amp;-Sanity-Checks-(Human,-Mouse,-Pig)">
 <h1>Appendix — Self-tests &amp; Sanity Checks (Human, Mouse, Pig)<a class="headerlink" href="#Appendix-—-Self-tests-&-Sanity-Checks-(Human,-Mouse,-Pig)" title="Link to this heading"></a></h1>
-<p><em>Last updated:</em> 2026-01-08</p>
+<p><em>Last updated:</em> 2026-11-12</p>
 <p>Use this notebook when you want to <strong>confirm your setup is correct</strong> after building graphs.</p>
 <p>It checks:</p>
 <ul class="simple">
@@ -144,8 +144,8 @@
 </div></blockquote>
 <section id="1.-Setup">
 <h2>1. Setup<a class="headerlink" href="#1.-Setup" title="Link to this heading"></a></h2>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>1
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
@@ -156,7 +156,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">idtrack</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
 
-<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'./idtrack_cache'</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'idtrack_cache'</span><span class="p">))</span>
 <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
@@ -166,20 +166,29 @@
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Local repository: idtrack_cache
+</pre></div></div>
+</div>
 </section>
 <section id="2.-Helper:-pick-a-representative-gene-ID-from-a-built-graph">
 <h2>2. Helper: pick a representative gene ID from a built graph<a class="headerlink" href="#2.-Helper:-pick-a-representative-gene-ID-from-a-built-graph" title="Link to this heading"></a></h2>
 <p>We avoid hard-coding gene IDs for mouse/pig by selecting an example <strong>base Ensembl gene ID</strong> directly from the graph (these look like <code class="docutils literal notranslate"><span class="pre">ENSG...</span></code>, <code class="docutils literal notranslate"><span class="pre">ENSMUSG...</span></code>, <code class="docutils literal notranslate"><span class="pre">ENSSSCG...</span></code>; the macaques use <code class="docutils literal notranslate"><span class="pre">ENSMMUG...</span></code> and <code class="docutils literal notranslate"><span class="pre">ENSMFAG...</span></code>).</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>2
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">pick_example_base_gene_id</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-    <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">node_type_str</span><span class="p">)</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_base_ensembl</span><span class="p">[</span><span class="s1">'gene'</span><span class="p">]:</span>
+    <span class="c1"># The first base Ensembl gene id in the order of the node names (deterministic).</span>
+    <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">graph</span><span class="o">.</span><span class="n">node_type</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="o">==</span> <span class="n">DB</span><span class="o">.</span><span class="n">nts_base_ensembl</span><span class="p">[</span><span class="s1">'gene'</span><span class="p">]:</span>
             <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
     <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">'No base_ensembl_gene node found in the graph.'</span><span class="p">)</span>
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 </section>
@@ -193,24 +202,32 @@
 </ol>
 <section id="3A.-Human">
 <h3>3A. Human<a class="headerlink" href="#3A.-Human" title="Link to this heading"></a></h3>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>3
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 3A.1 YAML presence</span>
 <span class="n">human_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">'homo_sapiens_externals_modified.yml'</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'OK'</span> <span class="k">if</span> <span class="n">human_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="s1">'NOTE: missing (IDTrack can fall back to packaged default for human)'</span><span class="p">,</span> <span class="n">human_yaml</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'OK'</span> <span class="k">if</span> <span class="n">human_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="s1">'NOTE: not in the local repository (IDTrack uses the packaged default for human)'</span><span class="p">,</span> <span class="n">human_yaml</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+OK idtrack_cache/homo_sapiens_externals_modified.yml
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 3A.2 Build/load graph</span>
 <span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'human'</span><span class="p">)</span>
-<span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="n">latest_release</span>
-<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="mi">115</span>  <span class="c1"># pinned (latest_release is Ensembl's newest)</span>
+<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
 
 <span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
 <span class="nb">print</span><span class="p">(</span><span class="s1">'Organism:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">'organism'</span><span class="p">])</span>
@@ -219,8 +236,26 @@
 <br/></pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-11-12 23:11:50 INFO:idtrack._verify_organism: Ensembl Rest API query to get the organism names and associated releases.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Organism: homo_sapiens
+Release: 115
+Assembly: 38
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 3A.3 Smoke conversion</span>
@@ -229,6 +264,36 @@
 <span class="n">result</span>
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>5
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;query_id&#39;: &#39;ENSG00000000003&#39;,
+ &#39;graph_id&#39;: &#39;ENSG00000000003&#39;,
+ &#39;match&#39;: &#39;exact&#39;,
+ &#39;known_versions&#39;: [],
+ &#39;from_release&#39;: 115,
+ &#39;from_release_inferred&#39;: False,
+ &#39;from_release_given&#39;: 115,
+ &#39;from_release_fallback&#39;: False,
+ &#39;from_databases&#39;: [&#39;base_ensembl_gene&#39;],
+ &#39;to_release&#39;: 115,
+ &#39;strategy&#39;: &#39;best&#39;,
+ &#39;final_database&#39;: &#39;ensembl_gene&#39;,
+ &#39;target_id&#39;: [&#39;ENSG00000000003.17&#39;],
+ &#39;last_node&#39;: [[&#39;ENSG00000000003.17&#39;, &#39;ENSG00000000003.17&#39;]],
+ &#39;ambiguous&#39;: False,
+ &#39;tie&#39;: False,
+ &#39;alternative_locus_genes&#39;: [],
+ &#39;no_corresponding&#39;: False,
+ &#39;no_conversion&#39;: False,
+ &#39;no_target&#39;: False,
+ &#39;no_target_genes&#39;: [],
+ &#39;error&#39;: None}
+</pre></div></div>
 </div>
 <p>Interpretation tips:</p>
 <ul class="simple">
@@ -239,25 +304,37 @@
 </section>
 <section id="3B.-Mouse">
 <h3>3B. Mouse<a class="headerlink" href="#3B.-Mouse" title="Link to this heading"></a></h3>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>6
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mouse_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">'mus_musculus_externals_modified.yml'</span>
 <span class="c1"># A local file (Part 2) overrides the packaged default; either is fine.</span>
-<span class="n">HAS_MOUSE_YAML</span> <span class="o">=</span> <span class="n">mouse_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">or</span> <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">idtrack</span><span class="o">.</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s1">'default_config'</span> <span class="o">/</span> <span class="n">mouse_yaml</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'OK'</span> <span class="k">if</span> <span class="n">HAS_MOUSE_YAML</span> <span class="k">else</span> <span class="s1">'MISSING (create this in Part 2 for mouse)'</span><span class="p">,</span> <span class="n">mouse_yaml</span><span class="p">)</span>
+<span class="n">shipped_mouse_yaml</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">idtrack</span><span class="o">.</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s1">'default_config'</span> <span class="o">/</span> <span class="n">mouse_yaml</span><span class="o">.</span><span class="n">name</span>
+<span class="n">HAS_MOUSE_YAML</span> <span class="o">=</span> <span class="n">mouse_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">or</span> <span class="n">shipped_mouse_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+<span class="k">if</span> <span class="n">mouse_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'OK, local file:'</span><span class="p">,</span> <span class="n">mouse_yaml</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'OK, packaged default:'</span> <span class="k">if</span> <span class="n">HAS_MOUSE_YAML</span> <span class="k">else</span> <span class="s1">'MISSING (create it in Part 2 for mouse):'</span><span class="p">,</span> <span class="n">shipped_mouse_yaml</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+OK, local file: idtrack_cache/mus_musculus_externals_modified.yml
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>7
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_MOUSE_YAML</span><span class="p">:</span>
     <span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'mus musculus'</span><span class="p">)</span>
-    <span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="n">latest_release</span>
-    <span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="mi">115</span>  <span class="c1"># pinned (latest_release is Ensembl's newest)</span>
+    <span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
 
     <span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'Organism:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">'organism'</span><span class="p">])</span>
@@ -268,41 +345,92 @@
 <br/></pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Organism: mus_musculus
+Release: 115
+Assembly: 39
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>8
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_MOUSE_YAML</span><span class="p">:</span>
     <span class="n">example_id</span> <span class="o">=</span> <span class="n">pick_example_base_gene_id</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="n">example_id</span><span class="p">,</span> <span class="n">from_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
-    <span class="n">result</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'Skipping mouse smoke conversion (mouse graph not built).'</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;query_id&#39;: &#39;ENSMUSG00000000001&#39;,
+ &#39;graph_id&#39;: &#39;ENSMUSG00000000001&#39;,
+ &#39;match&#39;: &#39;exact&#39;,
+ &#39;known_versions&#39;: [],
+ &#39;from_release&#39;: 115,
+ &#39;from_release_inferred&#39;: False,
+ &#39;from_release_given&#39;: 115,
+ &#39;from_release_fallback&#39;: False,
+ &#39;from_databases&#39;: [&#39;base_ensembl_gene&#39;],
+ &#39;to_release&#39;: 115,
+ &#39;strategy&#39;: &#39;best&#39;,
+ &#39;final_database&#39;: &#39;ensembl_gene&#39;,
+ &#39;target_id&#39;: [&#39;ENSMUSG00000000001.5&#39;],
+ &#39;last_node&#39;: [[&#39;ENSMUSG00000000001.5&#39;, &#39;ENSMUSG00000000001.5&#39;]],
+ &#39;ambiguous&#39;: False,
+ &#39;tie&#39;: False,
+ &#39;alternative_locus_genes&#39;: [],
+ &#39;no_corresponding&#39;: False,
+ &#39;no_conversion&#39;: False,
+ &#39;no_target&#39;: False,
+ &#39;no_target_genes&#39;: [],
+ &#39;error&#39;: None}
+</pre></div></div>
+</div>
 </section>
 <section id="3C.-Pig">
 <h3>3C. Pig<a class="headerlink" href="#3C.-Pig" title="Link to this heading"></a></h3>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>9
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pig_yaml</span> <span class="o">=</span> <span class="n">LOCAL_REPOSITORY</span> <span class="o">/</span> <span class="s1">'sus_scrofa_externals_modified.yml'</span>
 <span class="c1"># A local file (Part 2) overrides the packaged default; either is fine.</span>
-<span class="n">HAS_PIG_YAML</span> <span class="o">=</span> <span class="n">pig_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">or</span> <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">idtrack</span><span class="o">.</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s1">'default_config'</span> <span class="o">/</span> <span class="n">pig_yaml</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="s1">'OK'</span> <span class="k">if</span> <span class="n">HAS_PIG_YAML</span> <span class="k">else</span> <span class="s1">'MISSING (create this in Part 2 for pig)'</span><span class="p">,</span> <span class="n">pig_yaml</span><span class="p">)</span>
+<span class="n">shipped_pig_yaml</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">idtrack</span><span class="o">.</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s1">'default_config'</span> <span class="o">/</span> <span class="n">pig_yaml</span><span class="o">.</span><span class="n">name</span>
+<span class="n">HAS_PIG_YAML</span> <span class="o">=</span> <span class="n">pig_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">or</span> <span class="n">shipped_pig_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span>
+<span class="k">if</span> <span class="n">pig_yaml</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'OK, local file:'</span><span class="p">,</span> <span class="n">pig_yaml</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">'OK, packaged default:'</span> <span class="k">if</span> <span class="n">HAS_PIG_YAML</span> <span class="k">else</span> <span class="s1">'MISSING (create it in Part 2 for pig):'</span><span class="p">,</span> <span class="n">shipped_pig_yaml</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+OK, local file: idtrack_cache/sus_scrofa_externals_modified.yml
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>10
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_PIG_YAML</span><span class="p">:</span>
     <span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'sus scrofa'</span><span class="p">)</span>
-    <span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="n">latest_release</span>
-    <span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">SNAPSHOT_RELEASE</span> <span class="o">=</span> <span class="mi">115</span>  <span class="c1"># pinned (latest_release is Ensembl's newest)</span>
+    <span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
 
     <span class="n">g</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'Organism:'</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s1">'organism'</span><span class="p">])</span>
@@ -313,40 +441,100 @@
 <br/></pre></div>
 </div>
 </div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Organism: sus_scrofa
+Release: 115
+Assembly: 111
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>11
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">HAS_PIG_YAML</span><span class="p">:</span>
     <span class="n">example_id</span> <span class="o">=</span> <span class="n">pick_example_base_gene_id</span><span class="p">(</span><span class="n">api</span><span class="o">.</span><span class="n">track</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">convert_identifier</span><span class="p">(</span><span class="n">example_id</span><span class="p">,</span> <span class="n">from_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">,</span> <span class="n">to_release</span><span class="o">=</span><span class="n">SNAPSHOT_RELEASE</span><span class="p">)</span>
-    <span class="n">result</span>
+    <span class="n">display</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'Skipping pig smoke conversion (pig graph not built).'</span><span class="p">)</span>
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;query_id&#39;: &#39;ENSSSCG00000000001&#39;,
+ &#39;graph_id&#39;: &#39;ENSSSCG00000000001&#39;,
+ &#39;match&#39;: &#39;exact&#39;,
+ &#39;known_versions&#39;: [],
+ &#39;from_release&#39;: 89,
+ &#39;from_release_inferred&#39;: True,
+ &#39;from_release_given&#39;: 115,
+ &#39;from_release_fallback&#39;: True,
+ &#39;from_databases&#39;: [&#39;base_ensembl_gene&#39;],
+ &#39;to_release&#39;: 115,
+ &#39;strategy&#39;: &#39;best&#39;,
+ &#39;final_database&#39;: &#39;ensembl_gene&#39;,
+ &#39;target_id&#39;: [&#39;ENSSSCG00000027852.4&#39;],
+ &#39;last_node&#39;: [[&#39;ENSSSCG00000027852.4&#39;, &#39;ENSSSCG00000027852.4&#39;]],
+ &#39;ambiguous&#39;: False,
+ &#39;tie&#39;: False,
+ &#39;alternative_locus_genes&#39;: [],
+ &#39;no_corresponding&#39;: False,
+ &#39;no_conversion&#39;: False,
+ &#39;no_target&#39;: False,
+ &#39;no_target_genes&#39;: [],
+ &#39;error&#39;: None}
+</pre></div></div>
 </div>
 </section>
 </section>
 <section id="4.-Optional:-deeper-integrity-checks-(advanced)">
 <h2>4. Optional: deeper integrity checks (advanced)<a class="headerlink" href="#4.-Optional:-deeper-integrity-checks-(advanced)" title="Link to this heading"></a></h2>
 <p>IDTrack exposes a developer-focused test harness called <code class="docutils literal notranslate"><span class="pre">TrackTests</span></code>.</p>
-<p>If you are a power user and want extra confidence, you can build the graph in test mode and run invariants. These tests can be slow on large graphs.</p>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span> 
+<p>If you are a power user and want extra confidence, you can load the graph in test mode and run invariants. Test mode needs the tables the graph was built from (it reads Ensembl’s tables through a database manager), and some tests are slow on large graphs.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>12
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Example: build TrackTests for human and run one invariant</span>
 <span class="c1"># (This is optional; skip if you just want to use IDTrack.)</span>
 
-<span class="n">organism</span><span class="p">,</span> <span class="n">latest_release</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">resolve_organism</span><span class="p">(</span><span class="s1">'human'</span><span class="p">)</span>
-<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="n">organism</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="n">latest_release</span><span class="p">,</span> <span class="n">return_test</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">calculate_caches</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">api</span><span class="o">.</span><span class="n">build_graph</span><span class="p">(</span><span class="n">organism_name</span><span class="o">=</span><span class="s1">'homo_sapiens'</span><span class="p">,</span> <span class="n">snapshot_release</span><span class="o">=</span><span class="mi">115</span><span class="p">,</span> <span class="n">return_test</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="n">tests</span> <span class="o">=</span> <span class="n">api</span><span class="o">.</span><span class="n">track</span>  <span class="c1"># TrackTests instance</span>
-<span class="c1"># A relatively small check compared to full history stress-tests:</span>
-<span class="n">tests</span><span class="o">.</span><span class="n">is_base_is_range_correct</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="c1"># A relatively small check compared to full history stress-tests. Every check returns a result:</span>
+<span class="c1"># `holds` says whether the invariant holds (it is also the truth value of the result), and</span>
+<span class="c1"># `details` what was compared and every violation found.</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">tests</span><span class="o">.</span><span class="n">is_base_is_range_correct</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">check</span><span class="p">,</span> <span class="s1">'-&gt; holds:'</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">holds</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">'gene ids compared:'</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s1">'compared'</span><span class="p">],</span> <span class="s1">'| differing:'</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">details</span><span class="p">[</span><span class="s1">'n_differing'</span><span class="p">])</span>
 <br/></pre></div>
 </div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+2026-11-12 23:11:59 INFO:idtrack._database_manager: Ensembl releases of homo_sapiens assembly 38 read from &#39;idtrack_cache/ensembl_https_index_homo_sapiens_assembly-38.json&#39; (scanned up to release 116).
+2026-11-12 23:11:59 INFO:idtrack._graph_maker: The graph is being read: idtrack_cache/graph_homo_sapiens_assembly38_min48_max115_narrow.npz
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+is_base_is_range_correct -&gt; holds: True
+gene ids compared: 127247 | differing: 0
+</pre></div></div>
 </div>
 </section>
 <section id="5.-If-something-fails">

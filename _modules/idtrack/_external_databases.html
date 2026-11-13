@@ -102,14 +102,28 @@
 <span class="c1"># Kemal Inecik</span>
 <span class="c1"># k.inecik@gmail.com</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">idtrack._db</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB</span>
+
+<span class="n">_YAML_LOADER</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">yaml</span><span class="p">,</span> <span class="s2">"CSafeLoader"</span><span class="p">,</span> <span class="n">yaml</span><span class="o">.</span><span class="n">SafeLoader</span><span class="p">)</span>
+
+<span class="c1"># Parsed and validated externals YAML files, per path, with the (mtime_ns, size) they were read at.</span>
+<span class="n">_yaml_cache</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="nb">dict</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">_yaml_cache_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+<span class="c1"># (organism, configured path) pairs whose fallback to the shipped file was already announced in this process.</span>
+<span class="n">_fallback_announced</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
 
 <span class="c1"># Where the documented recipe for making an externals YAML lives (shown in error messages).</span>
 <span class="n">_EXTERNALS_RECIPE</span> <span class="o">=</span> <span class="p">(</span>
@@ -119,14 +133,140 @@
 
 
 <div class="viewcode-block" id="ExternalsReleaseNotCoveredError">
-<a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalsReleaseNotCoveredError">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ExternalsReleaseNotCoveredError">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ExternalsReleaseNotCoveredError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Raised when an externals YAML file has no entry for the requested Ensembl release."""</span></div>
 
 
 
+<div class="viewcode-block" id="_assembly_window">
+<a class="viewcode-back" href="../../reference.html#idtrack._assembly_window">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">_assembly_window</span><span class="p">(</span><span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the releases an assembly may have: its ``ReleaseRange`` clipped to idtrack's floor (48)."""</span>
+    <span class="n">first</span><span class="p">,</span> <span class="n">last</span> <span class="o">=</span> <span class="n">DB</span><span class="o">.</span><span class="n">release_range</span><span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">))</span>
+    <span class="n">floor</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">DB</span><span class="o">.</span><span class="n">mysql_port_min_release</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+    <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">first</span><span class="p">),</span> <span class="n">floor</span><span class="p">),</span> <span class="p">(</span><span class="kc">None</span> <span class="k">if</span> <span class="n">last</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">int</span><span class="p">(</span><span class="n">last</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="validate_externals_yaml">
+<a class="viewcode-back" href="../../reference.html#idtrack.validate_externals_yaml">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">validate_externals_yaml</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">shipped</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Check a parsed externals YAML against the organism table and return the usable part.</span>
+
+<span class="sd">    Every entry must have a boolean ``Include`` (a quoted ``"false"`` would otherwise count as enabled) and a list of</span>
+<span class="sd">    integer releases. For an organism of the organism table, every assembly key must be one of the organism's keys</span>
+<span class="sd">    and every release must lie in that assembly's release window (``ReleaseRange`` clipped to release 48). A file</span>
+<span class="sd">    shipped with idtrack must satisfy all of this (anything else is an error); in a user file, entries of unknown</span>
+<span class="sd">    assemblies and releases outside an assembly's window are reported in one warning and left out, because nothing</span>
+<span class="sd">    can be built from them.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        data: The parsed YAML.</span>
+<span class="sd">        path: The file, for the messages.</span>
+<span class="sd">        shipped: The file is one of idtrack's ``default_config`` files.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: *data* without the entries left out (a new object; *data* is not changed).</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If the layout is wrong, an ``Include`` is not a boolean, a release is not an integer, or (for a</span>
+<span class="sd">            shipped file) an entry names an unknown assembly or a release outside its window.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The externals YAML </span><span class="si">{</span><span class="n">path</span><span class="si">!r}</span><span class="s2"> must map organisms to forms; got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+    <span class="n">problems</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">out</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">organism</span><span class="p">,</span> <span class="n">forms</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">configured</span> <span class="o">=</span> <span class="n">organism</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span>
+        <span class="n">out_forms</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">form</span><span class="p">,</span> <span class="n">databases</span> <span class="ow">in</span> <span class="p">(</span><span class="n">forms</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">out_dbs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">db_name</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="p">(</span><span class="n">databases</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">where</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">form</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">db_name</span><span class="si">}</span><span class="s2">"</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Assembly"</span><span class="p">),</span> <span class="nb">dict</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The externals YAML </span><span class="si">{</span><span class="n">path</span><span class="si">!r}</span><span class="s2">: entry </span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2"> has no `Assembly` mapping."</span><span class="p">)</span>
+                <span class="n">out_asm</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="k">for</span> <span class="n">asm</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"Assembly"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"Include"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">item</span> <span class="ow">or</span> <span class="s2">"Ensembl release"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">item</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">"The externals YAML </span><span class="si">{</span><span class="n">path</span><span class="si">!r}</span><span class="s2">: </span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2"> assembly </span><span class="si">{</span><span class="n">asm</span><span class="si">!r}</span><span class="s2"> needs `Ensembl release` and "</span>
+                            <span class="s2">"`Include`."</span>
+                        <span class="p">)</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"Include"</span><span class="p">],</span> <span class="nb">bool</span><span class="p">):</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">"The externals YAML </span><span class="si">{</span><span class="n">path</span><span class="si">!r}</span><span class="s2">: `Include` of </span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2"> assembly </span><span class="si">{</span><span class="n">asm</span><span class="si">!r}</span><span class="s2"> is "</span>
+                            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">item</span><span class="p">[</span><span class="s1">'Include'</span><span class="p">]</span><span class="si">!r}</span><span class="s2">; it must be true or false (unquoted)."</span>
+                        <span class="p">)</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">releases</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"Ensembl release"</span><span class="p">])</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">","</span><span class="p">)]</span>
+                    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">"The externals YAML </span><span class="si">{</span><span class="n">path</span><span class="si">!r}</span><span class="s2">: `Ensembl release` of </span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2"> assembly </span><span class="si">{</span><span class="n">asm</span><span class="si">!r}</span><span class="s2"> must be a "</span>
+                            <span class="sa">f</span><span class="s2">"comma-separated list of integers, got </span><span class="si">{</span><span class="n">item</span><span class="p">[</span><span class="s1">'Ensembl release'</span><span class="p">]</span><span class="si">!r}</span><span class="s2">."</span>
+                        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+                    <span class="k">if</span> <span class="n">configured</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="nb">str</span><span class="p">(</span><span class="n">asm</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span> <span class="ow">or</span> <span class="nb">int</span><span class="p">(</span><span class="n">asm</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DB</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="n">organism</span><span class="p">]:</span>
+                            <span class="n">problems</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2">: assembly </span><span class="si">{</span><span class="n">asm</span><span class="si">!r}</span><span class="s2"> is not an assembly of </span><span class="si">{</span><span class="n">organism</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                            <span class="k">continue</span>
+                        <span class="n">first</span><span class="p">,</span> <span class="n">last</span> <span class="o">=</span> <span class="n">_assembly_window</span><span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">asm</span><span class="p">))</span>
+                        <span class="n">outside</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">releases</span> <span class="k">if</span> <span class="n">r</span> <span class="o">&lt;</span> <span class="n">first</span> <span class="ow">or</span> <span class="p">(</span><span class="n">last</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">r</span> <span class="o">&gt;</span> <span class="n">last</span><span class="p">)]</span>
+                        <span class="k">if</span> <span class="n">outside</span><span class="p">:</span>
+                            <span class="n">problems</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">where</span><span class="si">}</span><span class="s2"> assembly </span><span class="si">{</span><span class="n">asm</span><span class="si">}</span><span class="s2">: releases </span><span class="si">{</span><span class="n">outside</span><span class="si">}</span><span class="s2"> lie outside its window </span><span class="si">{</span><span class="n">first</span><span class="si">}</span><span class="s2">..</span><span class="si">{</span><span class="n">last</span><span class="si">}</span><span class="s2">"</span>
+                            <span class="p">)</span>
+                            <span class="n">releases</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">releases</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">outside</span><span class="p">)]</span>
+                            <span class="k">if</span> <span class="ow">not</span> <span class="n">releases</span><span class="p">:</span>
+                                <span class="k">continue</span>
+                            <span class="n">item</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">item</span><span class="p">,</span> <span class="s2">"Ensembl release"</span><span class="p">:</span> <span class="s2">","</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">releases</span><span class="p">))}</span>
+                    <span class="n">out_asm</span><span class="p">[</span><span class="n">asm</span><span class="p">]</span> <span class="o">=</span> <span class="n">item</span>
+                <span class="k">if</span> <span class="n">out_asm</span><span class="p">:</span>
+                    <span class="n">out_dbs</span><span class="p">[</span><span class="n">db_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">entry</span><span class="p">,</span> <span class="s2">"Assembly"</span><span class="p">:</span> <span class="n">out_asm</span><span class="p">}</span>
+            <span class="n">out_forms</span><span class="p">[</span><span class="n">form</span><span class="p">]</span> <span class="o">=</span> <span class="n">out_dbs</span>
+        <span class="n">out</span><span class="p">[</span><span class="n">organism</span><span class="p">]</span> <span class="o">=</span> <span class="n">out_forms</span>
+    <span class="k">if</span> <span class="n">problems</span><span class="p">:</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"The externals YAML </span><span class="si">{</span><span class="n">path</span><span class="si">!r}</span><span class="s2"> has entries that the organism table rules out: "</span> <span class="o">+</span> <span class="s2">"; "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">problems</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">shipped</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">message</span> <span class="o">+</span> <span class="s2">". They are ignored."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+
+
+<div class="viewcode-block" id="load_externals_yaml">
+<a class="viewcode-back" href="../../reference.html#idtrack.load_externals_yaml">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_externals_yaml</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">shipped</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Return the parsed and validated externals YAML at *path*, read once per version of the file.</span>
+
+<span class="sd">    The file is parsed and checked (:py:func:`validate_externals_yaml`) the first time it is asked for and again only</span>
+<span class="sd">    after it changed (another modification time or size), so the many look-ups of a graph build cost nothing.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        path: The file.</span>
+<span class="sd">        shipped: The file is one of idtrack's ``default_config`` files.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: The usable content. Callers must not modify it.</span>
+<span class="sd">    """</span>
+    <span class="n">stat</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">stat</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">stamp</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">stat</span><span class="o">.</span><span class="n">st_mtime_ns</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">stat</span><span class="o">.</span><span class="n">st_size</span><span class="p">))</span>
+    <span class="k">with</span> <span class="n">_yaml_cache_lock</span><span class="p">:</span>
+        <span class="n">cached</span> <span class="o">=</span> <span class="n">_yaml_cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cached</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">cached</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">stamp</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">cached</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">Loader</span><span class="o">=</span><span class="n">_YAML_LOADER</span><span class="p">)</span>  <span class="c1"># noqa: S506 - a safe loader</span>
+    <span class="n">checked</span> <span class="o">=</span> <span class="n">validate_externals_yaml</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">shipped</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">_yaml_cache_lock</span><span class="p">:</span>
+        <span class="n">_yaml_cache</span><span class="p">[</span><span class="n">path</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">stamp</span><span class="p">,</span> <span class="n">checked</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">checked</span></div>
+
+
+
 <div class="viewcode-block" id="_yaml_scalar">
-<a class="viewcode-back" href="../../reference.html#idtrack._external_databases._yaml_scalar">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack._yaml_scalar">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">_yaml_scalar</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Format a scalar the way the shipped externals YAML files do (plain when unambiguous, else double-quoted)."""</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
@@ -145,7 +285,7 @@
 
 
 <div class="viewcode-block" id="_yaml_key">
-<a class="viewcode-back" href="../../reference.html#idtrack._external_databases._yaml_key">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack._yaml_key">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">_yaml_key</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Format a mapping key like :py:func:`_yaml_scalar`, checking that it reads back as the same key."""</span>
     <span class="n">text</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
@@ -160,7 +300,7 @@
 
 
 <div class="viewcode-block" id="write_externals_yaml">
-<a class="viewcode-back" href="../../reference.html#idtrack._external_databases.write_externals_yaml">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.write_externals_yaml">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">write_externals_yaml</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Write an externals YAML file in the layout of the files shipped in ``idtrack/default_config``.</span>
 
@@ -169,10 +309,13 @@
 <span class="sd">    double-quoted (``"38"``, ``""``), and release lists plain (``Ensembl release: 90,91,92``). Loading the result</span>
 <span class="sd">    with :py:func:`yaml.safe_load` gives back *data*.</span>
 
+<span class="sd">    The file is written to a temporary file in the same directory and renamed, so an interruption leaves the old</span>
+<span class="sd">    file as it was. Comments of an existing file are not kept (the content is written from *data*).</span>
+
 <span class="sd">    Args:</span>
 <span class="sd">        data: Parsed externals YAML, ``{organism: {form: {database: entry}}}``, each entry holding ``Assembly``,</span>
 <span class="sd">            ``Database Index`` and ``Potential Synonymous``.</span>
-<span class="sd">        path: Target file path (overwritten).</span>
+<span class="sd">        path: Target file path (replaced).</span>
 
 <span class="sd">    Raises:</span>
 <span class="sd">        ValueError: If the written text would not read back as *data* (a guard on the formatter itself).</span>
@@ -192,13 +335,21 @@
     <span class="n">text</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span>
     <span class="k">if</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">!=</span> <span class="n">data</span><span class="p">:</span>  <span class="c1"># pragma: no cover - guards the formatter itself</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Internal error: the externals YAML written to </span><span class="si">{</span><span class="n">path</span><span class="si">!r}</span><span class="s2"> does not read back unchanged."</span><span class="p">)</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
-        <span class="n">handle</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">text</span><span class="p">)</span></div>
+    <span class="n">tmp_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">.tmp-</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">[:</span><span class="mi">8</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+            <span class="n">handle</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+            <span class="n">handle</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">fsync</span><span class="p">(</span><span class="n">handle</span><span class="o">.</span><span class="n">fileno</span><span class="p">())</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">tmp_path</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="ExternalDatabases">
-<a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ExternalDatabases">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ExternalDatabases</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Manage third-party metadata for Ensembl entities through YAML side-car files.</span>
 
@@ -217,8 +368,10 @@
 <span class="sd">       ``true`` for the resources they need.</span>
 <span class="sd">    3. The modified YAML is saved under *local_repository*; subsequent calls to</span>
 <span class="sd">       :py:meth:`load_modified_yaml` return it as a plain :py:class:`dict` for downstream logic.</span>
-<span class="sd">    4. :py:meth:`validate_yaml_file_up_to_date` warns if the user file lags behind a newer template</span>
-<span class="sd">       (e.g. because a later Ensembl release introduced extra tables).</span>
+<span class="sd">    4. Every file is checked when it is read (:py:func:`validate_externals_yaml`: boolean ``Include``, assembly keys</span>
+<span class="sd">       and releases that the organism table allows), and :py:meth:`validate_yaml_file_up_to_date` raises</span>
+<span class="sd">       :py:class:`ExternalsReleaseNotCoveredError` if the manager's release is not listed at all</span>
+<span class="sd">       (:py:meth:`extend_modified_yaml` adds new releases).</span>
 <span class="sd">    5. Utility helpers such as :py:meth:`give_list_for_case` expose convenient filtered views—e.g.</span>
 <span class="sd">       *all databases that should be downloaded for the current form*, or *all releases supported by</span>
 <span class="sd">       assembly 38*.</span>
@@ -259,7 +412,7 @@
 <span class="sd">                assemblies available for the same *organism*/*release* pair.</span>
 <span class="sd">        """</span>
         <span class="c1"># The logger for informing the user about the progress.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"external_databases"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
         <span class="c1"># Instance attributes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">local_repository</span> <span class="o">=</span> <span class="n">local_repository</span>
@@ -269,12 +422,12 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">genome_assembly</span> <span class="o">=</span> <span class="n">genome_assembly</span>
 
 <div class="viewcode-block" id="ExternalDatabases.create_template_yaml">
-<a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.create_template_yaml">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ExternalDatabases.create_template_yaml">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">create_template_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""Generate a template YAML enumerating external-database options.</span>
 
 <span class="sd">        This helper scans *df*—typically the dataframe returned by</span>
-<span class="sd">        :py:meth:`idtrack._database_manager.DatabaseManager.create_database_content`—and</span>
+<span class="sd">        :py:meth:`idtrack.DatabaseManager.create_database_content`—and</span>
 <span class="sd">        writes a scaffold configuration file to</span>
 <span class="sd">        :py:meth:`~ExternalDatabases.file_name_template_yaml`.</span>
 <span class="sd">        The file lists every *organism* → *form* → database combination observed in</span>
@@ -326,13 +479,8 @@
 <span class="sd">            df (pandas.DataFrame): Dataframe containing at least the columns</span>
 <span class="sd">                ``["organism", "form", "name_db", "assembly", "release"]``.  It</span>
 <span class="sd">                should be produced by</span>
-<span class="sd">                :py:meth:`idtrack._database_manager.DatabaseManager.create_database_content`</span>
+<span class="sd">                :py:meth:`idtrack.DatabaseManager.create_database_content`</span>
 <span class="sd">                so that the expected schema is guaranteed.</span>
-
-<span class="sd">        Raises:</span>
-<span class="sd">            ValueError: If *df* contains duplicate *assembly* entries for the same</span>
-<span class="sd">                organism/form/database triple, causing an internal consistency check</span>
-<span class="sd">                to fail.</span>
 
 <span class="sd">        Notes:</span>
 <span class="sd">            The **Potential Synonymous** is now all empty. In the following versions, it is aimed to integrate</span>
@@ -355,8 +503,9 @@
                 <span class="n">df_a2</span> <span class="o">=</span> <span class="n">df_a1</span><span class="p">[</span><span class="n">df_a1</span><span class="p">[</span><span class="s2">"form"</span><span class="p">]</span> <span class="o">==</span> <span class="n">a2</span><span class="p">]</span>
                 <span class="k">for</span> <span class="n">a3</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">df_a2</span><span class="p">[</span><span class="s2">"name_db"</span><span class="p">])):</span>
                     <span class="n">df_a3</span> <span class="o">=</span> <span class="n">df_a2</span><span class="p">[</span><span class="n">df_a2</span><span class="p">[</span><span class="s2">"name_db"</span><span class="p">]</span> <span class="o">==</span> <span class="n">a3</span><span class="p">]</span>
-                    <span class="k">for</span> <span class="n">a4</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">df_a3</span><span class="p">[</span><span class="s2">"assembly"</span><span class="p">])):</span>
-                        <span class="n">df_a4</span> <span class="o">=</span> <span class="n">df_a3</span><span class="p">[</span><span class="n">df_a3</span><span class="p">[</span><span class="s2">"assembly"</span><span class="p">]</span> <span class="o">==</span> <span class="n">a4</span><span class="p">]</span>
+                    <span class="n">assemblies</span> <span class="o">=</span> <span class="n">df_a3</span><span class="p">[</span><span class="s2">"assembly"</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">a4</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">assemblies</span><span class="p">)):</span>
+                        <span class="n">df_a4</span> <span class="o">=</span> <span class="n">df_a3</span><span class="p">[</span><span class="n">assemblies</span> <span class="o">==</span> <span class="n">a4</span><span class="p">]</span>
                         <span class="n">a4_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">a4</span><span class="p">)</span>
 
                         <span class="k">if</span> <span class="n">a1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">r</span><span class="p">:</span>
@@ -369,16 +518,10 @@
                                 <span class="s2">"Potential Synonymous"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span>
                             <span class="p">}</span>
                             <span class="n">r</span><span class="p">[</span><span class="n">a1</span><span class="p">][</span><span class="n">a2</span><span class="p">][</span><span class="n">a3</span><span class="p">][</span><span class="s2">"Assembly"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-                        <span class="k">if</span> <span class="n">a4_str</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">r</span><span class="p">[</span><span class="n">a1</span><span class="p">][</span><span class="n">a2</span><span class="p">][</span><span class="n">a3</span><span class="p">][</span><span class="s2">"Assembly"</span><span class="p">]:</span>
-                            <span class="n">r</span><span class="p">[</span><span class="n">a1</span><span class="p">][</span><span class="n">a2</span><span class="p">][</span><span class="n">a3</span><span class="p">][</span><span class="s2">"Assembly"</span><span class="p">][</span><span class="n">a4_str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-                                <span class="s2">"Ensembl release"</span><span class="p">:</span> <span class="n">list_to_str</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">df_a4</span><span class="p">[</span><span class="s2">"release"</span><span class="p">]))),</span>
-                                <span class="s2">"Include"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-                            <span class="p">}</span>
-                        <span class="k">else</span><span class="p">:</span>
-                            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                                <span class="sa">f</span><span class="s2">"Unexpected assembly format: expected int, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">a4</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> for assembly </span><span class="si">{</span><span class="n">a4</span><span class="si">!r}</span><span class="s2"> "</span>
-                                <span class="sa">f</span><span class="s2">"in database </span><span class="si">{</span><span class="n">a1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">a2</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">a3</span><span class="si">}</span><span class="s2">."</span>
-                            <span class="p">)</span>
+                        <span class="n">r</span><span class="p">[</span><span class="n">a1</span><span class="p">][</span><span class="n">a2</span><span class="p">][</span><span class="n">a3</span><span class="p">][</span><span class="s2">"Assembly"</span><span class="p">][</span><span class="n">a4_str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                            <span class="s2">"Ensembl release"</span><span class="p">:</span> <span class="n">list_to_str</span><span class="p">(</span><span class="nb">sorted</span><span class="p">({</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">df_a4</span><span class="p">[</span><span class="s2">"release"</span><span class="p">]})),</span>
+                            <span class="s2">"Include"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                        <span class="p">}</span>
 
         <span class="n">write_externals_yaml</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name_template_yaml</span><span class="p">())</span>
 
@@ -390,7 +533,7 @@
 
 
 <div class="viewcode-block" id="ExternalDatabases.file_name_template_yaml">
-<a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.file_name_template_yaml">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ExternalDatabases.file_name_template_yaml">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">file_name_template_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return absolute path to the *template* YAML configuration file.</span>
 
@@ -412,7 +555,7 @@
 
 
 <div class="viewcode-block" id="ExternalDatabases.file_name_modified_yaml">
-<a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.file_name_modified_yaml">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ExternalDatabases.file_name_modified_yaml">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">file_name_modified_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Resolve the path to a *modified* YAML file customised by the user or shipped with the package.</span>
 
@@ -449,7 +592,7 @@
 
 
 <div class="viewcode-block" id="ExternalDatabases._modified_yaml_path">
-<a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases._modified_yaml_path">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ExternalDatabases._modified_yaml_path">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">_modified_yaml_path</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return the path of the modified YAML to use: the local repository's copy, else the shipped default.</span>
 
@@ -462,11 +605,16 @@
         <span class="n">configured</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name_modified_yaml</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"configured"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">configured</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">configured</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"External database config is not found in provided temp directory: `</span><span class="si">{</span><span class="n">configured</span><span class="si">}</span><span class="s2">`."</span><span class="p">)</span>
 
         <span class="n">default</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name_modified_yaml</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"default"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">access</span><span class="p">(</span><span class="n">default</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">R_OK</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The package uses the default config file for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+            <span class="n">announced</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">,</span> <span class="n">configured</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">announced</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_fallback_announced</span><span class="p">:</span>
+                <span class="n">_fallback_announced</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">announced</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"No externals YAML in the local repository (`</span><span class="si">{</span><span class="n">configured</span><span class="si">}</span><span class="s2">`); the package uses its default "</span>
+                    <span class="sa">f</span><span class="s2">"file for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">}</span><span class="s2"> (`</span><span class="si">{</span><span class="n">default</span><span class="si">}</span><span class="s2">`)."</span>
+                <span class="p">)</span>
             <span class="k">return</span> <span class="n">default</span>
 
         <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
@@ -479,23 +627,36 @@
 
 
 <div class="viewcode-block" id="ExternalDatabases.read_modified_yaml">
-<a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.read_modified_yaml">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ExternalDatabases.read_modified_yaml">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">read_modified_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Read the modified YAML (local repository first, then the shipped default) without release checks.</span>
 
-<span class="sd">        Returns:</span>
-<span class="sd">            dict: Parsed YAML content keyed by ``{organism → form → database → Assembly → {...}}``.</span>
+<span class="sd">        The file is parsed and checked against the organism table once per version of the file</span>
+<span class="sd">        (:py:func:`load_externals_yaml`).</span>
 
-<span class="sd">        Raises:</span>
-<span class="sd">            FileNotFoundError: If neither the *configured* nor the *default* YAML file exists (see</span>
-<span class="sd">                :py:meth:`load_modified_yaml`).</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: Parsed YAML content keyed by ``{organism → form → database → Assembly → {...}}``; a copy that the</span>
+<span class="sd">            caller may change.</span>
+
+<span class="sd">        If neither the *configured* nor the *default* YAML file exists, :py:meth:`_modified_yaml_path` raises</span>
+<span class="sd">        :py:class:`FileNotFoundError`.</span>
 <span class="sd">        """</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_modified_yaml_path</span><span class="p">())</span> <span class="k">as</span> <span class="n">yaml_file</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">yaml_file</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span></div>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modified_yaml_path</span><span class="p">()</span>
+        <span class="n">shipped</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">==</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_name_modified_yaml</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"default"</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">load_externals_yaml</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">shipped</span><span class="o">=</span><span class="n">shipped</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="ExternalDatabases._modified_yaml_view">
+<a class="viewcode-back" href="../../reference.html#idtrack.ExternalDatabases._modified_yaml_view">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_modified_yaml_view</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the checked YAML content without copying it (read-only use)."""</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modified_yaml_path</span><span class="p">()</span>
+        <span class="n">shipped</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">==</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_name_modified_yaml</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"default"</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">load_externals_yaml</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">shipped</span><span class="o">=</span><span class="n">shipped</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="ExternalDatabases.load_modified_yaml">
-<a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.load_modified_yaml">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ExternalDatabases.load_modified_yaml">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">load_modified_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Load the user-edited or default YAML configuration and verify release compatibility.</span>
 
@@ -510,8 +671,6 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            dict: Parsed YAML content keyed by ``{organism → form → database → Assembly → {...}}``.</span>
 
-<span class="sd">        Raises:</span>
-<span class="sd">            FileNotFoundError: If neither the *configured* nor the *default* YAML file can be accessed.</span>
 <span class="sd">        """</span>
         <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_modified_yaml</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">validate_yaml_file_up_to_date</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
@@ -519,7 +678,7 @@
 
 
 <div class="viewcode-block" id="ExternalDatabases._releases_of">
-<a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases._releases_of">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ExternalDatabases._releases_of">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_releases_of</span><span class="p">(</span><span class="n">read_yaml_file</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""Return every release listed in a parsed externals YAML (for one organism, or for all)."""</span>
@@ -535,21 +694,21 @@
 
 
 <div class="viewcode-block" id="ExternalDatabases.covered_releases">
-<a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.covered_releases">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ExternalDatabases.covered_releases">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">covered_releases</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""Return the Ensembl releases that the organism's externals YAML lists (any form, database or assembly).</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            set[int]: Releases with at least one entry; empty if the file has no entry for the organism.</span>
 
-<span class="sd">        Raises:</span>
-<span class="sd">            FileNotFoundError: If no externals YAML file exists for the organism (see :py:meth:`load_modified_yaml`).</span>
+<span class="sd">        If no externals YAML file exists for the organism, :py:class:`FileNotFoundError` is raised (see</span>
+<span class="sd">        :py:meth:`load_modified_yaml`).</span>
 <span class="sd">        """</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_releases_of</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">read_modified_yaml</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_releases_of</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_modified_yaml_view</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="ExternalDatabases.validate_yaml_file_up_to_date">
-<a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.validate_yaml_file_up_to_date">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ExternalDatabases.validate_yaml_file_up_to_date">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">validate_yaml_file_up_to_date</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">read_yaml_file</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""Assert that the YAML configuration lists the active Ensembl release.</span>
 
@@ -589,7 +748,7 @@
 
 
 <div class="viewcode-block" id="ExternalDatabases.extend_modified_yaml">
-<a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.extend_modified_yaml">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ExternalDatabases.extend_modified_yaml">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">extend_modified_yaml</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">content</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">base_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
@@ -597,7 +756,7 @@
 
 <span class="sd">        This is the way to bring an existing ``&lt;organism&gt;_externals_modified.yml`` up to new Ensembl releases</span>
 <span class="sd">        without regenerating and re-curating it. *content* is the output of</span>
-<span class="sd">        :py:meth:`idtrack._database_manager.DatabaseManager.create_database_content` for the new releases (build the</span>
+<span class="sd">        :py:meth:`idtrack.DatabaseManager.create_database_content` for the new releases (build the</span>
 <span class="sd">        manager with ``ignore_before`` and ``ignore_after`` set to them). For every ``(form, database, assembly)``</span>
 <span class="sd">        that *content* holds:</span>
 
@@ -613,8 +772,9 @@
 
 <span class="sd">        The base file is *base_path* if given, else the local repository's copy if present, else the shipped</span>
 <span class="sd">        default. The result is written to *output_path* (default: ``&lt;local_repository&gt;/&lt;organism&gt;_externals_modified.yml``),</span>
-<span class="sd">        in the layout of the shipped files. Passing a template as both *base_path* and *output_path* extends the</span>
-<span class="sd">        template the same way (all its flags are ``false``).</span>
+<span class="sd">        in the layout of the shipped files, atomically (comments of the base file are not kept). When the file read</span>
+<span class="sd">        is replaced, its previous version is kept as ``&lt;file&gt;.bak``. Passing a template as both *base_path* and</span>
+<span class="sd">        *output_path* extends the template the same way (all its flags are ``false``).</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            content: Frame with at least the columns ``organism``, ``form``, ``name_db``, ``assembly`` and</span>
@@ -643,10 +803,11 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"`content` has no row for organism </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">base_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">base_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">yaml_file</span><span class="p">:</span>
-                <span class="n">y</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">yaml_file</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">load_externals_yaml</span><span class="p">(</span><span class="n">base_path</span><span class="p">,</span> <span class="n">shipped</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+            <span class="n">read_from</span> <span class="o">=</span> <span class="n">base_path</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_modified_yaml</span><span class="p">()</span>
+            <span class="n">read_from</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modified_yaml_path</span><span class="p">()</span>
         <span class="n">org</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">,</span> <span class="p">{})</span>
         <span class="n">indexes</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"Database Index"</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span> <span class="k">for</span> <span class="n">dbs</span> <span class="ow">in</span> <span class="n">org</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="p">(</span><span class="n">dbs</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
         <span class="n">next_index</span> <span class="o">=</span> <span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">indexes</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">indexes</span> <span class="k">else</span> <span class="mi">0</span>
@@ -669,7 +830,7 @@
                 <span class="k">continue</span>
             <span class="n">assemblies</span> <span class="o">=</span> <span class="n">dbs</span><span class="p">[</span><span class="n">db_name</span><span class="p">][</span><span class="s2">"Assembly"</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">asm_key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">assemblies</span><span class="p">:</span>
-                <span class="n">flags</span> <span class="o">=</span> <span class="p">{</span><span class="nb">bool</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="s2">"Include"</span><span class="p">])</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">assemblies</span><span class="o">.</span><span class="n">values</span><span class="p">()}</span>
+                <span class="n">flags</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">[</span><span class="s2">"Include"</span><span class="p">]</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">assemblies</span><span class="o">.</span><span class="n">values</span><span class="p">()}</span>
                 <span class="n">include</span> <span class="o">=</span> <span class="n">flags</span> <span class="o">==</span> <span class="p">{</span><span class="kc">True</span><span class="p">}</span>
                 <span class="n">assemblies</span><span class="p">[</span><span class="n">asm_key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"Ensembl release"</span><span class="p">:</span> <span class="s2">","</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">rels</span><span class="p">))),</span> <span class="s2">"Include"</span><span class="p">:</span> <span class="n">include</span><span class="p">}</span>
                 <span class="n">new_assembly_entries</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">form</span><span class="p">,</span> <span class="n">db_name</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">asm_key</span><span class="p">),</span> <span class="n">include</span><span class="p">))</span>
@@ -688,6 +849,9 @@
             <span class="n">next_index</span> <span class="o">+=</span> <span class="mi">1</span>
 
         <span class="n">path</span> <span class="o">=</span> <span class="n">output_path</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_name_modified_yaml</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">"configured"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">==</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">read_from</span><span class="p">):</span>
+            <span class="c1"># The curated file is replaced: keep the previous version beside it.</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">copy2</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">.bak"</span><span class="p">)</span>
         <span class="n">write_externals_yaml</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
 
         <span class="n">report</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
@@ -718,12 +882,12 @@
 
 
 <div class="viewcode-block" id="ExternalDatabases.give_list_for_case">
-<a class="viewcode-back" href="../../reference.html#idtrack._external_databases.ExternalDatabases.give_list_for_case">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.ExternalDatabases.give_list_for_case">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">give_list_for_case</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">give_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return database names or assembly codes extracted from the external-DB YAML file.</span>
 
 <span class="sd">        The helper provides a lightweight way for higher-level components (e.g.</span>
-<span class="sd">        :py:class:`~idtrack._database_manager.DatabaseManager`) to discover which</span>
+<span class="sd">        :py:class:`~idtrack.DatabaseManager`) to discover which</span>
 <span class="sd">        external resources—or which genome assemblies—are currently *eligible*</span>
 <span class="sd">        according to the user-editable YAML configuration created by</span>
 <span class="sd">        :py:meth:`ExternalDatabases.create_template_yaml`.  Instead of forcing the</span>
@@ -742,7 +906,8 @@
 <span class="sd">                - ``"assembly"``</span>
 <span class="sd">                  genome-assembly **codes** (``int``) for which the YAML enables</span>
 <span class="sd">                  *at least one* external database (``Include: true``) at the</span>
-<span class="sd">                  current Ensembl release.</span>
+<span class="sd">                  current Ensembl release, restricted to the assemblies whose release window (organism table) holds</span>
+<span class="sd">                  that release.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            list[str] | list[int]:</span>
@@ -756,7 +921,8 @@
 <span class="sd">        """</span>
         <span class="k">if</span> <span class="n">give_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"db"</span><span class="p">,</span> <span class="s2">"assembly"</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"give_type must be 'db' or 'assembly', got </span><span class="si">{</span><span class="n">give_type</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span>
-        <span class="n">the_dict_loaded</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_modified_yaml</span><span class="p">()</span>
+        <span class="n">the_dict_loaded</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modified_yaml_view</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">validate_yaml_file_up_to_date</span><span class="p">(</span><span class="n">the_dict_loaded</span><span class="p">)</span>
         <span class="c1"># A file without an entry for this organism or form means "no external databases" (see</span>
         <span class="c1"># `validate_yaml_file_up_to_date`).</span>
         <span class="n">the_dict</span> <span class="o">=</span> <span class="p">(</span><span class="n">the_dict_loaded</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">organism</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">form</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
@@ -775,7 +941,7 @@
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">result</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">asm</span><span class="p">))</span>
 
-        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
 </div>
 
 </pre></div>

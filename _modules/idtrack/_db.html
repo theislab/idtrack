@@ -104,20 +104,19 @@
 
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numbers</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
-
 
 <div class="viewcode-block" id="DB">
-<a class="viewcode-back" href="../../reference.html#idtrack._db.DB">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.DB">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">DB</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Store constants shared across IDTrack modules for Ensembl data access and graph construction.</span>
 
-<span class="sd">    This class centralizes every constant that multiple components (e.g. :py:class:`idtrack.graph.GraphMaker`,</span>
-<span class="sd">    :py:class:`idtrack.pathfinder.PathFinder`) rely on when talking to the Ensembl FTP mirror, REST API,</span>
+<span class="sd">    This class centralizes every constant that multiple components (e.g. :py:class:`idtrack.GraphMaker`,</span>
+<span class="sd">    :py:class:`idtrack.Track`) rely on when talking to the Ensembl FTP mirror, REST API,</span>
 <span class="sd">    and public MySQL instances. Housing the values in one namespace prevents circular imports, ensures a single</span>
 <span class="sd">    source of truth, and simplifies testing. `DB` is never instantiated; import the class and reference its</span>
 <span class="sd">    attributes directly. The organism table is the only part meant to change at run time, and only through</span>
@@ -125,7 +124,6 @@
 
 <span class="sd">    Attributes:</span>
 <span class="sd">        id_ver_delimiter (str): Character separating a stable identifier from its version suffix.</span>
-<span class="sd">        first_version (int): Default version assumed when an ID lacks an explicit version component.</span>
 
 <span class="sd">        connection_timeout (int): TCP connect timeout in seconds used by both FTP and REST clients.</span>
 <span class="sd">        reading_timeout  (int): Socket read timeout in seconds applied to FTP and REST operations. Raise it (e.g.</span>
@@ -143,9 +141,13 @@
 
 <span class="sd">        mysql_host (str): Hostname of the Ensembl public MySQL server.</span>
 <span class="sd">        myqsl_user (str): Username for anonymous MySQL access.</span>
-<span class="sd">        mysql_togo (str): Placeholder string kept for backward compatibility when assembling connection URLs.</span>
+<span class="sd">        mysql_togo (str): Password for the anonymous MySQL access (empty: Ensembl's public server needs none).</span>
 
 <span class="sd">        mysql_port_min_release (dict[int, int]): Minimum Ensembl release supported by each public MySQL port.</span>
+<span class="sd">        mysql_port_assembly (dict[int, tuple[str, int]]): Ports that serve one assembly only, as</span>
+<span class="sd">            ``{port: (organism, assembly key)}``. Port 3337, Ensembl's archive server, is read for human GRCh37 only</span>
+<span class="sd">            (its copies of other assemblies under later release numbers are not part of a graph); only that assembly</span>
+<span class="sd">            may list the port.</span>
 <span class="sd">        mysql_probe_timeout (float): TCP connect timeout in seconds used the first time a MySQL port is probed in a</span>
 <span class="sd">            process (see :py:mod:`idtrack._ensembl_access`).</span>
 <span class="sd">        ensembl_access (Optional[str]): How Ensembl is reached. ``"auto"`` uses the public MySQL service where its</span>
@@ -163,6 +165,17 @@
 <span class="sd">        symbol_databases (dict[str, tuple[str, ...]]): Ordered gene-symbol databases per organism (names as in the</span>
 <span class="sd">            externals YAML). The first one is the default final database of</span>
 <span class="sd">            :py:class:`idtrack.HarmonizeFeatures`.</span>
+<span class="sd">        organism_aliases (dict[str, tuple[str, ...]]): Short names of the organisms of the table (``"pig"``,</span>
+<span class="sd">            ``"human"``). A declared alias names its organism wherever an organism is asked for</span>
+<span class="sd">            (:py:class:`idtrack.VerifyOrganism`), without the network, and wins over what Ensembl lists under the</span>
+<span class="sd">            same word (``"pig"`` is the common name of every pig breed there). Lower case, unique across organisms.</span>
+<span class="sd">        accession_database_prefixes (tuple[str, ...]): Beginnings of the names of the external databases whose ids</span>
+<span class="sd">            are sequence accessions, which their sources write with a version (``NM_000546.6``, ``P04637.4``,</span>
+<span class="sd">            ``CCDS11118.1``). Only an id of such a database is looked up without a version suffix that the graph</span>
+<span class="sd">            does not hold (:py:meth:`idtrack.TheGraph.resolve_name`); a gene symbol never is.</span>
+<span class="sd">        non_reference_attribute (str): Code of the attribute by which Ensembl's core databases mark a sequence region</span>
+<span class="sd">            that is not part of the reference sequence of an assembly (``attrib_type.code``; an alternative locus, an</span>
+<span class="sd">            assembly patch or an LRG record). See :py:meth:`idtrack.DatabaseManager.create_gene_region`.</span>
 <span class="sd">        organism_table_version (int): Incremented whenever :py:meth:`register_organism` changes the table, so that</span>
 <span class="sd">            caches derived from it (e.g. the core-database index) can tell they are stale.</span>
 
@@ -173,9 +186,6 @@
 <span class="sd">        no_old_node_id (str): Sentinel used when a historical ID is retired.</span>
 <span class="sd">        no_new_node_id (str): Sentinel used when no future successor exists.</span>
 <span class="sd">        alternative_versions (set[str]): Two sentinels—:py:data:`no_new_node_id` and :py:data:`no_old_node_id`.</span>
-
-<span class="sd">        hyperconnecting_threshold (int): Maximum allowable out-degree before a node is considered</span>
-<span class="sd">            hyper-connected and ignored by breadth-first expansions.</span>
 
 <span class="sd">        node_type_str (str): Edge/Node attribute key holding the node type value.</span>
 <span class="sd">        nts_external (str): Canonical node type assigned to entities originating outside Ensembl.</span>
@@ -189,31 +199,22 @@
 <span class="sd">        nts_assembly (dict[int, dict[str, str]]): Assembly key → form → assembly-specific node type (derived).</span>
 <span class="sd">        nts_assembly_reverse (dict[str, str]): Assembly-specific node type → :py:data:`nts_ensembl` value (derived).</span>
 <span class="sd">        nts_base_ensembl (dict[str, str]): Reduced node type names stripped of assembly suffixes.</span>
-<span class="sd">        nts_base_ensembl_reverse (dict[str, str]): Reverse mapping of :py:data:`nts_base_ensembl`.</span>
 
 <span class="sd">        nts_bidirectional_synonymous_search (set[str]): Node types for which synonym searches are</span>
 <span class="sd">            performed bidirectionally.</span>
 <span class="sd">        nts_assembly_gene (set[str]): Every assembly-specific node type that represents a gene (derived).</span>
 
 <span class="sd">        connection_dict (str): Edge attribute key whose value stores connection metadata dictionaries.</span>
-<span class="sd">        conn_dict_str_ensembl_base (str): Constant placed under :py:data:`connection_dict` when the edge</span>
-<span class="sd">            points to an Ensembl data source.</span>
 
 <span class="sd">        external_search_settings (dict[str, Any]): Default limits for outward traversal into external</span>
 <span class="sd">            databases. Keys are ``jump_limit``, ``synonymous_max_depth``, and ``nts_backbone``.</span>
-
-<span class="sd">        placeholder_na (str): Sentinel stored in HDF5 datasets where a true NA/None value is not</span>
-<span class="sd">            permitted or would break downstream type expectations.</span>
-<span class="sd">        UTF8 (str): The literal string ``"utf-8"``—a canonical spelling of the UTF-8 encoding name</span>
-<span class="sd">            used when writing variable-length strings to HDF5 files.</span>
-<span class="sd">        UTF8_STR (h5py.Datatype): Pre-configured variable-length UTF-8 string dtype created via</span>
-<span class="sd">            :py:func:`h5py.string_dtype`.  Pass this value when creating HDF5 datasets that should</span>
-<span class="sd">            hold arbitrary Unicode text to avoid hard-coding datatypes throughout the codebase.</span>
 <span class="sd">    """</span>
 
     <span class="c1"># Delimiter separating the ID and the version of an ensembl identifier.</span>
     <span class="n">id_ver_delimiter</span> <span class="o">=</span> <span class="s2">"."</span>
-    <span class="n">first_version</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># just and arbitrary assumption</span>
+
+    <span class="c1"># Ensembl's attribute of a sequence region outside the reference sequence (`attrib_type.code`).</span>
+    <span class="n">non_reference_attribute</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"non_ref"</span>
 
     <span class="c1"># FTP and REST API Timeouts. It’s a good practice to set connect timeouts to slightly larger than a multiple of 3,</span>
     <span class="c1"># which is the default TCP packet retransmission window.</span>
@@ -264,8 +265,9 @@
         <span class="c1"># Keys and fields</span>
         <span class="c1"># ---------------</span>
         <span class="c1"># - The key of an assembly entry is an integer that is unique within the organism. It is what the rest of</span>
-        <span class="c1">#   idtrack sees: node types (`assembly_&lt;key&gt;_ensembl_gene`), cache files (`&lt;organism&gt;_assembly-&lt;key&gt;.h5`),</span>
-        <span class="c1">#   the assembly keys of the externals YAML files and the public `genome_assembly` argument.</span>
+        <span class="c1">#   idtrack sees: node types (`assembly_&lt;key&gt;_ensembl_gene`), table folders</span>
+        <span class="c1">#   (`idtrack_tables/&lt;organism&gt;_assembly-&lt;key&gt;/`), graph file names (`graph_&lt;organism&gt;_assembly&lt;key&gt;_...`), the</span>
+        <span class="c1">#   assembly keys of the externals YAML files and the `genome_assembly` argument of `DatabaseManager`.</span>
         <span class="c1"># - Core databases are named `&lt;organism&gt;_core_&lt;release&gt;_&lt;DbSuffix&gt;[patch letter]` (e.g. `..._37a`); patch</span>
         <span class="c1">#   letters belong to the same assembly. `DbSuffix` defaults to the key, and the key equals Ensembl's code</span>
         <span class="c1">#   wherever that is unambiguous. The code is species-specific (`38` is GRCh38 for human, GRCm38 for mouse).</span>
@@ -311,7 +313,9 @@
         <span class="s2">"sus_scrofa"</span><span class="p">:</span> <span class="p">{</span>
             <span class="c1"># Sscrofa11.1 (Ensembl release 90+; clean handoff from Sscrofa10.2 at release 90)</span>
             <span class="mi">111</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"Sscrofa11.1"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">90</span><span class="p">,</span> <span class="kc">None</span><span class="p">]},</span>
-            <span class="c1"># Sscrofa10.2 (archive) — Ensembl release 67–89</span>
+            <span class="c1"># Sscrofa10.2 (Ensembl release 67–89). Core databases named `sus_scrofa_core_90_102` to `..._99_102`</span>
+            <span class="c1"># exist only on the archive port 3337: frozen copies, not annotation of those releases, and excluded on</span>
+            <span class="c1"># purpose (see `mysql_port_assembly`).</span>
             <span class="mi">102</span><span class="p">:</span> <span class="p">{</span><span class="s2">"Name"</span><span class="p">:</span> <span class="s2">"Sscrofa10.2"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">:</span> <span class="p">[</span><span class="mi">3306</span><span class="p">,</span> <span class="mi">5306</span><span class="p">],</span> <span class="s2">"Priority"</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">:</span> <span class="p">[</span><span class="mi">67</span><span class="p">,</span> <span class="mi">89</span><span class="p">]},</span>
             <span class="c1"># Sscrofa9 (historic; clean handoff to Sscrofa10.2 at release 67)</span>
             <span class="c1"># - Ensembl FTP contains releases 56–66 under directory names like</span>
@@ -352,6 +356,21 @@
         <span class="s2">"macaca_fascicularis"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"VGNC Symbol"</span><span class="p">,</span> <span class="s2">"HGNC Symbol"</span><span class="p">),</span>
     <span class="p">}</span>
 
+    <span class="c1"># Short names of the organisms. A declared alias resolves to its organism before Ensembl's species list is asked,</span>
+    <span class="c1"># so it never depends on the network or on how many breeds and strains Ensembl files under the same common name.</span>
+    <span class="n">organism_aliases</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"homo_sapiens"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"human"</span><span class="p">,),</span>
+        <span class="s2">"mus_musculus"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"mouse"</span><span class="p">,),</span>
+        <span class="s2">"sus_scrofa"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"pig"</span><span class="p">,),</span>
+        <span class="s2">"macaca_mulatta"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"rhesus"</span><span class="p">,),</span>
+        <span class="s2">"macaca_fascicularis"</span><span class="p">:</span> <span class="p">(</span><span class="s2">"cynomolgus"</span><span class="p">,),</span>
+    <span class="p">}</span>
+
+    <span class="c1"># External databases of sequence accessions (by the beginning of their names in the externals YAML files): RefSeq</span>
+    <span class="c1"># (`RefSeq_mRNA`, `RefSeq_peptide`, ...), UniProt accessions (`Uniprot/SWISSPROT`, `Uniprot/SPTREMBL`; not the</span>
+    <span class="c1"># gene names of `UniProtKB Gene Name`), CCDS, and the nucleotide and protein archives (`EMBL`, `protein_id`).</span>
+    <span class="n">accession_database_prefixes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"RefSeq_"</span><span class="p">,</span> <span class="s2">"Uniprot/"</span><span class="p">,</span> <span class="s2">"CCDS"</span><span class="p">,</span> <span class="s2">"EMBL"</span><span class="p">,</span> <span class="s2">"protein_id"</span><span class="p">)</span>
+
     <span class="c1"># Fields an assembly entry may carry, and which of them are required.</span>
     <span class="n">assembly_entry_fields</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"Name"</span><span class="p">,</span> <span class="s2">"DbSuffix"</span><span class="p">,</span> <span class="s2">"Ports"</span><span class="p">,</span> <span class="s2">"Priority"</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">)</span>
     <span class="n">assembly_entry_required_fields</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"Ports"</span><span class="p">,</span> <span class="s2">"Priority"</span><span class="p">,</span> <span class="s2">"ReleaseRange"</span><span class="p">)</span>
@@ -362,12 +381,11 @@
     <span class="n">supported_organisms</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>
     <span class="n">all_assemblies</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
 
-    <span class="c1"># Protected Non-int Version Strings/Thresholds</span>
+    <span class="c1"># Protected Non-int Version Strings</span>
     <span class="n">synonym_id_nodes_prefix</span> <span class="o">=</span> <span class="s2">"synonym_id::"</span>
     <span class="n">no_old_node_id</span> <span class="o">=</span> <span class="s2">"Void"</span>
     <span class="n">no_new_node_id</span> <span class="o">=</span> <span class="s2">"Retired"</span>
     <span class="n">alternative_versions</span> <span class="o">=</span> <span class="p">{</span><span class="n">no_new_node_id</span><span class="p">,</span> <span class="n">no_old_node_id</span><span class="p">}</span>
-    <span class="n">hyperconnecting_threshold</span> <span class="o">=</span> <span class="mi">20</span>
 
     <span class="c1"># Node Types</span>
     <span class="n">node_type_str</span> <span class="o">=</span> <span class="s2">"node_type"</span>
@@ -390,14 +408,10 @@
     <span class="n">nts_base_ensembl</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">_form</span> <span class="ow">in</span> <span class="n">forms_in_order</span><span class="p">:</span>
         <span class="n">nts_base_ensembl</span><span class="p">[</span><span class="n">_form</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"base_ensembl_</span><span class="si">{</span><span class="n">_form</span><span class="si">}</span><span class="s2">"</span>
-    <span class="n">nts_base_ensembl_reverse</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">for</span> <span class="n">_form</span><span class="p">,</span> <span class="n">_nts</span> <span class="ow">in</span> <span class="n">nts_base_ensembl</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="n">nts_base_ensembl_reverse</span><span class="p">[</span><span class="n">_nts</span><span class="p">]</span> <span class="o">=</span> <span class="n">_form</span>
     <span class="n">nts_bidirectional_synonymous_search</span> <span class="o">=</span> <span class="p">{</span><span class="n">nts_external</span><span class="p">,</span> <span class="n">nts_base_ensembl</span><span class="p">[</span><span class="n">backbone_form</span><span class="p">]}</span>
 
     <span class="c1"># Edge/Note Attributes:</span>
     <span class="n">connection_dict</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"connection"</span>
-    <span class="n">conn_dict_str_ensembl_base</span> <span class="o">=</span> <span class="s2">"ensembl_base"</span>  <span class="c1"># as a database in connection_dict</span>
 
     <span class="c1"># PathFinder Settings</span>
     <span class="n">external_search_settings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
@@ -406,20 +420,18 @@
         <span class="s2">"nts_backbone"</span><span class="p">:</span> <span class="n">nts_ensembl</span><span class="p">[</span><span class="n">backbone_form</span><span class="p">],</span>
     <span class="p">}</span>
 
-    <span class="c1"># HDF5 Settings</span>
-    <span class="n">placeholder_na</span> <span class="o">=</span> <span class="s2">"_PLACEHOLDER_NA_"</span>
-    <span class="n">UTF8</span> <span class="o">=</span> <span class="s2">"utf-8"</span>
-    <span class="n">UTF8_STR</span> <span class="o">=</span> <span class="n">h5py</span><span class="o">.</span><span class="n">string_dtype</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="n">UTF8</span><span class="p">)</span>
-
     <span class="c1"># ------------------------------------------------------------------------------------------------------------</span>
     <span class="c1"># Organism table: validation, derived attributes, run-time registration and accessors</span>
     <span class="c1"># ------------------------------------------------------------------------------------------------------------</span>
 
 <div class="viewcode-block" id="DB._validate_organism_table">
-<a class="viewcode-back" href="../../reference.html#idtrack._db.DB._validate_organism_table">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.DB._validate_organism_table">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_validate_organism_table</span><span class="p">(</span>
-        <span class="bp">cls</span><span class="p">,</span> <span class="n">table</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]],</span> <span class="n">symbol_databases</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">table</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]],</span>
+        <span class="n">symbol_databases</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+        <span class="n">organism_aliases</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Check the organism table and the symbol-database table for consistency.</span>
 
@@ -429,11 +441,14 @@
 <span class="sd">        assembly), ``Priority`` and ``ReleaseRange``, plus optionally ``Name`` and ``DbSuffix`` and nothing else;</span>
 <span class="sd">        priorities are unique per organism and start at 1; release ranges are ``[first, last]`` with ``last``</span>
 <span class="sd">        ``None`` or not smaller than ``first``; entries of one organism that share a ``DbSuffix`` have</span>
-<span class="sd">        non-overlapping release ranges; the symbol-database table names exactly the organisms of the organism table.</span>
+<span class="sd">        non-overlapping release ranges; the symbol-database table names exactly the organisms of the organism table;</span>
+<span class="sd">        aliases belong to organisms of the table, are lower-case words that are no organism name, and no alias is</span>
+<span class="sd">        declared for two organisms.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            table: Candidate value of :py:attr:`assembly_mysqlport_priority`.</span>
 <span class="sd">            symbol_databases: Candidate value of :py:attr:`symbol_databases`.</span>
+<span class="sd">            organism_aliases: Candidate value of :py:attr:`organism_aliases`; ``None`` for a table without aliases.</span>
 
 <span class="sd">        Raises:</span>
 <span class="sd">            ValueError: If any rule is violated; the message names the organism, the assembly and the rule.</span>
@@ -537,11 +552,28 @@
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">databases</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">databases</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">: symbol databases must be a sequence of names."</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">databases</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">databases</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">databases</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">: symbol databases must be distinct non-empty strings."</span><span class="p">)</span></div>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">: symbol databases must be distinct non-empty strings."</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">organism_aliases</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">organism_aliases</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">set</span><span class="p">(</span><span class="n">organism_aliases</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="nb">set</span><span class="p">(</span><span class="n">table</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The alias table must be a mapping {organism of the organism table: (alias, ...)}."</span><span class="p">)</span>
+        <span class="n">owner_of</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">organism</span><span class="p">,</span> <span class="n">aliases</span> <span class="ow">in</span> <span class="n">organism_aliases</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">aliases</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">aliases</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">: aliases must be a sequence of names."</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">alias</span> <span class="ow">in</span> <span class="n">aliases</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">alias</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">alias</span> <span class="ow">or</span> <span class="n">alias</span> <span class="o">!=</span> <span class="n">alias</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">or</span> <span class="n">alias</span> <span class="ow">in</span> <span class="n">table</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">"Organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">: alias </span><span class="si">{</span><span class="n">alias</span><span class="si">!r}</span><span class="s2"> must be a non-empty lower-case name that is not "</span>
+                        <span class="s2">"an organism name."</span>
+                    <span class="p">)</span>
+                <span class="k">if</span> <span class="n">owner_of</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">alias</span><span class="p">,</span> <span class="n">organism</span><span class="p">)</span> <span class="o">!=</span> <span class="n">organism</span> <span class="ow">or</span> <span class="nb">list</span><span class="p">(</span><span class="n">aliases</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">alias</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Alias </span><span class="si">{</span><span class="n">alias</span><span class="si">!r}</span><span class="s2"> is declared twice (</span><span class="si">{</span><span class="n">owner_of</span><span class="p">[</span><span class="n">alias</span><span class="p">]</span><span class="si">!r}</span><span class="s2">, </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">)."</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="DB._rebuild_organism_tables">
-<a class="viewcode-back" href="../../reference.html#idtrack._db.DB._rebuild_organism_tables">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.DB._rebuild_organism_tables">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_rebuild_organism_tables</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Validate the organism table and recompute every attribute derived from it.</span>
@@ -551,7 +583,7 @@
 <span class="sd">        references to any of them taken earlier stay current. (Replacing :py:attr:`assembly_mysqlport_priority` by</span>
 <span class="sd">        assignment, as some tests do, is not seen by such references.)</span>
 <span class="sd">        """</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_validate_organism_table</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">symbol_databases</span><span class="p">)</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_validate_organism_table</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">symbol_databases</span><span class="p">,</span> <span class="bp">cls</span><span class="o">.</span><span class="n">organism_aliases</span><span class="p">)</span>
 
         <span class="bp">cls</span><span class="o">.</span><span class="n">supported_organisms</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">))</span>
 
@@ -573,13 +605,14 @@
 
 
 <div class="viewcode-block" id="DB.register_organism">
-<a class="viewcode-back" href="../../reference.html#idtrack._db.DB.register_organism">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.DB.register_organism">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">register_organism</span><span class="p">(</span>
         <span class="bp">cls</span><span class="p">,</span>
         <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">assemblies</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
         <span class="n">symbol_databases</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">aliases</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Add an organism to the organism table, or replace its entry, and recompute the derived attributes.</span>
 
@@ -605,6 +638,9 @@
 <span class="sd">                for a new organism (an empty list if it has none, in which case :py:class:`idtrack.HarmonizeFeatures`</span>
 <span class="sd">                needs an explicit ``final_database``). When an organism already in the table is replaced and this is</span>
 <span class="sd">                omitted (``None``), its current symbol databases are kept.</span>
+<span class="sd">            aliases: Short names of the organism (lower case, e.g. ``["zebrafish"]``), which then resolve to it</span>
+<span class="sd">                wherever an organism is asked for. ``None`` keeps the aliases of an organism that is replaced and</span>
+<span class="sd">                gives a new organism none.</span>
 
 <span class="sd">        Raises:</span>
 <span class="sd">            ValueError: If *symbol_databases* is omitted for a new organism, or if the resulting table violates a</span>
@@ -623,18 +659,54 @@
         <span class="n">table</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">assemblies</span>
         <span class="n">symbols</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">symbol_databases</span><span class="p">)</span>
         <span class="n">symbols</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">symbol_databases</span><span class="p">)</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_validate_organism_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">symbols</span><span class="p">)</span>
+        <span class="n">declared</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">organism_aliases</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">aliases</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">declared</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">aliases</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_validate_organism_table</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">symbols</span><span class="p">,</span> <span class="n">declared</span><span class="p">)</span>
 
         <span class="bp">cls</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
             <span class="nb">int</span><span class="p">(</span><span class="n">key</span><span class="p">):</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">entry</span><span class="p">))</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">assemblies</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
         <span class="p">}</span>
         <span class="bp">cls</span><span class="o">.</span><span class="n">symbol_databases</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">symbols</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">declared</span><span class="p">:</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">organism_aliases</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">declared</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
         <span class="bp">cls</span><span class="o">.</span><span class="n">organism_table_version</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="bp">cls</span><span class="o">.</span><span class="n">_rebuild_organism_tables</span><span class="p">()</span></div>
 
 
+<div class="viewcode-block" id="DB.assembly_key">
+<a class="viewcode-back" href="../../reference.html#idtrack.DB.assembly_key">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">assembly_key</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return *value* as an assembly key of the organism table, refusing values that only look like one.</span>
+
+<span class="sd">        Accepted: an integer (also a NumPy integer), an integral float (``38.0``) or a string of digits (as read from</span>
+<span class="sd">        YAML or JSON). Booleans and fractional numbers are refused: ``int(True)`` and ``int(38.9)`` would silently</span>
+<span class="sd">        name another assembly (``1`` is rhesus MMUL_1). This is the one rule for every place that takes an assembly</span>
+<span class="sd">        from a caller.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            value: The value given by the caller.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            int: The assembly key.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: For any other value.</span>
+<span class="sd">        """</span>
+        <span class="c1"># NumPy booleans are neither `bool` nor registered numbers, so they reach the last line like any other type.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Integral</span><span class="p">):</span>
+                <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">numbers</span><span class="o">.</span><span class="n">Real</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">is_integer</span><span class="p">():</span>
+                <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Genome assembly must be an integer key of the organism table, got </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">."</span><span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="DB._assembly_entry">
-<a class="viewcode-back" href="../../reference.html#idtrack._db.DB._assembly_entry">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.DB._assembly_entry">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_assembly_entry</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""Return the table entry of ``(organism, assembly)`` or raise a ``ValueError`` naming what is configured."""</span>
@@ -644,24 +716,25 @@
                 <span class="s2">"Add it with `idtrack.DB.register_organism`."</span>
             <span class="p">)</span>
         <span class="n">entries</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">assembly_mysqlport_priority</span><span class="p">[</span><span class="n">organism</span><span class="p">]</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">assembly</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">:</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">assembly_key</span><span class="p">(</span><span class="n">assembly</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">"Genome assembly </span><span class="si">{</span><span class="n">assembly</span><span class="si">!r}</span><span class="s2"> is not configured for organism </span><span class="si">{</span><span class="n">organism</span><span class="si">!r}</span><span class="s2">. "</span>
                 <span class="sa">f</span><span class="s2">"Supported assemblies: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">entries</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
-        <span class="k">return</span> <span class="n">entries</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">)]</span></div>
+        <span class="k">return</span> <span class="n">entries</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="DB.db_suffix">
-<a class="viewcode-back" href="../../reference.html#idtrack._db.DB.db_suffix">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.DB.db_suffix">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">db_suffix</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return the assembly code used in core database names (``DbSuffix``, defaulting to the key)."""</span>
-        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_assembly_entry</span><span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="n">assembly</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"DbSuffix"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">assembly</span><span class="p">))))</span></div>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_assembly_entry</span><span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="n">assembly</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"DbSuffix"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">assembly_key</span><span class="p">(</span><span class="n">assembly</span><span class="p">))))</span></div>
 
 
 <div class="viewcode-block" id="DB.release_range">
-<a class="viewcode-back" href="../../reference.html#idtrack._db.DB.release_range">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.DB.release_range">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">release_range</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""Return the configured ``(first, last)`` release of an assembly; ``last`` is ``None`` when open-ended."""</span>
@@ -669,8 +742,27 @@
         <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">first</span><span class="p">),</span> <span class="p">(</span><span class="kc">None</span> <span class="k">if</span> <span class="n">last</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">int</span><span class="p">(</span><span class="n">last</span><span class="p">))</span></div>
 
 
+<div class="viewcode-block" id="DB.first_release">
+<a class="viewcode-back" href="../../reference.html#idtrack.DB.first_release">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">first_release</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the first Ensembl release of an organism in the organism table (over all its assemblies).</span>
+
+<span class="sd">        This is the default start of every release window (``ignore_before`` of</span>
+<span class="sd">        :py:class:`idtrack.DatabaseManager` and of the graphs :py:class:`idtrack.API` builds and loads): a window</span>
+<span class="sd">        that starts there covers the whole history that idtrack can read for the organism.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            organism: Ensembl production name.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            int: The smallest first release of the ``ReleaseRange`` of the organism's assemblies.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">release_range</span><span class="p">(</span><span class="n">organism</span><span class="p">,</span> <span class="n">assembly</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">assembly</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">assemblies_by_priority</span><span class="p">(</span><span class="n">organism</span><span class="p">))</span></div>
+
+
 <div class="viewcode-block" id="DB.assembly_name">
-<a class="viewcode-back" href="../../reference.html#idtrack._db.DB.assembly_name">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.DB.assembly_name">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">assembly_name</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return Ensembl's name of an assembly (e.g. ``"Mmul_10"``), or ``None`` if the table does not give one."""</span>
@@ -678,7 +770,7 @@
 
 
 <div class="viewcode-block" id="DB.assemblies_by_priority">
-<a class="viewcode-back" href="../../reference.html#idtrack._db.DB.assemblies_by_priority">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.DB.assemblies_by_priority">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">assemblies_by_priority</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">"""Return the assembly keys of an organism ordered by ``Priority`` (preferred first)."""</span>
@@ -692,7 +784,7 @@
 
 
 <div class="viewcode-block" id="DB.core_db_name_pattern">
-<a class="viewcode-back" href="../../reference.html#idtrack._db.DB.core_db_name_pattern">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.DB.core_db_name_pattern">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">core_db_name_pattern</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">assembly</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"re.Pattern[str]"</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return the regular expression of the assembly's core database names.</span>
@@ -712,7 +804,7 @@
 
 
 <div class="viewcode-block" id="DB.assembly_for_core_db">
-<a class="viewcode-back" href="../../reference.html#idtrack._db.DB.assembly_for_core_db">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.DB.assembly_for_core_db">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">assembly_for_core_db</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">organism</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">db_suffix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">release</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Return the assembly key whose ``DbSuffix`` and ``ReleaseRange`` match a core database, else ``None``.</span>
@@ -741,14 +833,8 @@
 <span class="n">DB</span><span class="o">.</span><span class="n">_rebuild_organism_tables</span><span class="p">()</span>
 
 
-<span class="k">class</span><span class="w"> </span><span class="nc">EmptyConversionMetricsError</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Raised when conversion_metrics is empty and no alternative conversion is possible."""</span>
-
-    <span class="k">pass</span>
-
-
 <div class="viewcode-block" id="EnsemblRestError">
-<a class="viewcode-back" href="../../reference.html#idtrack._db.EnsemblRestError">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.EnsemblRestError">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">EnsemblRestError</span><span class="p">(</span><span class="ne">ConnectionError</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Raised when Ensembl REST cannot be reached or does not give a usable answer after every attempt.</span>
 
@@ -759,7 +845,7 @@
 
 
 <div class="viewcode-block" id="EnsemblSchemaError">
-<a class="viewcode-back" href="../../reference.html#idtrack._db.EnsemblSchemaError">[docs]</a>
+<a class="viewcode-back" href="../../reference.html#idtrack.EnsemblSchemaError">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">EnsemblSchemaError</span><span class="p">(</span><span class="ne">LookupError</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Raised when an Ensembl core database has no such table, or the table lacks requested columns.</span>
 

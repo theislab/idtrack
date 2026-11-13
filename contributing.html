@@ -488,19 +488,33 @@ themselves when Ensembl is not reachable):</p>
 <h3>Test Organization<a class="headerlink" href="#test-organization" title="Link to this heading"></a></h3>
 <p>Tests are located in the <code class="docutils literal notranslate"><span class="pre">tests/</span></code> directory:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>tests/
-├── conftest.py               # Shared fixtures, markers and the per-organism real-graph settings
-├── _real_graph_builder.py    # Builds the tiny real graphs of the end-to-end tests (MySQL or HTTPS)
+├── conftest.py               # Shared fixtures (among them the graphs of real organisms) and markers
+├── _real_tables.py           # Serves real Ensembl tables, cut down to a few hundred genes, to DatabaseManager
+├── data/real/                # Per organism: the cut tables, the gene list, the expected answers, the build script
 ├── test_main.py              # Command-line entry point
 ├── test_external_mappers.py  # External mapping backends (slow classes query live services)
-├── unit/                     # Offline tests, one file per module (test_api.py, test_db.py, ...)
-└── integration/              # Network-backed tests against Ensembl (MySQL and HTTPS dumps, end to end)
+├── unit/                     # Offline tests, one file per module (test_api.py, test_db.py, ...) and test_real_*.py
+└── integration/              # Network-backed tests against Ensembl (MySQL and HTTPS dumps)
 </pre></div>
 </div>
-<p>Markers: <code class="docutils literal notranslate"><span class="pre">slow</span></code> (skipped unless <code class="docutils literal notranslate"><span class="pre">--runslow</span></code> or <code class="docutils literal notranslate"><span class="pre">IDTRACK_SKIP_SLOW=0</span></code>), <code class="docutils literal notranslate"><span class="pre">network</span></code>, <code class="docutils literal notranslate"><span class="pre">integration</span></code> and
-<code class="docutils literal notranslate"><span class="pre">database</span></code>. The end-to-end tests run for every organism that ships a default externals YAML
-(<code class="docutils literal notranslate"><span class="pre">IDTRACK_TEST_ORGANISMS=a,b</span></code> selects others); their small real graphs are cached in
-<code class="docutils literal notranslate"><span class="pre">IDTRACK_TEST_CACHE_DIR</span></code>. Where the Ensembl MySQL ports are closed, the graphs are built from the HTTPS dumps,
-which happens only with <code class="docutils literal notranslate"><span class="pre">--runslow</span></code>.</p>
+<p>Markers: <code class="docutils literal notranslate"><span class="pre">slow</span></code> (skipped unless <code class="docutils literal notranslate"><span class="pre">--runslow</span></code> or <code class="docutils literal notranslate"><span class="pre">IDTRACK_SKIP_SLOW=0</span></code>), <code class="docutils literal notranslate"><span class="pre">network</span></code>, <code class="docutils literal notranslate"><span class="pre">integration</span></code>,
+<code class="docutils literal notranslate"><span class="pre">database</span></code> and <code class="docutils literal notranslate"><span class="pre">wrong_argument_type</span></code> (a test that passes an argument of a wrong type on purpose; skipped in the
+typeguard session, where typeguard refuses the argument first).</p>
+<p>The tests that can catch a wrong mapping are <code class="docutils literal notranslate"><span class="pre">tests/unit/test_real_*.py</span></code>. They need no network:
+<code class="docutils literal notranslate"><span class="pre">tests/_real_tables.py</span></code> serves real Ensembl tables of pig and human, cut down to a few hundred genes
+(<code class="docutils literal notranslate"><span class="pre">tests/data/real/&lt;organism&gt;.tables.json.xz</span></code>, each under 500 kB), to <a class="reference internal" href="reference.html#idtrack.DatabaseManager" title="idtrack.DatabaseManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.DatabaseManager</span></code></a>, so the
+graphs of both organisms are built by the production code (tables, history, graph file, engine, API) in the test
+session. Conversions are compared with expected answers that were derived from Ensembl’s own files
+(<code class="docutils literal notranslate"><span class="pre">tests/data/real/&lt;organism&gt;.truth.jsonl</span></code>) and with the tables themselves, read by independent code; the package’s
+self-tests (<a class="reference internal" href="reference.html#idtrack.TrackTests" title="idtrack.TrackTests"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.TrackTests</span></code></a>) run on the same graphs.</p>
+<p>To write a table file again from a gene list (<code class="docutils literal notranslate"><span class="pre">tests/data/real/&lt;organism&gt;.genes.txt</span></code>), for example after adding
+genes that a new test needs:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>poetry<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>tests/data/real/build_real_tables.py<span class="w"> </span>--organism<span class="w"> </span>sus_scrofa<span class="w"> </span>--repository<span class="w"> </span>&lt;<span class="nb">local</span><span class="w"> </span>repository&gt;
+</pre></div>
+</div>
+<p>It reads the tables from the local repository and downloads what the repository lacks over HTTPS.
+<code class="docutils literal notranslate"><span class="pre">tests/integration/test_real_tables_source.py</span></code> (<code class="docutils literal notranslate"><span class="pre">--runslow</span></code>, network) fetches one release of each organism again
+and compares it with the stored file.</p>
 </section>
 </section>
 <section id="building-documentation">
@@ -547,6 +561,9 @@ they are rendered with pre-existing outputs.</p>
 <li><p><strong>Tutorial notebooks are source of truth for narrative workflows</strong>: notebooks live in <code class="docutils literal notranslate"><span class="pre">docs/_notebooks</span></code> and are
 rendered by <em>nbsphinx</em> without execution during builds.</p></li>
 <li><p><strong>Avoid huge notebook outputs</strong>: keep outputs concise and deterministic so the rendered docs remain readable.</p></li>
+<li><p><strong>Outputs come from running the code</strong>: after changing a notebook, run it in full (with the graphs of the pinned
+snapshot release the tutorials use, 115) so that every shown output is what the code prints; never edit an output
+by hand. The examples of <a class="reference internal" href="usage.html"><span class="doc">Quickstart</span></a> and the README show outputs of the same snapshot.</p></li>
 </ul>
 </section>
 <section id="submitting-changes">
@@ -572,7 +589,7 @@ rendered by <em>nbsphinx</em> without execution during builds.</p></li>
 </tr>
 <tr class="row-odd"><td><p>2</p></td>
 <td><p>Branch</p></td>
-<td><p>Create a feature branch from <code class="docutils literal notranslate"><span class="pre">development</span></code></p></td>
+<td><p>Create a feature branch from <code class="docutils literal notranslate"><span class="pre">main</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p>3</p></td>
 <td><p>Develop</p></td>
@@ -599,8 +616,8 @@ rendered by <em>nbsphinx</em> without execution during builds.</p></li>
 </pre></div>
 </div>
 <p><strong>Step 2: Create a feature branch</strong></p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>git<span class="w"> </span>checkout<span class="w"> </span>development
-<span class="gp">$ </span>git<span class="w"> </span>pull<span class="w"> </span>upstream<span class="w"> </span>development
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>git<span class="w"> </span>checkout<span class="w"> </span>main
+<span class="gp">$ </span>git<span class="w"> </span>pull<span class="w"> </span>upstream<span class="w"> </span>main
 <span class="gp">$ </span>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feature/your-feature-name
 </pre></div>
 </div>
@@ -626,7 +643,7 @@ rendered by <em>nbsphinx</em> without execution during builds.</p></li>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>feature/your-feature-name
 </pre></div>
 </div>
-<p>Then open a pull request on GitHub against the <code class="docutils literal notranslate"><span class="pre">development</span></code> branch.</p>
+<p>Then open a pull request on GitHub against the <code class="docutils literal notranslate"><span class="pre">main</span></code> branch.</p>
 </section>
 <section id="pull-request-guidelines">
 <h3>Pull Request Guidelines<a class="headerlink" href="#pull-request-guidelines" title="Link to this heading"></a></h3>
@@ -675,54 +692,37 @@ Fixes <span class="ni">#123</span>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><strong>Formatting</strong></p></td>
-<td><p>Black (automatically applied by pre-commit)</p></td>
+<td><p>Black, line length 120, and isort (applied by the pre-commit hooks)</p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>Linting</strong></p></td>
-<td><p>Ruff</p></td>
+<td><p>flake8 with flake8-docstrings, darglint, flake8-bugbear, flake8-bandit, flake8-rst-docstrings and pep8-naming
+(<code class="docutils literal notranslate"><span class="pre">.flake8</span></code>), pyupgrade <code class="docutils literal notranslate"><span class="pre">--py312-plus</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><strong>Type hints</strong></p></td>
-<td><p>Use type annotations for public APIs</p></td>
+<td><p>Type annotations for public APIs; mypy (<code class="docutils literal notranslate"><span class="pre">nox</span> <span class="pre">--session=mypy</span></code>)</p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>Docstrings</strong></p></td>
-<td><p>NumPy style</p></td>
+<td><p>Google style (<code class="docutils literal notranslate"><span class="pre">docstring-convention</span> <span class="pre">=</span> <span class="pre">google</span></code>); every argument, return value and raised error documented
+(darglint checks it); cross-references with the <code class="docutils literal notranslate"><span class="pre">:py:meth:</span></code>, <code class="docutils literal notranslate"><span class="pre">:py:class:</span></code> … roles</p></td>
 </tr>
 </tbody>
 </table>
+<p>The pre-commit session (<code class="docutils literal notranslate"><span class="pre">nox</span> <span class="pre">--session=pre-commit</span></code>) runs all of these.</p>
 <section id="example-function">
 <h3>Example Function<a class="headerlink" href="#example-function" title="Link to this heading"></a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">convert_identifier</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span>
-    <span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">to_release</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">explain</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ConversionResult</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Convert a biological identifier to a target release.</span>
+<p>A docstring in the style of the package (modelled on <a class="reference internal" href="reference.html#idtrack.API.valid_final_databases" title="idtrack.API.valid_final_databases"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.valid_final_databases()</span></code></a>):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">valid_final_databases</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">to_release</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Return the values accepted as ``final_database`` for a target release, sorted.</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    identifier</span>
-<span class="sd">        The identifier to convert (e.g., gene symbol, Ensembl ID).</span>
-<span class="sd">    to_release</span>
-<span class="sd">        Target Ensembl release number.</span>
-<span class="sd">    explain</span>
-<span class="sd">        If True, include detailed mapping information.</span>
+<span class="sd">    These are the external databases of the genome assembly that is primary at *to_release* and the two</span>
+<span class="sd">    Ensembl gene namespaces (versioned ``ensembl_gene`` and ``base_ensembl_gene``).</span>
 
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    ConversionResult</span>
-<span class="sd">        The conversion result with mapped identifiers.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        to_release (int | None): The target release; ``None`` means the graph's snapshot release.</span>
 
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    ValueError</span>
-<span class="sd">        If the identifier format is not recognized.</span>
-
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    &gt;&gt;&gt; api.convert_identifier("TP53", to_release=112)</span>
-<span class="sd">    ConversionResult(...)</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        list[str]: The database names.</span>
 <span class="sd">    """</span>
-    <span class="o">...</span>
 </pre></div>
 </div>
 </section>
@@ -752,10 +752,12 @@ and names the shared code in <code class="docutils literal notranslate"><span cl
 public MySQL ports in preference order (3306 and 5306 serve release 48 onwards; 3337 is the GRCh37 archive
 and may be listed for human GRCh37 only, see <code class="docutils literal notranslate"><span class="pre">DB.mysql_port_assembly</span></code>); <code class="docutils literal notranslate"><span class="pre">Priority</span></code> 1 is the preferred, newest
 assembly. Add the organism’s symbol databases to <code class="docutils literal notranslate"><span class="pre">DB.symbol_databases</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">(&quot;VGNC</span> <span class="pre">Symbol&quot;,</span> <span class="pre">&quot;HGNC</span>
-<span class="pre">Symbol&quot;)</span></code>). The table is validated at import.</p>
+<span class="pre">Symbol&quot;)</span></code>) and its short names to <code class="docutils literal notranslate"><span class="pre">DB.organism_aliases</span></code> (lower case, unique across organisms, e.g.
+<code class="docutils literal notranslate"><span class="pre">(&quot;rhesus&quot;,)</span></code>). The table is validated at import. IDTrack reads Ensembl ids with versions: an organism whose ids
+carry no versions is not supported.</p>
 </li>
 <li><p><strong>Try it without editing the package.</strong> <code class="docutils literal notranslate"><span class="pre">idtrack.DB.register_organism(name,</span> <span class="pre">assemblies,</span>
-<span class="pre">symbol_databases)</span></code> adds the same entry for the running Python session, validates it, and recomputes
+<span class="pre">symbol_databases,</span> <span class="pre">aliases)</span></code> adds the same entry for the running Python session, validates it, and recomputes
 everything derived from the table.</p></li>
 <li><p><strong>Make the externals file.</strong> Generate the template over every release and form
 (<code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_database_content()</span></code> and <code class="docutils literal notranslate"><span class="pre">ExternalDatabases.create_template_yaml()</span></code>), switch on the

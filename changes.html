@@ -107,141 +107,323 @@
 <p>This page lists the changes that affect users, newest first. Version numbers follow <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>.</p>
 <section id="unreleased">
 <h2>Unreleased<a class="headerlink" href="#unreleased" title="Link to this heading"></a></h2>
-<p><strong>New organisms</strong></p>
+<p>This version changes what conversions return where 0.0.5 returned wrong genes, how graphs are stored, and the
+arguments and results of the API. Graphs and table caches of 0.0.5 are not read.</p>
+<p><strong>What a user of 0.0.5 must do</strong></p>
 <ul class="simple">
-<li><p>Rhesus macaque (<code class="docutils literal notranslate"><span class="pre">macaca_mulatta</span></code>; assemblies Mmul_10, Mmul_8.0.1 and MMUL_1, keys <code class="docutils literal notranslate"><span class="pre">10</span></code>, <code class="docutils literal notranslate"><span class="pre">801</span></code> and <code class="docutils literal notranslate"><span class="pre">1</span></code>)
-and cynomolgus macaque (<code class="docutils literal notranslate"><span class="pre">macaca_fascicularis</span></code>; Macaca_fascicularis_6.0 and 5.0, keys <code class="docutils literal notranslate"><span class="pre">6</span></code> and <code class="docutils literal notranslate"><span class="pre">5</span></code>) are
-supported like human, mouse and pig. Ensembl names the MMUL_1 and Mmul_10 core databases alike
-(<code class="docutils literal notranslate"><span class="pre">macaca_mulatta_core_&lt;release&gt;_10</span></code>); MMUL_1 therefore has the key <code class="docutils literal notranslate"><span class="pre">1</span></code>. See the Supported Organisms table in
-<a class="reference internal" href="usage.html"><span class="doc">Quickstart</span></a>.</p></li>
-<li><p>Organisms are declared in one table, <code class="docutils literal notranslate"><span class="pre">DB.assembly_mysqlport_priority</span></code>; <code class="docutils literal notranslate"><span class="pre">DB.register_organism</span></code> adds or
-replaces one for the running session (see “Adding Organism Support” in <a class="reference internal" href="contributing.html"><span class="doc">Contributor Guide</span></a>).</p></li>
-<li><p>The shipped external-database files of human, mouse and pig now include Ensembl release 116.
-<code class="docutils literal notranslate"><span class="pre">ExternalDatabases.extend_modified_yaml</span></code> extends a file to new releases, and a graph build warns once about
-releases its file does not cover.</p></li>
+<li><p><strong>Build your graphs again.</strong> Graph files of 0.0.5 (<code class="docutils literal notranslate"><span class="pre">graph_&lt;organism&gt;_min&lt;a&gt;_max&lt;b&gt;_narrow.pickle</span></code>) and its table
+cache (<code class="docutils literal notranslate"><span class="pre">&lt;organism&gt;_assembly-&lt;key&gt;.h5</span></code>) are not read; <a class="reference internal" href="reference.html#idtrack.API.build_graph" title="idtrack.API.build_graph"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.build_graph()</span></code></a> builds the graph from
+Ensembl’s tables (downloaded again) and writes the new files beside the old ones, which you can then delete. A build
+takes from 6 minutes (cynomolgus) to 2 hours (human) and at most 4.5 GB of memory (previously up to 11 hours and
+65 GB for human); see “Time and Memory” in <a class="reference internal" href="usage.html"><span class="doc">Quickstart</span></a>.</p></li>
+<li><p>Remove the arguments and attributes listed under “Removed” below from your code: <code class="docutils literal notranslate"><span class="pre">calculate_caches</span></code> and
+<code class="docutils literal notranslate"><span class="pre">genome_assembly</span></code> of <code class="docutils literal notranslate"><span class="pre">API.build_graph</span></code>, <code class="docutils literal notranslate"><span class="pre">API.calculate_graph_caches</span></code>, <code class="docutils literal notranslate"><span class="pre">deprioritize_lrg_genes</span></code> and three
+scoring arguments of <code class="docutils literal notranslate"><span class="pre">Track.convert</span></code>, the diagnostic attributes of <code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures</span></code>.</p></li>
+<li><p>Use Python 3.12 to 3.15.</p></li>
+<li><p>Pin the snapshot release in scripts (<code class="docutils literal notranslate"><span class="pre">build_graph(...,</span> <span class="pre">snapshot_release=115)</span></code>) rather than building at
+<a class="reference internal" href="reference.html#idtrack.API.resolve_organism" title="idtrack.API.resolve_organism"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.resolve_organism()</span></code></a>’s latest release, which changes with every Ensembl release.</p></li>
+<li><p>Expect other answers where 0.0.5 was wrong (below). Results of 0.0.5 that you keep cannot be reproduced with this
+version; record the version with your results.</p></li>
+</ul>
+<p><strong>Conversions: what an identifier means</strong></p>
+<ul class="simple">
+<li><p><strong>The starting release.</strong> With <code class="docutils literal notranslate"><span class="pre">from_release</span></code> the identifier is read at that release. Without it, it is read at
+the target release when it exists there, and otherwise at the latest release at which it exists. Previously an id
+without <code class="docutils literal notranslate"><span class="pre">from_release</span></code> was read at the <em>oldest</em> period in which it existed, so that, for example, a current human gene id
+without version converted to another gene in 2,557 of 78,899 cases (<code class="docutils literal notranslate"><span class="pre">NFYA</span></code> to <code class="docutils literal notranslate"><span class="pre">NFYB</span></code>), and 17 % of human NCBI
+gene ids and 1 to 2 % of symbols returned the wrong gene. The rule is the same for Ensembl ids, symbols and other
+external ids, and the result says which release was used (<code class="docutils literal notranslate"><span class="pre">from_release</span></code>, <code class="docutils literal notranslate"><span class="pre">from_release_inferred</span></code>).</p></li>
+<li><p><strong>A</strong> <code class="docutils literal notranslate"><span class="pre">from_release</span></code> <strong>at which the graph does not hold the identifier.</strong> <a class="reference internal" href="reference.html#idtrack.Track.convert" title="idtrack.Track.convert"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.Track.convert()</span></code></a> raises
+<a class="reference internal" href="reference.html#idtrack.InactiveAtReleaseError" title="idtrack.InactiveAtReleaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.InactiveAtReleaseError</span></code></a>, which names the releases at which the identifier exists (previously the
+answer came silently, as if no release had been given). <a class="reference internal" href="reference.html#idtrack.API.convert_identifier" title="idtrack.API.convert_identifier"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.convert_identifier()</span></code></a> reads the
+identifier where the graph holds it instead and flags the result (<code class="docutils literal notranslate"><span class="pre">from_release_fallback</span></code>, <code class="docutils literal notranslate"><span class="pre">from_release_given</span></code>).</p></li>
+<li><p><strong>What a string means.</strong> When a string can mean several nodes (a symbol that was the name of one gene and is a
+synonym of another today), the one that exists at the release asked about is taken (<code class="docutils literal notranslate"><span class="pre">from_release</span></code>, without it the
+snapshot release); an Ensembl stable id is never passed over for a synonym spelt the same. An identifier exists at a
+release only on the genome assembly that Ensembl maintained at that release: the names that human GRCh37, listed
+beside GRCh38 with its annotation of release 75, still carries do not exist today (3,277 of them are a synonym of
+a gene on GRCh38 today; read as the old name, 638 returned other genes than the synonym’s). Then the string is
+matched
+exactly, then ignoring letter case, then taking <code class="docutils literal notranslate"><span class="pre">-</span></code>, <code class="docutils literal notranslate"><span class="pre">_</span></code> and <code class="docutils literal notranslate"><span class="pre">.</span></code> as one character, then (only for ids of
+sequence-accession databases such as RefSeq and UniProt) without a version the graph does not hold; each step on
+names and then on synonyms. A name typed as a database wrote it at the release it is read at is an exact match of
+that name, also where the database writes it in another letter case today or two databases write it in two ways
+(at release 75 MGI wrote the mouse gene <code class="docutils literal notranslate"><span class="pre">Bap1</span></code> and UniProt wrote it <code class="docutils literal notranslate"><span class="pre">BAP1</span></code>), and is not taken for another
+gene’s synonym spelt the same.
+The new result field <code class="docutils literal notranslate"><span class="pre">match</span></code> says how it matched. The engine reads a string by the same
+rule (<a class="reference internal" href="reference.html#idtrack.TheGraph.resolve_name" title="idtrack.TheGraph.resolve_name"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.TheGraph.resolve_name()</span></code></a>): <code class="docutils literal notranslate"><span class="pre">Track.convert(&quot;X&quot;)</span></code> no longer takes a string that happens to be
+the name of a node as that node; to convert a particular node whatever the release, give a <code class="docutils literal notranslate"><span class="pre">from_release</span></code> at which
+it exists. Previously a dash-or-underscore suffix was cut off any string (<code class="docutils literal notranslate"><span class="pre">SNORD116_10</span></code> became <code class="docutils literal notranslate"><span class="pre">SNORD116</span></code>:
+10,506 human ids resolved to another gene), the least-connected spelling of an id written in several cases was kept,
+and every combination of separators was tried (minutes for a string with 20 of them); the lookup now costs
+microseconds whatever the string. Surrounding white space is ignored.</p></li>
+<li><p><strong>Versions.</strong> An Ensembl id with a version that the graph does not hold is not answered with another version’s gene:
+the result has no target, and <code class="docutils literal notranslate"><span class="pre">known_versions</span></code> lists the versions that exist (the engine raises
+<a class="reference internal" href="reference.html#idtrack.UnknownVersionError" title="idtrack.UnknownVersionError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.UnknownVersionError</span></code></a>). A version higher than all the graph holds, of an id still active at the
+snapshot, may come from a newer release: it is read as the latest version and reported as
+<code class="docutils literal notranslate"><span class="pre">match</span> <span class="pre">==</span> <span class="pre">&quot;version_newer_than_graph&quot;</span></code>. Previously any unknown version was answered with the gene of the id without
+version. Transcript and translation ids without version are now found (previously none was).</p></li>
+<li><p><strong>Ties.</strong> <code class="docutils literal notranslate"><span class="pre">strategy=&quot;best&quot;</span></code> returns one target, or, when several genes or targets are equal in all evidence, all
+of them, with <code class="docutils literal notranslate"><span class="pre">tie</span></code> true, ordered by the mapping score of each to the gene the identifier was read as and then by
+gene and target id. Previously several targets could come in an
+order that changed between runs (the hash seed), so <code class="docutils literal notranslate"><span class="pre">target_id[0]</span></code> could be another gene in the next run. Every list of
+a result is now in a defined order, and two runs give the same answer. A tie is judged among the genes that have an
+id in the requested database (the others are named in <code class="docutils literal notranslate"><span class="pre">no_target_genes</span></code>).</p></li>
+<li><p><strong>Every answer, best first.</strong> <code class="docutils literal notranslate"><span class="pre">strategy=&quot;all&quot;</span></code> returns the genes of the best answer first, in the order in which
+<code class="docutils literal notranslate"><span class="pre">strategy=&quot;best&quot;</span></code> returns them, then the others by their evidence: <code class="docutils literal notranslate"><span class="pre">target_id[0]</span></code> is the first target of the
+best answer with either strategy.</p></li>
+<li><p><strong>Copies on alternative loci, patches and LRG records</strong> (human; mouse GRCm38) are marked in the graph from Ensembl’s
+sequence regions. When an identifier leads to a gene of the reference sequence, the copies are left out of the
+answer and listed in the new result field <code class="docutils literal notranslate"><span class="pre">alternative_locus_genes</span></code>; when it leads to copies only, they are the
+answer. <a class="reference internal" href="reference.html#idtrack.TheGraph.is_non_reference" title="idtrack.TheGraph.is_non_reference"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.TheGraph.is_non_reference()</span></code></a> and <a class="reference internal" href="reference.html#idtrack.TheGraph.non_reference_releases" title="idtrack.TheGraph.non_reference_releases"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.TheGraph.non_reference_releases()</span></code></a> tell
+where a gene is such a copy. (Previously LRG records were left out by their id prefix, without saying so.)</p></li>
+<li><p><strong>A gene id is its own answer.</strong> A queried Ensembl gene id that exists at the target release is answered with
+itself: its own version comes first in the result, is never set apart as a copy, and is the answer of
+<code class="docutils literal notranslate"><span class="pre">strategy=&quot;best&quot;</span></code> whatever else its history reaches; <code class="docutils literal notranslate"><span class="pre">strategy=&quot;all&quot;</span></code> lists the other genes after it.</p></li>
+<li><p><strong>A database named for the identifier.</strong> <code class="docutils literal notranslate"><span class="pre">from_database</span></code> of <a class="reference internal" href="reference.html#idtrack.API.convert_identifier" title="idtrack.API.convert_identifier"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.convert_identifier()</span></code></a> (and of
+<a class="reference internal" href="reference.html#idtrack.Track.convert" title="idtrack.Track.convert"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.Track.convert()</span></code></a>) reads the identifier as an id of that database: only the genes that database
+attaches it to are entered, and between them the evidence of every database still counts. A symbol that two
+databases give to two genes is a tie without it and that database’s gene with it; a symbol that the named database
+gives to two genes, of which other databases confirm one, is that one.</p></li>
+<li><p><strong>The databases behind an identifier.</strong> The result field <code class="docutils literal notranslate"><span class="pre">from_databases</span></code> names every database that attaches the
+identifier to its genes at the release it was read at, whether to a gene itself or to one of its transcripts or
+translations, and the support of a gene (<code class="docutils literal notranslate"><span class="pre">entry_support</span></code> of <a class="reference internal" href="reference.html#idtrack.Track.convert" title="idtrack.Track.convert"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.Track.convert()</span></code></a>) counts all of them.</p></li>
+<li><p><strong>History.</strong> Ensembl’s id history (<code class="docutils literal notranslate"><span class="pre">mapping_session</span></code>) is checked against the ids of each release when a graph is
+built; a session recorded with wrong releases is placed where its ids change (pig 106 to “104” is 106 to 107; human
+114 to “114” is 114 to 115), each correction is recorded in the graph file and logged, and a session that fits no
+pair of releases stops the build (<a class="reference internal" href="reference.html#idtrack.HistoryValidationError" title="idtrack.HistoryValidationError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.HistoryValidationError</span></code></a>). Previously 1,123 pig gene ids converted
+to ids that do not exist at the target. The human graph now has the id history before release 76, which the
+previous table cache could omit.</p></li>
+<li><p><strong>Search.</strong> The search follows Ensembl’s history first; only when that leads to no gene does it pass through an
+external id or transcript that two genes carried (at most two such bridges, the fewest possible, in the order of
+time, never through clone-based names or through ids that more than five genes carry at once). It is bounded: every
+state is visited once, and a call has a budget (<a class="reference internal" href="reference.html#idtrack.Track.search_budget_states" title="idtrack.Track.search_budget_states"><code class="xref py py-attr docutils literal notranslate"><span class="pre">idtrack.Track.search_budget_states</span></code></a>,
+<a class="reference internal" href="reference.html#idtrack.Track.search_budget_seconds" title="idtrack.Track.search_budget_seconds"><code class="xref py py-attr docutils literal notranslate"><span class="pre">idtrack.Track.search_budget_seconds</span></code></a>) past which it raises <a class="reference internal" href="reference.html#idtrack.SearchBudgetExceededError" title="idtrack.SearchBudgetExceededError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.SearchBudgetExceededError</span></code></a>.
+The previous search enumerated paths: some conversions ran for more than 40 minutes, and <code class="docutils literal notranslate"><span class="pre">strategy=&quot;best&quot;</span></code> raised
+<code class="docutils literal notranslate"><span class="pre">unexpected!2</span></code> for 2.7 % of mouse gene ids.</p></li>
+<li><p><strong>Assemblies.</strong> A conversion uses, at each release, the assembly Ensembl maintained at that release (human GRCh38
+from 76; the parallel GRCh37 is not walked, its ids are converted from). A conversion to a release of an earlier
+assembly returns that assembly’s ids (previously none, e.g. 0 of 2,981 mouse symbols at release 102), and an id is
+returned as the database wrote it at the target release (<code class="docutils literal notranslate"><span class="pre">IFN-omega-4</span></code> for UniProt, <code class="docutils literal notranslate"><span class="pre">IFN-OMEGA-4</span></code> for NCBI). A
+graph’s external ids are named after the spelling of the latest release in which they exist (<code class="docutils literal notranslate"><span class="pre">PKD1</span></code>, not
+<code class="docutils literal notranslate"><span class="pre">pkd1</span></code>).</p></li>
+<li><p><strong>Archive copies.</strong> Ensembl’s archive server (MySQL port 3337) carries older assemblies forward under later release
+numbers (rhesus MMUL_1, pig Sscrofa10.2 for releases 90 to 99, mouse GRCm38); these frozen copies are not part of any
+graph, so a graph built over MySQL equals one built over HTTPS. Port 3337 is read for human GRCh37 only.</p></li>
+</ul>
+<p><strong>Results of the API</strong></p>
+<ul class="simple">
+<li><p>Results are plain data: <code class="docutils literal notranslate"><span class="pre">json.dumps</span></code> works on every result (previously NumPy booleans and tuple-keyed paths).</p></li>
+<li><p>New fields of <a class="reference internal" href="reference.html#idtrack.API.convert_identifier" title="idtrack.API.convert_identifier"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.convert_identifier()</span></code></a>: <code class="docutils literal notranslate"><span class="pre">match</span></code>, <code class="docutils literal notranslate"><span class="pre">known_versions</span></code>, <code class="docutils literal notranslate"><span class="pre">from_release</span></code> (the
+release used), <code class="docutils literal notranslate"><span class="pre">from_release_inferred</span></code>, <code class="docutils literal notranslate"><span class="pre">from_release_given</span></code>, <code class="docutils literal notranslate"><span class="pre">from_release_fallback</span></code>, <code class="docutils literal notranslate"><span class="pre">from_databases</span></code>,
+<code class="docutils literal notranslate"><span class="pre">to_release</span></code>, <code class="docutils literal notranslate"><span class="pre">strategy</span></code>, <code class="docutils literal notranslate"><span class="pre">ambiguous</span></code>, <code class="docutils literal notranslate"><span class="pre">tie</span></code>, <code class="docutils literal notranslate"><span class="pre">alternative_locus_genes</span></code>, <code class="docutils literal notranslate"><span class="pre">no_target_genes</span></code> (genes reached
+that have no id in the requested database while others have) and <code class="docutils literal notranslate"><span class="pre">error</span></code>. <code class="docutils literal notranslate"><span class="pre">last_node</span></code> holds lists
+<code class="docutils literal notranslate"><span class="pre">[gene,</span> <span class="pre">target]</span></code> (previously tuples). With <code class="docutils literal notranslate"><span class="pre">explain=True</span></code>, <code class="docutils literal notranslate"><span class="pre">the_path</span></code> is a list with one entry per pair of
+<code class="docutils literal notranslate"><span class="pre">last_node</span></code>: the gene the identifier was read as, the number of bridges, the product of Ensembl’s mapping scores and
+the edges walked.</p></li>
+<li><p>Every argument is checked before the search: the identifier (a non-empty string), the releases (integers of the
+graph: <a class="reference internal" href="reference.html#idtrack.API.graph_releases" title="idtrack.API.graph_releases"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.graph_releases()</span></code></a>; previously releases the graph does not hold were answered), the final
+database (<a class="reference internal" href="reference.html#idtrack.API.valid_final_databases" title="idtrack.API.valid_final_databases"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.valid_final_databases()</span></code></a>, case ignored; previously checked only when the identifier
+was found) and the strategy. An invalid argument raises <code class="xref py py-class docutils literal notranslate"><span class="pre">TypeError</span></code> or <code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code> naming it.</p></li>
+<li><p><a class="reference internal" href="reference.html#idtrack.API.convert_identifier_multiple" title="idtrack.API.convert_identifier_multiple"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.convert_identifier_multiple()</span></code></a> checks all items first (positions named), converts each distinct
+identifier once, and records a search over its budget as <code class="docutils literal notranslate"><span class="pre">error</span></code> on that item instead of losing the batch.</p></li>
+<li><p><a class="reference internal" href="reference.html#idtrack.API.list_ensembl_releases" title="idtrack.API.list_ensembl_releases"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.list_ensembl_releases()</span></code></a> returns the graph’s releases (pig 56 to 115; previously the primary
+assembly’s releases only, 90 to 115); the <code class="docutils literal notranslate"><span class="pre">list_*</span></code> methods return new sorted lists.</p></li>
+<li><p><a class="reference internal" href="reference.html#idtrack.API.infer_identifier_source" title="idtrack.API.infer_identifier_source"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.infer_identifier_source()</span></code></a> returns a list: every origin tied for the highest count, or all
+origins with their counts; it raises <code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code> when no identifier is in the graph (previously
+<code class="docutils literal notranslate"><span class="pre">IndexError</span></code>).</p></li>
+<li><p><a class="reference internal" href="reference.html#idtrack.API.classify_multiple_conversion" title="idtrack.API.classify_multiple_conversion"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.classify_multiple_conversion()</span></code></a> counts a query that converts to itself (without version, in
+another case) as unchanged; previously every query without version counted as “changed”.</p></li>
+<li><p><a class="reference internal" href="reference.html#idtrack.API.configure_logger" title="idtrack.API.configure_logger"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.configure_logger()</span></code></a> configures the <code class="docutils literal notranslate"><span class="pre">&quot;idtrack&quot;</span></code> logger only (previously it called
+<code class="docutils literal notranslate"><span class="pre">logging.basicConfig</span></code> on the root logger); every module logs under <code class="docutils literal notranslate"><span class="pre">idtrack.&lt;module&gt;</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">idtrack</span></code> imports nothing heavy; <code class="docutils literal notranslate"><span class="pre">idtrack.API</span></code> does not import anndata or scipy.</p></li>
+<li><p>Errors a caller may want to catch are exported: <a class="reference internal" href="reference.html#idtrack.InactiveAtReleaseError" title="idtrack.InactiveAtReleaseError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.InactiveAtReleaseError</span></code></a>,
+<a class="reference internal" href="reference.html#idtrack.UnknownVersionError" title="idtrack.UnknownVersionError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.UnknownVersionError</span></code></a>, <a class="reference internal" href="reference.html#idtrack.SearchBudgetExceededError" title="idtrack.SearchBudgetExceededError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.SearchBudgetExceededError</span></code></a>,
+<a class="reference internal" href="reference.html#idtrack.GraphMismatchError" title="idtrack.GraphMismatchError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.GraphMismatchError</span></code></a>, <a class="reference internal" href="reference.html#idtrack.HistoryValidationError" title="idtrack.HistoryValidationError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.HistoryValidationError</span></code></a>,
+<a class="reference internal" href="reference.html#idtrack.EnsemblRestError" title="idtrack.EnsemblRestError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.EnsemblRestError</span></code></a>, <a class="reference internal" href="reference.html#idtrack.EnsemblDownloadError" title="idtrack.EnsemblDownloadError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.EnsemblDownloadError</span></code></a>.</p></li>
+</ul>
+<p><strong>Graph files</strong></p>
+<ul class="simple">
+<li><p>A graph is one <code class="docutils literal notranslate"><span class="pre">.npz</span></code> file of arrays and JSON, named
+<code class="docutils literal notranslate"><span class="pre">graph_&lt;organism&gt;_assembly&lt;key&gt;_min&lt;first&gt;_max&lt;snapshot&gt;_narrow.npz</span></code>; it holds no pickle, so loading it executes
+no code. It records what it is (format version, package version, organism, primary assembly, window, snapshot,
+forms, the selection of external databases that takes effect, the organism table, the tables it was built from, the
+history corrections, build date, content digest: <code class="docutils literal notranslate"><span class="pre">graph.graph[&quot;manifest&quot;]</span></code>). A file that holds another graph than
+the one asked for raises <a class="reference internal" href="reference.html#idtrack.GraphMismatchError" title="idtrack.GraphMismatchError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.GraphMismatchError</span></code></a> naming the differences and how to build the graph again (previously it was loaded silently, so
+a graph of another assembly or of another externals YAML answered for this one).</p></li>
+<li><p><a class="reference internal" href="reference.html#idtrack.API.build_graph" title="idtrack.API.build_graph"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.API.build_graph()</span></code></a> loads a graph file with no table, no <a class="reference internal" href="reference.html#idtrack.DatabaseManager" title="idtrack.DatabaseManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.DatabaseManager</span></code></a> and no
+network (<a class="reference internal" href="reference.html#idtrack.GraphMaker.load_graph" title="idtrack.GraphMaker.load_graph"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.GraphMaker.load_graph()</span></code></a>, <a class="reference internal" href="reference.html#idtrack.Track.from_graph" title="idtrack.Track.from_graph"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.Track.from_graph()</span></code></a>). Loading takes 1 to 5 s and
+holds 0.26 to 1.14 GB (human: 4.3 s and 1.14 GB; previously 206 s and 35 GB, 50 GB with the caches); nothing is
+computed in advance.</p></li>
+<li><p>A graph is deterministic: built twice from the same tables, under different hash seeds, it has the same content
+digest (<code class="docutils literal notranslate"><span class="pre">graph.graph[&quot;manifest&quot;]</span></code>).</p></li>
+<li><p>Tables are stored one file per table (<code class="docutils literal notranslate"><span class="pre">idtrack_tables/&lt;organism&gt;_assembly-&lt;key&gt;/ens&lt;release&gt;_&lt;table&gt;.h5</span></code>), each
+written to a temporary file and renamed, so an interrupted run leaves every stored table readable (previously one HDF5
+file per assembly, which a killed writer could leave unopenable). A table’s file name and content record what it
+depends on (the release window of the id history, the databases the externals YAML enables): changing the YAML or
+the window no longer serves a stale table, and nothing needs to be deleted by hand. A read-only repository serves
+the tables it holds.</p></li>
+</ul>
+<p><strong>Organisms</strong></p>
+<ul class="simple">
+<li><p>Supported: human, mouse, pig, rhesus macaque (<code class="docutils literal notranslate"><span class="pre">macaca_mulatta</span></code>; assemblies Mmul_10, Mmul_8.0.1 and MMUL_1, keys
+<code class="docutils literal notranslate"><span class="pre">10</span></code>, <code class="docutils literal notranslate"><span class="pre">801</span></code> and <code class="docutils literal notranslate"><span class="pre">1</span></code>) and cynomolgus macaque (<code class="docutils literal notranslate"><span class="pre">macaca_fascicularis</span></code>; Macaca_fascicularis_6.0 and 5.0, keys
+<code class="docutils literal notranslate"><span class="pre">6</span></code> and <code class="docutils literal notranslate"><span class="pre">5</span></code>). Ensembl names the MMUL_1 and Mmul_10 core databases alike (<code class="docutils literal notranslate"><span class="pre">macaca_mulatta_core_&lt;release&gt;_10</span></code>);
+MMUL_1 therefore has the key <code class="docutils literal notranslate"><span class="pre">1</span></code>. See the Supported Organisms table in <a class="reference internal" href="usage.html"><span class="doc">Quickstart</span></a>.</p></li>
+<li><p>Organisms are declared in one table, <code class="docutils literal notranslate"><span class="pre">DB.assembly_mysqlport_priority</span></code>; <code class="docutils literal notranslate"><span class="pre">DB.register_organism</span></code> adds or replaces
+one for the running session (see “Adding Organism Support” in <a class="reference internal" href="contributing.html"><span class="doc">Contributor Guide</span></a>). Each organism declares short
+names (<code class="docutils literal notranslate"><span class="pre">&quot;human&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;mouse&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;pig&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;rhesus&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;cynomolgus&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">DB.organism_aliases</span></code>) that resolve
+without the network and win over Ensembl’s other species of that name (<code class="docutils literal notranslate"><span class="pre">&quot;pig&quot;</span></code> is also the common name of
+every pig breed in Ensembl). Assembly names (<code class="docutils literal notranslate"><span class="pre">&quot;GRCm38&quot;</span></code>) resolve to their organism.</p></li>
+<li><p>Organisms whose Ensembl ids carry no versions are not supported: building a graph for one raises a
+<code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code> that says so.</p></li>
+<li><p>A graph’s window starts at the organism’s first release in the table (<code class="docutils literal notranslate"><span class="pre">DB.first_release</span></code>: 48 for human, mouse and
+rhesus, 56 for pig, 91 for cynomolgus), for <a class="reference internal" href="reference.html#idtrack.DatabaseManager" title="idtrack.DatabaseManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.DatabaseManager</span></code></a> and the API alike (previously 48 in the
+API, the selected assembly’s first release in the manager).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">API.build_graph</span></code> builds on the organism’s assembly order; the primary assembly is the preferred one that has the
+snapshot release.</p></li>
+<li><p>The shipped external-database files of all five organisms include Ensembl release 116.
+<code class="docutils literal notranslate"><span class="pre">ExternalDatabases.extend_modified_yaml</span></code> extends a file to new releases (keeping a <code class="docutils literal notranslate"><span class="pre">.bak</span></code> of the file it
+replaces), and a graph build warns once about releases its file does not cover. <code class="docutils literal notranslate"><span class="pre">Include</span></code> must be a YAML boolean;
+entries for assemblies or releases that the organism table does not give the organism are left out with a warning
+(an error in a shipped file).</p></li>
+</ul>
+<p><strong>Harmonization</strong> (<a class="reference internal" href="reference.html#idtrack.HarmonizeFeatures" title="idtrack.HarmonizeFeatures"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.HarmonizeFeatures</span></code></a>)</p>
+<ul class="simple">
+<li><p>Each converted gene is one output feature, named by its Ensembl gene id at the target release; its name in the final
+database is a column (the first in sorted order, the others in <code class="docutils literal notranslate"><span class="pre">&lt;final</span> <span class="pre">database&gt;_alternatives</span></code>). A gene without a
+name there keeps a missing value and status <code class="docutils literal notranslate"><span class="pre">converted_no_final_id</span></code>: the final-database column never holds an
+Ensembl id (previously 58 % of pig rows converted to VGNC symbols had an Ensembl id there, unflagged).</p></li>
+<li><p>Nothing is dropped silently: every output feature has <code class="docutils literal notranslate"><span class="pre">var[&quot;idtrack_status&quot;]</span></code> and <code class="docutils literal notranslate"><span class="pre">var[&quot;idtrack_reason&quot;]</span></code>
+(statuses in <code class="docutils literal notranslate"><span class="pre">idtrack._harmonize_features.STATUSES</span></code>). A dataset is converted on its own: an id that is n-to-1 in
+one dataset is no longer deleted from every dataset (previously 12 % of the counts of two pig datasets were lost this way).
+A feature that is a gene id existing at the target release is converted to itself (see “A gene id is its own answer”),
+not flagged ambiguous between its own later version and other genes its history reaches.</p></li>
+<li><p>New arguments: <code class="docutils literal notranslate"><span class="pre">merge=&quot;sum&quot;</span></code> adds up the input features of one gene (<code class="docutils literal notranslate"><span class="pre">&quot;flag&quot;</span></code>, the default, keeps the feature
+that names the gene and flags the others), <code class="docutils literal notranslate"><span class="pre">keep_unconverted</span></code>, <code class="docutils literal notranslate"><span class="pre">source_releases</span></code> (the release each dataset was
+annotated with), <code class="docutils literal notranslate"><span class="pre">source_databases</span></code> (the database each dataset’s feature names are ids of), <code class="docutils literal notranslate"><span class="pre">api</span></code> (an
+<a class="reference internal" href="reference.html#idtrack.API" title="idtrack.API"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.API</span></code></a> whose graph is loaded).</p></li>
+<li><p>New methods: <code class="docutils literal notranslate"><span class="pre">feature_table</span></code>, <code class="docutils literal notranslate"><span class="pre">output_plan</span></code>, <code class="docutils literal notranslate"><span class="pre">conversion_report</span></code>; the attributes <code class="docutils literal notranslate"><span class="pre">matchings</span></code>,
+<code class="docutils literal notranslate"><span class="pre">feature_names</span></code>, <code class="docutils literal notranslate"><span class="pre">gene_names</span></code>. Removed: <code class="docutils literal notranslate"><span class="pre">get_idtrack_matchings_for_all_datasets</span></code>, <code class="docutils literal notranslate"><span class="pre">dict_n_to_1</span></code>,
+<code class="docutils literal notranslate"><span class="pre">unified_matching_dict</span></code>, <code class="docutils literal notranslate"><span class="pre">multiple_ensembl_dict</span></code>, the <code class="docutils literal notranslate"><span class="pre">removed_*</span></code>/<code class="docutils literal notranslate"><span class="pre">kept_*</span></code> diagnostics,
+<code class="docutils literal notranslate"><span class="pre">conversion_failed_identifiers</span></code>, <code class="docutils literal notranslate"><span class="pre">debugging_variables</span></code>.</p></li>
+<li><p>The result cache is one JSON file per dataset (<code class="docutils literal notranslate"><span class="pre">idtrack_result_&lt;project&gt;_&lt;dataset&gt;.json</span></code>), written atomically, with
+a header of everything it depends on (idtrack version, organism, final database, releases, source database, graph);
+anything else is recomputed. Caches of 0.0.5 are recomputed once.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">organism_name</span></code> is read from the graphs in the local repository when not given; <code class="docutils literal notranslate"><span class="pre">graph_last_ensembl_release</span></code>
+defaults to the newest local graph of the organism; <code class="docutils literal notranslate"><span class="pre">final_database</span></code> defaults to the organism’s first symbol
+database (<code class="docutils literal notranslate"><span class="pre">DB.symbol_databases</span></code>: HGNC Symbol for human, MGI Symbol for mouse, VGNC Symbol for pig and the
+macaques). In 0.0.5 they defaulted to human and release 114.</p></li>
+<li><p><a class="reference internal" href="reference.html#idtrack.HarmonizeFeatures.unify_multiple_anndatas" title="idtrack.HarmonizeFeatures.unify_multiple_anndatas"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.HarmonizeFeatures.unify_multiple_anndatas()</span></code></a> loses no <code class="docutils literal notranslate"><span class="pre">obs</span></code> column by default (<a class="reference external" href="https://github.com/theislab/idtrack/issues/85">#85</a>): <code class="docutils literal notranslate"><span class="pre">obs_join=&quot;outer&quot;</span></code> keeps every column of any dataset, missing
+(as a missing value of the column’s kind; integers and booleans become nullable) in the datasets without it;
+<code class="docutils literal notranslate"><span class="pre">obs_join=&quot;inner&quot;</span></code> keeps the columns every dataset has. <code class="docutils literal notranslate"><span class="pre">obs_columns_to_keep</span></code> selects among the joined columns.
+Every input <code class="docutils literal notranslate"><span class="pre">var</span></code> column is kept (one column where the datasets agree on each feature, otherwise
+<code class="docutils literal notranslate"><span class="pre">&lt;column&gt;_&lt;handle&gt;</span></code>). Layers, <code class="docutils literal notranslate"><span class="pre">obsm</span></code>, <code class="docutils literal notranslate"><span class="pre">obsp</span></code> and shared <code class="docutils literal notranslate"><span class="pre">uns</span></code> entries are carried over, <code class="docutils literal notranslate"><span class="pre">X</span></code> keeps its dtype,
+<code class="docutils literal notranslate"><span class="pre">raw</span></code> is dropped with a warning. Values are no longer rewritten (no placeholder <code class="docutils literal notranslate"><span class="pre">_PLACEHOLDER_NA_</span></code>; text columns
+become categorical). <code class="docutils literal notranslate"><span class="pre">feature_harmonizer</span></code> returns the whole dataset re-indexed by the harmonised features.</p></li>
+<li><p>Feature names are read from the files without loading them, checked (empty, not strings, repeated) before any
+conversion; <code class="docutils literal notranslate"><span class="pre">mode</span></code>, <code class="docutils literal notranslate"><span class="pre">obs_join</span></code> and <code class="docutils literal notranslate"><span class="pre">merge</span></code> are validated before any work.</p></li>
 </ul>
 <p><strong>Access to Ensembl</strong></p>
 <ul class="simple">
-<li><p>New access modes, set with the environment variable <code class="docutils literal notranslate"><span class="pre">IDTRACK_ENSEMBL_ACCESS</span></code> or <code class="docutils literal notranslate"><span class="pre">DB.ensembl_access</span></code>:
-<code class="docutils literal notranslate"><span class="pre">auto</span></code> (default: MySQL where its ports answer, the HTTPS dumps otherwise) and <code class="docutils literal notranslate"><span class="pre">https</span></code> (MySQL is never
-contacted). Each MySQL port is probed once per process instead of before every table; a port whose connection
-fails is not tried again in that process. An invalid value raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> when a <code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code> is
-created. See <a class="reference internal" href="installation.html#ensembl-access"><span class="std std-ref">Network Access: MySQL or HTTPS</span></a>.</p></li>
-<li><p>MySQL port 3337 (Ensembl’s GRCh37 archive) is read for human GRCh37 only, the one parallel assembly Ensembl
-maintains there. The archive also carries older assemblies forward as frozen copies under its later release
-numbers (rhesus MMUL_1 as <code class="docutils literal notranslate"><span class="pre">macaca_mulatta_core_79_10</span></code> to <code class="docutils literal notranslate"><span class="pre">_99_10</span></code>, pig Sscrofa10.2 for 90 to 99, mouse
-GRCm38); these are not annotation of those releases and are no longer part of any graph. An assembly’s releases
-are those of the main servers and of the HTTPS dumps, so a graph built over MySQL equals one built over HTTPS.
-Mouse GRCm38 and pig Sscrofa10.2 no longer list 3337, and <code class="docutils literal notranslate"><span class="pre">DB.register_organism</span></code> rejects 3337 for any other
-assembly (<code class="docutils literal notranslate"><span class="pre">DB.mysql_port_assembly</span></code>). A pig graph that was built over MySQL with an earlier version had
-Sscrofa10.2 edges at releases 90 to 99 from such copies; a rebuilt graph has none.</p></li>
-<li><p>Tables read from the HTTPS dumps are now decoded as MySQL loads them (escaped tabs, newlines and backslashes in
-fields), so such rows are no longer split or dropped.</p></li>
+<li><p>Access modes, set with the environment variable <code class="docutils literal notranslate"><span class="pre">IDTRACK_ENSEMBL_ACCESS</span></code> or <code class="docutils literal notranslate"><span class="pre">DB.ensembl_access</span></code>: <code class="docutils literal notranslate"><span class="pre">auto</span></code>
+(default: MySQL where its ports answer, the HTTPS dumps otherwise) and <code class="docutils literal notranslate"><span class="pre">https</span></code> (MySQL is never contacted). Both give
+the same tables, with the same values and column types. A MySQL port that fails is tried again after ten minutes;
+MySQL query errors are raised. See <a class="reference internal" href="installation.html#ensembl-access"><span class="std std-ref">Network Access: MySQL or HTTPS</span></a>.</p></li>
+<li><p>A failed request is never read as “absent”: a release that cannot be listed, or a table that cannot be downloaded
+after the retries, raises (<a class="reference internal" href="reference.html#idtrack.EnsemblDownloadError" title="idtrack.EnsemblDownloadError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.EnsemblDownloadError</span></code></a>); previously such releases were dropped silently, and one
+failed request could select another primary assembly.</p></li>
+<li><p>Ensembl REST requests (organism names, the latest release) are retried on timeouts, connection and SSL errors and
+the HTTP statuses 429 and 5xx (<code class="docutils literal notranslate"><span class="pre">DB.rest_attempts</span></code>, default 3), with the timeouts <code class="docutils literal notranslate"><span class="pre">DB.connection_timeout</span></code> (15 s)
+and <code class="docutils literal notranslate"><span class="pre">DB.reading_timeout</span></code> (60 s; also used by the HTTPS dumps). After the last attempt
+<a class="reference internal" href="reference.html#idtrack.EnsemblRestError" title="idtrack.EnsemblRestError"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.EnsemblRestError</span></code></a> (a <code class="docutils literal notranslate"><span class="pre">ConnectionError</span></code>) names the URL, the timeouts and how to raise them
+(<a class="reference external" href="https://github.com/theislab/idtrack/issues/84">#84</a>).</p></li>
+<li><p><a class="reference internal" href="reference.html#idtrack.VerifyOrganism" title="idtrack.VerifyOrganism"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.VerifyOrganism</span></code></a> asks Ensembl REST for the species list at most once per process and only when a
+look-up needs it; <code class="docutils literal notranslate"><span class="pre">fetch_organism_and_latest_release</span></code> takes no timeout arguments.</p></li>
+<li><p>Tables read from the HTTPS dumps are decoded as MySQL loads them (escaped tabs, newlines and backslashes), so such
+rows are no longer split or dropped. Building a pig graph from nothing takes 15 minutes (previously 73 minutes) and
+0.65 GB of disk (previously 6.9 GB).</p></li>
+</ul>
+<p><strong>pandas 3</strong> (<a class="reference external" href="https://github.com/theislab/idtrack/issues/86">#86</a>)</p>
+<ul class="simple">
+<li><p>idtrack works with pandas 2.3 and 3.x. 0.0.5 could not store a table with a text column under pandas 3, and
+<code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_ids</span></code> then reported the misleading <code class="docutils literal notranslate"><span class="pre">Table</span> <span class="pre">'gene_stable_id'</span> <span class="pre">not</span> <span class="pre">found</span></code>. Only a schema answer
+(<code class="docutils literal notranslate"><span class="pre">idtrack._db.EnsemblSchemaError</span></code>: the release has no such table or column) leads to the older-schema fallbacks;
+any other error is raised as it is. Text comes back in the running pandas’ default text dtype; tables written under
+one pandas version are read under the other.</p></li>
 </ul>
 <p><strong>Dependencies</strong></p>
 <ul class="simple">
-<li><p>idtrack supports Python 3.12 to 3.15; Python 3.9, 3.10 and 3.11 are no longer supported (see pandas 3 below).</p></li>
+<li><p>idtrack supports Python 3.12 to 3.15; Python 3.9, 3.10 and 3.11 are no longer supported (on Python 3.11 no anndata
+release writes <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code> files with pandas 3).</p></li>
 <li><p>Minimum versions are raised to releases that install on Python 3.12 and pass the test suite together: pandas 2.3
-(and 3.x), anndata 0.13, numpy 2.1, scipy 1.14, h5py 3.11 (the last three as anndata 0.13 requires), networkx 3.2,
-sparse 0.15, PyYAML 6.0.2, PyMySQL 1.1.1, tqdm 4.66.3, PySocks 1.7.1; optional: biopython 1.81, torch 2.2,
-transformers 4.36. See <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> for the reason of each.</p></li>
+(and 3.x), anndata 0.13, numpy 2.1, scipy 1.14, h5py 3.11, networkx 3.2, PyYAML 6.0.2, PyMySQL 1.1.1,
+tqdm 4.66.3, PySocks 1.7.1; optional: biopython 1.81, torch 2.2, transformers 4.36. <code class="docutils literal notranslate"><span class="pre">sparse</span></code> is no longer a
+dependency. See <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> for the reason of each.</p></li>
 <li><p>idtrack requires <code class="docutils literal notranslate"><span class="pre">requests&gt;=2.33.0</span></code> and <code class="docutils literal notranslate"><span class="pre">urllib3&gt;=2.8.0</span></code>, the first releases without the vulnerabilities
 CVE-2026-25645 (requests) and CVE-2026-44431, -44432, -97687, -97688 and -97689 (urllib3).</p></li>
 </ul>
-<p><strong>pandas 3</strong></p>
-<ul class="simple">
-<li><p>idtrack works with pandas 3 (tested with 2.3 and 3.1 on Python 3.13). The table cache wrote no table with a text column
-under pandas 3 (<code class="docutils literal notranslate"><span class="pre">Unsupported</span> <span class="pre">dtype</span> <span class="pre">&lt;StringDtype(...)&gt;</span></code>), and <code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_ids</span></code> then reported the
-misleading <code class="docutils literal notranslate"><span class="pre">Table</span> <span class="pre">'gene_stable_id'</span> <span class="pre">not</span> <span class="pre">found</span></code>. Text columns of every pandas text dtype are cached now and come
-back in the default text dtype of the running pandas with <code class="docutils literal notranslate"><span class="pre">NaN</span></code> for missing values, which is what pandas gives
-for freshly read text; cache files written under pandas 2 are read unchanged. Cache files are written with the
-default HDF5 format bounds, so files written with HDF5 2.x stay readable by HDF5 1.14.</p></li>
-<li><p>Only a schema answer (<code class="docutils literal notranslate"><span class="pre">idtrack._db.EnsemblSchemaError</span></code>: the release has no such table or column) leads to the
-older-schema fallbacks (<code class="docutils literal notranslate"><span class="pre">&lt;form&gt;_stable_id</span></code> tables, legacy <code class="docutils literal notranslate"><span class="pre">identity_xref</span></code> columns); any other error, such as a
-failed download or cache write, is raised as it is.</p></li>
-<li><p>Supported: Python 3.12 to 3.15 with pandas 2.3 or later (including 3.x) and anndata 0.13 or later. On Python 3.11
-no anndata release supports pandas 3 (the last ones for 3.11 require <code class="docutils literal notranslate"><span class="pre">pandas&lt;3</span></code>; older ones cannot write <code class="docutils literal notranslate"><span class="pre">str</span></code>
-columns to <code class="docutils literal notranslate"><span class="pre">.h5ad</span></code>).</p></li>
-</ul>
-<p><strong>Network</strong></p>
-<ul class="simple">
-<li><p>Ensembl REST requests (organism names, the latest release) are retried on timeouts, connection and SSL errors and
-the HTTP statuses 429 and 5xx (<code class="docutils literal notranslate"><span class="pre">DB.rest_attempts</span></code>, default 3), with the timeouts <code class="docutils literal notranslate"><span class="pre">DB.connection_timeout</span></code>
-(now 15 s) and <code class="docutils literal notranslate"><span class="pre">DB.reading_timeout</span></code> (now 60 s; also used by the HTTPS dumps). After the last attempt
-<code class="docutils literal notranslate"><span class="pre">EnsemblRestError</span></code> (a <code class="docutils literal notranslate"><span class="pre">ConnectionError</span></code>; formerly a <code class="docutils literal notranslate"><span class="pre">TimeoutError</span></code> for timeouts and raw <code class="docutils literal notranslate"><span class="pre">requests</span></code>
-exceptions otherwise) names the URL, the timeouts and how to raise them. See <a class="reference internal" href="installation.html#ensembl-access"><span class="std std-ref">Network Access: MySQL or HTTPS</span></a>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">VerifyOrganism</span></code> asks Ensembl REST for the species list at most once per process and only when a look-up needs
-it; the formal name of a supported organism (also written with spaces) resolves without the network.
-<code class="docutils literal notranslate"><span class="pre">fetch_organism_and_latest_release</span></code> takes no timeout arguments.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code> saves which releases the HTTPS dumps hold in the local repository
-(<code class="docutils literal notranslate"><span class="pre">ensembl_https_index_&lt;organism&gt;_assembly-&lt;key&gt;.json</span></code>) and reads it for a window that ends at a release the
-saved scan reached, so loading a graph that is on disk, and <code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures</span></code> with it, need no network in
-<code class="docutils literal notranslate"><span class="pre">https</span></code> mode.</p></li>
-</ul>
-<p><strong>Older snapshots</strong></p>
+<p><strong>Older snapshots</strong> (<a class="reference external" href="https://github.com/theislab/idtrack/issues/71">#71</a>)</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">GraphMaker</span></code> explains, when a manager is not at the newest release of its window, how to build a graph whose
 snapshot is an older release (<code class="docutils literal notranslate"><span class="pre">API.build_graph(...,</span> <span class="pre">snapshot_release=&lt;release&gt;)</span></code>); see “Working with an older
 Ensembl release” in <a class="reference internal" href="usage.html"><span class="doc">Quickstart</span></a>.</p></li>
 </ul>
-<p><strong>Harmonization</strong></p>
+<p><strong>Removed</strong></p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures.unify_multiple_anndatas</span></code> loses no <code class="docutils literal notranslate"><span class="pre">obs</span></code> column by default (formerly it kept only those
-named in <code class="docutils literal notranslate"><span class="pre">obs_columns_to_keep</span></code>): the new <code class="docutils literal notranslate"><span class="pre">obs_join=&quot;outer&quot;</span></code> keeps every column of any dataset, missing (as a
-missing value of the column’s kind; integers and booleans become nullable) in the datasets without it;
-<code class="docutils literal notranslate"><span class="pre">obs_join=&quot;inner&quot;</span></code> keeps the columns every dataset has. <code class="docutils literal notranslate"><span class="pre">obs_columns_to_keep</span></code> selects among the joined
-columns; a name that is not among them raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> naming it. Every input <code class="docutils literal notranslate"><span class="pre">var</span></code> column is kept: as one
-column where the datasets agree on each feature, otherwise once per dataset (<code class="docutils literal notranslate"><span class="pre">&lt;column&gt;_&lt;handle&gt;</span></code>). Layers,
-<code class="docutils literal notranslate"><span class="pre">obsm</span></code>, <code class="docutils literal notranslate"><span class="pre">obsp</span></code> and shared <code class="docutils literal notranslate"><span class="pre">uns</span></code> entries are carried over, and <code class="docutils literal notranslate"><span class="pre">X</span></code> keeps its dtype (formerly <code class="docutils literal notranslate"><span class="pre">float64</span></code>).
-<code class="docutils literal notranslate"><span class="pre">raw</span></code> is dropped with a warning.</p></li>
-<li><p>Values of <code class="docutils literal notranslate"><span class="pre">obs</span></code> and <code class="docutils literal notranslate"><span class="pre">var</span></code> are no longer rewritten: the strings <code class="docutils literal notranslate"><span class="pre">&quot;NA&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;none&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;-&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;unknown&quot;</span></code>
-and others stay as they are, numbers stay numbers, and missing values stay missing instead of becoming the
-placeholder <code class="docutils literal notranslate"><span class="pre">_PLACEHOLDER_NA_</span></code>. Text columns become categorical. <code class="docutils literal notranslate"><span class="pre">intersection</span></code> is computed from presence.
-The list of “missing-like” strings used for that rewriting, <code class="docutils literal notranslate"><span class="pre">idtrack._db.MISSING_VALUES</span></code>, is removed.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">mode</span></code> and <code class="docutils literal notranslate"><span class="pre">obs_join</span></code> are validated before any work; a <code class="docutils literal notranslate"><span class="pre">handle_anndata_key</span></code> that is already an <code class="docutils literal notranslate"><span class="pre">obs</span></code>
-column, colliding cell names and a generated <code class="docutils literal notranslate"><span class="pre">var</span></code> column name that an input column already has raise
-<code class="docutils literal notranslate"><span class="pre">ValueError</span></code>. <code class="docutils literal notranslate"><span class="pre">create_intersection_column_values</span></code> is removed.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">feature_harmonizer</span></code> returns the whole dataset re-indexed by the harmonised features (layers, <code class="docutils literal notranslate"><span class="pre">obsm</span></code>,
-<code class="docutils literal notranslate"><span class="pre">obsp</span></code>, <code class="docutils literal notranslate"><span class="pre">uns</span></code>, <code class="docutils literal notranslate"><span class="pre">varm</span></code>, the input <code class="docutils literal notranslate"><span class="pre">var</span></code> columns), not only <code class="docutils literal notranslate"><span class="pre">X</span></code> and <code class="docutils literal notranslate"><span class="pre">obs</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">API.build_graph</span></code>: the arguments <code class="docutils literal notranslate"><span class="pre">calculate_caches</span></code> (nothing is computed in advance) and <code class="docutils literal notranslate"><span class="pre">genome_assembly</span></code>
+(a graph is built on the organism’s assembly order; a graph with another primary assembly was never built
+correctly). <code class="docutils literal notranslate"><span class="pre">API.calculate_graph_caches</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Track.convert</span></code>: <code class="docutils literal notranslate"><span class="pre">deprioritize_lrg_genes</span></code> (LRG records follow the rule for copies above), <code class="docutils literal notranslate"><span class="pre">reduction</span></code>,
+<code class="docutils literal notranslate"><span class="pre">remove_na</span></code>, <code class="docutils literal notranslate"><span class="pre">score_of_the_queried_item</span></code> (the score of a path is the product of Ensembl’s mapping scores).
+<code class="docutils literal notranslate"><span class="pre">Track.version_info</span></code>, the graph attribute <code class="docutils literal notranslate"><span class="pre">version_info</span></code>; <code class="docutils literal notranslate"><span class="pre">EmptyConversionMetricsError</span></code> (nothing raises it).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TheGraph</span></code>: <code class="docutils literal notranslate"><span class="pre">combined_edges</span></code>, <code class="docutils literal notranslate"><span class="pre">combined_edges_genes</span></code>, <code class="docutils literal notranslate"><span class="pre">combined_edges_assembly_specific_genes</span></code>,
+<code class="docutils literal notranslate"><span class="pre">get_active_ranges_of_id</span></code>, <code class="docutils literal notranslate"><span class="pre">node_trios</span></code>, <code class="docutils literal notranslate"><span class="pre">lower_chars_graph</span></code> and <code class="docutils literal notranslate"><span class="pre">node_name_alternatives</span></code> (use
+<a class="reference internal" href="reference.html#idtrack.TheGraph.combined" title="idtrack.TheGraph.combined"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.TheGraph.combined()</span></code></a>, <a class="reference internal" href="reference.html#idtrack.TheGraph.active_ranges" title="idtrack.TheGraph.active_ranges"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.TheGraph.active_ranges()</span></code></a>, <a class="reference internal" href="reference.html#idtrack.TheGraph.trios" title="idtrack.TheGraph.trios"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.TheGraph.trios()</span></code></a>,
+<a class="reference internal" href="reference.html#idtrack.TheGraph.resolve_name" title="idtrack.TheGraph.resolve_name"><code class="xref py py-meth docutils literal notranslate"><span class="pre">idtrack.TheGraph.resolve_name()</span></code></a>); the node attribute <code class="docutils literal notranslate"><span class="pre">is_latest</span></code>; <code class="docutils literal notranslate"><span class="pre">GraphMaker.get_graph</span></code>’s
+<code class="docutils literal notranslate"><span class="pre">overwrite_even_if_exist</span></code> (a rebuild always replaces the file).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code>: <code class="docutils literal notranslate"><span class="pre">check_version_info</span></code>, <code class="docutils literal notranslate"><span class="pre">version_fix</span></code>, <code class="docutils literal notranslate"><span class="pre">version_fix_incomplete</span></code>, <code class="docutils literal notranslate"><span class="pre">version_uniformize</span></code>,
+<code class="docutils literal notranslate"><span class="pre">create_version_info</span></code>, <code class="docutils literal notranslate"><span class="pre">get_db(&quot;versioninfo&quot;)</span></code>, <code class="docutils literal notranslate"><span class="pre">available_releases_no_save</span></code>, <code class="docutils literal notranslate"><span class="pre">tables_in_disk</span></code>,
+<code class="docutils literal notranslate"><span class="pre">file_name</span></code>, <code class="docutils literal notranslate"><span class="pre">create_id_history_fixed</span></code>, <code class="docutils literal notranslate"><span class="pre">create_relation_archive</span></code> and <code class="docutils literal notranslate"><span class="pre">get_db(&quot;relationarchive&quot;)</span></code>,
+<code class="docutils literal notranslate"><span class="pre">available_tables_mysql</span></code>, <code class="docutils literal notranslate"><span class="pre">get_release_date</span></code>; <code class="docutils literal notranslate"><span class="pre">GraphMaker.initialize_downloads</span></code> and
+<code class="docutils literal notranslate"><span class="pre">GraphMaker.update_graph_with_the_new_release</span></code> (they only raised <code class="docutils literal notranslate"><span class="pre">NotImplementedError</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DB</span></code>: <code class="docutils literal notranslate"><span class="pre">main_assembly</span></code> (use <code class="docutils literal notranslate"><span class="pre">DB.assemblies_by_priority(organism)[0]</span></code>), <code class="docutils literal notranslate"><span class="pre">first_version</span></code>,
+<code class="docutils literal notranslate"><span class="pre">hyperconnecting_threshold</span></code> (the threshold is <code class="docutils literal notranslate"><span class="pre">TheGraph.genes_at_once_threshold</span></code>), <code class="docutils literal notranslate"><span class="pre">placeholder_na</span></code>,
+<code class="docutils literal notranslate"><span class="pre">MISSING_VALUES</span></code>, <code class="docutils literal notranslate"><span class="pre">conn_dict_str_ensembl_base</span></code>, <code class="docutils literal notranslate"><span class="pre">nts_base_ensembl_reverse</span></code>.</p></li>
+<li><p>The table cache functions of <code class="docutils literal notranslate"><span class="pre">idtrack._utils_hdf5</span></code> that wrote one file per assembly (<code class="docutils literal notranslate"><span class="pre">export_disk</span></code>,
+<code class="docutils literal notranslate"><span class="pre">read_exported</span></code>, <code class="docutils literal notranslate"><span class="pre">repack_hdf5</span></code>).</p></li>
 </ul>
-<p><strong>Changed behaviour and removed attributes</strong></p>
+<p><strong>Other changes</strong></p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">DB.main_assembly</span></code> (a human-only default, <code class="docutils literal notranslate"><span class="pre">38</span></code>) is removed. Use the organism’s preferred assembly,
-<code class="docutils literal notranslate"><span class="pre">DB.assemblies_by_priority(organism)[0]</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">HarmonizeFeatures</span></code> no longer defaults to human:</p>
-<ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">organism_name</span></code> is read from the graphs in the IDTrack local repository when not given; if they name no or
-several organisms, it must be passed.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">graph_last_ensembl_release</span></code> defaults to the newest local graph of the organism (else Ensembl’s latest
-release) instead of the fixed release 114, so conversions that relied on the default can differ.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">final_database</span></code> defaults to the organism’s first symbol database (<code class="docutils literal notranslate"><span class="pre">DB.symbol_databases</span></code>: HGNC Symbol for
-human, MGI Symbol for mouse, VGNC Symbol for pig and the macaques).</p></li>
-<li><p>Result caches are recomputed once: their file name now carries organism, final database, target release and
-graph release (<code class="docutils literal notranslate"><span class="pre">idtrack_result_&lt;project&gt;_&lt;dataset&gt;_&lt;organism&gt;_&lt;database&gt;_rel&lt;r&gt;_graph&lt;g&gt;.pickle</span></code>). The old
-name held none of these, so it could return a result made with another configuration.</p></li>
-</ul>
-</li>
-<li><p><code class="docutils literal notranslate"><span class="pre">API.resolve_organism</span></code> / <code class="docutils literal notranslate"><span class="pre">VerifyOrganism</span></code> match case-insensitively and accept taxon IDs as integers or
-strings; a taxon ID shared by strains or breeds resolves to the species (<code class="docutils literal notranslate"><span class="pre">9823</span></code> → <code class="docutils literal notranslate"><span class="pre">sus_scrofa</span></code>). A common
-name that several Ensembl species share, such as <code class="docutils literal notranslate"><span class="pre">&quot;pig&quot;</span></code>, raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> that lists the candidates;
-use the species name or the taxon ID.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">VerifyOrganism.name_synonyms_dataframe</span></code> has a new <code class="docutils literal notranslate"><span class="pre">kind</span></code> column (<code class="docutils literal notranslate"><span class="pre">formal_name</span></code>, <code class="docutils literal notranslate"><span class="pre">taxon_id</span></code> or
-<code class="docutils literal notranslate"><span class="pre">other</span></code>); synonyms are stored as lower-case strings, and the separate integer rows for taxon IDs are gone.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Track</span></code> raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> for a graph whose organism is not in the organism table (previously the
 assemblies were ordered by their numeric code); register the organism first.</p></li>
-<li><p>Without an explicit assembly, <code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code> now picks the highest-priority assembly that has a release
-inside <code class="docutils literal notranslate"><span class="pre">ignore_before</span></code>/<code class="docutils literal notranslate"><span class="pre">ignore_after</span></code> (e.g. a mouse snapshot at release 100 uses GRCm38).</p></li>
+<li><p>Without an explicit assembly, <code class="docutils literal notranslate"><span class="pre">DatabaseManager</span></code> picks the highest-priority assembly that has the release it is
+made for, inside <code class="docutils literal notranslate"><span class="pre">ignore_before</span></code>/<code class="docutils literal notranslate"><span class="pre">ignore_after</span></code> (e.g. a mouse snapshot at release 100 uses GRCm38).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_available_databases</span></code> lists the core databases of the organism’s configured assemblies
-within their release ranges, the same in both access modes.</p></li>
-<li><p>Removed <code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_id_history_fixed</span></code> (deprecated; <code class="docutils literal notranslate"><span class="pre">create_id_history</span></code> handles the same cases) and
-<code class="docutils literal notranslate"><span class="pre">DatabaseManager.create_relation_archive</span></code> with its <code class="docutils literal notranslate"><span class="pre">get_db(&quot;relationarchive&quot;)</span></code> table (it read the incomplete
-<code class="docutils literal notranslate"><span class="pre">gene_archive</span></code> table; <code class="docutils literal notranslate"><span class="pre">create_relation_current</span></code> per release is what the graph uses). Neither was used.</p></li>
-<li><p>Removed methods that only raised <code class="docutils literal notranslate"><span class="pre">NotImplementedError</span></code>: <code class="docutils literal notranslate"><span class="pre">GraphMaker.initialize_downloads</span></code>,
-<code class="docutils literal notranslate"><span class="pre">GraphMaker.update_graph_with_the_new_release</span></code>, <code class="docutils literal notranslate"><span class="pre">DatabaseManager.available_tables_mysql</span></code> and
-<code class="docutils literal notranslate"><span class="pre">DatabaseManager.get_release_date</span></code>.</p></li>
-<li><p>The notebooks under <code class="docutils literal notranslate"><span class="pre">reproducibility/experiments/prev/</span></code> are frozen history (they are not part of the
-experiment index in <code class="docutils literal notranslate"><span class="pre">reproducibility/experiments/README.md</span></code>) and are not updated; for example,
-<code class="docutils literal notranslate"><span class="pre">prev/initialization_test.ipynb</span></code> still uses <code class="docutils literal notranslate"><span class="pre">DB.main_assembly</span></code>.</p></li>
+within their release ranges, the same in both access modes; <code class="docutils literal notranslate"><span class="pre">DatabaseManager.get_db(&quot;generegion&quot;)</span></code> tells which
+genes of a release lie outside the reference sequence.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">idtrack._external_mappers.align_ortholog_pair_with_features</span></code> computes its alignment features again (it returned
+<code class="docutils literal notranslate"><span class="pre">{}</span></code> for every ortholog, because <code class="docutils literal notranslate"><span class="pre">gget.muscle</span></code> writes the alignment to a file rather than returning it). The
+alignment of an ortholog is in the key <code class="docutils literal notranslate"><span class="pre">alignment_aligned_fasta</span></code> (aligned FASTA as MUSCLE writes it; formerly
+<code class="docutils literal notranslate"><span class="pre">alignment_raw_clustal</span></code>).</p></li>
+<li><p>The self-tests of a graph (<a class="reference internal" href="reference.html#idtrack.TrackTests" title="idtrack.TrackTests"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack.TrackTests</span></code></a>, <code class="docutils literal notranslate"><span class="pre">API.build_graph(...,</span> <span class="pre">return_test=True)</span></code>): every check
+(<code class="docutils literal notranslate"><span class="pre">is_...</span></code>) returns a <a class="reference internal" href="reference.html#idtrack._track_tests.CheckResult" title="idtrack._track_tests.CheckResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">idtrack._track_tests.CheckResult</span></code></a> with <code class="docutils literal notranslate"><span class="pre">holds</span></code> (also its truth value) and
+<code class="docutils literal notranslate"><span class="pre">details</span></code> (what was compared and every violation found), where it returned <code class="docutils literal notranslate"><span class="pre">True</span></code>, <code class="docutils literal notranslate"><span class="pre">False</span></code> or a tuple. A
+check does not raise for what it finds: a table that cannot be read or a release without identifiers is a result
+that does not hold, with the error in its details. A database that the graph does not hold is refused before
+anything is converted, by the checks and by <code class="docutils literal notranslate"><span class="pre">history_travel_testing</span></code>: a <code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code> that names the
+argument and lists the valid databases, as the API raises for a wrong argument (previously
+<code class="docutils literal notranslate"><span class="pre">history_travel_testing</span></code> returned a report in which every identifier was lost or failed, and the name of a
+form was the only name it refused). The checks compare assembly by assembly at every release an assembly has
+(previously they raised at the first release of an earlier assembly, or reported every graph with more than one
+assembly as inconsistent), report identifiers that only the graph has as well as those it lacks, and count a gene
+that has an id in a database and is not converted to it. <code class="docutils literal notranslate"><span class="pre">random_dataset_source_generator</span></code> returns <code class="docutils literal notranslate"><span class="pre">None</span></code> when
+nothing can be drawn (previously the tuple <code class="docutils literal notranslate"><span class="pre">(&quot;&quot;,</span> <span class="pre">-1,</span> <span class="pre">-1)</span></code>), and
+<code class="docutils literal notranslate"><span class="pre">history_travel_testing_random_arguments_generator</span></code> raises <code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code> after 100 attempts.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ConnectionBridge</span></code> used as <code class="docutils literal notranslate"><span class="pre">with</span> <span class="pre">ConnectionBridge(...)</span></code> raises <code class="docutils literal notranslate"><span class="pre">ConnectionError</span></code> when its check fails; a bridge
+stays active until <code class="docutils literal notranslate"><span class="pre">stop()</span></code> or <code class="docutils literal notranslate"><span class="pre">ConnectionBridge.stop_all()</span></code>, and restores the proxy settings it found.</p></li>
+<li><p>The notebooks under <code class="docutils literal notranslate"><span class="pre">reproducibility/experiments/</span></code> are records of the analysis published with the released version
+and are not kept running against later versions (see the README of that folder).</p></li>
 </ul>
 </section>
 </section>

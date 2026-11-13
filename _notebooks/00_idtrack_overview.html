@@ -135,7 +135,7 @@
   <a class="idtrack-notebook-download" href="../_sources/_notebooks/00_idtrack_overview.ipynb">Download notebook</a>
 </div><section id="Part-0-—-Conceptual-Foundation">
 <h1>Part 0 — Conceptual Foundation<a class="headerlink" href="#Part-0-—-Conceptual-Foundation" title="Link to this heading"></a></h1>
-<p><em>Last updated:</em> 2026-01-08</p>
+<p><em>Last updated:</em> 2026-11-12</p>
 <p>This section builds the mental model you need <strong>before touching code</strong>. It is written for <strong>wet-lab researchers</strong> and <strong>bioinformaticians</strong> who want reliable, reproducible identifier conversion across Ensembl releases and external databases.</p>
 <p><strong>Learning objectives</strong></p>
 <ul class="simple">
@@ -225,6 +225,7 @@
 <p>This matters because it makes results <strong>reproducible</strong>:</p>
 <ul class="simple">
 <li><p>same snapshot boundary + same external YAML → same graph → same conversions</p></li>
+<li><p>IDTrack checks this for you: a graph file records the external databases and the organism table it was built from, and loading it for another selection is an error, never a silent substitute</p></li>
 </ul>
 <p>A practical metaphor: you are doing “time travel” in a museum that you <em>freeze in time</em>. The outside world (newer releases) keeps changing, but your museum exhibits do not.</p>
 </section>
@@ -233,8 +234,7 @@
 <p>IDTrack does <em>not</em> automatically include every external database Ensembl knows about. Instead, you explicitly opt in via a small YAML file (the <strong>external YAML</strong>).</p>
 <p>Why? Because including everything would:</p>
 <ul class="simple">
-<li><p>make the graph huge</p></li>
-<li><p>slow down path-finding</p></li>
+<li><p>make the graph and the downloads larger</p></li>
 <li><p>increase ambiguity (many-to-many relationships)</p></li>
 </ul>
 <p>So the workflow is:</p>
@@ -268,13 +268,13 @@
 <li><p>cynomolgus macaque: <strong>Macaca_fascicularis_6.0</strong> and <strong>5.0</strong></p></li>
 </ul>
 <p>Why this matters in practice: two datasets can use the “same kind of identifiers” but still be anchored to different builds because they were annotated with different GTFs or reference packages. That is a very common atlas-building situation.</p>
-<p>IDTrack treats assemblies as a first-class part of the graph. A snapshot is not only “release-bounded in time” — it can also be <strong>multi-assembly</strong>:</p>
+<p>IDTrack treats assemblies as a first-class part of the graph. A snapshot is not only “release-bounded in time” — it is also <strong>multi-assembly</strong>:</p>
 <ul class="simple">
-<li><p>nodes/edges carry assembly context where needed</p></li>
-<li><p>the path-finder can move across <strong>releases</strong> and across <strong>assemblies</strong> to reach a unified target space</p></li>
-<li><p>some external databases are only present (or only reliable) on specific assembly/release combinations, so having multiple assemblies available can increase connectivity</p></li>
+<li><p>nodes/edges carry assembly context where needed: an external id is linked to a gene for the assemblies and releases at which Ensembl lists the link</p></li>
+<li><p>a conversion follows, at each release, the assembly Ensembl maintained at that release (human: NCBI36 to release 54, GRCh37 to 75, GRCh38 from 76), so identifiers of an older build convert to the build of your target release</p></li>
+<li><p>ids of a build Ensembl kept beside the maintained one (human GRCh37 after release 75) are in the graph as ids to convert from</p></li>
 </ul>
-<p>In most projects you choose a single <strong>target</strong> (a snapshot boundary + a primary assembly for output), and use IDTrack to bring mixed inputs into that target in a reproducible way.</p>
+<p>In most projects you choose a single <strong>target</strong> (a snapshot boundary and a target release), and use IDTrack to bring mixed inputs into that target in a reproducible way.</p>
 <p>Human is the main case where two assemblies are actively supported in parallel (GRCh38 + GRCh37). Mouse, pig and the two macaques are <em>clean-handoff</em> species (one maintained assembly per release), but older assemblies still matter for legacy datasets.</p>
 </section>
 <section id="0.2.5-—-Key-Abstractions-You-Will-Use">
@@ -320,14 +320,14 @@
 <p>IDTrack assumes you have:</p>
 <ul class="simple">
 <li><p>a writable <strong>local repository folder</strong> (cache + graphs + YAML configs)</p></li>
-<li><p>network access the first time you build a graph (REST + HTTPS/FTP dumps; later runs reuse the cache)</p></li>
-<li><p>enough disk space (graphs and cached tables can be large)</p></li>
+<li><p>network access the first time you build a graph (REST + HTTPS/FTP dumps); loading a graph that is on disk needs none</p></li>
+<li><p>enough disk space for the tables a graph is built from (0.3 GB for cynomolgus to 5.3 GB for human, for snapshot 115)</p></li>
 </ul>
 <p>IDTrack can:</p>
 <ul class="simple">
 <li><p>time-travel identifiers across Ensembl releases inside a chosen snapshot boundary</p></li>
 <li><p>optionally hop into external namespaces you explicitly enabled</p></li>
-<li><p>surface ambiguity (1→n) instead of hiding it</p></li>
+<li><p>surface ambiguity (1→n) instead of hiding it, and return genes that are equal in all evidence as a tie</p></li>
 </ul>
 <p>IDTrack cannot magically fix upstream ambiguity:</p>
 <ul class="simple">
@@ -339,7 +339,7 @@
 <div><p><strong>Why this matters:</strong> IDTrack prefers to be “honestly ambiguous” rather than silently wrong. If you need a single answer from a 1→n case, you should make that choice explicitly (and record how you did it).</p>
 </div></blockquote>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>3
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>1
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1) Minimal setup cell (safe to run in any notebook)</span>
@@ -350,7 +350,7 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">idtrack</span>
 
-<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'./idtrack_cache'</span><span class="p">))</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+<span class="n">LOCAL_REPOSITORY</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'IDTRACK_LOCAL_REPO'</span><span class="p">,</span> <span class="s1">'idtrack_cache'</span><span class="p">))</span>
 <span class="n">LOCAL_REPOSITORY</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="n">api</span> <span class="o">=</span> <span class="n">idtrack</span><span class="o">.</span><span class="n">API</span><span class="p">(</span><span class="n">local_repository</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">LOCAL_REPOSITORY</span><span class="p">))</span>
@@ -367,7 +367,7 @@
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 IDTrack version: 0.0.5
-Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_notebooks/idtrack_cache
+Local repository: idtrack_cache
 </pre></div></div>
 </div>
 <p>The cell above does three things:</p>
@@ -377,7 +377,7 @@ Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_not
 <li><p>enables logging so you can see progress (downloads, caching, graph build)</p></li>
 </ol>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>4
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>2
 </pre></div>
 </div>
 <div class="input_area highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 2) Resolve organism names the way IDTrack expects</span>
@@ -394,24 +394,7 @@ Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_not
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-2026-01-09 21:31:06 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
-2026-01-09 21:31:07 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-&#39;human&#39; -&gt; &#39;homo_sapiens&#39; (latest Ensembl release: 115)
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-2026-01-09 21:31:07 INFO:verify_organism: Ensembl Rest API query to get the organism names and associated releases.
+2026-11-12 15:14:48 INFO:idtrack._verify_organism: Ensembl Rest API query to get the organism names and associated releases.
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -419,8 +402,9 @@ Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_not
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&#39;mus musculus&#39; -&gt; &#39;mus_musculus&#39; (latest Ensembl release: 115)
-&#39;sus scrofa&#39; -&gt; &#39;sus_scrofa&#39; (latest Ensembl release: 115)
+&#39;human&#39; -&gt; &#39;homo_sapiens&#39; (latest Ensembl release: 116)
+&#39;mus musculus&#39; -&gt; &#39;mus_musculus&#39; (latest Ensembl release: 116)
+&#39;sus scrofa&#39; -&gt; &#39;sus_scrofa&#39; (latest Ensembl release: 116)
 </pre></div></div>
 </div>
 <p>You will see outputs like:</p>
@@ -430,7 +414,7 @@ Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_not
 <li><p><code class="docutils literal notranslate"><span class="pre">'sus</span> <span class="pre">scrofa'</span> <span class="pre">-&gt;</span> <span class="pre">'sus_scrofa'</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">'Macaca</span> <span class="pre">mulatta'</span></code> or <code class="docutils literal notranslate"><span class="pre">9544</span></code> -&gt; <code class="docutils literal notranslate"><span class="pre">'macaca_mulatta'</span></code></p></li>
 </ul>
-<p>Matching is case-insensitive. Species names and taxon IDs always resolve; a common name shared by several Ensembl species (e.g. <code class="docutils literal notranslate"><span class="pre">'pig'</span></code>, which every pig breed in Ensembl carries) raises an error that lists the candidates.</p>
+<p>Matching is case-insensitive. Species names, taxon IDs and the short names <code class="docutils literal notranslate"><span class="pre">'human'</span></code>, <code class="docutils literal notranslate"><span class="pre">'mouse'</span></code>, <code class="docutils literal notranslate"><span class="pre">'pig'</span></code>, <code class="docutils literal notranslate"><span class="pre">'rhesus'</span></code> and <code class="docutils literal notranslate"><span class="pre">'cynomolgus'</span></code> always resolve (<code class="docutils literal notranslate"><span class="pre">'pig'</span></code> is <code class="docutils literal notranslate"><span class="pre">sus_scrofa</span></code>, although Ensembl also lists every pig breed under that common name); another common name shared by several Ensembl species raises an error that lists the candidates. The latest release is the newest one Ensembl serves today: the tutorials pin the snapshot release instead (Part 3).</p>
 <p>From now on, the tutorials use the <strong>formal Ensembl names</strong> (snake_case).</p>
 </section>
 <section id="0.4-—-Tutorial-Roadmap-(Recommended-Order)">
@@ -442,7 +426,6 @@ Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_not
 <li><p><strong>Run self-tests / sanity checks</strong> (initialization tests)</p></li>
 <li><p><strong>Human API deep dive</strong> (Part 4)</p></li>
 <li><p><strong>Harmonization tutorial (HLCA-style)</strong> (Part 5)</p></li>
-<li><p><strong>HLCA experiments case study</strong> (Part 5, advanced)</p></li>
 <li><p><strong>Cross-species humanization</strong> (Part 6, advanced)</p></li>
 <li><p><strong>Advanced topics</strong> (Part 7)</p></li>
 </ol>
@@ -453,10 +436,10 @@ Local repository: /Users/kemalinecik/git_nosync/master_idtrack/idtrack/docs/_not
 <ol class="arabic simple">
 <li><p><strong>Permissions</strong>: is your local repository writable?</p></li>
 <li><p><strong>Network</strong>: first-time runs need to reach Ensembl services (REST + HTTPS/FTP dumps; MySQL is optional).</p></li>
-<li><p><strong>Disk space</strong>: building graphs can use multiple GB.</p></li>
-<li><p><strong>Snapshot boundary + assemblies</strong>: the snapshot release must exist for the organism and the chosen primary assembly. Older assemblies have different release coverage; a multi-assembly snapshot can still include them when they exist within the release window.</p></li>
+<li><p><strong>Disk space</strong>: the tables of a graph take 0.3 GB (cynomolgus) to 5.3 GB (human) for snapshot 115.</p></li>
+<li><p><strong>Snapshot boundary</strong>: the snapshot release must be a release of the organism in Ensembl (and in IDTrack’s organism table); the graph covers every release from the organism’s first release in IDTrack up to it, on all its assemblies.</p></li>
 <li><p><strong>External YAML</strong>: every supported organism ships a default; a <code class="docutils literal notranslate"><span class="pre">*_externals_modified.yml</span></code> in your local repository overrides it. If a graph build warns that releases have no entry in the YAML, extend the file (Part 2, section 2.6).</p></li>
-<li><p><strong>Blocked MySQL ports</strong>: set <code class="docutils literal notranslate"><span class="pre">IDTRACK_ENSEMBL_ACCESS=https</span></code> to skip MySQL entirely (same rows and values; over HTTPS a text column holding only digit strings is read as numbers).</p></li>
+<li><p><strong>Blocked MySQL ports</strong>: set <code class="docutils literal notranslate"><span class="pre">IDTRACK_ENSEMBL_ACCESS=https</span></code> to skip MySQL entirely (the same tables, rows and values).</p></li>
 </ol>
 <blockquote>
 <div><p><strong>Tip:</strong> For a deeper checklist (including diagnostics helpers), see Part 7.3 in <code class="docutils literal notranslate"><span class="pre">07_advanced_topics.ipynb</span></code>.</p>
