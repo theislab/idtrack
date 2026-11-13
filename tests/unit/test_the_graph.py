@@ -22,21 +22,6 @@ class TestTheGraphInitialization:
         assert len(graph.nodes()) == 0
         assert len(graph.edges()) == 0
 
-    def test_inherits_from_multidigraph(self):
-        """Test TheGraph inherits from MultiDiGraph."""
-        from idtrack._the_graph import TheGraph
-
-        graph = TheGraph()
-        assert isinstance(graph, nx.MultiDiGraph)
-
-    def test_has_logger(self):
-        """Test TheGraph has a logger."""
-        from idtrack._the_graph import TheGraph
-
-        graph = TheGraph()
-        assert hasattr(graph, "log")
-        assert graph.log is not None
-
     def test_available_forms_initially_none(self):
         """Test available_forms is None initially."""
         from idtrack._the_graph import TheGraph
@@ -280,11 +265,11 @@ class TestIsPointInRange:
         assert TheGraph.is_point_in_range(lor, 7) is False
 
 
-class TestNodeNameAlternatives:
-    """Test node_name_alternatives method."""
+class TestResolveName:
+    """Test how a user's string is matched to a node of a graph made by hand."""
 
     def test_exact_match(self):
-        """Test exact match returns node."""
+        """An exact node name is itself."""
         from idtrack._db import DB
         from idtrack._the_graph import TheGraph
 
@@ -293,31 +278,24 @@ class TestNodeNameAlternatives:
         graph.graph["genome_assembly"] = 38
         graph.graph["confident_for_release"] = [100, 110]
 
-        # Need to build lower_chars_graph cache
-        _ = graph.lower_chars_graph
-
-        result, was_converted = graph.node_name_alternatives("ENSG00000141510")
-        assert result == "ENSG00000141510"
-        assert was_converted is False
+        assert graph.resolve_name("ENSG00000141510") == ("ENSG00000141510", "exact")
 
     def test_case_insensitive_match(self):
-        """Test case-insensitive matching."""
+        """A name in another letter case is matched and reported as such."""
         from idtrack._db import DB
         from idtrack._the_graph import TheGraph
 
         graph = TheGraph()
+        graph.add_node("ENSG00000141510", **{DB.node_type_str: "ensembl_gene"})
         graph.add_node("TP53", **{DB.node_type_str: "external"})
         graph.graph["genome_assembly"] = 38
         graph.graph["confident_for_release"] = [100, 110]
 
-        _ = graph.lower_chars_graph
-
-        result, was_converted = graph.node_name_alternatives("tp53")
-        assert result == "TP53"
-        assert was_converted is True
+        assert graph.resolve_name("tp53") == ("TP53", "case")
+        assert graph.resolve_name("ensg00000141510") == ("ENSG00000141510", "case")
 
     def test_not_found(self):
-        """Test node not found returns None."""
+        """A string that is no node in any spelling matches nothing."""
         from idtrack._db import DB
         from idtrack._the_graph import TheGraph
 
@@ -326,71 +304,28 @@ class TestNodeNameAlternatives:
         graph.graph["genome_assembly"] = 38
         graph.graph["confident_for_release"] = [100, 110]
 
-        _ = graph.lower_chars_graph
+        assert graph.resolve_name("NONEXISTENT") == (None, None)
 
-        result, was_converted = graph.node_name_alternatives("NONEXISTENT")
-        assert result is None
-        assert was_converted is False
-
-
-class TestLowerCharsGraph:
-    """Test lower_chars_graph cached property."""
-
-    def test_builds_lowercase_mapping(self):
-        """Test lowercase mapping is built correctly."""
-        from idtrack._db import DB
-        from idtrack._the_graph import TheGraph
-
-        graph = TheGraph()
-        graph.add_node("ENSG00000141510", **{DB.node_type_str: "ensembl_gene"})
-        graph.add_node("TP53", **{DB.node_type_str: "external"})
-
-        lower_map = graph.lower_chars_graph
-
-        assert "ensg00000141510" in lower_map
-        assert "tp53" in lower_map
-        assert lower_map["ensg00000141510"] == "ENSG00000141510"
-        assert lower_map["tp53"] == "TP53"
-
-    def test_caching(self):
-        """Test lower_chars_graph is cached."""
+    def test_names_equal_in_lower_case_are_reported_by_the_store(self):
+        """Two nodes that differ only in letter case are what a build refuses; the store names them."""
         from idtrack._db import DB
         from idtrack._the_graph import TheGraph
 
         graph = TheGraph()
         graph.add_node("TEST", **{DB.node_type_str: "external"})
+        graph.add_node("Test", **{DB.node_type_str: "external"})
 
-        map1 = graph.lower_chars_graph
-        map2 = graph.lower_chars_graph
-
-        assert map1 is map2
+        assert graph.freeze()._frozen().lower_collisions() == [("TEST", "Test")]
 
 
-class TestCombinedEdges:
-    """Test combined_edges cached property."""
+class TestCombined:
+    """Test the per-node summary of cross-reference edges."""
 
-    def test_combined_edges_with_mock_graph(self, mock_the_graph):
-        """Test combined_edges property with mock graph."""
-        # The mock_the_graph fixture creates a graph with edges
-        # Test that combined_edges runs without error
-        combined = mock_the_graph.combined_edges
-        assert isinstance(combined, dict)
-
-
-class TestGraphMetadata:
-    """Test graph metadata handling."""
-
-    def test_graph_attributes(self, mock_the_graph):
-        """Test graph-level attributes."""
-        assert "genome_assembly" in mock_the_graph.graph
-        assert "confident_for_release" in mock_the_graph.graph
-        assert mock_the_graph.graph["genome_assembly"] == 38
-
-    def test_confident_for_release_is_list(self, mock_the_graph):
-        """Test confident_for_release is a list."""
-        releases = mock_the_graph.graph["confident_for_release"]
-        assert isinstance(releases, list)
-        assert all(isinstance(r, int) for r in releases)
+    def test_combined_with_mock_graph(self, mock_the_graph):
+        """An external id and a base gene id are summed over the edges that leave them, a gene over those that enter."""
+        assert mock_the_graph.combined("TP53") == {"HGNC Symbol": {38: {110}}}
+        assert mock_the_graph.combined("ENSG00000141510") == {"base_ensembl_gene": {38: {70, 80, 110}}}
+        assert set(mock_the_graph.combined("ENSG00000141510.15")) == {"assembly_38_ensembl_gene"}
 
 
 class TestHyperconnectiveNodes:
@@ -410,58 +345,79 @@ class TestHyperconnectiveNodes:
         hcn = graph.hyperconnective_nodes
         assert len(hcn) == 0
 
-    def test_identifies_high_degree_nodes(self):
-        """Test high-degree nodes are identified."""
+    def test_id_shared_by_many_genes_at_once_is_hyperconnective(self):
+        """An external id linked to more genes than the threshold in one release is hyper-connective."""
         from idtrack._db import DB
         from idtrack._the_graph import TheGraph
 
-        graph = TheGraph()
-        # Add a hyperconnective external node
-        hub = "HUB_NODE"
-        graph.add_node(hub, **{DB.node_type_str: DB.nts_external})
+        graph = TheGraph(genome_assembly=38, confident_for_release=[100, 101])
+        threshold = TheGraph.genes_at_once_threshold
+        for name, genes in (("FAMILY", threshold + 1), ("PAIR", threshold)):
+            graph.add_node(name, **{DB.node_type_str: DB.nts_external})
+            for i in range(genes):
+                target = f"{name}GENE{i}.1"
+                graph.add_node(target, **{DB.node_type_str: "ensembl_gene"})
+                graph.add_edge(name, target, **{DB.connection_dict: {"DB1": {38: {100}}}})
 
-        # Add many outgoing edges (more than threshold)
-        for i in range(DB.hyperconnecting_threshold + 10):
-            target = f"TARGET_{i}"
-            graph.add_node(target, **{DB.node_type_str: "ensembl_gene"})
-            graph.add_edge(hub, target)
+        assert graph.hyperconnective_nodes == {"FAMILY": threshold + 1}
+        assert graph.genes_linked_at_once("PAIR") == threshold
+        assert graph.shared_external_ids == {"FAMILY": threshold + 1, "PAIR": threshold}
 
-        hcn = graph.hyperconnective_nodes
-        assert hub in hcn
-        assert hcn[hub] > DB.hyperconnecting_threshold
-
-
-class TestGetExternalDatabaseNodes:
-    """Test get_external_database_nodes method."""
-
-    def test_method_exists(self):
-        """Test get_external_database_nodes method exists."""
+    def test_threshold_is_read_when_the_nodes_are_asked_for(self, monkeypatch):
+        """Another threshold takes effect on a graph that exists already (the counts are kept, not the verdict)."""
+        from idtrack._db import DB
         from idtrack._the_graph import TheGraph
 
-        graph = TheGraph()
-        assert hasattr(graph, "get_external_database_nodes")
-        assert callable(graph.get_external_database_nodes)
+        graph = TheGraph(genome_assembly=38, confident_for_release=[100])
+        graph.add_node("TWO", **{DB.node_type_str: DB.nts_external})
+        for i in range(2):
+            graph.add_node(f"GENE{i}.1", **{DB.node_type_str: "ensembl_gene"})
+            graph.add_edge("TWO", f"GENE{i}.1", **{DB.connection_dict: {"DB1": {38: {100}}}})
 
-    def test_returns_set(self):
-        """Test method returns a set for valid graph."""
+        assert graph.hyperconnective_nodes == {}
+        monkeypatch.setattr(TheGraph, "genes_at_once_threshold", 1)
+        assert graph.hyperconnective_nodes == {"TWO": 2}
+
+    def test_versions_and_years_do_not_make_an_id_hyperconnective(self):
+        """Many versions of one gene are one gene; genes of different releases are one at a time."""
+        from idtrack._db import DB
         from idtrack._the_graph import TheGraph
 
-        graph = TheGraph()
-        # Empty graph should return empty set
-        result = graph.get_external_database_nodes("HGNC Symbol")
-        assert isinstance(result, set)
+        graph = TheGraph(genome_assembly=38, confident_for_release=list(range(60, 100)))
+        graph.add_node("SYMBOL", **{DB.node_type_str: DB.nts_external})
+        graph.add_node("FAMILY", **{DB.node_type_str: DB.nts_external})
+        graph.add_node("MOVING", **{DB.node_type_str: DB.nts_external})
+        for i in range(30):
+            for target in (f"GENE.{i + 1}", f"MEMBER{i}.1", f"OTHER{i}.1"):
+                graph.add_node(target, **{DB.node_type_str: "ensembl_gene"})
+            graph.add_edge("SYMBOL", f"GENE.{i + 1}", **{DB.connection_dict: {"DB1": {38: {60 + i}}}})
+            graph.add_edge("FAMILY", f"MEMBER{i}.1", **{DB.connection_dict: {"DB1": {38: {70, 71}}}})
+            graph.add_edge("MOVING", f"OTHER{i}.1", **{DB.connection_dict: {"DB1": {38: {60 + i}}}})
+
+        assert graph.out_degree["SYMBOL"] == graph.out_degree["MOVING"] == 30
+        assert graph.genes_linked_at_once("SYMBOL") == 1
+        assert graph.genes_linked_at_once("FAMILY") == 30
+        assert graph.genes_linked_at_once("MOVING") == 1
+        assert graph.hyperconnective_nodes == {"FAMILY": 30}
+
+    def test_genes_linked_at_once_counts_a_transcript_as_its_gene(self):
+        """An id linked to two transcripts of one gene links one gene."""
+        from idtrack._db import DB
+        from idtrack._the_graph import TheGraph
+
+        graph = TheGraph(genome_assembly=38, confident_for_release=[100])
+        graph.add_node("NM_1", **{DB.node_type_str: DB.nts_external})
+        graph.add_node("GENE.1", **{DB.node_type_str: "ensembl_gene"})
+        for transcript in ("T1.1", "T2.1"):
+            graph.add_node(transcript, **{DB.node_type_str: "ensembl_transcript"})
+            graph.add_edge("NM_1", transcript, **{DB.connection_dict: {"RefSeq": {38: {100}}}})
+            graph.add_edge(transcript, "GENE.1", **{DB.connection_dict: {"ensembl_transcript": {38: {100}}}})
+
+        assert graph.genes_linked_at_once("NM_1") == 1
 
 
 class TestCalculateCaches:
     """Test calculate_caches method."""
-
-    def test_method_exists(self):
-        """Test calculate_caches method exists."""
-        from idtrack._the_graph import TheGraph
-
-        graph = TheGraph()
-        assert hasattr(graph, "calculate_caches")
-        assert callable(graph.calculate_caches)
 
     def test_empty_graph_caches(self):
         """Test calculate_caches on empty graph."""
@@ -470,9 +426,11 @@ class TestCalculateCaches:
         graph = TheGraph()
         graph.graph["confident_for_release"] = [100, 105, 110]
 
-        # Empty graph should have empty caches
-        assert graph.combined_edges == {}
-        assert len(graph.lower_chars_graph) == 0
+        # An empty graph has nothing to compute and nothing to find
+        graph.calculate_caches(for_test=False)
+        assert len(graph) == 0 and graph.is_frozen
+        assert graph.resolve_name("anything") == (None, None)
+        assert graph.available_external_databases == set()
 
 
 class TestRangesToList:
@@ -509,16 +467,3 @@ class TestRangesToList:
         assert 108 in result
         assert 109 in result
         assert 110 in result
-
-
-class TestGetTwoNodesCoincidingReleases:
-    """Test get_two_nodes_coinciding_releases method."""
-
-    def test_overlapping_releases(self, mock_the_graph):
-        """Test finding overlapping releases between two nodes."""
-        # Add test nodes with known ranges
-        # This requires proper setup of get_active_ranges_of_id
-
-        # For now, just verify the method exists and is callable
-        assert hasattr(mock_the_graph, "get_two_nodes_coinciding_releases")
-        assert callable(mock_the_graph.get_two_nodes_coinciding_releases)

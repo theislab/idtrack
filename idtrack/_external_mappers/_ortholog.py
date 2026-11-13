@@ -223,71 +223,67 @@ def run_muscle_pairwise(
 ) -> tuple[str, str, str]:
     """Align two AA sequences via gget.muscle.
 
+    ``gget.muscle`` returns nothing: it writes the alignment as aligned FASTA to the file named by ``out`` (without
+    ``out`` it only prints a coloured view of it). The two sequences are therefore written to a temporary folder,
+    aligned into a file beside them, and the file is read back.
+
     Args:
         seq1: Amino-acid sequence for the first protein.
         seq2: Amino-acid sequence for the second protein.
-        name1: Sequence name for the first protein (used in FASTA headers).
-        name2: Sequence name for the second protein (used in FASTA headers).
+        name1: Sequence name for the first protein (used in FASTA headers; no white space).
+        name2: Sequence name for the second protein (used in FASTA headers; no white space).
         super5: Whether to enable MUSCLE super5 mode.
 
     Returns:
-        tuple[str, str, str]: ``(aligned_seq1, aligned_seq2, raw_clustal_text)``.
+        tuple[str, str, str]: ``(aligned_seq1, aligned_seq2, aligned_fasta_text)``: the two sequences with gaps, of
+        equal length, and the alignment as MUSCLE wrote it.
 
     Raises:
-        RuntimeError: If MUSCLE output cannot be parsed or does not contain the expected sequence names.
+        RuntimeError: If MUSCLE wrote no alignment, or the alignment does not hold the two sequence names.
     """
-    fasta_text = f">{name1}\n{seq1}\n>{name2}\n{seq2}\n"
-
-    with tempfile.NamedTemporaryFile("w", suffix=".fa", delete=False) as fh:
-        path = fh.name
-        fh.write(fasta_text)
-
     gget, _, _ = _require_ortholog_deps()
-    try:
-        clustal = gget.muscle(path, super5=super5)
-    finally:
-        try:
-            os.remove(path)
-        except OSError:
-            pass
+    with tempfile.TemporaryDirectory(prefix="idtrack_muscle_") as folder:
+        fasta_path = os.path.join(folder, "pair.fa")
+        aligned_path = os.path.join(folder, "pair.afa")
+        with open(fasta_path, "w") as fh:
+            fh.write(f">{name1}\n{seq1}\n>{name2}\n{seq2}\n")
+        gget.muscle(fasta_path, super5=super5, out=aligned_path)
+        if not os.path.isfile(aligned_path):
+            raise RuntimeError(f"MUSCLE wrote no alignment for {name1}/{name2}.")
+        with open(aligned_path) as fh:
+            aligned_fasta = fh.read()
 
-    aligned = parse_clustal_alignment(clustal)
+    aligned = parse_aligned_fasta(aligned_fasta)
     if name1 not in aligned or name2 not in aligned:
         raise RuntimeError(f"Could not find {name1}/{name2} sequences in MUSCLE output.")
+    if len(aligned[name1]) != len(aligned[name2]):
+        raise RuntimeError(f"MUSCLE output for {name1}/{name2} holds sequences of unequal aligned length.")
 
-    return aligned[name1], aligned[name2], clustal
+    return aligned[name1], aligned[name2], aligned_fasta
 
 
-def parse_clustal_alignment(clustal_text: str) -> dict[str, str]:
-    """Parse a minimal ClustalW/MUSCLE text alignment.
+def parse_aligned_fasta(fasta_text: str) -> dict[str, str]:
+    """Parse an aligned FASTA text (``.afa``), as MUSCLE writes it.
 
     Args:
-        clustal_text: Raw ClustalW/MUSCLE text output.
+        fasta_text: The text: per sequence a header line ``>name ...`` and one or more lines of residues and gaps.
 
     Returns:
-        Mapping of ``{sequence_name: aligned_sequence}``.
+        Mapping of ``{sequence_name: aligned_sequence}``; the name is the header up to the first white space.
     """
     seqs: dict[str, list[str]] = {}
-
-    for line in clustal_text.splitlines():
-        line = line.rstrip()
+    name: str | None = None
+    for line in fasta_text.splitlines():
+        line = line.strip()
         if not line:
             continue
-        if line.startswith("CLUSTAL") or line.startswith("MUSCLE"):
-            continue
-
-        parts = line.split()
-        if len(parts) < 2:
-            continue
-        name, frag = parts[0], parts[1]
-
-        # Skip consensus lines of just *:. etc.
-        if all(c in "*:." for c in name):
-            continue
-
-        seqs.setdefault(name, []).append(frag)
-
-    return {name: "".join(frags) for name, frags in seqs.items()}
+        if line.startswith(">"):
+            fields = line[1:].split()
+            name = fields[0] if fields else ""
+            seqs.setdefault(name, [])
+        elif name is not None:
+            seqs[name].append(line)
+    return {key: "".join(parts) for key, parts in seqs.items()}
 
 
 # ------------------------ scoring ------------------------ #
@@ -575,7 +571,7 @@ def align_ortholog_pair_with_features(
 
         # MUSCLE alignment
         try:
-            aligned_q, aligned_t, clustal = run_muscle_pairwise(
+            aligned_q, aligned_t, aligned_fasta = run_muscle_pairwise(
                 query_seq_aa,
                 target_seq_aa,
                 name1=query_ensembl_id,
@@ -630,7 +626,7 @@ def align_ortholog_pair_with_features(
             "target_species_species": species,
             "alignment_aligned_query": aligned_q,
             "alignment_aligned_target": aligned_t,
-            "alignment_raw_clustal": clustal,
+            "alignment_aligned_fasta": aligned_fasta,
         }
 
         # Scalar alignment scores

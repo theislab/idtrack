@@ -178,6 +178,27 @@ def _escape(text: str) -> str:
     return html.escape(text) if text else ""
 
 
+def _as_terminal(text: str) -> str:
+    """Return *text* as a terminal shows it: on each line, what follows the last carriage return.
+
+    Progress bars (tqdm) redraw a line after a carriage return; keeping every redraw would fill the block, and a raw
+    carriage return in the HTML breaks the reStructuredText that nbsphinx makes of the notebook.
+
+    Args:
+        text: Captured output.
+
+    Returns:
+        The output with each line reduced to its last redraw.
+    """
+    if "\r" not in text:
+        return text
+    lines = []
+    for line in text.split("\n"):
+        redraws = [part for part in line.split("\r") if part]
+        lines.append(redraws[-1] if redraws else "")
+    return "\n".join(lines)
+
+
 def _render_collapsed_block(summary: str, content: str, *, is_open: bool = False) -> str:
     """Render a `<details>` HTML block.
 
@@ -283,9 +304,9 @@ class CollapseMagics(Magics):
             """Build the HTML content for inside the <pre> block."""
             parts: list[str] = []
 
-            log_text = log_buf.getvalue()
-            stdout_text = stdout_buf.getvalue()
-            stderr_text = stderr_buf.getvalue()
+            log_text = _as_terminal(log_buf.getvalue())
+            stdout_text = _as_terminal(stdout_buf.getvalue())
+            stderr_text = _as_terminal(stderr_buf.getvalue())
 
             # In preview mode, truncate to last N lines
             if preview:

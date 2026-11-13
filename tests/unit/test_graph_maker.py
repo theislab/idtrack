@@ -34,6 +34,7 @@ def _synthetic_graph_mysql() -> _SyntheticGraphMySQL:
             "gene_id": [1, 2, 4],
             "stable_id": ["ENSG00000000001", "ENSG00000000002", "ENSG00000000004"],
             "version": [1, 1, 1],
+            "seq_region_id": [1, 1, 1],
         }
     )
     gene_r101 = pd.DataFrame(
@@ -41,6 +42,7 @@ def _synthetic_graph_mysql() -> _SyntheticGraphMySQL:
             "gene_id": [1, 3, 5],
             "stable_id": ["ENSG00000000001", "ENSG00000000003", "ENSG00000000005"],
             "version": [2, 1, 1],
+            "seq_region_id": [1, 1, 1],
         }
     )
 
@@ -68,9 +70,14 @@ def _synthetic_graph_mysql() -> _SyntheticGraphMySQL:
         }
     )
 
+    # every gene lies on sequence region 1, a chromosome of the reference sequence
+    regions = {
+        "attrib_type": pd.DataFrame({"attrib_type_id": [6, 16], "code": ["toplevel", "non_ref"]}),
+        "seq_region_attrib": pd.DataFrame({"seq_region_id": [1], "attrib_type_id": [6]}),
+    }
     tables_by_release = {
-        100: {"gene": gene_r100, "stable_id_event": stable_id_event, "mapping_session": mapping_session},
-        101: {"gene": gene_r101, "stable_id_event": stable_id_event, "mapping_session": mapping_session},
+        100: {"gene": gene_r100, "stable_id_event": stable_id_event, "mapping_session": mapping_session, **regions},
+        101: {"gene": gene_r101, "stable_id_event": stable_id_event, "mapping_session": mapping_session, **regions},
     }
     return _SyntheticGraphMySQL(tables_by_release=tables_by_release, available_releases=[100, 101])
 
@@ -151,18 +158,12 @@ def synthetic_graph_dm(tmp_path, monkeypatch) -> DatabaseManager:
     )
 
 
-def test_import_graph_maker():
-    """Import smoke test for GraphMaker."""
-    assert GraphMaker is not None
-
-
 def test_construct_graph_form_builds_time_travel_edges(synthetic_graph_dm):
     """Construct a per-form graph and validate backbone edges."""
     gm = GraphMaker(synthetic_graph_dm)
     g = gm.construct_graph_form(narrow=False, db_manager=synthetic_graph_dm.change_form("gene"))
 
     assert isinstance(g, TheGraph)
-    assert g.graph["version_info"] == "with_version"
 
     assert "ENSG00000000001.1" in g.nodes
     assert "ENSG00000000001.2" in g.nodes
@@ -174,7 +175,10 @@ def test_construct_graph_form_builds_time_travel_edges(synthetic_graph_dm):
     edge_data = next(iter(g.get_edge_data("ENSG00000000002.1", "ENSG00000000003.1").values()))
     assert edge_data["old_release"] == 100
     assert edge_data["new_release"] == 101
-    assert "mapping_session_id" in edge_data  # narrow=False path
+    # narrow=False path: the session metadata is in the report of the history, not on every edge.
+    (session,) = g.graph["history"]["sessions"]
+    assert session["mapping_session_id"] == 1 and session["used"] == [100, 101]
+    assert session["new_db_name"] == "homo_sapiens_core_101_38"
 
     # Version-change edge is created from df_w lookup (ENSG1.1 → ENSG1.2).
     assert g.has_edge("ENSG00000000001.1", "ENSG00000000001.2")
@@ -183,9 +187,10 @@ def test_construct_graph_form_builds_time_travel_edges(synthetic_graph_dm):
     assert any(data.get("Version") == DB.no_old_node_id for _, data in g.nodes(data=True))
     assert any(data.get("Version") == DB.no_new_node_id for _, data in g.nodes(data=True))
 
-    # Latest-release nodes should be labelled.
-    assert g.nodes["ENSG00000000001.2"]["is_latest"] is True
-    assert g.nodes["ENSG00000000001.1"]["is_latest"] is False
+    # Ids of the latest release carry the self-loop to infinity; earlier versions do not.
+    assert g.get_edge_data("ENSG00000000001.2", "ENSG00000000001.2")[0]["new_release"] == float("inf")
+    assert not g.has_edge("ENSG00000000001.1", "ENSG00000000001.1")
+    assert g.get_edge_data("ENSG00000000001.1", "ENSG00000000001.2")[0]["weight"] == 0.8
 
 
 def test_construct_graph_form_handles_clean_handoff_assemblies(tmp_path, monkeypatch):
@@ -325,9 +330,10 @@ def test_construct_graph_adds_base_nodes_and_merges_case_insensitive_externals(s
     assert g.nodes["ENSG00000000001"][DB.node_type_str] == DB.nts_base_ensembl["gene"]
     assert g.has_edge("ENSG00000000001", "ENSG00000000001.1") or g.has_edge("ENSG00000000001", "ENSG00000000001.2")
 
-    # External IDs differing only by case should be merged.
-    assert len({"TP53", "tp53"} & set(g.nodes)) == 1
-    ext_node = "TP53" if "TP53" in g.nodes else "tp53"
+    # External IDs differing only by case are one node, named with the upper-case spelling here (both spellings
+    # occur in the latest release with one link each).
+    assert "TP53" in g.nodes and "tp53" not in g.nodes
+    ext_node = "TP53"
 
     # External edges carry the connection dictionary and derived available releases.
     targets = [t for t in g.neighbors(ext_node) if t.startswith("ENSG")]
@@ -390,14 +396,14 @@ def test_construct_graph_without_externals_yaml_fails_before_building(synthetic_
     def _must_not_run(*args, **kwargs):
         raise AssertionError("the history graph must not be built without an externals YAML")
 
-    monkeypatch.setattr(GraphMaker, "construct_graph_form", _must_not_run)
+    monkeypatch.setattr(GraphMaker, "history", _must_not_run)
     gm = GraphMaker(synthetic_graph_dm)
     with pytest.raises(FileNotFoundError, match="create_template_yaml"):
         gm.construct_graph(narrow=True, form_list=["gene"], narrow_external=True)
 
 
-def test_get_graph_roundtrips_pickle_cache(synthetic_graph_dm):
-    """Ensure get_graph writes and reloads a cached pickle."""
+def test_get_graph_roundtrips_graph_file(synthetic_graph_dm):
+    """Ensure get_graph writes the graph file and reads it back."""
     gm = GraphMaker(synthetic_graph_dm)
 
     file_path = gm.create_file_name(narrow=True, form_list=["gene"])
@@ -405,7 +411,6 @@ def test_get_graph_roundtrips_pickle_cache(synthetic_graph_dm):
         narrow=True,
         create_even_if_exist=True,
         save_after_calculation=True,
-        overwrite_even_if_exist=True,
         form_list=["gene"],
     )
     assert os.path.exists(file_path)
@@ -417,32 +422,19 @@ def test_get_graph_roundtrips_pickle_cache(synthetic_graph_dm):
         form_list=["gene"],
     )
     assert isinstance(g2, TheGraph)
-    assert set(g1.nodes) == set(g2.nodes)
+    assert list(g1.nodes) == list(g2.nodes)
+    assert all(repr(g1.get_edge_data(u, v)) == repr(g2.get_edge_data(u, v)) for u in g1.nodes for v in g1.neighbors(u))
+    assert g2.manifest == g1.manifest
 
     with pytest.raises(FileNotFoundError):
-        GraphMaker.read_exported(os.path.join(synthetic_graph_dm.local_repository, "does-not-exist.pickle"))
+        TheGraph.load(os.path.join(synthetic_graph_dm.local_repository, "does-not-exist.npz"))
 
 
-def test_remove_non_gene_trees_prunes_transcript_history():
-    """Ensure non-gene temporal trees are pruned."""
-    g = TheGraph()
-    t1 = "ENST00000000010.1"
-    t2 = "ENST00000000020.1"
-    t_void = "ENST00000000030.Void"
-    gene = "ENSG00000000001.1"
-
-    g.add_node(t1, **{DB.node_type_str: DB.nts_ensembl["transcript"], "Version": "1"})
-    g.add_node(t2, **{DB.node_type_str: DB.nts_ensembl["transcript"], "Version": "1"})
-    g.add_node(t_void, **{DB.node_type_str: DB.nts_ensembl["transcript"], "Version": DB.no_old_node_id})
-    g.add_node(gene, **{DB.node_type_str: DB.nts_ensembl["gene"], "Version": "1"})
-
-    g.add_edge(t1, t2)
-    g.add_edge(t1, gene)
-
-    pruned = GraphMaker.remove_non_gene_trees(g)
-    assert t_void not in pruned.nodes
-    assert not pruned.has_edge(t1, t2)
-    assert pruned.has_edge(t1, gene)
+def test_get_graph_without_saving_writes_nothing(synthetic_graph_dm):
+    """save_after_calculation=False leaves the local repository without a graph file."""
+    gm = GraphMaker(synthetic_graph_dm)
+    gm.get_graph(narrow=True, save_after_calculation=False, form_list=["gene"])
+    assert GraphMaker.list_graph_files(synthetic_graph_dm.local_repository) == []
 
 
 def test_graph_maker_requires_latest_release(synthetic_graph_dm):
@@ -452,41 +444,7 @@ def test_graph_maker_requires_latest_release(synthetic_graph_dm):
         GraphMaker(older)
 
 
-class TestGraphMakerPerformance:
-    """Test performance-related functionality."""
-
-    def test_uses_efficient_data_structures(self):
-        """Test efficient data structures are used."""
-        import networkx as nx
-
-        from idtrack._the_graph import TheGraph
-
-        graph = TheGraph()
-        # MultiDiGraph is appropriate for this use case
-        assert isinstance(graph, nx.MultiDiGraph)
-
-
-class TestGraphMakerIntegrationPoints:
-    """Test integration with other modules."""
-
-    def test_uses_database_manager(self, mock_database_manager):
-        """Test uses DatabaseManager correctly."""
-        assert mock_database_manager.organism == "homo_sapiens"
-
-    def test_produces_the_graph(self):
-        """Test produces TheGraph instance."""
-        from idtrack._the_graph import TheGraph
-
-        graph = TheGraph()
-        assert isinstance(graph, TheGraph)
-
-    def test_uses_db_constants(self):
-        """Test uses DB constants."""
-        from idtrack._db import DB
-
-        assert DB.node_type_str == "node_type"
-
-
+@pytest.mark.wrong_argument_type  # the manager is a stand-in that only carries the attributes the check reads
 def test_graph_maker_explains_how_to_build_an_older_snapshot():
     """A manager anchored before the end of its window is refused with the call that builds that snapshot."""
     from types import SimpleNamespace

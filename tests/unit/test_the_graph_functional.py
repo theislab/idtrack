@@ -102,45 +102,22 @@ class TestTheGraphCachedPropertiesFunctional:
 
         return graph
 
-    def test_lower_chars_graph_computed(self, populated_graph):
-        """Test lower_chars_graph cached property is computed correctly."""
-        # Access the cached property
-        lower_map = populated_graph.lower_chars_graph
+    def test_names_are_found_in_any_letter_case(self, populated_graph):
+        """A node is found by its name in another letter case, and the match says so."""
+        assert populated_graph.resolve_name("tp53") == ("TP53", "case")
+        assert populated_graph.resolve_name("brca1") == ("BRCA1", "case")
+        assert populated_graph.resolve_name("ensg00000141510.15") == ("ENSG00000141510.15", "case")
+        assert populated_graph.resolve_name("TP53") == ("TP53", "exact")
 
-        # Verify structure
-        assert isinstance(lower_map, dict)
-        assert len(lower_map) > 0
+    def test_combined_of_external_and_base_nodes(self, populated_graph):
+        """External ids and base gene ids are summed over the edges that leave them."""
+        assert set(populated_graph.combined("TP53")) == {"HGNC Symbol"}
+        assert set(populated_graph.combined("BRCA1")) == {"HGNC Symbol"}
+        assert set(populated_graph.combined("ENSG00000141510")) == {"base_ensembl_gene"}
 
-        # Verify lowercase mapping works
-        assert lower_map["tp53"] == "TP53"
-        assert lower_map["brca1"] == "BRCA1"
-        assert lower_map["ensg00000141510.15"] == "ENSG00000141510.15"
-
-    def test_combined_edges_computed(self, populated_graph):
-        """Test combined_edges cached property is computed correctly."""
-        # Access the cached property
-        combined = populated_graph.combined_edges
-
-        # Verify structure
-        assert isinstance(combined, dict)
-
-        # External nodes should be in combined_edges
-        assert "TP53" in combined
-        assert "BRCA1" in combined
-
-        # Base ensembl nodes should be in combined_edges
-        assert "ENSG00000141510" in combined
-
-    def test_combined_edges_genes_computed(self, populated_graph):
-        """Test combined_edges_genes cached property is computed correctly."""
-        # Access the cached property
-        combined_genes = populated_graph.combined_edges_genes
-
-        # Verify structure
-        assert isinstance(combined_genes, dict)
-
-        # Gene nodes should be in combined_edges_genes
-        assert "ENSG00000141510.15" in combined_genes or "ENSG00000141510.1" in combined_genes
+    def test_combined_of_a_gene(self, populated_graph):
+        """A gene is summed over the edges that enter it, under the gene type of each assembly."""
+        assert set(populated_graph.combined("ENSG00000141510.15")) == {"assembly_38_ensembl_gene"}
 
     def test_hyperconnective_nodes_computed(self, populated_graph):
         """Test hyperconnective_nodes cached property is computed correctly."""
@@ -150,8 +127,8 @@ class TestTheGraphCachedPropertiesFunctional:
         # Verify structure
         assert isinstance(hyperconn, dict)
 
-        # With our small test graph, no nodes should exceed the threshold
-        # (DB.hyperconnecting_threshold is typically 100+)
+        # No external id of the small test graph is linked to more genes at once than
+        # `TheGraph.genes_at_once_threshold`.
         assert len(hyperconn) == 0
 
     def test_rev_property(self, populated_graph):
@@ -168,19 +145,31 @@ class TestTheGraphCachedPropertiesFunctional:
         assert rev_graph.has_edge("ENSG00000141510.15", "TP53")
 
     def test_calculate_caches_runs(self, populated_graph):
-        """Test calculate_caches method executes without error."""
+        """calculate_caches freezes the graph; no table over all nodes is kept."""
         populated_graph.calculate_caches(for_test=False)
-        assert "combined_edges" in populated_graph.__dict__
-        assert "get_active_ranges_of_id" in populated_graph.__dict__
+        assert populated_graph.is_frozen
+        tables = [
+            k for k, v in populated_graph.__dict__.items() if isinstance(v, dict) and len(v) >= len(populated_graph)
+        ]
+        assert [k for k in tables if k not in ("graph",)] == []
 
     def test_calculate_caches_with_test_flag(self, populated_graph):
-        """Test calculate_caches with for_test=True."""
+        """calculate_caches with for_test=True also computes the table of the integrity tests."""
         populated_graph.calculate_caches(for_test=True)
-        assert "node_trios" in populated_graph.__dict__
+        table = populated_graph.available_releases_given_database_assembly
+        assert all(isinstance(key, tuple) and len(key) == 2 for key in table)
+
+    def test_frozen_graph_refuses_changes(self, populated_graph):
+        """After the first derived value nothing can be changed, so nothing derived can be stale."""
+        _ = populated_graph.combined("TP53")
+        with pytest.raises(nx.NetworkXError, match="frozen"):
+            populated_graph.add_node("LATE", **{DB.node_type_str: DB.nts_external})
+        with pytest.raises(nx.NetworkXError, match="frozen"):
+            populated_graph.add_edge("TP53", "ENSG00000141510.1")
 
 
-class TestNodeNameAlternatives:
-    """Test node_name_alternatives method."""
+class TestResolveNameFunctional:
+    """Test `resolve_name` on a graph with several node types."""
 
     @pytest.fixture
     def graph_with_nodes(self):
@@ -195,43 +184,31 @@ class TestNodeNameAlternatives:
         graph.add_node("ENSG00000141510", **{DB.node_type_str: DB.nts_base_ensembl["gene"]})
         graph.add_node("P04637", **{DB.node_type_str: DB.nts_external})
 
-        # Build the lowercase cache
-        _ = graph.lower_chars_graph
-
         return graph
 
     def test_exact_match(self, graph_with_nodes):
         """Test exact identifier match."""
-        result, converted = graph_with_nodes.node_name_alternatives("TP53")
-        assert result == "TP53"
-        assert converted is False
+        assert graph_with_nodes.resolve_name("TP53") == ("TP53", "exact")
 
     def test_lowercase_match(self, graph_with_nodes):
         """Test lowercase identifier is matched."""
-        result, converted = graph_with_nodes.node_name_alternatives("tp53")
-        assert result == "TP53"
-        assert converted is True
+        assert graph_with_nodes.resolve_name("tp53") == ("TP53", "case")
 
     def test_versioned_id_match(self, graph_with_nodes):
         """Test versioned Ensembl ID match."""
-        result, converted = graph_with_nodes.node_name_alternatives("ENSG00000141510.15")
-        assert result == "ENSG00000141510.15"
-        assert converted is False
+        assert graph_with_nodes.resolve_name("ENSG00000141510.15") == ("ENSG00000141510.15", "exact")
 
     def test_unknown_identifier(self, graph_with_nodes):
         """Test unknown identifier returns None."""
-        result, converted = graph_with_nodes.node_name_alternatives("UNKNOWN_GENE_XYZ")
-        assert result is None
-        assert converted is False
+        assert graph_with_nodes.resolve_name("UNKNOWN_GENE_XYZ") == (None, None)
 
     def test_empty_string(self, graph_with_nodes):
         """Test empty string returns None."""
-        result, converted = graph_with_nodes.node_name_alternatives("")
-        assert result is None
+        assert graph_with_nodes.resolve_name("") == (None, None)
 
 
-class TestGetActiveRangesOfId:
-    """Test get_active_ranges_of_id cached property."""
+class TestActiveRanges:
+    """Test the release ranges of a gene, from its history edges."""
 
     @pytest.fixture
     def graph_with_releases(self):
@@ -255,12 +232,11 @@ class TestGetActiveRangesOfId:
 
         return graph
 
-    def test_get_active_ranges_computed(self, graph_with_releases):
-        """Test get_active_ranges_of_id cached property."""
-        active_ranges = graph_with_releases.get_active_ranges_of_id
-        assert isinstance(active_ranges, dict)
-        assert active_ranges["GENE.1"] == [[100, 100]]
-        assert active_ranges["GENE.2"][0][0] == 105
+    def test_active_ranges_computed(self, graph_with_releases):
+        """A version is active from the release it is entered at to the release it is left at."""
+        assert graph_with_releases.active_ranges("GENE.1") == [[100, 100]]
+        assert graph_with_releases.active_ranges("GENE.2") == [[105, float("inf")]]
+        assert graph_with_releases.is_active("GENE.2", 110) and not graph_with_releases.is_active("GENE.1", 105)
 
 
 class TestAvailableExternalDatabases:
@@ -351,12 +327,11 @@ class TestNodeTrios:
         graph._attach_included_forms(["gene"])
         return graph
 
-    def test_node_trios_computed(self, graph_for_trios):
-        """Test node_trios cached property is computed."""
-        trios = graph_for_trios.node_trios
-        assert isinstance(trios, dict)
-        assert ("DB1", 38, 100) in trios["EXT1"]
-        assert ("DB1", 38, 110) in trios["EXT1"]
+    def test_trios_computed(self, graph_for_trios):
+        """The (database, assembly, release) triples of a node come from its own edges."""
+        trios = graph_for_trios.trios("EXT1")
+        assert ("DB1", 38, 100) in trios
+        assert ("DB1", 38, 110) in trios
 
 
 class TestAttachIncludedForms:
@@ -379,61 +354,42 @@ class TestAttachIncludedForms:
         assert graph.available_forms == []
 
 
-class TestCombinedEdgesHelper:
-    """Test _combined_edges_genes_helper static method."""
+class TestCombined:
+    """Test the per-node summary of cross-reference edges."""
 
-    def test_helper_merges_correctly(self):
-        """Test _combined_edges_genes_helper merges nested dicts."""
-        # Simulate input from _combined_edges
-        input_dict = {
-            "neighbor1": {38: {100, 105}},
-            "neighbor2": {38: {105, 110}},
-        }
-
-        result = TheGraph._combined_edges_genes_helper(input_dict)
-
-        # Result should be reorganized by assembly
-        assert isinstance(result, dict)
-
-
-class TestCombinedEdgesStaticMethod:
-    """Test _combined_edges static method."""
-
-    def test_combined_edges_basic(self):
-        """Test _combined_edges with simple graph."""
-        graph = TheGraph()
-        graph.graph["genome_assembly"] = 38
-
-        # Add nodes of different types
+    def test_external_node_is_summed_per_database(self):
+        """The edges that leave an external node are summed per database and assembly."""
+        graph = TheGraph(genome_assembly=38, confident_for_release=[100, 105, 110])
         graph.add_node("EXT", **{DB.node_type_str: DB.nts_external})
-        graph.add_node("GENE", **{DB.node_type_str: DB.nts_ensembl["gene"]})
+        graph.add_node("GENE.1", **{DB.node_type_str: DB.nts_ensembl["gene"]})
+        graph.add_node("GENE.2", **{DB.node_type_str: DB.nts_ensembl["gene"]})
+        graph.add_edge("EXT", "GENE.1", **{DB.connection_dict: {"DB": {38: {100}}}})
+        graph.add_edge("EXT", "GENE.2", **{DB.connection_dict: {"DB": {38: {105, 110}}, "DB2": {37: {105}}}})
 
-        # Add edge between different types
-        graph.add_edge("EXT", "GENE", **{DB.connection_dict: {"DB": {38: {100}}}})
+        assert graph.combined("EXT") == {"DB": {38: {100, 105, 110}}, "DB2": {37: {105}}}
 
-        # Call static method
-        result = TheGraph._combined_edges(["EXT"], graph)
+    def test_gene_is_summed_per_assembly(self):
+        """The edges that enter a gene are reported under the gene type of each assembly."""
+        graph = TheGraph(genome_assembly=38, confident_for_release=[100, 105, 110])
+        graph.add_node("EXT", **{DB.node_type_str: DB.nts_external})
+        graph.add_node("GENE", **{DB.node_type_str: DB.nts_base_ensembl["gene"]})
+        graph.add_node("GENE.1", **{DB.node_type_str: DB.nts_ensembl["gene"]})
+        graph.add_edge("EXT", "GENE.1", **{DB.connection_dict: {"DB": {38: {100}, 37: {100, 105}}}})
+        graph.add_edge("GENE", "GENE.1", **{DB.connection_dict: {"base_ensembl_gene": {38: {100, 105}}}})
 
-        assert "EXT" in result
-        assert isinstance(result["EXT"], dict)
+        expected = {"assembly_38_ensembl_gene": {38: {100, 105}}, "assembly_37_ensembl_gene": {37: {100, 105}}}
+        assert graph.combined("GENE.1") == expected
+        assert graph.combined("GENE") == {"base_ensembl_gene": {38: {100, 105}}}
 
-    def test_combined_edges_excludes_same_type(self):
-        """Test _combined_edges excludes edges between same node types."""
-        graph = TheGraph()
-        graph.graph["genome_assembly"] = 38
+    def test_edges_between_nodes_of_one_type_are_not_summed(self):
+        """History edges are not cross-references."""
+        graph = TheGraph(genome_assembly=38, confident_for_release=[100, 101])
+        graph.add_node("GENE1.1", **{DB.node_type_str: DB.nts_ensembl["gene"]})
+        graph.add_node("GENE2.1", **{DB.node_type_str: DB.nts_ensembl["gene"]})
+        graph.add_edge("GENE1.1", "GENE2.1", weight=1.0, old_release=100, new_release=101)
 
-        # Add nodes of same type
-        graph.add_node("GENE1", **{DB.node_type_str: DB.nts_ensembl["gene"]})
-        graph.add_node("GENE2", **{DB.node_type_str: DB.nts_ensembl["gene"]})
-
-        # Add edge between same types
-        graph.add_edge("GENE1", "GENE2", **{DB.connection_dict: {DB.nts_ensembl["gene"]: {38: {100}}}})
-
-        # Call static method
-        result = TheGraph._combined_edges(["GENE1"], graph)
-
-        # GENE1 should not be in result because edge is to same type
-        assert "GENE1" not in result or len(result.get("GENE1", {})) == 0
+        with pytest.raises(KeyError):
+            graph.combined("GENE1.1")
 
 
 class TestGraphInitialization:
@@ -445,7 +401,6 @@ class TestGraphInitialization:
 
         assert isinstance(graph, nx.MultiDiGraph)
         assert graph.available_forms is None
-        assert hasattr(graph, "log")
 
     def test_initialization_with_data(self):
         """Test initialization with initial data."""

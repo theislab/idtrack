@@ -1,252 +1,279 @@
 #!/usr/bin/env python3
-"""Unit tests for idtrack._utils_hdf5.
+"""Unit tests for idtrack._utils_hdf5: one immutable, atomically written HDF5 file per cached table."""
 
-These tests focus on the custom, PyTables-free HDF5 round-trip helpers used by the cache layer.
-"""
+import multiprocessing
+import os
+import signal
+import time
 
-import logging
-
+import h5py
 import numpy as np
 import pandas as pd
 import pytest
 
-from idtrack._utils_hdf5 import (
-    check_h5_key,
-    export_disk,
-    read_exported,
-    read_hdf,
-    repack_hdf5,
-    to_hdf,
-    validate_dataframe,
-)
-
-
-class TestHdf5RoundTrip:
-    """Round-trip and validation tests for the HDF5 helpers."""
-
-    def test_to_hdf_and_read_hdf_roundtrip_preserves_metadata(self, tmp_path):
-        """Round-trip a DataFrame and preserve metadata/dtypes."""
-        path = tmp_path / "roundtrip.h5"
-
-        index = pd.Index(["row1", "row2", "row3"], dtype="string", name="idx")
-        df = pd.DataFrame(
-            {
-                "int_col": [1, 2, 3],
-                "float_col": [1.5, 2.5, 3.5],
-                "bool_col": [True, False, True],
-                "string_col": ["a", pd.NA, "c"],
-                "object_col": ["x", None, "z"],
-                "cat_col": pd.Categorical(["low", "mid", "low"], categories=["low", "mid", "high"], ordered=True),
-                "dt_col": pd.to_datetime(["2020-01-01", "2020-01-02", "2020-01-03"]),
-                "td_col": pd.to_timedelta([1, 2, 3], unit="D"),
-            },
-            index=index,
-        )
-        df["int_col"] = df["int_col"].astype("int64")
-        df["float_col"] = df["float_col"].astype("float64")
-        df["bool_col"] = df["bool_col"].astype("bool")
-        df["string_col"] = df["string_col"].astype("string")
-        df["object_col"] = df["object_col"].astype("object")
-        df.columns.name = "cols"
-
-        to_hdf(path=str(path), key="/df", df=df, mode="a")
-        loaded = read_hdf(path=str(path), key="/df", mode="r")
-
-        # Text of the default kind comes back in the default text dtype of the running pandas with NaN for missing
-        # values (what pandas itself gives for fresh text); `string` stays `string` with pd.NA.
-        expected = df.copy()
-        expected["object_col"] = pd.Series(["x", np.nan, "z"], index=index, dtype=pd.Series(["a"]).dtype)
-
-        pd.testing.assert_frame_equal(loaded, expected, check_dtype=True)
-        assert loaded.columns.name == "cols"
-        assert loaded.index.name == "idx"
-
-    def test_validate_dataframe_rejects_bad_object_column(self):
-        """validate_dataframe should reject mixed-type object columns."""
-        df = pd.DataFrame({"bad": pd.Series(["ok", 1], dtype="object")})
-        with pytest.raises(ValueError, match="Object column"):
-            validate_dataframe(df)
-
-
-class TestHdf5CacheUtilities:
-    """Tests for cache-oriented HDF5 convenience functions."""
-
-    def test_check_h5_key_missing_file_is_false(self, tmp_path):
-        """check_h5_key should be False for missing files."""
-        assert check_h5_key(str(tmp_path / "missing.h5"), "/df") is False
-
-    def test_export_disk_and_read_exported_roundtrip(self, tmp_path):
-        """export_disk and read_exported should round-trip DataFrames."""
-        path = tmp_path / "cache.h5"
-        logger = logging.getLogger("test_utils_hdf5")
-
-        df1 = pd.DataFrame({"a": [1, 2, 3]}, index=pd.Index([10, 11, 12], name="idx"))
-        export_disk(df=df1, hierarchy="/df", file_path=str(path), overwrite=False, logger=logger)
-        assert check_h5_key(str(path), "/df") is True
-
-        loaded = read_exported(hierarchy="/df", file_path=str(path))
-        pd.testing.assert_frame_equal(loaded, df1)
-
-        # No overwrite → keep the original.
-        df2 = pd.DataFrame({"a": [4, 5, 6]}, index=pd.Index([10, 11, 12], name="idx"))
-        export_disk(df=df2, hierarchy="/df", file_path=str(path), overwrite=False, logger=logger)
-        loaded_again = read_exported(hierarchy="/df", file_path=str(path))
-        pd.testing.assert_frame_equal(loaded_again, df1)
-
-        # Overwrite replaces the key.
-        export_disk(df=df2, hierarchy="/df", file_path=str(path), overwrite=True, logger=logger)
-        loaded_overwritten = read_exported(hierarchy="/df", file_path=str(path))
-        pd.testing.assert_frame_equal(loaded_overwritten, df2)
-
-    def test_repack_hdf5_preserves_keys(self, tmp_path):
-        """repack_hdf5 should keep existing keys readable."""
-        path = tmp_path / "repack.h5"
-        logger = logging.getLogger("test_utils_hdf5")
-
-        df = pd.DataFrame({"x": np.arange(5)})
-        export_disk(df=df, hierarchy="/df", file_path=str(path), overwrite=True, logger=logger)
-        repack_hdf5(str(path))
-
-        loaded = read_exported(hierarchy="/df", file_path=str(path))
-        pd.testing.assert_frame_equal(loaded, df)
-
-
-def test_zero_row_frame_with_string_columns_roundtrips(tmp_path):
-    """A frame with no rows and string columns (e.g. an empty `idhistory_narrow`) can be saved and read back."""
-    df = pd.DataFrame(
-        {
-            "old_stable_id": pd.Series([], dtype=object),
-            "new_stable_id": pd.Series([], dtype=object),
-            "score": pd.Series([], dtype=float),
-            "old_release": pd.Series([], dtype=float),
-        }
-    )
-    path = tmp_path / "zero.h5"
-    export_disk(df, "ens116_processed_idhistory_narrow_gene", str(path), False, logger=logging.getLogger("t"))
-    back = read_exported("ens116_processed_idhistory_narrow_gene", str(path))
-    assert list(back.columns) == list(df.columns)
-    assert len(back) == 0
-    assert back["old_stable_id"].dtype == pd.Series(["a"]).dtype  # default text dtype of the running pandas
-    assert back["score"].dtype == float
-
-    categorical = pd.DataFrame({"c": pd.Categorical([], categories=[])})
-    to_hdf(str(tmp_path / "zero_cat.h5"), "k", categorical, mode="w")
-    assert len(read_hdf(str(tmp_path / "zero_cat.h5"), "k")) == 0
+import idtrack._utils_hdf5 as hs
+from idtrack._utils_hdf5 import TableFormatError, load_table, read_table, read_table_params, write_table
 
 
 def _default_text_dtype():
     return pd.Series(["a"]).dtype
 
 
-def _text_dtypes() -> list:
-    """The three pandas text dtypes: `object`, `string` (pd.NA) and `str` (NaN; the default of pandas 3)."""
-    return [
-        pytest.param(object, id="object"),
-        pytest.param("string", id="string"),
-        pytest.param(pd.StringDtype(na_value=np.nan), id="str"),
-    ]
+def _assert_same(a: pd.DataFrame, b: pd.DataFrame):
+    assert list(a.columns) == list(b.columns)
+    assert list(a.dtypes) == list(b.dtypes)
+    assert type(a.index) is type(b.index) and a.index.equals(b.index)
+    assert a.equals(b)
 
 
-@pytest.mark.parametrize("dtype", _text_dtypes())
-def test_every_text_dtype_roundtrips_with_its_missing_values(tmp_path, dtype):
-    """Every pandas text dtype is accepted; `object`/`str` come back as the default text dtype with NaN."""
-    df = pd.DataFrame({"t": pd.Series(["ENSG1", None, "", "ENSG2"], dtype=dtype), "n": [1, 2, 3, 4]})
-    to_hdf(str(tmp_path / "t.h5"), "k", df, mode="w")
-    back = read_hdf(str(tmp_path / "t.h5"), "k")
-    assert back["t"].isna().tolist() == [False, True, False, False]
-    assert back["t"].dropna().tolist() == ["ENSG1", "", "ENSG2"]
-    if isinstance(dtype, str):
-        assert back["t"].dtype == pd.StringDtype()
-        assert back["t"].iloc[1] is pd.NA
-    else:
-        assert back["t"].dtype == _default_text_dtype()
-        assert isinstance(back["t"].iloc[1], float) and np.isnan(back["t"].iloc[1])
-
-
-def test_cached_text_table_equals_the_fresh_table(tmp_path):
-    """A text table as pandas reads it from a dump (here: read_csv) is unchanged by a cache round trip."""
-    import io
-
-    fresh = pd.read_csv(
-        io.StringIO("a\tb\tc\nx\t1\t\\N\ny\t2\tz\n"), sep="\t", na_values=["\\N"], keep_default_na=False
+def _mixed_frame(n: int = 7) -> pd.DataFrame:
+    rng = np.random.default_rng(0)
+    text = pd.Series([np.nan if i == 1 else f"id{i % 3}" for i in range(n)], dtype=object)
+    return pd.DataFrame(
+        {
+            "text": text,
+            "int64": np.arange(n, dtype=np.int64),
+            "uint8": np.arange(n, dtype=np.uint8),
+            "float16": rng.random(n).astype(np.float16),
+            "float64": np.where(np.arange(n) % 2 == 0, np.nan, 1.5),
+            "bool": np.arange(n) % 2 == 0,
+            "cat": pd.Categorical([["a|b", "c"][i % 2] for i in range(n)], categories=["c", "a|b"], ordered=True),
+            "when": pd.to_datetime(["2020-01-01"] * n).astype("datetime64[us]"),
+            "a/b": [f"x{i}" for i in range(n)],
+        }
     )
-    to_hdf(str(tmp_path / "f.h5"), "k", fresh, mode="w")
-    pd.testing.assert_frame_equal(read_hdf(str(tmp_path / "f.h5"), "k"), fresh, check_dtype=True)
 
 
-@pytest.mark.parametrize("dtype", _text_dtypes())
-def test_text_index_roundtrips(tmp_path, dtype):
-    """A text index (object, str or string) is accepted and restored like a text column."""
-    df = pd.DataFrame({"x": [1, 2]}, index=pd.Index(["r1", "r2"], dtype=dtype, name="rows"))
-    to_hdf(str(tmp_path / "i.h5"), "k", df, mode="w")
-    back = read_hdf(str(tmp_path / "i.h5"), "k")
-    assert back.index.tolist() == ["r1", "r2"]
-    assert back.index.name == "rows"
-    expected = pd.StringDtype() if isinstance(dtype, str) else _default_text_dtype()
-    assert back.index.dtype == expected
+def test_roundtrip_is_exact_for_every_supported_dtype(tmp_path):
+    """A table read back equals the table written, dtypes and index included (storage_net-7, -8)."""
+    df = _mixed_frame()
+    df.loc[2, "when"] = pd.NaT
+    df["text"] = df["text"].astype(_default_text_dtype())
+    df["string"] = pd.array(["s", None, "t", "u", "v", "w", "x"], dtype="string")
+    path = str(tmp_path / "t.h5")
+    write_table(path, df, {"k": 1})
+    back = read_table(path)
+    _assert_same(df, back)
+    assert pd.isna(back.loc[1, "text"]) and back.loc[1, "text"] is not pd.NA
+    assert back.loc[1, "string"] is pd.NA
 
 
-def test_datetime_and_timedelta_with_missing_values_roundtrip(tmp_path):
-    """Missing datetimes (NaT) survive a round trip, and the recorded resolution is restored."""
+def test_values_that_look_like_missing_values_stay_values(tmp_path):
+    """The old sentinel text, ``nan``, ``None``, NUL and surrounding blanks are values, not missing (storage_net-7b)."""
+    values = ["_PLACEHOLDER_NA_", "nan", "None", "a\x00b", " x ", "", "ß€😀", None]
+    df = pd.DataFrame({"v": pd.Series(values, dtype=object)})
+    path = str(tmp_path / "t.h5")
+    write_table(path, df, {})
+    back = read_table(path)
+    assert back["v"].iloc[:7].tolist() == values[:7]
+    assert pd.isna(back["v"].iloc[7])
+
+
+def test_zero_rows_and_zero_columns_roundtrip(tmp_path):
+    """Empty tables are stored and read back with their dtypes."""
+    df = _mixed_frame().iloc[0:0].reset_index(drop=True)
+    df["text"] = df["text"].astype(_default_text_dtype())
+    path = str(tmp_path / "t.h5")
+    write_table(path, df, {})
+    _assert_same(df, read_table(path))
+    write_table(path, pd.DataFrame(), {})
+    assert read_table(path).shape == (0, 0)
+
+
+def test_range_index_is_kept(tmp_path):
+    """A RangeIndex other than 0..n comes back as the same RangeIndex (storage_net-7d)."""
+    df = pd.DataFrame({"a": [1, 2]}, index=pd.RangeIndex(5, 7))
+    path = str(tmp_path / "t.h5")
+    write_table(path, df, {})
+    back = read_table(path)
+    assert isinstance(back.index, pd.RangeIndex) and list(back.index) == [5, 6]
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        pd.DataFrame({0: [1]}),  # integer label
+        pd.DataFrame([[1, 2]], columns=["a", "a"]),  # duplicate labels
+        pd.DataFrame({"a": [1]}, index=["x"]),  # not a RangeIndex
+        pd.DataFrame({"a": pd.Series([1, "x"], dtype=object)}),  # mixed object column
+        pd.DataFrame({"a": pd.array([1, None], dtype="Int64")}),  # unsupported dtype
+        pd.DataFrame({"a": pd.Categorical([1, 2])}),  # non-text categories
+        pytest.param(pd.Series([1, 2]), marks=pytest.mark.wrong_argument_type),  # not a DataFrame (storage_net-9)
+    ],
+)
+def test_unstorable_tables_are_rejected_before_anything_is_written(tmp_path, bad):
+    """Labels, dtypes and indexes that would not round-trip raise before a file appears (storage_net-8, -9)."""
+    path = str(tmp_path / "t.h5")
+    with pytest.raises(TableFormatError):
+        write_table(path, bad, {})
+    assert os.listdir(tmp_path) == []
+
+
+def test_exception_during_a_write_leaves_no_table_and_no_temporary(tmp_path, monkeypatch):
+    """A write interrupted by an exception (e.g. Ctrl-C) leaves the old state (storage_net-2)."""
+    path = str(tmp_path / "t.h5")
+    old = pd.DataFrame({"a": ["old"]})
+    write_table(path, old, {})
+    calls = {"n": 0}
+    original = hs._write_column
+
+    def failing(group, i, series, tag, digest=None):
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise KeyboardInterrupt
+        return original(group, i, series, tag, digest)
+
+    monkeypatch.setattr(hs, "_write_column", failing)
+    with pytest.raises(KeyboardInterrupt):
+        write_table(path, pd.DataFrame({"a": ["new"], "b": ["new"]}), {})
+    assert os.listdir(tmp_path) == ["t.h5"]
+    _assert_same(old, read_table(path))
+
+
+def _slow_writer(path: str, ready) -> None:
+    original = hs._write_column
+
+    def slow(group, i, series, tag, digest=None):
+        ready.set()
+        time.sleep(60)
+        return original(group, i, series, tag, digest)
+
+    hs._write_column = slow
+    write_table(path, pd.DataFrame({"a": np.arange(10)}), {})
+
+
+def test_a_killed_writer_leaves_every_table_readable(tmp_path):
+    """SIGKILL in the middle of a write: older tables stay readable, the killed one is absent (storage_net-1, access-6)."""
+    keep = str(tmp_path / "keep.h5")
+    target = str(tmp_path / "target.h5")
+    df = pd.DataFrame({"a": ["x", "y"]})
+    write_table(keep, df, {})
+    ctx = multiprocessing.get_context("fork")
+    ready = ctx.Event()
+    proc = ctx.Process(target=_slow_writer, args=(target, ready))
+    proc.start()
+    assert ready.wait(30)
+    os.kill(proc.pid, signal.SIGKILL)
+    proc.join()
+    _assert_same(df, read_table(keep))
+    assert load_table(target, {}) is None
+    write_table(target, df, {})
+    _assert_same(df, read_table(target))
+
+
+def test_stale_temporaries_are_removed_by_the_next_writer(tmp_path):
+    """Leftovers of killed writers do not accumulate."""
+    stale = tmp_path / "t.h5.tmp-1-abc"
+    stale.write_bytes(b"x")
+    old = time.time() - 2 * hs._STALE_TEMPORARY_SECONDS
+    os.utime(stale, (old, old))
+    fresh = tmp_path / "u.h5.tmp-2-def"
+    fresh.write_bytes(b"x")
+    write_table(str(tmp_path / "t.h5"), pd.DataFrame({"a": [1]}), {})
+    assert sorted(os.listdir(tmp_path)) == ["t.h5", "u.h5.tmp-2-def"]
+
+
+def test_load_table_requires_the_same_parameters(tmp_path):
+    """A table made with other parameters is not served (decision 5)."""
+    path = str(tmp_path / "t.h5")
+    write_table(path, pd.DataFrame({"a": [1]}), {"window": [48, 115], "dbs": ["A", "B"]})
+    assert load_table(path, {"window": [48, 115], "dbs": ["A", "B"]}) is not None
+    assert load_table(path, {"window": [76, 115], "dbs": ["A", "B"]}) is None
+    assert load_table(path, {"window": [48, 115], "dbs": ["A"]}) is None
+    assert read_table_params(path) == {"dbs": ["A", "B"], "window": [48, 115]}
+
+
+def test_damaged_or_foreign_files_are_reported_absent(tmp_path):
+    """A file that is not a table of this format is not read as one."""
+    damaged = tmp_path / "d.h5"
+    damaged.write_bytes(b"not hdf5")
+    assert load_table(str(damaged), {}) is None
+    foreign = str(tmp_path / "f.h5")
+    with h5py.File(foreign, "w") as f:
+        f.attrs["idtrack_table_format"] = 1
+    assert load_table(foreign, {}) is None
+    with pytest.raises(TableFormatError):
+        read_table(foreign)
+
+
+def test_replacing_a_table_frees_the_old_one(tmp_path):
+    """Ten overwrites of one table use the space of one copy (storage_net-5)."""
+    path = str(tmp_path / "t.h5")
+    df = pd.DataFrame({"a": [f"value-{i}" for i in range(50_000)], "b": np.arange(50_000)})
+    write_table(path, df, {})
+    size_one = os.path.getsize(path)
+    for _ in range(10):
+        write_table(path, df, {})
+    assert sum(os.path.getsize(tmp_path / n) for n in os.listdir(tmp_path)) <= 1.1 * size_one
+
+
+def test_text_is_compressed(tmp_path):
+    """Repetitive text costs a small fraction of its raw size on disk (storage_net-4)."""
+    n = 200_000
     df = pd.DataFrame(
-        {
-            "dt": pd.Series([pd.Timestamp("2020-01-01"), pd.NaT, pd.Timestamp("2021-06-30 12:00:00")]).astype(
-                "datetime64[s]"
-            ),
-            "td": pd.to_timedelta(["1 days", None, "2 hours"]),
-        }
+        {"name_db": ["Uniprot/SPTREMBL", "EntrezGene"] * (n // 2), "id": [f"ENSG{i:011d}" for i in range(n)]}
     )
-    to_hdf(str(tmp_path / "d.h5"), "k", df, mode="w")
-    back = read_hdf(str(tmp_path / "d.h5"), "k")
-    pd.testing.assert_frame_equal(back, df, check_dtype=True)
+    path = str(tmp_path / "t.h5")
+    write_table(path, df, {})
+    assert os.path.getsize(path) < 0.25 * int(df.memory_usage(deep=True).sum())
 
 
-# The HDF5 library line that can read the cache files of idtrack 0.0.5: its writer opened them with
-# `libver="latest"`, so the HDF5 1.14 of its h5py wheels wrote datatype messages of version 4, which HDF5 1.10 does not
-# know ("bad version number for datatype message"); HDF5 1.12 introduced them.
-HDF5_READING_IDTRACK_0_0_5_CACHES = (1, 12, 0)
+def test_files_use_the_oldest_hdf5_format(tmp_path):
+    """Files are written with the format bounds ("earliest", "v110"), never "latest" (storage_net-new-1)."""
+    # The superblock is then version 0, which HDF5 1.10 reads and which has no "open for write" flag that a killed
+    # writer could leave set.
+    path = str(tmp_path / "t.h5")
+    write_table(path, pd.DataFrame({"a": ["x"], "b": [1]}), {})
+    with open(path, "rb") as handle:
+        head = handle.read(9)
+    assert head[:8] == b"\x89HDF\r\n\x1a\n"
+    assert head[8] == 0
 
 
-def test_cache_written_by_idtrack_0_0_5_reads_back_unchanged():
-    """A table cached by idtrack 0.0.5 reads back with the same values and missing values.
-
-    The fixture `tests/data/legacy_cache_v0.0.5.h5` is a real cache of that version: written by
-    `tests/data/make_legacy_cache_v0_0_5.py` with the writer of the `v0.0.5` tag, under pandas 2.2.3 and h5py 3.13.0
-    with HDF5 1.14.6, the environment that wrote the owner's caches. Text comes back in the default text dtype of the
-    running pandas (`object` under pandas 2, `str` under pandas 3) with NaN for missing values, as pandas itself reads
-    text; every other dtype is the recorded one. An HDF5 older than 1.12 cannot open such a file at all, whatever
-    idtrack does, so the test is skipped there, with that reason, instead of failing.
-    """
-    from pathlib import Path
-
-    import h5py
-
-    if h5py.version.hdf5_version_tuple < HDF5_READING_IDTRACK_0_0_5_CACHES:
-        pytest.skip(
-            f"HDF5 {h5py.version.hdf5_version} cannot read files written by HDF5 1.14 with libver='latest' (datatype "
-            "messages of version 4 need HDF5 >= 1.12), as the caches of idtrack 0.0.5 are."
-        )
-    path = str(Path(__file__).parents[1] / "data" / "legacy_cache_v0.0.5.h5")
-    text = _default_text_dtype()
-    expected = pd.DataFrame(
-        {
-            "old_stable_id": pd.Series(["ENSSSCG00000000001", np.nan, "ENSSSCG00000000003", np.nan], dtype=text),
-            "old_version": [1.0, np.nan, 2.0, 1.0],
-            "new_stable_id": pd.Series(
-                ["ENSSSCG00000000001", "ENSSSCG00000000002", "", "ENSSSCG00000000004"], dtype=text
-            ),
-            "mapping_session_id": np.array([10, 11, 12, 13], dtype=np.int64),
-            "type": pd.Categorical(["gene", "gene", "transcript", "gene"]),
-            "is_current": [True, False, True, True],
-        }
-    )
-    back = read_hdf(path, "ens115_mysql_stable_id_event")
-    pd.testing.assert_frame_equal(back, expected, check_dtype=True, check_categorical=True)
-    assert back["old_stable_id"].isna().tolist() == [False, True, False, True]
+def _reader_loop(path: str, frames: list, reads) -> None:
+    ok = 0
+    deadline = time.time() + 3
+    while time.time() < deadline:
+        back = load_table(path, {})
+        assert back is not None
+        assert any(back.equals(f) for f in frames)
+        ok += 1
+    # The count goes back through shared memory, which is written before the function returns. A
+    # `multiprocessing.Queue` hands the value to a feeder thread instead, and on Python 3.13 to 3.15 the value of this
+    # process, which ends right after `put`, never arrived when the whole test tree had run before (exit code 0, the
+    # pipe intact and empty), although it arrives when the test runs alone and on Python 3.12.
+    reads.value = ok
 
 
-def test_validate_dataframe_rejects_non_text_object_index():
-    """An object index must hold strings, like an object column."""
-    df = pd.DataFrame({"x": [1, 2]}, index=pd.Index(["a", 1], dtype=object))
-    with pytest.raises(ValueError, match="Object index"):
-        validate_dataframe(df)
+def test_readers_never_see_a_partial_table_while_a_writer_replaces_it(tmp_path):
+    """Readers are never blocked or fed a partial table by a concurrent writer (storage_net-6)."""
+    path = str(tmp_path / "t.h5")
+    frames = [pd.DataFrame({"a": [f"{k}-{i}" for i in range(20_000)]}) for k in range(3)]
+    write_table(path, frames[0], {})
+    ctx = multiprocessing.get_context("fork")
+    reads = ctx.Value("q", 0)
+    reader = ctx.Process(target=_reader_loop, args=(path, frames, reads))
+    reader.start()
+    deadline = time.time() + 3
+    k = 0
+    while time.time() < deadline:
+        write_table(path, frames[k % 3], {})
+        k += 1
+    reader.join(30)
+    assert reader.exitcode == 0
+    assert reads.value > 0
+    assert k > 0
+
+
+def test_content_digest_identifies_the_table(tmp_path):
+    """Equal tables have equal digests whoever wrote them; a changed value changes it (decision 5, for graph files)."""
+    from idtrack._utils_hdf5 import read_table_digest
+
+    df = _mixed_frame()
+    write_table(str(tmp_path / "a.h5"), df, {"x": 1})
+    write_table(str(tmp_path / "b.h5"), df.copy(), {"x": 2})
+    other = df.copy()
+    other.loc[0, "int64"] = 99
+    write_table(str(tmp_path / "c.h5"), other, {})
+    a, b, c = (read_table_digest(str(tmp_path / f"{n}.h5")) for n in "abc")
+    assert a == b and a != c and len(a) == 64

@@ -1,20 +1,39 @@
 #!/usr/bin/env python3
 
-import gc
+import hashlib
+import json
 import logging
 import os
-import pickle  # noqa: S403
 import re
-from functools import cached_property
-from typing import Literal
+import tempfile
+from typing import Any, Literal
 
 import anndata as ad
+import h5py
 import numpy as np
 import pandas as pd
+import scipy.sparse as sp
 import tqdm
 
 import idtrack
 from idtrack import DB
+from idtrack._api import API, _stable_id
+from idtrack._graph_maker import GraphMaker
+
+_CACHE_FORMAT = 2
+
+#: Status of an output feature (``var["idtrack_status"]``); see :py:class:`HarmonizeFeatures`.
+STATUSES = (
+    "converted",
+    "converted_no_final_id",
+    "merged",
+    "merged_no_final_id",
+    "unconverted_merge_partner",
+    "unconverted_ambiguous",
+    "unconverted_no_conversion",
+    "unconverted_not_in_graph",
+    "unconverted_error",
+)
 
 
 def _is_text(series: pd.Series) -> bool:
@@ -63,198 +82,499 @@ def _missing_like(template: pd.Series, index: pd.Index) -> pd.Series:
     return pd.Series(index=index, dtype=_holding_missing(template.iloc[:0]).dtype)
 
 
-class HarmonizeFeatures:
-    """Harmonize gene/feature identifiers across multiple single-cell expression datasets.
-
-    This manager streamlines the otherwise error-prone task of bringing heterogeneous gene identifiers
-    (Ensembl IDs, gene symbols, etc.) into a single, version-controlled namespace before integrated
-    downstream analysis.  Under the hood it leverages :py:class:`idtrack.api.API` to resolve identifier
-    mappings through a pre-computed Ensembl graph, handles one-to-many and one-to-zero conversions, logs
-    any ambiguous or inconsistent matches, and finally produces harmonised
-    :py:class:`anndata.AnnData` objects ready for comparative or joint analysis.
-
-    The public workflow is intentionally simple:
-
-    * :py:meth:`feature_harmonizer` — convert a single dataset and return the filtered ``AnnData`` plus
-      before/after feature counts.
-    * :py:meth:`unify_multiple_anndatas` — apply harmonisation across *all* supplied datasets and return
-      an integrated object.
-    * :py:meth:`get_idtrack_matchings_for_all_datasets` — inspect the raw IDTrack matchings used.
-
-    Instances keep several diagnostic attributes (e.g. ``removed_conversion_failed_identifiers``,
-    ``multiple_ensembl_dict``) so that users can audit every decision that removed or altered a feature.
+def read_feature_names(path: str) -> list[str]:
+    """Return the feature names (``var`` index) of an ``.h5ad`` file without reading anything else.
 
     Args:
-        project_name (str): Human-readable label used in log messages and derived output file names.
-        data_h5ad_dict (dict[str, str]): Mapping *dataset_alias → absolute .h5ad path* of the source
-            single-cell expression matrices.
-        project_local_repository (str): Writable directory where harmonised outputs, logs, and temporary
-            artefacts will be stored.
-        idtrack_local_repository (str): Local clone or cache directory understood by
-            :py:class:`idtrack.api.API`; used to read the pre-built identifier graph.
-        target_ensembl_release (int): Ensembl release that all identifiers will be converted *to*.  Must
-            be ≤ *graph_last_ensembl_release*.
-        final_database (Optional[str]): Canonical namespace kept after conversion (e.g. ``"HGNC Symbol"``).
-            Defaults to the organism's first symbol database (:py:attr:`idtrack.DB.symbol_databases`: HGNC Symbol
-            for human, MGI Symbol for mouse, VGNC Symbol for pig and the macaques).
+        path: Path of the ``.h5ad`` file.
+
+    Returns:
+        list[str]: The names in file order.
+    """
+    with h5py.File(path, "r") as handle:
+        var = handle["var"]
+        index_key = var.attrs["_index"]
+        index_key = index_key.decode() if isinstance(index_key, bytes) else str(index_key)
+        values = ad.io.read_elem(var[index_key])
+    return [v.decode() if isinstance(v, bytes) else v for v in np.asarray(values, dtype=object).tolist()]
+
+
+def _validated_feature_names(dataset_name: str, names: list[Any]) -> list[str]:
+    """Return *names* or raise naming the dataset and the offending names (none, not strings, empty, repeated)."""
+    if not names:
+        raise ValueError(f"Dataset {dataset_name!r} has no features.")
+    bad = [n for n in names if not isinstance(n, str) or not n.strip()]
+    if bad:
+        raise ValueError(f"Dataset {dataset_name!r} has feature names that are empty or not strings: {bad[:10]}.")
+    repeated = pd.Index(names)
+    repeated = repeated[repeated.duplicated()].unique().tolist()
+    if repeated:
+        raise ValueError(
+            f"Dataset {dataset_name!r} has {len(repeated)} repeated feature names (each feature must be unique), "
+            f"e.g. {repeated[:10]}."
+        )
+    return names
+
+
+def _slug(text: str) -> str:
+    """Return *text* reduced to characters that are safe in file names, with a short hash that keeps it unique."""
+    readable = re.sub(r"[^0-9A-Za-z.-]+", "-", text).strip("-.")[:60] or "x"
+    return f"{readable}-{hashlib.sha256(text.encode()).hexdigest()[:8]}"
+
+
+def _write_json_atomically(path: str, content: Any) -> None:
+    """Write *content* as JSON to a temporary file beside *path* and rename it, so a reader never sees a part."""
+    directory = os.path.dirname(os.path.abspath(path))
+    fd, tmp = tempfile.mkstemp(prefix=".tmp_", suffix=".json", dir=directory)
+    try:
+        with os.fdopen(fd, "w") as handle:
+            json.dump(content, handle)
+        os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
+
+
+def feature_table(
+    feature_names: list[str],
+    matchings: list[dict[str, Any]],
+    gene_names: dict[str, list[str]],
+) -> pd.DataFrame:
+    """Classify each input feature of one dataset by its conversion; a pure function of that dataset alone.
+
+    Args:
+        feature_names: The dataset's feature names, in file order.
+        matchings: :py:meth:`idtrack.API.convert_identifier` results, one per feature, in the same order.
+        gene_names: ``{ensembl_gene: names}``: the final-database names of every gene reached (empty: none).
+
+    Returns:
+        pandas.DataFrame: Indexed by the input names, in file order, with the columns ``status`` (one of
+        ``"converted"``, ``"converted_no_final_id"``, ``"ambiguous"``, ``"no_conversion"``, ``"not_in_graph"``,
+        ``"error"``), ``reason`` (missing for ``"converted"``, unless the feature had to be read at another release
+        than the dataset's source release because the graph does not hold it there), ``ensembl_gene`` (the gene at
+        the target release
+        when there is exactly one), ``final_id`` (the gene's final-database name: the first in sorted order of
+        *gene_names*), ``final_id_alternatives`` (the gene's other names, ``";"``-joined) and ``own`` (the input
+        names the gene itself: its stable id, or one of its final-database names, compared without case).
+    """
+    rows = []
+    for name, m in zip(feature_names, matchings):
+        if m["query_id"] != name:
+            raise ValueError(f"Matching of {m['query_id']!r} given for feature {name!r}.")
+        genes = sorted({gene for gene, _ in m["last_node"]})
+        row: dict[str, Any] = {
+            "status": None,
+            "reason": None,
+            "ensembl_gene": None,
+            "final_id": None,
+            "final_id_alternatives": None,
+            "own": False,
+        }
+        if m.get("error"):
+            row.update(status="error", reason=f"{m['error']['type']}: {m['error']['message']}")
+        elif m["no_corresponding"]:
+            row.update(status="not_in_graph", reason="not found in the graph")
+        elif m["no_conversion"] or not genes:
+            row.update(status="no_conversion", reason=f"no gene at release {m['to_release']}")
+        elif len(genes) > 1:
+            row.update(status="ambiguous", reason=f"maps to {len(genes)} genes: {';'.join(genes)}")
+        else:
+            gene = genes[0]
+            names = sorted(gene_names.get(gene, []))
+            resolved = _stable_id(m.get("graph_id") or name).casefold()
+            row.update(
+                ensembl_gene=gene,
+                final_id=names[0] if names else None,
+                final_id_alternatives=";".join(names[1:]) or None,
+                own=resolved in {_stable_id(gene).casefold(), *(n.casefold() for n in names)},
+            )
+            if m.get("from_release_fallback"):
+                row["reason"] = (
+                    f"not in the graph at release {m['from_release_given']}; read at release {m['from_release']}"
+                )
+            if names:
+                row["status"] = "converted"
+            else:
+                no_name = "the gene has no id in the final database"
+                row.update(
+                    status="converted_no_final_id", reason=f"{no_name}; {row['reason']}" if row["reason"] else no_name
+                )
+        rows.append(row)
+    return pd.DataFrame(rows, index=pd.Index(feature_names, dtype=object), columns=list(rows[0]) if rows else None)
+
+
+def _text_or_none(value: Any) -> str | None:
+    """Return a table cell as text, or ``None`` for a missing value (pandas stores a missing text as NaN)."""
+    return None if value is None or (isinstance(value, float) and value != value) else str(value)
+
+
+def output_plan(table: pd.DataFrame, merge: str, keep_unconverted: bool) -> pd.DataFrame:
+    """Decide the output features of one dataset from its :py:func:`feature_table` (a pure function of it).
+
+    Rules (also in :py:class:`HarmonizeFeatures`):
+
+    * A gene reached by exactly one input feature is one output feature named by the gene (``"converted"``, or
+      ``"converted_no_final_id"`` when the gene has no final-database id).
+    * A gene reached by several input features ("n-to-1"): with ``merge="sum"`` one output feature named by the gene
+      whose values are the sum of theirs (``"merged"``/``"merged_no_final_id"``); with ``merge="flag"``, if exactly
+      one of them names the gene itself (``own``) it becomes the gene's feature and the others stay under their
+      input names as ``"unconverted_merge_partner"``; otherwise all stay under their input names as
+      ``"unconverted_merge_partner"`` and the gene has no output feature.
+    * Every other input feature stays under its input name (``"unconverted_ambiguous"``,
+      ``"unconverted_no_conversion"``, ``"unconverted_not_in_graph"``, ``"unconverted_error"``) when
+      *keep_unconverted*, and is left out otherwise; merge partners are always kept.
+    * An input name kept unconverted that equals the name of a converted output feature is renamed
+      ``"unconverted:<name>"``.
+
+    Args:
+        table: Output of :py:func:`feature_table`.
+        merge: ``"sum"`` or ``"flag"``.
+        keep_unconverted: Keep the unconverted features (see above).
+
+    Returns:
+        pandas.DataFrame: One row per output feature, in the order of its first input feature, indexed by the output
+        name, with the columns ``sources`` (list of input positions), ``query_ids`` (``";"``-joined input names),
+        ``status``, ``reason``, ``ensembl_gene``, ``final_id``, ``final_id_alternatives``.
+    """
+    converted = table["status"].isin(["converted", "converted_no_final_id"])
+    groups: dict[str, list[int]] = {}
+    for position, gene in enumerate(table["ensembl_gene"].tolist()):
+        if converted.iloc[position]:
+            groups.setdefault(gene, []).append(position)
+    names = table.index.tolist()
+    statuses = table["status"].tolist()
+    rows: list[dict[str, Any]] = []
+    first_of_gene: dict[str, int] = {}
+
+    def _gene_row(gene: str, sources: list[int], status: str, reason: str | None) -> dict[str, Any]:
+        first = sources[0]
+        return {
+            "name": gene,
+            "sources": sources,
+            "query_ids": ";".join(names[s] for s in sources),
+            "status": status,
+            "reason": reason,
+            "ensembl_gene": gene,
+            "final_id": table["final_id"].iloc[first],
+            "final_id_alternatives": table["final_id_alternatives"].iloc[first],
+        }
+
+    def _kept_row(position: int, status: str, reason: str | None, gene: str | None) -> dict[str, Any]:
+        return {
+            "name": names[position],
+            "sources": [position],
+            "query_ids": names[position],
+            "status": status,
+            "reason": reason,
+            "ensembl_gene": gene,
+            "final_id": None,
+            "final_id_alternatives": None,
+        }
+
+    for position in range(len(names)):
+        status = statuses[position]
+        if status in ("converted", "converted_no_final_id"):
+            gene = table["ensembl_gene"].iloc[position]
+            sources = groups[gene]
+            suffix = "" if status == "converted" else "_no_final_id"
+            if len(sources) == 1:
+                rows.append(_gene_row(gene, sources, status, _text_or_none(table["reason"].iloc[position])))
+                continue
+            partners = ";".join(names[s] for s in sources)
+            if merge == "sum":
+                if gene not in first_of_gene:
+                    first_of_gene[gene] = position
+                    reason = f"sum of {len(sources)} input features: {partners}"
+                    rows.append(_gene_row(gene, sources, f"merged{suffix}", reason))
+                continue
+            own = [s for s in sources if table["own"].iloc[s]]
+            if len(own) == 1 and own[0] == position:
+                rows.append(_gene_row(gene, [position], status, f"kept as the gene itself among: {partners}"))
+            else:
+                reason = f"shares the gene {gene} with: {partners}"
+                rows.append(_kept_row(position, "unconverted_merge_partner", reason, gene))
+        elif keep_unconverted:
+            rows.append(
+                _kept_row(position, f"unconverted_{status}", _text_or_none(table["reason"].iloc[position]), None)
+            )
+
+    plan = pd.DataFrame(rows, columns=list(_kept_row(0, "", None, None)) if not rows else None)
+    if plan.empty:
+        return pd.DataFrame(
+            columns=["sources", "query_ids", "status", "reason", "ensembl_gene", "final_id", "final_id_alternatives"],
+            index=pd.Index([], dtype=object),
+        )
+    gene_names_out = set(plan.loc[~plan["status"].str.startswith("unconverted"), "name"])
+    clash = plan["status"].str.startswith("unconverted") & plan["name"].isin(gene_names_out)
+    plan.loc[clash, "name"] = "unconverted:" + plan.loc[clash, "name"]
+    plan = plan.set_index("name")
+    plan.index.name = None
+    if plan.index.duplicated().any():
+        raise AssertionError(f"Output features named twice: {plan.index[plan.index.duplicated()].tolist()[:10]}.")
+    return plan
+
+
+def _aggregate(matrix: Any, plan: pd.DataFrame, n_inputs: int) -> Any:
+    """Return *matrix* (cells x input features) as cells x output features: columns selected, merged ones summed.
+
+    Args:
+        matrix: Dense or sparse matrix with one column per input feature.
+        plan: Output of :py:func:`output_plan`.
+        n_inputs: Number of input features.
+
+    Returns:
+        The matrix of the output features, of the same kind and dtype.
+    """
+    sources = plan["sources"].tolist()
+    if all(len(s) == 1 for s in sources):
+        columns = [s[0] for s in sources]
+        return matrix[:, columns]
+    rows = np.concatenate([np.asarray(s, dtype=np.int64) for s in sources])
+    cols = np.repeat(np.arange(len(sources)), [len(s) for s in sources])
+    dtype = matrix.dtype if np.issubdtype(matrix.dtype, np.number) else np.float64
+    summing = sp.csr_matrix((np.ones(len(rows), dtype=dtype), (rows, cols)), shape=(n_inputs, len(sources)))
+    if sp.issparse(matrix):
+        out = (sp.csr_matrix(matrix) @ summing).astype(matrix.dtype, copy=False)
+        return out if isinstance(matrix, (sp.csr_matrix, sp.csr_array)) else out.asformat(matrix.format)
+    return np.asarray(summing.T @ np.asarray(matrix).T).T.astype(matrix.dtype, copy=False)
+
+
+class HarmonizeFeatures:
+    """Convert the features of several single-cell datasets to one Ensembl release and merge the datasets.
+
+    For every dataset, each feature name (Ensembl gene id with or without version, symbol or other external id) is
+    converted with :py:meth:`idtrack.API.convert_identifier_multiple` to its Ensembl gene at
+    *target_ensembl_release*. The conversion of a dataset depends only on that dataset (its feature names and its
+    *source_releases* and *source_databases* entries), never on the other datasets.
+
+    **Output features.** Each converted gene is one feature, named by the gene id at the target release (with
+    version); its final-database name (default: the organism's symbol database) is in the column named after the
+    final database. That name is a property of the gene, not of the query: the gene's ids in the final database at
+    the target release (:py:meth:`idtrack.Track.gene_to_database`: read from the gene, no search), the first in sorted order when
+    there are several (the others in ``"<final database>_alternatives"``). A gene without an id in the final database
+    keeps the gene id as its feature name and a missing final-database name (status ``"converted_no_final_id"``):
+    the final-database column never holds an Ensembl id. Features that are not converted keep their input name; no
+    feature is dropped silently. Every output feature has, in ``var``:
+
+    * ``"idtrack_status"``: ``"converted"``, ``"converted_no_final_id"``, ``"merged"``, ``"merged_no_final_id"``
+      (with ``merge="sum"``, the sum of several input features), ``"unconverted_merge_partner"`` (with
+      ``merge="flag"``, an input feature that shares its gene with others), ``"unconverted_ambiguous"`` (several
+      genes), ``"unconverted_no_conversion"`` (in the graph, but no gene at the target release),
+      ``"unconverted_not_in_graph"`` or ``"unconverted_error"`` (the conversion of this feature raised an error that
+      concerns it alone, a search over its budget);
+    * ``"idtrack_reason"``: why (missing for a plain conversion; for a feature that the graph does not hold at its
+      dataset's source release and that was therefore read at another release, that release);
+    * ``"Query ID"``: the input name(s), ``";"``-joined for a merged feature;
+    * ``"matching_ensembl_gene"``: the gene (also for a merge partner; missing for the other unconverted features).
+
+    **Several input features of one dataset on one gene** (an Ensembl merge, or two aliases): with ``merge="sum"``
+    (right for counts) they become one feature whose values in ``X`` and every layer are the sum of theirs; with
+    ``merge="flag"`` (default, for normalised data, where a sum has no meaning) the feature that names the gene itself
+    (its stable id or one of its final-database names, ignoring version and case) becomes the gene's feature, and
+    the others keep their input names with status ``"unconverted_merge_partner"`` (if none or several name the gene,
+    all keep their names and the gene has no feature). Rows that a merge sums carry a ``var`` value only where all
+    their input features agree (missing otherwise), and ``varm``/``varp`` are left out of a dataset in which features
+    were summed.
+
+    An unconverted input name that equals a converted feature's name (in the dataset, or in another dataset when
+    merging) is renamed ``"unconverted:<name>"``, so that converted and unconverted measurements never share a row.
+
+    **Result cache.** The conversions of each dataset are stored in *project_local_repository* as one JSON file per
+    dataset (written to a temporary file and renamed). A stored file is used only if it was written by the same
+    idtrack version for the same feature names, organism, final database, target and source release, graph snapshot
+    and graph (the graph file's name, size and modification time, or the loaded graph's metadata when *api* is
+    given); an unreadable or mismatching file is recomputed and replaced.
+
+    Args:
+        project_name (str): Label used in log messages and cache file names.
+        data_h5ad_dict (dict[str, str]): ``{dataset name: path of an .h5ad file}``; at least one.
+        project_local_repository (str): Writable folder for the result cache (created if missing).
+        idtrack_local_repository (str): idtrack's local repository holding the graph.
+        target_ensembl_release (int): Ensembl release all features are converted to; a release of the graph.
+        final_database (Optional[str]): Database of the feature names in the output (e.g. ``"HGNC Symbol"``).
+            Defaults to the organism's first symbol database (:py:attr:`idtrack.DB.symbol_databases`: HGNC Symbol for
+            human, MGI Symbol for mouse, VGNC Symbol for pig and the macaques).
         organism_name (Optional[str]): Organism, as an Ensembl species name (e.g. ``"homo_sapiens"``) or any query
             :py:meth:`idtrack.API.resolve_organism` accepts. If ``None``, it is read from the graph files in
             *idtrack_local_repository*, which must then hold graphs of exactly one organism.
-        graph_last_ensembl_release (Optional[int]): Snapshot release of the IDTrack graph. If ``None``, the newest
-            graph of the organism in *idtrack_local_repository* (built by :py:meth:`idtrack.API.build_graph`) is
-            used, or the latest Ensembl release of the organism when there is none.
-        verbose_level (Literal[0, 1, 2]): Logging verbosity; 0 = errors only, 1 = warnings, 2 =
-            info.  Defaults to ``2``.
-        debugging_variables (bool): Retain heavy intermediate structures for post-mortem
-            inspection.  Defaults to ``False``.
-        converted_id_column (str): Column name used to store converted identifiers inside the
-            resulting ``AnnData.var`` DataFrame.  Defaults to ``"converted_id"``.
+        graph_last_ensembl_release (Optional[int]): Snapshot release of the graph. If ``None``, the newest graph of
+            the organism in *idtrack_local_repository* (built by :py:meth:`idtrack.API.build_graph`) is used, or the
+            latest Ensembl release of the organism when there is none.
+        source_releases (Optional[dict[str, int]]): The Ensembl release each dataset was annotated with, by dataset
+            name. A dataset with a release is converted with ``from_release``; a feature that the graph does not hold
+            at that release is read where the graph holds it (the rule without a release, below), and its
+            ``"idtrack_reason"`` says so. Without a release, each feature is read at the target release if it is
+            active there, else at the latest release in which it is active.
+        source_databases (Optional[dict[str, str]]): The external database the feature names of a dataset are ids
+            of, by dataset name (``{"study_a": "HGNC Symbol"}``; one of
+            :py:meth:`idtrack.API.list_external_databases`). A dataset with a database is converted with
+            ``from_database``: every feature is read as an id of that database, so a symbol that another database
+            gives to another gene is not a tie, and a feature that is no id of that database (an Ensembl id among
+            symbols) is not converted. Without one, nothing is assumed about where a name comes from: a name that
+            two databases give to two genes stands for both (status ``"unconverted_ambiguous"``) when both genes
+            have a name in *final_database*; a tie is judged among the genes that can be named there, so when only
+            one of the two has a name in it, the feature is converted to that gene. Nothing is inferred
+            from the names on the caller's behalf.
+        api (Optional[idtrack.API]): An :py:class:`idtrack.API` with the graph already loaded, to use instead of
+            loading the graph again. Without it, the harmonizer loads the graph only if some dataset is not in the
+            result cache, and releases it when the conversions are done.
+        verbose_level (Literal[0, 1, 2, 3]): 0 shows nothing, 1 progress bars, 2 also a summary of each dataset's
+            conversions (logged at INFO by the ``"idtrack"`` loggers; see :py:meth:`idtrack.API.configure_logger`),
+            3 also debug messages. The harmonizer never configures logging itself.
+        converted_id_column (str): Name of the merged final-database column of :py:meth:`unify_multiple_anndatas`.
 
     Attributes:
-        idt (idtrack.api.API): Lazily initialised IDTrack interface used for all identifier look-ups.
-        multiple_ensembl_dict (dict[str, list[str]]): Map of collapsed IDs to *all* Ensembl IDs that were
-            originally associated with the same target identifier.
-        removed_conversion_failed_identifiers (dict[str, set[str]]): Features that failed conversion and
-            were dropped from each dataset.
-        kept_conversion_failed_identifiers (dict[str, set[str]]): Non-convertible features kept because
-            they were consistently non-convertible across *all* datasets.
-        removed_inconsistent_identifier_matching (dict[str, set[str]]): Features whose mappings disagreed
-            between datasets and were therefore removed for consistency.
+        feature_names (dict[str, list[str]]): The feature names of each dataset, in file order.
+        matchings (dict[str, list[dict]]): The conversion of each feature of each dataset (results of
+            :py:meth:`idtrack.API.convert_identifier`, plain data).
+        gene_names (dict[str, dict[str, list[str]]]): Per dataset, the final-database names of each gene reached.
     """
 
-    nonmatching_but_consistent_suffix = ""
-
-    # Internal column name for matched Ensembl gene IDs.
-    # Using a distinct name avoids conflicts when final_database="ensembl_gene".
     _ENSEMBL_GENE_COLUMN = "matching_ensembl_gene"
-
-    @staticmethod
-    def _get_column_as_series(df: pd.DataFrame, column: str) -> pd.Series:
-        """Safely extract a single column from a DataFrame, always returning a Series.
-
-        When a DataFrame has duplicate column names, ``df[column]`` returns a DataFrame
-        instead of a Series. This method handles such edge cases by selecting the first
-        matching column when duplicates exist.
-
-        Args:
-            df (pd.DataFrame): The DataFrame to extract from.
-            column (str): The column name to extract.
-
-        Returns:
-            pd.Series: The column data as a Series.
-        """
-        result = df[column]
-        if isinstance(result, pd.DataFrame):
-            # Duplicate column names exist; take the first one and warn
-            result = result.iloc[:, 0]
-        return result
+    _QUERY_COLUMN = "Query ID"
+    _STATUS_COLUMN = "idtrack_status"
+    _REASON_COLUMN = "idtrack_reason"
 
     def __init__(
         self,
         project_name: str,
-        data_h5ad_dict: dict[str, str],  # custom dataset name to dataset absolute path
+        data_h5ad_dict: dict[str, str],
         project_local_repository: str,
         idtrack_local_repository: str,
         target_ensembl_release: int,
         final_database: str | None = None,
         organism_name: str | None = None,
         graph_last_ensembl_release: int | None = None,
-        verbose_level: Literal[0, 1, 2] = 2,
-        debugging_variables: bool = False,
+        source_releases: dict[str, int] | None = None,
+        source_databases: dict[str, str] | None = None,
+        api: API | None = None,
+        verbose_level: Literal[0, 1, 2, 3] = 2,
         converted_id_column: str = "converted_id",
     ):
-        """Instantiate the harmoniser and perform lightweight validation.
+        """Validate the arguments, read the feature names and convert every feature of every dataset.
 
-        The constructor merely *prepares* the harmonisation context: it validates input paths, configures
-        logging, and primes IDTrack.  Heavy work—graph initialisation, identifier matching, gene-symbol
-        resolution—happens lazily when the first harmonisation method is called.
+        Everything that can be checked without the graph is checked before any conversion starts (the arguments,
+        the files, the feature names, the project folder). The conversions then run, or are read from the result
+        cache; this is the long part (minutes for large datasets when nothing is cached).
 
         Args:
-            project_name (str): See :py:meth:`HarmonizeFeatures`.
-            data_h5ad_dict (dict[str, str]): See :py:meth:`HarmonizeFeatures`.
-            project_local_repository (str): See :py:meth:`HarmonizeFeatures`.
-            idtrack_local_repository (str): See :py:meth:`HarmonizeFeatures`.
-            target_ensembl_release (int): See :py:meth:`HarmonizeFeatures`.
-            final_database (Optional[str]): See :py:meth:`HarmonizeFeatures`.
-            organism_name (Optional[str]): See :py:meth:`HarmonizeFeatures`.
-            graph_last_ensembl_release (Optional[int]): See :py:meth:`HarmonizeFeatures`.
-            verbose_level (Literal[0, 1, 2]): See :py:meth:`HarmonizeFeatures`.
-            debugging_variables (bool): See :py:meth:`HarmonizeFeatures`.
-            converted_id_column (str): See :py:meth:`HarmonizeFeatures`.
+            project_name (str): See :py:class:`HarmonizeFeatures`.
+            data_h5ad_dict (dict[str, str]): See :py:class:`HarmonizeFeatures`.
+            project_local_repository (str): See :py:class:`HarmonizeFeatures`.
+            idtrack_local_repository (str): See :py:class:`HarmonizeFeatures`.
+            target_ensembl_release (int): See :py:class:`HarmonizeFeatures`.
+            final_database (Optional[str]): See :py:class:`HarmonizeFeatures`.
+            organism_name (Optional[str]): See :py:class:`HarmonizeFeatures`.
+            graph_last_ensembl_release (Optional[int]): See :py:class:`HarmonizeFeatures`.
+            source_releases (Optional[dict[str, int]]): See :py:class:`HarmonizeFeatures`.
+            source_databases (Optional[dict[str, str]]): See :py:class:`HarmonizeFeatures`.
+            api (Optional[idtrack.API]): See :py:class:`HarmonizeFeatures`.
+            verbose_level (Literal[0, 1, 2, 3]): See :py:class:`HarmonizeFeatures`.
+            converted_id_column (str): See :py:class:`HarmonizeFeatures`.
 
         Raises:
-            ValueError: If *verbose_level* is not 0, 1, 2 or 3, if *organism_name* is ``None`` and the graphs in
-                *idtrack_local_repository* do not name exactly one organism, or if *final_database* is ``None`` and
-                the organism declares no symbol database.
+            ValueError: If *verbose_level* is not 0 to 3; if *data_h5ad_dict* is empty, names a missing file or a
+                dataset whose feature names are empty, not strings or repeated; if *source_releases* or
+                *source_databases* names an unknown dataset; if a release is not an integer or a source database not
+                a string, or *target_ensembl_release* is after the graph snapshot; if
+                *organism_name* is ``None`` and the graphs in *idtrack_local_repository* do not name exactly one
+                organism; if *final_database* is ``None`` and the organism declares no symbol database; and the errors
+                of :py:meth:`idtrack.API.convert_identifier_multiple` (e.g. a release or database not of the graph).
         """
-        self.project_name = project_name
-        self.project_local_repository = project_local_repository
-        self.data_h5ad_dict = data_h5ad_dict
-        self.converted_id_column = converted_id_column
-        self.idtrack_local_repository = idtrack_local_repository
-        self.target_ensembl_release = target_ensembl_release
-        self.n_datasets = len(self.data_h5ad_dict)
-        self.debugging_variables = debugging_variables
-
-        if verbose_level == 0:
-            _logging = logging.ERROR
-        elif verbose_level == 1:
-            _logging = logging.WARNING
-        elif verbose_level == 2:
-            _logging = logging.INFO
-        elif verbose_level == 3:
-            _logging = logging.DEBUG
-        else:
+        if verbose_level not in (0, 1, 2, 3):
             raise ValueError(f"verbose_level must be 0, 1, 2, or 3, got {verbose_level!r}.")
         self.verbose_level = verbose_level
+        self.log = logging.getLogger(__name__)
+        if not isinstance(data_h5ad_dict, dict) or not data_h5ad_dict:
+            raise ValueError("`data_h5ad_dict` must be a non-empty dict {dataset name: .h5ad path}.")
+        missing = {k: v for k, v in data_h5ad_dict.items() if not os.path.isfile(v)}
+        if missing:
+            raise ValueError(f"`data_h5ad_dict` names files that do not exist: {missing}.")
+        self.project_name = str(project_name)
+        self.data_h5ad_dict = dict(data_h5ad_dict)
+        self.project_local_repository = project_local_repository
+        self.idtrack_local_repository = idtrack_local_repository
+        self.converted_id_column = converted_id_column
+        self.target_ensembl_release = self._integer(target_ensembl_release, "target_ensembl_release")
+        self.source_releases = {
+            k: self._integer(v, f"source_releases[{k!r}]") for k, v in (source_releases or {}).items() if v is not None
+        }
+        unknown = sorted(set(self.source_releases) - set(self.data_h5ad_dict))
+        if unknown:
+            raise ValueError(f"`source_releases` names datasets that are not in `data_h5ad_dict`: {unknown}.")
+        self.source_databases = {k: v for k, v in (source_databases or {}).items() if v is not None}
+        unknown = sorted(set(self.source_databases) - set(self.data_h5ad_dict))
+        if unknown:
+            raise ValueError(f"`source_databases` names datasets that are not in `data_h5ad_dict`: {unknown}.")
+        not_names = {k: v for k, v in self.source_databases.items() if not isinstance(v, str) or not v.strip()}
+        if not_names:
+            raise ValueError(f"`source_databases` must name one external database per dataset, got {not_names}.")
 
-        self.idt = idtrack.API(local_repository=self.idtrack_local_repository)
-        self.log = logging.getLogger("harmonize_features")
-        self.idt.configure_logger(_logging)
-        self.idt_initialized = False
-
-        # Organism, final database and snapshot release: explicit values win; nothing defaults to one organism.
-        self.organism_name = self._resolve_organism_name(organism_name)
+        if api is not None:
+            graph = api._require_track().graph.graph
+            self.organism_name = str(graph["organism"])
+            self.graph_last_ensembl_release = int(graph["ensembl_release"])
+            given = {"organism_name": organism_name, "graph_last_ensembl_release": graph_last_ensembl_release}
+            if organism_name is not None and self._resolve_organism_name(organism_name) != self.organism_name:
+                raise ValueError(
+                    f"`organism_name`={organism_name!r} differs from the graph of `api` ({self.organism_name})."
+                )
+            if graph_last_ensembl_release is not None and graph_last_ensembl_release != self.graph_last_ensembl_release:
+                raise ValueError(
+                    f"`graph_last_ensembl_release`={given['graph_last_ensembl_release']!r} differs from the snapshot of "
+                    f"the graph of `api` ({self.graph_last_ensembl_release})."
+                )
+        else:
+            self.organism_name = self._resolve_organism_name(organism_name)
+            self.graph_last_ensembl_release = (
+                self._integer(graph_last_ensembl_release, "graph_last_ensembl_release")
+                if graph_last_ensembl_release is not None
+                else self._default_graph_last_release()
+            )
+        if self.target_ensembl_release > self.graph_last_ensembl_release:
+            raise ValueError(
+                f"`target_ensembl_release`={self.target_ensembl_release} is after the graph snapshot "
+                f"{self.graph_last_ensembl_release}."
+            )
         self.final_database = (
             final_database if final_database is not None else self.default_final_database(self.organism_name)
         )
-        self.graph_last_ensembl_release = (
-            int(graph_last_ensembl_release)
-            if graph_last_ensembl_release is not None
-            else self._default_graph_last_release()
-        )
 
-        self.dict_n_to_1: dict[str, list[str]] = dict()
-        self.multiple_ensembl_list: list[list[tuple[str, str]]] = list()
+        os.makedirs(self.project_local_repository, exist_ok=True)
+        if not os.access(self.project_local_repository, os.W_OK):
+            raise ValueError(f"`project_local_repository` {self.project_local_repository!r} is not writable.")
 
-        # Important dictionaries for debugging:
+        self.feature_names: dict[str, list[str]] = {
+            name: _validated_feature_names(name, read_feature_names(path)) for name, path in self.data_h5ad_dict.items()
+        }
+        self._api = api
+        self._api_given = api is not None
+        self.matchings: dict[str, list[dict[str, Any]]] = {}
+        self.gene_names: dict[str, dict[str, list[str]]] = {}
+        try:
+            for name in self.data_h5ad_dict:
+                self.matchings[name], self.gene_names[name] = self._dataset_conversions(name)
+                if self.verbose_level > 1:
+                    api_for_summary = self._api or API(self.idtrack_local_repository)
+                    summary = api_for_summary.binned_conversion_summary(
+                        api_for_summary.classify_multiple_conversion(self.matchings[name])
+                    )
+                    self.log.info(f"Dataset {name!r}:{summary}")
+        finally:
+            if api is None:
+                self._api = None  # release a graph loaded here
+        self._tables = {
+            name: feature_table(self.feature_names[name], self.matchings[name], self.gene_names[name])
+            for name in self.data_h5ad_dict
+        }
 
-        # If there is n-to-1 matching in a database and if one of them is query=matching, keep it and remove others
-        # for a given group (n), below shows the chosen id (due to its identical as explained), the group
-        # and the datasets that has this group
-        self.dict_n_to_1_with_query: dict[str, dict[tuple, list]] = dict()
-        # this dictionary is ideal to find out the removed ids
-        self.dict_n_to_1_with_query_reverse: dict[str, dict[str, list[str]]] = dict()
-        # this is a dictary showing group-to-dataset
-        self.dict_n_to_1_without_query: dict[tuple, list] = dict()
-        # also:
-        # cached_property: self.dict_1_to_not_1
-
-        # to include into integrated anndata object.
-
-        # sometimes, final database (e.g. HGNC) id is associated with multiple ensembl ids, the algorithm chooses
-        # one of them and creates a list. here you can find the actual possible ensembl ids.
-        self.multiple_ensembl_dict: dict[str, list[str]] = dict()
-        # removed ids from the anndata by `harmonizer` method. the list and the in which datasets it is deleted is kept.
-        self.removed_conversion_failed_identifiers: dict[str, dict[str, list[str]]] = dict()
-        # these ids could be removed but kept as they are consistent across all provided datasets.
-        self.kept_conversion_failed_identifiers: dict[str, dict[str, list[str]]] = dict()
-        # inconsistent matching
-        self.removed_inconsistent_identifier_matching: dict[str, dict[str, list[str]]] = dict()
-        # removed due to multiple source IDs mapping to same final_database (ensembl_gene override duplicates)
-        self.removed_final_database_duplicates: dict[str, dict[str, list[str]]] = dict()
-
-        self._initialize()
+    @staticmethod
+    def _integer(value: Any, name: str) -> int:
+        """Return *value* as an ``int`` release, or raise naming the argument."""
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
+            raise ValueError(f"`{name}` must be an integer Ensembl release, got {value!r}.")
+        return int(value)
 
     @staticmethod
     def default_final_database(organism: str) -> str:
@@ -277,27 +597,52 @@ class HarmonizeFeatures:
             )
         return str(databases[0])
 
+    def _graph_files(self, repository: str, organism: str | None = None) -> list[dict[str, Any]]:
+        """Return the graph files of *repository* that :py:meth:`idtrack.API.build_graph` would load.
+
+        Those are the files :py:meth:`idtrack.GraphMaker.list_graph_files` lists with the window and the content the
+        API builds: from the organism's first release (:py:meth:`idtrack.DB.first_release`) to a snapshot release,
+        the narrow history, every form, the selected external databases, and as primary assembly the organism's
+        preferred one that has the snapshot release.
+
+        Args:
+            repository: Folder to look in.
+            organism: Only graphs of this organism; ``None`` for all.
+
+        Returns:
+            list[dict]: The entries of :py:meth:`idtrack.GraphMaker.list_graph_files`, sorted by file name.
+        """
+        found = []
+        for entry in GraphMaker.list_graph_files(repository, organism):
+            snapshot = entry["ignore_after"]
+            if (
+                entry["organism"] not in DB.supported_organisms
+                or snapshot is None
+                or entry["ignore_before"] != DB.first_release(entry["organism"])
+                or not entry["narrow"]
+                or entry["forms"] is not None
+                or not entry["narrow_external"]
+            ):
+                continue
+            for assembly in DB.assemblies_by_priority(entry["organism"]):
+                first, last = DB.release_range(entry["organism"], assembly)
+                if first <= snapshot and (last is None or snapshot <= last):
+                    if assembly == entry["genome_assembly"]:
+                        found.append(entry)
+                    break
+        return found
+
     def _graph_snapshots(self) -> dict[str, list[int]]:
         """Return ``{organism: [snapshot releases]}`` of the graphs :py:meth:`idtrack.API.build_graph` would load.
 
-        Graph files are named by :py:meth:`idtrack._graph_maker.GraphMaker.create_file_name`; the API builds them
-        with ``ignore_before`` at idtrack's floor and ``narrow=True``.
-
         Returns:
-            dict[str, list[int]]: Sorted snapshot releases per organism with at least one such graph.
+            dict[str, list[int]]: Sorted snapshot releases per organism with at least one such graph
+            (:py:meth:`_graph_files`).
         """
-        floor = int(min(DB.mysql_port_min_release.values()))
         found: dict[str, list[int]] = {}
-        try:
-            names = os.listdir(self.idtrack_local_repository)
-        except OSError:
-            return found
-        for organism in DB.supported_organisms:
-            pattern = re.compile(rf"^graph_{re.escape(organism)}_min{floor}_max([0-9]+)_narrow\.pickle$")
-            releases = sorted(int(m.group(1)) for m in map(pattern.match, names) if m)
-            if releases:
-                found[organism] = releases
-        return found
+        for entry in self._graph_files(self.idtrack_local_repository):
+            found.setdefault(entry["organism"], []).append(int(entry["ignore_after"]))
+        return {organism: sorted(releases) for organism, releases in sorted(found.items())}
 
     def _resolve_organism_name(self, organism_name: str | None) -> str:
         """Return the Ensembl species name to use (see the ``organism_name`` argument)."""
@@ -324,708 +669,263 @@ class HarmonizeFeatures:
         releases = self._graph_snapshots().get(self.organism_name)
         if releases:
             return int(max(releases))
-        _, latest_release = self.idt.resolve_organism(self.organism_name)
+        _, latest_release = API(self.idtrack_local_repository).resolve_organism(self.organism_name)
         return int(latest_release)
 
-    def _initialize(self) -> None:
-        """Populate diagnostic structures for failed or ambiguous identifier conversions.
+    # ----------------------------------------------------------------------------------------------------------------
+    # Conversions and their cache
 
-        Called once by :py:meth:`HarmonizeFeatures.__init__`, this routine scans every input dataset and
-        updates several reporting attributes (for example :py:attr:`removed_conversion_failed_identifiers`
-        or :py:attr:`removed_inconsistent_identifier_matching`).  It also derives
-        :py:attr:`multiple_ensembl_dict`, a reverse map of ambiguous *Ensembl ID → source identifiers*,
-        enabling downstream inspection of one-to-many relationships.
+    def _graph_identity(self) -> dict[str, Any]:
+        """Return what identifies the graph the conversions come from (see "Result cache" in the class docs).
 
-        Returns ``None``: All results are stored on *self* for later inspection.
-
-        Internally the method:
-
-        1. Extracts raw feature identifiers from each :py:class:`anndata.AnnData` file.
-        2. Classifies identifiers into failure or inconsistency categories.
-        3. Records per-dataset membership via :py:meth:`reporter_dict_creator`.
-        4. Builds the ``multiple_ensembl_list`` used by
-           :py:meth:`HarmonizeFeatures.create_multiple_ensembl_dict`.
-        5. Touches :py:meth:`datataset_conversion_dataframe_issues` so the cached-property is built
-           eagerly.
+        The graph file of the organism and snapshot in the repository of the API (given or own): its name, size and
+        modification time, so that the same graph identifies the same way whether it is loaded or not. A loaded graph
+        without such a file (e.g. built elsewhere) is identified by a digest of its metadata.
         """
-        for dataset_name, dataset_path in self.data_h5ad_dict.items():
-            gene_list = self.extract_source_identifiers_from_anndata(dataset_path)
-
-            self.reporter_dict_creator(
-                dataset_name=dataset_name,
-                the_dict=self.removed_conversion_failed_identifiers,
-                the_set=set(gene_list) & self.conversion_failed_identifiers,
-            )
-
-            self.reporter_dict_creator(
-                dataset_name=dataset_name,
-                the_dict=self.kept_conversion_failed_identifiers,
-                the_set=set(gene_list) & self.conversion_failed_but_consistent_identifiers,
-            )
-
-            self.reporter_dict_creator(
-                dataset_name=dataset_name,
-                the_dict=self.removed_inconsistent_identifier_matching,
-                the_set=set(gene_list) & self.datataset_conversion_dataframe_issues["gene_names_inconsistency"],
-            )
-
-            self.reporter_dict_creator(
-                dataset_name=dataset_name,
-                the_dict=self.removed_final_database_duplicates,
-                the_set=set(gene_list)
-                & self.datataset_conversion_dataframe_issues["final_database_duplicate_source_ids"],
-            )
-
-            for the_id in gene_list:
-                conversion = self.unified_matching_dict[the_id]["matching"]["last_node"]
-                if the_id not in self.conversion_failed_but_consistent_identifiers:
-                    self.multiple_ensembl_list.append(conversion)
-
-        self.multiple_ensembl_dict = self.create_multiple_ensembl_dict()
-        self.datataset_conversion_dataframe_issues
-
-    def _initialize_idt(self) -> None:
-        """Instantiate the IDTrack interface on first use.
-
-        The public API defers expensive graph loading until it is actually required.  This helper therefore
-        checks whether :py:attr:`idt` is ``None`` and, if so, loads the on-disk identifier graph described by
-        *idtrack_local_repository* and *graph_last_ensembl_release*, then configures release filters so that
-        subsequent look-ups always target *target_ensembl_release*.  Re-invocations are no-ops.
-
-        Returns ``None``: The :py:attr:`idt` attribute is populated and ready for queries.
-        """
-        if not self.idt_initialized:
-            # `self.organism_name` is already the Ensembl species name (see `_resolve_organism_name`).
-            self.idt.build_graph(organism_name=self.organism_name, snapshot_release=self.graph_last_ensembl_release)
-            self.idt.calculate_graph_caches()
-            self.idt_initialized = True
-
-    def create_multiple_ensembl_dict(self) -> dict[str, list[str]]:
-        """Reverse map ambiguous Ensembl target IDs to their originating source identifiers.
-
-        During scanning, :py:meth:`_initialize` collects every *(source_id, target_ensembl_id)* pair that
-        falls outside the *consistent one-to-one* category into ``multiple_ensembl_list``.  This helper
-        consolidates that list into a dictionary keyed by ``target_ensembl_id`` with a **sorted list** of
-        associated ``source_id`` values, allowing auditors to quickly discover all inputs that collapsed
-        onto the same Ensembl record.
-
-        Returns:
-            dict[str, list[str]]: ``{target_ensembl_id: [source_id₁, source_id₂, …]}`` with duplicates
-            removed and values sorted alphanumerically.
-        """
-        r: dict[str, set[str]] = dict()
-        for i in self.multiple_ensembl_list:
-            for n, m in i:
-                if m not in r:
-                    r[m] = set()
-                r[m].add(n)
-
-        return {k: sorted(v) for k, v in r.items()}
-
-    def reporter_dict_creator_helper_reason_finder(self, the_id: str) -> str:
-        """Infer why a particular identifier failed or produced a non-one-to-one conversion.
-
-        The algorithm inspects :py:attr:`unified_matching_dict` and categorises *the_id* into one or more
-        mutually non-exclusive reasons:
-
-        * ``"n-to-1"``   — The identifier was part of an *n → 1* collapse within *at least one* dataset.
-        * ``"1-to-0"``   — No target identifier was returned (conversion failure).
-        * ``"1-to-n"``   — The conversion yielded multiple targets (ambiguous mapping).
-
-        The final label is a single string where multiple reasons are concatenated with underscores, e.g.
-        ``"1-to-0_1-to-n"``.
-
-        Args:
-            the_id (str): Source identifier whose conversion outcome needs explanation.
-
-        Returns:
-            str: Underscore-delimited reason string describing the failure or ambiguity class.
-        """
-        reason = []
-
-        matching = self.unified_matching_dict[the_id]
-        len_targets = len(matching["matching"]["target_id"])
-
-        if the_id in self.dict_n_to_1:  # in one of the datasets during the integration, this ID was a part of n-to-1.
-            reason.append("n-to-1")
-        if len_targets == 0:
-            reason.append("1-to-0")
-        if len_targets > 1:
-            reason.append("1-to-n")
-
-        return "_".join(reason)
-
-    def reporter_dict_creator(
-        self,
-        the_dict: dict[str, dict],
-        the_set: set[str],
-        dataset_name: str,
-    ) -> None:
-        """Update or create per-identifier diagnostic entries for a single dataset.
-
-        Each identifier in *the_set* is ensured to exist as a key inside *the_dict*.  The entry's
-        ``"reason"`` field is generated exactly once using
-        :py:meth:`reporter_dict_creator_helper_reason_finder`; its ``"datasets_containing"`` list is then
-        appended with *dataset_name*.  This allows quick aggregation of “where did this problematic
-        identifier occur?” across all datasets.
-
-        Returns ``None``: *the_dict* is modified in-place.
-
-        Args:
-            the_dict (dict[str, dict]): Target dictionary that stores diagnostic metadata.  Keys are
-                source identifiers; values have keys ``"reason"`` (``str``) and
-                ``"datasets_containing"`` (``list[str]``).
-            the_set (set[str]): Identifiers that belong to the diagnostic category represented by
-                *the_dict*.
-            dataset_name (str): Human-readable alias of the dataset currently being processed.
-        """
-        for i in the_set:
-            if i not in the_dict:
-                the_dict[i] = {"reason": self.reporter_dict_creator_helper_reason_finder(i), "datasets_containing": []}
-            the_dict[i]["datasets_containing"].append(dataset_name)
-
-    @cached_property
-    def datataset_conversion_dataframe_issues(self) -> pd.DataFrame:
-        """Aggregate conversion failures and ambiguities into a tidy diagnostic table.
-
-        The cached DataFrame has one row per *source identifier* encountered across **all** datasets and
-        the following columns:
-
-        * ``dataset``                — Dataset alias that triggered the row (duplicates possible).
-        * ``reason``                 — Underscore-delimited label from
-          :py:meth:`reporter_dict_creator_helper_reason_finder`.
-        * ``target_identifier``      — The resolved identifier or ``NaN`` if conversion failed.
-        * ``was_removed`` (bool)     — Whether the feature was ultimately dropped from the dataset.
-
-        This compact view is ideal for spreadsheet export or in-notebook inspection because it condenses
-        the richer nested structures stored on the class into a flat, analysis-friendly format.
-
-        Returns:
-            pandas.DataFrame: Combined diagnostic table sorted lexicographically by *dataset* and *reason*.
-        """
-        gene_list = set(self.unified_matching_dict.keys()) - self.conversion_failed_identifiers
-        df = self.create_dataset_conversion_dataframe(gene_list=gene_list, initialization_run=True)
-
-        # In Shiddar and Wang in HLCA datasets contains FAM231C, and FAM231B. Very weird genes, IDTrack fails:
-        # ENSG00000268674.2	FAM231C	FAM231C
-        # ENSG00000268674.2	FAM231B	FAM231B
-        # Report and remove from all conversion lists.
-        ensembl_col = self._ENSEMBL_GENE_COLUMN
-        dfa = df.drop_duplicates(subset=[ensembl_col, self.final_database], keep="first")
-
-        # Use safe column accessor to handle potential duplicate column names edge cases
-        ensembl_gene_duplicated_mask = self._get_column_as_series(dfa, ensembl_col).duplicated(keep=False)
-        dfa_duplicated_ensembl = dfa[ensembl_gene_duplicated_mask]
-        _gene_names_inconsistency = set(
-            self._get_column_as_series(dfa_duplicated_ensembl, self.final_database).unique()
+        repository = (
+            self._api.local_repository if self._api_given and self._api is not None else self.idtrack_local_repository
         )
-
-        final_db_col = self._get_column_as_series(df, self.final_database)
-        gene_names_inconsistency = set(
-            self._get_column_as_series(df[final_db_col.isin(_gene_names_inconsistency)], "Query ID").unique()
-        )
-
-        final_database_chosen_single_ensembl_dict = dict()
-        # Track source IDs that should be removed because their ensembl_gene was not chosen
-        # (they would cause duplicates after the ensembl_gene override)
-        final_database_duplicate_source_ids = set()
-
-        final_db_col_dfa = self._get_column_as_series(dfa, self.final_database)
-        dfa_duplicated_final_db = dfa[final_db_col_dfa.duplicated(keep=False)]
-        for final_final_database_gene_name, df_subset in dfa_duplicated_final_db.groupby(self.final_database):
-            # Due to the path, idtrack may choose different ensembl_gene
-            # for corresponding final_database (e.g. HGNC). Here, make a rule for each final_database id.
-            # You can see all possible ensembl ids in
-            ensembl_gene_col = self._get_column_as_series(df_subset, ensembl_col)
-            chosen_ensembl_id = sorted(ensembl_gene_col)[0]  # choose first one
-            final_database_chosen_single_ensembl_dict[final_final_database_gene_name] = chosen_ensembl_id
-            # Mark source IDs with non-chosen ensembl_genes for removal to prevent duplicates
-            non_chosen_rows = df_subset[ensembl_gene_col != chosen_ensembl_id]
-            final_database_duplicate_source_ids.update(self._get_column_as_series(non_chosen_rows, "Query ID").tolist())
-
-        return {
-            "gene_names_inconsistency": gene_names_inconsistency,
-            "final_database_chosen_single_ensembl_dict": final_database_chosen_single_ensembl_dict,
-            "final_database_duplicate_source_ids": final_database_duplicate_source_ids,
-        }
-
-    def create_dataset_conversion_dataframe(
-        self, gene_list: list[str] | pd.Index, initialization_run: bool
-    ) -> pd.DataFrame:
-        """Build a two-column mapping table for a single dataset's feature identifiers.
-
-        The routine transforms every source identifier in *gene_list* into the target namespace defined by
-        ``self.final_database`` and Ensembl gene IDs.  The resulting convertible subset is written into a
-        new :py:class:`pandas.DataFrame` with three columns—``_ENSEMBL_GENE_COLUMN``, ``self.final_database``,
-        and ``"Query ID"``—while problematic identifiers are annotated or filtered according to the rules
-        established during :py:meth:`_initialize`.
-
-        When called by :py:meth:`_initialize` (*initialization_run* ``True``), the method writes provisional
-        mappings without inspecting post-initialisation overrides.  In subsequent calls
-        (*initialization_run* ``False``) it resolves single-Ensembl ambiguities via
-        ``self.datataset_conversion_dataframe_issues["final_database_chosen_single_ensembl_dict"]`` to
-        guarantee a one-to-one relation between indices and feature rows.
-
-        Args:
-            gene_list (Union[list[str], pd.Index]): Ordered collection of source identifiers to convert for
-                the current dataset.
-            initialization_run (bool): ``True`` if invoked from :py:meth:`_initialize`; disables the
-                single-Ensembl disambiguation step applied in later passes.
-
-        Returns:
-            pandas.DataFrame: Mapping table ready to become ``adata.var``.  Columns are
-            ``_ENSEMBL_GENE_COLUMN``, ``self.final_database``, and the original ``"Query ID"`` for traceability.
-
-        Raises:
-            AssertionError: If diagnostic sets such as :py:attr:`conversion_failed_identifiers` were not
-                populated—indicating an incorrect call order—or if unexpected duplicate target IDs remain
-                after processing.
-            ValueError: When malformed conversion entry.
-        """
-        # Ensure unified_matching_dict is populated (verifies proper initialization order).
-        # The cached properties conversion_failed_identifiers and conversion_failed_but_consistent_identifiers
-        # may legitimately be empty when all conversions succeed or when failures are all consistent/inconsistent.
-        if len(self.unified_matching_dict) == 0:
-            raise AssertionError("Possible function call order issue: unified_matching_dict is empty!")
-
-        new_var_list = list()
-        for the_id in gene_list:
-            conversion = self.unified_matching_dict[the_id]["matching"]["last_node"]
-
-            if the_id in self.conversion_failed_but_consistent_identifiers:
-                modified_id = (f"{the_id}{HarmonizeFeatures.nonmatching_but_consistent_suffix}", the_id)
-                new_var_list.append(list(modified_id) + [the_id])
-
-            # 1-to-n's and 1-to-0s are either removed or kept as consistent ones.
-            # if there is multiple ensembl id matching, then len(conversion) != 1.
-            # it keeps the first one for now, the possible lists are saved self.multiple_ensembl_list in `initialize` method
-
-            elif initialization_run:
-                first_match = conversion[0]
-                # Validate the conversion tuple structure to prevent DataFrame column misalignment
-                if not isinstance(first_match, (tuple, list)) or len(first_match) != 2:
-                    raise ValueError(
-                        f"Malformed conversion entry for identifier {the_id!r}: expected a 2-tuple "
-                        f"(ensembl_gene, {self.final_database}), got {first_match!r} with "
-                        f"type={type(first_match).__name__}, len={len(first_match) if hasattr(first_match, '__len__') else 'N/A'}"
-                    )
-                ensembl_gene, final_db_value = first_match
-                new_var_list.append([ensembl_gene, final_db_value, the_id])
-            else:
-                first_match = conversion[0]
-                # Validate the conversion tuple structure
-                if not isinstance(first_match, (tuple, list)) or len(first_match) != 2:
-                    raise ValueError(
-                        f"Malformed conversion entry for identifier {the_id!r}: expected a 2-tuple "
-                        f"(ensembl_gene, {self.final_database}), got {first_match!r} with "
-                        f"type={type(first_match).__name__}, len={len(first_match) if hasattr(first_match, '__len__') else 'N/A'}"
-                    )
-                ensembl_gene, final_db_value = first_match
-                if (
-                    final_db_value
-                    in self.datataset_conversion_dataframe_issues["final_database_chosen_single_ensembl_dict"]
-                ):
-                    ensembl_gene = self.datataset_conversion_dataframe_issues[
-                        "final_database_chosen_single_ensembl_dict"
-                    ][final_db_value]
-
-                new_var_list.append([ensembl_gene, final_db_value, the_id])
-
-        df = pd.DataFrame(new_var_list, columns=[self._ENSEMBL_GENE_COLUMN, self.final_database, "Query ID"])
-        return df
-
-    def feature_harmonizer(self, dataset_name: str) -> tuple[ad.AnnData, int, int]:
-        """Convert one dataset's feature space into the unified target namespace.
-
-        The ``.h5ad`` file is read completely, the features removed during :py:meth:`_initialize` are dropped, and
-        the feature axis is renamed with the mapping of :py:meth:`create_dataset_conversion_dataframe`. Everything
-        else of the dataset is kept: ``X``, ``layers``, ``obs``, ``obsm``, ``obsp`` and ``uns`` as they are, and
-        ``varm``/``varp`` subset to the kept features. ``var`` holds the input's own columns (a column whose name is
-        one of the conversion columns gets the suffix ``"_input"``) after the conversion columns. ``raw`` is dropped
-        (with a warning), because its features are not harmonised. The source file is never altered.
-
-        Args:
-            dataset_name (str): Key from :py:attr:`data_h5ad_dict` identifying which dataset to load and
-                harmonise.
-
-        Returns:
-            tuple:
-                * **resulting_adata** (:py:class:`anndata.AnnData`) - The dataset whose ``var`` index is the matched
-                  Ensembl gene ID (or the input name for features kept unconverted), with the columns
-                  ``self.final_database`` and ``"Query ID"`` (the input name) before the input's ``var`` columns.
-                * **t0** (int) - Number of features *before* filtering and harmonisation.
-                * **t1** (int) - Number of features *after* the procedure (i.e., retained in
-                  *resulting_adata*).
-
-        Raises:
-            AssertionError: If duplicate Ensembl or target-database IDs slip past the conversion checks,
-                which would break one-to-one mapping assumptions.
-        """
-        adata = ad.read_h5ad(self.data_h5ad_dict[dataset_name])
-        t0 = adata.n_vars
-        keep = ~(
-            adata.var.index.isin(self.conversion_failed_identifiers)
-            | adata.var.index.isin(self.datataset_conversion_dataframe_issues["gene_names_inconsistency"])
-            | adata.var.index.isin(self.datataset_conversion_dataframe_issues["final_database_duplicate_source_ids"])
-        )
-        if adata.raw is not None:
-            self.log.warning(
-                f"Dataset {dataset_name!r}: `raw` is dropped, because its features are not harmonised; "
-                "keep raw counts in a layer to carry them through."
-            )
-            del adata.raw
-        adata = adata[:, keep].copy()
-
-        df = self.create_dataset_conversion_dataframe(gene_list=adata.var.index, initialization_run=False)
-
-        # Use safe column accessor to check for duplicates
-        ensembl_col = self._ENSEMBL_GENE_COLUMN
-        ensembl_gene_col = self._get_column_as_series(df, ensembl_col)
-        final_db_col = self._get_column_as_series(df, self.final_database)
-        if ensembl_gene_col.duplicated(keep=False).any() or final_db_col.duplicated(keep=False).any():
-            raise AssertionError("Unexpected duplicated entry!")
-
-        conversion = df.set_index(ensembl_col)
-        conversion.index = conversion.index.astype(str)
-        conversion.index.name = None
-        input_var = adata.var.copy()
-        input_var.columns = [f"{c}_input" if c in conversion.columns else c for c in input_var.columns]
-        input_var.index = conversion.index
-        adata.var = pd.concat([conversion, input_var], axis=1)
-
-        return adata, t0, adata.n_vars
-
-    @cached_property
-    def dict_1_to_not_1(self) -> dict[str, set[str]]:
-        """Collect identifiers involved in one-to-many or one-to-zero conversions.
-
-        This helper scans :py:attr:`unified_matching_dict` and extracts every *source identifier* whose
-        conversion to the target namespace is **not** a strict one-to-one mapping.  Two situations are
-        considered problematic:
-
-        * **1 → 0 (conversion failure)** — no target identifier could be resolved.
-        * **1 → n (ambiguous hit)** — multiple targets share the best score, preventing an unambiguous choice.
-
-        The resulting dictionary is later consumed by :py:meth:`reporter_dict_creator` to populate the
-        diagnostic attributes exposed to users and by
-        :py:meth:`create_dataset_conversion_dataframe` to decide which features should be dropped or
-        flagged in each :py:class:`anndata.AnnData` object.
-
-        Returns:
-            dict[str, set[str]]: ``{problem_class: {source_id₁, source_id₂, …}}`` where *problem_class* is
-                either ``"1-to-0"`` or ``"1-to-n"``.
-        """
-        result = dict()
-        for query, value in self.unified_matching_dict.items():
-            if len(value["matching"]["target_id"]) != 1:
-                result[query] = value["datasets_containing"]
-
-        return result
-
-    @cached_property
-    def conversion_failed_identifiers(self) -> set[str]:
-        """Return identifiers that could not be converted in at least one dataset.
-
-        The property wraps :py:meth:`dict_1_to_not_1` and filters its ``"1-to-0"`` category so that
-        downstream code can quickly query *irrecoverable* failures without iterating over the entire
-        diagnostic structure.
-
-        Returns:
-            set[str]: Identifiers that failed conversion in at least one dataset
-                or have inconsistent mappings (1-to-0, 1-to-n, or n-to-1 where not
-                all datasets share the same mapping).
-        """
-        result = set()
-
-        for query, datasets_containing in self.dict_1_to_not_1.items():
-            # for 1-to-n and 1-to-0, if it is not shared across all the datasets, add remove list.
-            if len(datasets_containing) != self.n_datasets:
-                result.add(query)
-
-        for query, datasets_containing_2 in self.dict_n_to_1.items():
-            # for one gene in n (among n-to-1), if it is not shared across all the datasets, add remove list.
-            if len(datasets_containing_2) != self.n_datasets:
-                result.add(query)
-
-        return result
-
-    @cached_property
-    def conversion_failed_but_consistent_identifiers(self) -> set[str]:
-        """Identify non-convertible identifiers that are consistently absent across *all* datasets.
-
-        An identifier that fails conversion in *every* dataset can be retained (or at least logged once)
-        without jeopardising dataset comparability.  This property computes the set intersection of
-        :py:attr:`conversion_failed_identifiers` across datasets and makes the result available for
-        selective retention or downstream visualisation.
-
-        Returns:
-            set[str]: Identifiers that were never convertible but appeared in every dataset examined.
-        """
-        _result1 = {i for i, _ in self.dict_n_to_1.items() if i not in self.conversion_failed_identifiers}
-        _result2 = {i for i, _ in self.dict_1_to_not_1.items() if i not in self.conversion_failed_identifiers}
-        result = set.union(_result1, _result2)
-
-        return result
-
-    @cached_property
-    def unified_matching_dict(self):
-        """Expose the full source-to-target identifier mapping produced by IDTrack.
-
-        The dictionary is created during :py:meth:`_initialize` when the IDTrack graph is first queried.
-        Keys are *source identifiers* (as found in input files); values are **all** candidate target IDs
-        returned by the graph query, ordered by decreasing score.  A value may therefore be
-
-        * a single-element list (unambiguous one-to-one),
-        * a multi-element list (ambiguous one-to-n), or
-        * an empty list (1-to-0 conversion failure).
-
-        Public access to this attribute enables advanced users to perform their own diagnostics or to
-        reproduce the algorithm's decisions outside the class.
-
-        Returns:
-            dict[str, list[str]]: Mapping ``{source_id: [target_id₁, target_id₂, …]}`` in the order
-                delivered by the IDTrack query.
-        """
-        matching_dict = self.get_idtrack_matchings_for_all_datasets()
-        unified_dict = dict()
-
-        for dataset_name, matching in matching_dict.items():
-            for m in matching:
-                if m["query_id"] not in unified_dict:
-                    unified_dict[m["query_id"]] = {"matching": m, "datasets_containing": []}
-                unified_dict[m["query_id"]]["datasets_containing"].append(dataset_name)
-
-        return unified_dict
-
-    def get_idtrack_matchings_for_all_datasets(self) -> dict[str, pd.DataFrame]:
-        """Return raw ID-Track matchings for every dataset in the project.
-
-        This helper exposes the unfiltered mapping tables produced by ID-Track so that users can inspect
-        exactly how each *source identifier* was converted (or failed to convert) in every individual
-        dataset.  Internally it triggers :py:meth:`run_idtrack_for_single_dataset` for any dataset that
-        has not yet been processed, caches the resulting tables in memory, and then assembles a
-        ``{dataset_name: dataframe}`` dictionary whose keys align one-to-one with :py:data:`data_h5ad_dict`.
-
-        Each returned :py:class:`pandas.DataFrame` includes at least the following columns:
-        ``source_id``, ``target_id``, ``conversion_status``, ``reason``, and any custom
-        metadata injected by :py:class:`idtrack.api.API`.
-
-        Returns:
-            dict[str, pandas.DataFrame]: Mapping of dataset alias to its full, row-level ID-Track
-            matching table.  The dictionary order follows the insertion order of
-            :py:data:`data_h5ad_dict`.
-        """
-        result_dataset = dict()
-        for dataset_name, dataset_path in self.data_h5ad_dict.items():
-            dataset_pickle = self.result_cache_path(dataset_name)
-
-            switch_inconsistency = None
-            if os.path.isfile(dataset_pickle) and os.access(dataset_pickle, os.R_OK):
-                with open(dataset_pickle, "rb") as handle:
-                    matching_list = pickle.load(handle)  # noqa: S301
-                _saved_id_list = sorted([i["query_id"] for i in matching_list])
-                _dataset_id_list = sorted(self.extract_source_identifiers_from_anndata(dataset_path=dataset_path))
-
-                # if the id lists are different than the provided one.
-                switch_inconsistency = _saved_id_list != _dataset_id_list
-
-            if switch_inconsistency is not False:
-                if switch_inconsistency is None and self.verbose_level > 2:
-                    self.log.debug(f"Pickle not found: `{dataset_name}`. Calculating IDTrack matchings.")
-                elif switch_inconsistency is True and self.verbose_level > 2:
-                    self.log.debug(
-                        "Inconsistent IDs with pickle object and the "
-                        f"dataset: `{dataset_name}`. Calculating IDTrack matchings."
-                    )
-                matching_list = self.run_idtrack_for_single_dataset(dataset_name, dataset_path)
-                with open(dataset_pickle, "wb") as handle:
-                    pickle.dump(matching_list, handle)  # noqa: S301
-
-            result_dataset[dataset_name] = matching_list
-            if self.verbose_level > 1:
-                binned_conversions = self.idt.classify_multiple_conversion(matching_list)
-                self.log.info(f"{dataset_name}")
-                self.idt.print_binned_conversion(binned_conversions)
-
-            # Do not allow n_to_1 within a certain dataset.
-            self.n_to_1_within_individual_dataset(dataset_name=dataset_name, dataset_matching_list=matching_list)
-
-        return result_dataset
+        for entry in self._graph_files(repository, self.organism_name):
+            if entry["ignore_after"] == self.graph_last_ensembl_release:
+                stat = os.stat(entry["path"])
+                return {
+                    "graph_file": os.path.basename(entry["path"]),
+                    "size": stat.st_size,
+                    "mtime_ns": stat.st_mtime_ns,
+                }
+        if self._api is not None and self._api.track is not None:
+            metadata = {
+                k: v
+                for k, v in self._api.track.graph.graph.items()
+                if isinstance(v, (str, int, float, bool)) or (isinstance(v, (list, tuple)) and len(v) < 1000)
+            }
+            digest = hashlib.sha256(json.dumps(metadata, sort_keys=True, default=str).encode()).hexdigest()
+            return {"loaded_graph_metadata_sha256": digest}
+        return {"graph_file": None}
 
     def result_cache_path(self, dataset_name: str) -> str:
-        """Return the path of the cached ID-Track matchings of one dataset.
-
-        The file name holds everything the matchings depend on besides the identifiers themselves (which are
-        checked when the file is read): project, dataset, organism, final database, target release and graph
-        snapshot release, e.g. ``idtrack_result_<project>_<dataset>_homo_sapiens_HGNC-Symbol_rel114_graph115.pickle``.
+        """Return the path of the cached conversions of one dataset (a JSON file in the project folder).
 
         Args:
             dataset_name: Key of :py:attr:`data_h5ad_dict`.
 
         Returns:
-            str: Absolute or repository-relative path inside :py:attr:`project_local_repository`.
+            str: ``<project folder>/idtrack_result_<project>_<dataset>.json`` with both names made safe for file
+            names (characters other than letters, digits, ``.`` and ``-`` replaced, and a short hash added).
         """
-        final_db_slug = re.sub(r"[^0-9A-Za-z]+", "-", str(self.final_database)).strip("-")
-        name = (
-            f"idtrack_result_{self.project_name}_{dataset_name}_{self.organism_name}_{final_db_slug}"
-            f"_rel{self.target_ensembl_release}_graph{self.graph_last_ensembl_release}.pickle"
+        return os.path.join(
+            self.project_local_repository,
+            f"idtrack_result_{_slug(self.project_name)}_{_slug(dataset_name)}.json",
         )
-        return os.path.join(self.project_local_repository, name)
 
-    def extract_source_identifiers_from_anndata(self, dataset_path: str) -> list[str]:
-        """Load an ``.h5ad`` file and harvest the raw feature identifiers.
+    def _cache_header(self, dataset_name: str) -> dict[str, Any]:
+        """Return everything a dataset's conversions depend on (compared with a stored file before it is used)."""
+        names = self.feature_names[dataset_name]
+        return {
+            "format": _CACHE_FORMAT,
+            "idtrack_version": idtrack.__version__,
+            "organism": self.organism_name,
+            "final_database": self.final_database,
+            "target_ensembl_release": self.target_ensembl_release,
+            "source_release": self.source_releases.get(dataset_name),
+            "source_database": self.source_databases.get(dataset_name),
+            "graph_snapshot": self.graph_last_ensembl_release,
+            "graph": self._graph_identity(),
+            "feature_names_sha256": hashlib.sha256("\n".join(names).encode()).hexdigest(),
+        }
 
-        To prepare inputs for ID-Track, this routine opens the single-cell expression matrix at
-        *dataset_path*, reads the ``.var`` DataFrame, and extracts either the ``"gene_id"`` field (if
-        present) or the index itself as the *source identifier*.  Identifiers are returned in file order
-        so that downstream procedures can preserve the original feature ordering when reconstructing
-        matrices.
+    def _dataset_conversions(self, dataset_name: str) -> tuple[list[dict[str, Any]], dict[str, list[str]]]:
+        """Return the matchings and gene names of a dataset, from a valid result cache or computed."""
+        path = self.result_cache_path(dataset_name)
+        header = self._cache_header(dataset_name)
+        try:
+            with open(path) as handle:
+                stored = json.load(handle)
+            if stored.get("header") == header:
+                return stored["matchings"], stored["gene_names"]
+            self.log.info(f"Dataset {dataset_name!r}: the cached conversions are of other inputs; recomputing.")
+        except FileNotFoundError:
+            pass
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            self.log.warning(
+                f"Dataset {dataset_name!r}: the result cache {path!r} is unreadable ({error}); recomputing."
+            )
+        api = self._require_api()
+        header = self._cache_header(dataset_name)  # the graph is loaded now: identify it as loaded
+        matchings, gene_names = self._convert_dataset(api, dataset_name)
+        _write_json_atomically(path, {"header": header, "matchings": matchings, "gene_names": gene_names})
+        return matchings, gene_names
+
+    def _require_api(self) -> API:
+        """Return the API, loading the graph first if this harmonizer has none yet."""
+        if self._api is None:
+            api = API(local_repository=self.idtrack_local_repository)
+            api.build_graph(organism_name=self.organism_name, snapshot_release=self.graph_last_ensembl_release)
+            self._api = api
+        return self._api
+
+    def _convert_dataset(self, api: API, dataset_name: str) -> tuple[list[dict[str, Any]], dict[str, list[str]]]:
+        """Convert the features of one dataset, then name every gene reached (see the class docs).
+
+        The names of a gene in the final database depend on the gene, the database and the release only, so they are
+        read from the gene itself (:py:meth:`idtrack.Track.gene_to_database`: a few look-ups per gene, no search),
+        whatever feature led to the gene and whatever name that feature's own conversion returned.
 
         Args:
-            dataset_path (str): Absolute or project-relative path to an ``.h5ad`` file containing a valid
-                :py:class:`anndata.AnnData` object.
+            api: The API with the graph loaded.
+            dataset_name: Key of :py:attr:`data_h5ad_dict`.
 
         Returns:
-            list[str]: Ordered list of identifier strings exactly as they appear in the source file.
+            tuple: The matchings (one per feature, in file order) and ``{gene: final-database names}`` (sorted; empty
+            for a gene without an id in the final database).
         """
-        adata = ad.read_h5ad(dataset_path, backed="r")
-        result = list(adata.var_names)
-        del adata
-        gc.collect()
-
-        return result
-
-    def run_idtrack_for_single_dataset(self, dataset_name: str, dataset_path: str) -> pd.DataFrame:
-        """Convert identifiers for one dataset and cache the raw ID-Track output.
-
-        Given a dataset alias and its on-disk location, this method:
-
-        1. Calls :py:meth:`extract_source_identifiers_from_anndata` to obtain the feature list.
-        2. Feeds those identifiers to :py:class:`idtrack.api.API` and collects the per-feature match
-           results.
-        3. Stores the resulting :py:class:`pandas.DataFrame` inside the
-           :py:attr:`_idtrack_matchings_per_dataset` cache so repeated calls are O(1).
-        4. Updates :py:attr:`unified_matching_dict` so that cross-dataset diagnostics remain consistent.
-
-        Users rarely call this directly—:py:meth:`get_idtrack_matchings_for_all_datasets` handles the
-        orchestration—but it remains public for advanced, dataset-by-dataset debugging.
-
-        Args:
-            dataset_name (str): Human-friendly alias used as the key inside diagnostic dictionaries.
-            dataset_path (str): Absolute or project-relative ``.h5ad`` path passed straight to
-                :py:meth:`extract_source_identifiers_from_anndata`.
-
-        Returns:
-            pandas.DataFrame: Full ID-Track matching table for *dataset_name* with columns
-                ``source_id``, ``target_id``, ``conversion_status``, and any extra metadata returned by the API.
-        """
-        self._initialize_idt()
-        gene_list = self.extract_source_identifiers_from_anndata(dataset_path)
-
-        matching_list = self.idt.convert_identifier_multiple(
-            gene_list,
-            final_database=self.final_database,
+        matchings = api.convert_identifier_multiple(
+            self.feature_names[dataset_name],
+            from_release=self.source_releases.get(dataset_name),
+            from_database=self.source_databases.get(dataset_name),
             to_release=self.target_ensembl_release,
-            pbar_prefix=dataset_name,
+            final_database=self.final_database,
+            strategy="best",
             verbose=self.verbose_level > 0,
+            pbar_prefix=dataset_name,
         )
+        genes = sorted({gene for m in matchings for gene, _ in m["last_node"]})
+        if self.final_database == DB.nts_ensembl[DB.backbone_form]:
+            return matchings, {gene: [gene] for gene in genes}
+        track = api._require_track()
+        gene_names = {
+            gene: track.gene_to_database(gene, self.final_database, self.target_ensembl_release)[0] for gene in genes
+        }
+        return matchings, gene_names
 
-        return matching_list
+    # ----------------------------------------------------------------------------------------------------------------
+    # Reports
 
-    def n_to_1_within_individual_dataset(self, dataset_name: str, dataset_matching_list: list[dict]) -> None:
-        """Detect n-to-1 collapses inside one dataset and populate diagnostic caches.
-
-        In the ID-Track context *n-to-1* means **several source identifiers** (``query_id``) converging on the
-        **same target identifier** (``matched_id``).  Such collapses are problematic because they merge
-        distinct features when building the harmonised expression matrix.  This helper inspects the raw
-        matching rows for a single dataset, discovers all many-to-one events (including those that passed
-        through the *alternative target database*), and records the results in a family of per-project
-        dictionaries so that later stages—merging, filtering, and reporting—can make informed decisions.
-
-        The routine never returns a value; instead it mutates the following public attributes:
-
-        * :py:attr:`dict_n_to_1` - ``{matched_id: [dataset₁, dataset₂, …]}`` listing every dataset where the
-          collapse occurred.
-        * :py:attr:`dict_n_to_1_with_query` - ``{matched_id: {(query_id₁,…): [dataset]}}`` for cases where the
-          ``matched_id`` also appears in the collapsing query set.
-        * :py:attr:`dict_n_to_1_with_query_reverse` - ``{query_id: {matched_id: [dataset]}}`` for a
-          query-centric view.
-        * :py:attr:`dict_n_to_1_without_query` - collapses where the target never appears in its own query set.
-
-        Returns ``None``: All information is stored on the instance for subsequent pipeline stages.
+    def feature_table(self, dataset_name: str) -> pd.DataFrame:
+        """Return how each input feature of a dataset was converted (see :py:func:`feature_table`).
 
         Args:
-            dataset_name (str): Human-readable alias used throughout the project for *this* dataset.
-            dataset_matching_list (list[dict]): Raw per-feature matchings returned by
-                :py:class:`idtrack.api.API`.  Each dictionary must provide at least the keys
-                ``"query_id"``, ``"last_node"``, and ``"final_database"``.
+            dataset_name: Key of :py:attr:`data_h5ad_dict`.
+
+        Returns:
+            pandas.DataFrame: A new frame, one row per input feature in file order.
         """
-        reverse_dict_target: dict[str, list[str]] = dict()
-        reverse_dict_alternative_target: dict[str, list[str]] = dict()
+        return self._tables[dataset_name].copy()
 
-        for matching_entry in dataset_matching_list:
+    def conversion_report(self) -> pd.DataFrame:
+        """Return how every input feature of every dataset was converted.
 
-            # to capture matching without alternative target database.
-            # note that final database is `None` for 1-to-0, `ensembl_gene` for alternative target database.
+        Returns:
+            pandas.DataFrame: One row per input feature: ``dataset``, ``query_id`` and the columns of
+            :py:func:`feature_table`, in the order of :py:attr:`data_h5ad_dict` and of each file.
+        """
+        frames = []
+        for name, table in self._tables.items():
+            frame = table.reset_index(names="query_id")
+            frame.insert(0, "dataset", name)
+            frames.append(frame)
+        return pd.concat(frames, ignore_index=True)
 
-            query_id = matching_entry["query_id"]
+    def output_plan(self, dataset_name: str, merge: str = "flag", keep_unconverted: bool = True) -> pd.DataFrame:
+        """Return the output features of a dataset (see :py:func:`output_plan`).
 
-            if matching_entry["final_database"] == self.final_database:
-                for _, j in matching_entry["last_node"]:  # for loop if it is 1-to-n
-                    if j not in reverse_dict_target:
-                        reverse_dict_target[j] = []
-                    reverse_dict_target[j].append(query_id)
+        Args:
+            dataset_name: Key of :py:attr:`data_h5ad_dict`.
+            merge: ``"flag"`` (default) or ``"sum"``.
+            keep_unconverted: Keep the unconverted features (default).
 
-            elif matching_entry["final_database"] == "ensembl_gene":
-                for i, _ in matching_entry["last_node"]:  # for loop if it is 1-to-n
+        Returns:
+            pandas.DataFrame: One row per output feature.
+        """
+        if merge not in ("flag", "sum"):
+            raise ValueError(f"`merge` must be 'flag' or 'sum', got {merge!r}.")
+        return output_plan(self._tables[dataset_name], merge, keep_unconverted)
 
-                    if i not in reverse_dict_alternative_target:
-                        reverse_dict_alternative_target[i] = []
-                    reverse_dict_alternative_target[i].append(query_id)
+    # ----------------------------------------------------------------------------------------------------------------
+    # Matrices
 
-        # simply get the ids that has 1-to-n in reverse orientation, so get n-to-1
+    def feature_harmonizer(
+        self, dataset_name: str, merge: Literal["flag", "sum"] = "flag", keep_unconverted: bool = True
+    ) -> tuple[ad.AnnData, int, int]:
+        """Return one dataset with its features converted (see :py:class:`HarmonizeFeatures` for the rules).
 
-        set_n_to_1_in_dataset = set()
+        The ``.h5ad`` file is read completely and never altered. ``X`` and every layer get the output features
+        (columns selected, merged ones summed); ``obs``, ``obsm``, ``obsp`` and ``uns`` are kept as they are; ``varm``
+        and ``varp`` are subset to the output features, or left out when features were summed. ``var`` holds the
+        columns ``<final database>``, ``"<final database>_alternatives"``, ``"Query ID"``, ``"matching_ensembl_gene"``,
+        ``"idtrack_status"``, ``"idtrack_reason"`` and then the input's own columns (an input column with one of those
+        names gets the suffix ``"_input"``; for a merged feature, an input value is kept where all its input features
+        agree and is missing otherwise). ``raw`` is dropped with a warning, because its features are not converted.
 
-        for the_dict_of_interest in [reverse_dict_target, reverse_dict_alternative_target]:
-            for matched_id, query_id_list in the_dict_of_interest.items():
-                if len(query_id_list) > 1:
-                    for query_id in query_id_list:
+        Args:
+            dataset_name (str): Key of :py:attr:`data_h5ad_dict`.
+            merge (Literal["flag", "sum"]): How several input features of one gene are handled (default ``"flag"``).
+            keep_unconverted (bool): Keep the features that are not converted, under their input names (default).
 
-                        # if there is query and mathed id are the same, exlude this query id from the n-to-1 set.
-                        # basically assign it to be the true matching of the conversion for integration tasks
-                        if query_id != matched_id:
-                            # and matching is 1:1. note that if matching is actually 1-to-n,
-                            # it is resolved by other parts of the code.
-                            set_n_to_1_in_dataset.add(query_id)
+        Returns:
+            tuple: The harmonised :py:class:`anndata.AnnData`, the number of input features and the number of output
+            features.
+        """
+        plan = self.output_plan(dataset_name, merge, keep_unconverted)
+        adata = ad.read_h5ad(self.data_h5ad_dict[dataset_name])
+        if list(adata.var_names) != self.feature_names[dataset_name]:
+            raise ValueError(f"Dataset {dataset_name!r} changed on disk since the harmonizer read its feature names.")
+        t0 = adata.n_vars
+        if adata.raw is not None:
+            self.log.warning(
+                f"Dataset {dataset_name!r}: `raw` is dropped, because its features are not harmonised; "
+                "keep raw counts in a layer to carry them through."
+            )
+        summed = any(len(s) > 1 for s in plan["sources"])
+        if summed and (len(adata.varm) or len(adata.varp)):
+            self.log.warning(
+                f"Dataset {dataset_name!r}: `varm` and `varp` are left out, because input features were summed."
+            )
+        var = self._harmonized_var(adata.var, plan)
+        out = ad.AnnData(
+            X=None if adata.X is None else _aggregate(adata.X, plan, t0),
+            obs=adata.obs,
+            var=var,
+            uns=adata.uns,
+            obsm=adata.obsm,
+            obsp=adata.obsp,
+            layers={k: _aggregate(v, plan, t0) for k, v in adata.layers.items() if k is not None},  # None is X
+        )
+        if not summed:
+            columns = [s[0] for s in plan["sources"]]
+            for key, value in adata.varm.items():
+                out.varm[key] = value[columns]  # type: ignore[index]
+            for key, value in adata.varp.items():
+                out.varp[key] = value[columns][:, columns]  # type: ignore[index]
+        return out, t0, out.n_vars
 
-                    # For debugging and reporting
-                    if self.debugging_variables:
-                        query_id_list_tuple = tuple(sorted(query_id_list))
-                        if matched_id in query_id_list_tuple:
-
-                            if matched_id not in self.dict_n_to_1_with_query:
-                                self.dict_n_to_1_with_query[matched_id] = dict()
-                            if query_id_list_tuple not in self.dict_n_to_1_with_query[matched_id]:
-                                self.dict_n_to_1_with_query[matched_id][query_id_list_tuple] = list()
-                            self.dict_n_to_1_with_query[matched_id][query_id_list_tuple].append(dataset_name)
-
-                            for query_id in query_id_list_tuple:
-                                if query_id not in self.dict_n_to_1_with_query_reverse:
-                                    self.dict_n_to_1_with_query_reverse[query_id] = dict()
-                                if matched_id not in self.dict_n_to_1_with_query_reverse[query_id]:
-                                    self.dict_n_to_1_with_query_reverse[query_id][matched_id] = list()
-                                self.dict_n_to_1_with_query_reverse[query_id][matched_id].append(dataset_name)
-
-                        else:
-                            if query_id_list_tuple not in self.dict_n_to_1_without_query:
-                                self.dict_n_to_1_without_query[query_id_list_tuple] = list()
-                            self.dict_n_to_1_without_query[query_id_list_tuple].append(dataset_name)
-
-        for nto1 in set_n_to_1_in_dataset:
-            if nto1 not in self.dict_n_to_1:
-                self.dict_n_to_1[nto1] = []
-            self.dict_n_to_1[nto1].append(dataset_name)
+    def _harmonized_var(self, input_var: pd.DataFrame, plan: pd.DataFrame) -> pd.DataFrame:
+        """Return the ``var`` of a harmonised dataset (see :py:meth:`feature_harmonizer`)."""
+        alternatives = f"{self.final_database}_alternatives"
+        generated = pd.DataFrame(
+            {
+                self.final_database: plan["final_id"].astype(object),
+                alternatives: plan["final_id_alternatives"].astype(object),
+                self._QUERY_COLUMN: plan["query_ids"].astype(object),
+                self._ENSEMBL_GENE_COLUMN: plan["ensembl_gene"].astype(object),
+                self._STATUS_COLUMN: pd.Categorical(plan["status"], categories=list(STATUSES)),
+                self._REASON_COLUMN: plan["reason"].astype(object),
+            },
+            index=plan.index,
+        )
+        sources = plan["sources"].tolist()
+        first = [s[0] for s in sources]
+        carried = input_var.iloc[first].copy()
+        carried.index = plan.index
+        for position, group in enumerate(sources):
+            if len(group) > 1:
+                block = input_var.iloc[group]
+                for column in input_var.columns:
+                    if block[column].astype(object).nunique(dropna=False) > 1:
+                        carried[column] = _holding_missing(carried[column])
+                        carried.iloc[position, carried.columns.get_loc(column)] = None
+        carried.columns = [f"{c}_input" if c in generated.columns else c for c in carried.columns]
+        return pd.concat([generated, carried], axis=1)
 
     def unify_multiple_anndatas(
         self,
@@ -1033,20 +933,24 @@ class HarmonizeFeatures:
         obs_join: Literal["outer", "inner"] = "outer",
         obs_columns_to_keep: list[str] | None = None,
         numeric_var_columns: set[str] | None = None,
-        numeric_obs_columns: set[str] | None = None,  # for hdca it is {"age"}
+        numeric_obs_columns: set[str] | None = None,
         handle_anndata_key: str = "handle_anndata",
+        merge: Literal["flag", "sum"] = "flag",
+        keep_unconverted: bool = True,
     ) -> ad.AnnData:
         """Merge the harmonised datasets of :py:attr:`data_h5ad_dict` into one :py:class:`~anndata.AnnData`.
 
-        Each dataset is harmonised with :py:meth:`feature_harmonizer` and all are concatenated along the cells in
-        one :py:func:`anndata.concat`. By default nothing is lost, and values are never rewritten: text stays text,
-        numbers stay numbers, and where a dataset has no value the result holds a missing value of the column's
-        kind (``NaN`` for floats and text, ``pd.NA`` in a nullable integer or boolean column, ``NaT`` for times, a
-        missing category for categoricals), never a placeholder string.
+        Each dataset is harmonised with :py:meth:`feature_harmonizer` (with *merge* and *keep_unconverted*) and all
+        are concatenated along the cells in one :py:func:`anndata.concat`. A feature is the same feature in two
+        datasets when it has the same name: a converted gene id, or the same unconverted input name (an unconverted
+        name equal to another dataset's converted gene id is renamed ``"unconverted:<name>"`` first). By default
+        nothing is lost, and values are never rewritten: text stays text, numbers stay numbers, and where a dataset
+        has no value the result holds a missing value of the column's kind (``NaN`` for floats and text, ``pd.NA``
+        in a nullable integer or boolean column, ``NaT`` for times, a missing category for categoricals), never a
+        placeholder string.
 
-        * **Features.** ``"union"`` (default) keeps every feature of any dataset; a dataset that lacks a feature
-          gets zeros for it in ``X`` and in every layer. ``"intersect"`` keeps the features present in every
-          dataset.
+        * **Features.** ``"union"`` (default) keeps every feature of any dataset; a dataset that lacks a feature gets
+          zeros for it in ``X`` and in every layer. ``"intersect"`` keeps the features present in every dataset.
 
         * **.obs.** ``obs_join="outer"`` (default) keeps every ``obs`` column of any dataset; in the cells of a dataset
           without the column it is missing (see above; an integer or boolean column becomes the nullable ``Int``/
@@ -1057,20 +961,18 @@ class HarmonizeFeatures:
           categorical (values unchanged). The column *handle_anndata_key* records the dataset of each cell
           (categorical, in the order of :py:attr:`data_h5ad_dict`), and cells are named ``f"{handle}_{cell}"``.
 
-        * **.var.** ``converted_id_column`` holds the final-database name of each feature. In ``"union"`` mode the
-          per-dataset columns ``f"{converted_id_column}_{handle}"`` (missing where the dataset lacks the feature)
-          and an integer ``"intersection"`` column (1 if the feature is in every dataset) are added. Every ``var``
-          column of the inputs is kept. A column is kept as **one** column when, for every feature, the datasets
-          that have a value for it agree; it then holds that value (missing only where no dataset has one). When
-          two datasets give different values for the same feature, nothing is chosen: the column is kept **per
-          dataset** as ``f"{column}_{handle}"`` for each dataset that has it, and no column ``column`` exists.
-          Missing values follow the same kinds as in ``obs``. Columns in *numeric_var_columns* are converted to
-          ``float``; other text columns become categorical (values unchanged).
+        * **.var.** ``converted_id_column`` holds the final-database name of each feature (missing for features
+          without one), ``"matching_ensembl_gene"`` its gene. Per dataset: ``f"{column}_{handle}"`` for ``"Query
+          ID"``, ``"idtrack_status"`` and ``"idtrack_reason"`` (missing where the dataset lacks the feature). In
+          ``"union"`` mode also ``f"{converted_id_column}_{handle}"`` and an integer ``"intersection"`` column (1 if
+          the feature is in every dataset, by presence, whatever its name). Every other ``var`` column of the inputs is
+          kept: as **one** column when, for every feature, the datasets that have a value for it agree; otherwise
+          **per dataset** as ``f"{column}_{handle}"`` for each dataset that has it. Columns in *numeric_var_columns*
+          are converted to ``float``; other text columns become categorical (values unchanged).
 
         * **layers, obsm, obsp, uns.** Handled by :py:func:`anndata.concat`: a layer or ``obsm`` entry present in
           every dataset is concatenated (``obsp`` block-diagonally), and an ``uns`` entry is kept when it is the same
-          in every dataset. ``varm`` and ``varp`` are not carried into the merged object (they describe one
-          dataset's features), nor is ``raw`` (see :py:meth:`feature_harmonizer`).
+          in every dataset. ``varm``, ``varp`` and ``raw`` are not carried into the merged object.
 
         ``X`` keeps the common dtype of the inputs (e.g. ``float32`` stays ``float32``).
 
@@ -1083,32 +985,46 @@ class HarmonizeFeatures:
             numeric_obs_columns (set[str] | None): ``obs`` columns to convert to ``float``.
             handle_anndata_key (str): Name of the ``obs`` column that records the dataset of each cell. Defaults to
                 ``"handle_anndata"``; it must not be a column of any dataset.
+            merge (Literal["flag", "sum"]): See :py:meth:`feature_harmonizer`.
+            keep_unconverted (bool): See :py:meth:`feature_harmonizer`.
 
         Returns:
             anndata.AnnData: The merged object; cells in the order of :py:attr:`data_h5ad_dict`, then of each file.
 
         Raises:
-            ValueError: If *mode* or *obs_join* is not one of its values; if there is no dataset; if a name of
-                *obs_columns_to_keep* is not among the joined columns, *handle_anndata_key* is already an ``obs``
-                column, or a numeric column is absent or holds a value that is not a number; if two cells get the
-                same name; if a generated ``var`` column name clashes with an input column; or if a feature gets
-                different final-database names in different datasets.
+            ValueError: If *mode*, *obs_join* or *merge* is not one of its values; if a name of *obs_columns_to_keep*
+                is not among the joined columns, *handle_anndata_key* is already an ``obs`` column, or a numeric column
+                is absent or holds a value that is not a number; if two cells get the same name; if a generated
+                ``var`` column name clashes with an input column.
         """
         if mode not in ("union", "intersect"):
             raise ValueError(f"`mode` must be 'union' or 'intersect', got {mode!r}.")
         if obs_join not in ("outer", "inner"):
             raise ValueError(f"`obs_join` must be 'outer' or 'inner', got {obs_join!r}.")
+        if merge not in ("flag", "sum"):
+            raise ValueError(f"`merge` must be 'flag' or 'sum', got {merge!r}.")
         numeric_obs_columns = set(numeric_obs_columns or set())
         numeric_var_columns = set(numeric_var_columns or set())
         handles = list(self.data_h5ad_dict)
-        if not handles:
-            raise ValueError("`data_h5ad_dict` holds no dataset to merge.")
 
         studies: list[ad.AnnData] = []
         for handle in tqdm.tqdm(handles, ncols=140, disable=self.verbose_level == 0):
-            adata_study, t0, t1 = self.feature_harmonizer(dataset_name=handle)
-            self.log.info(f"Dataset {handle!r}: {t1} of {t0} features kept after harmonisation.")
+            adata_study, t0, t1 = self.feature_harmonizer(handle, merge=merge, keep_unconverted=keep_unconverted)
+            self.log.info(f"Dataset {handle!r}: {t1} output features from {t0} input features.")
             studies.append(adata_study)
+
+        converted_anywhere = set()
+        for study in studies:
+            converted_anywhere |= set(
+                study.var_names[~study.var[self._STATUS_COLUMN].astype(str).str.startswith("unconverted")]
+            )
+        for study in studies:
+            unconverted = study.var[self._STATUS_COLUMN].astype(str).str.startswith("unconverted").to_numpy()
+            clash = unconverted & study.var_names.isin(converted_anywhere)
+            if clash.any():
+                study.var_names = pd.Index(
+                    np.where(clash, "unconverted:" + study.var_names.astype(str), study.var_names.astype(str))
+                )
 
         obs_columns = self._joined_obs_columns([s.obs for s in studies], obs_join, obs_columns_to_keep)
         clashing = [h for h, s in zip(handles, studies) if handle_anndata_key in s.obs.columns]
@@ -1138,6 +1054,10 @@ class HarmonizeFeatures:
             study.obs = obs
             var_frames[handle] = study.var
             study.var = pd.DataFrame(index=study.var_names)
+            for key in list(study.varm):
+                del study.varm[key]
+            for key in list(study.varp):
+                del study.varp[key]
 
         adata = ad.concat(
             studies,
@@ -1238,8 +1158,7 @@ class HarmonizeFeatures:
             pandas.DataFrame: The merged ``var``, indexed by *var_names*.
 
         Raises:
-            ValueError: If a feature has different final-database names in different datasets, or a generated
-                column name is also an input column.
+            ValueError: If a generated column name is also an input column.
         """
         # Every column of every dataset, aligned to the merged features; where a dataset lacks features, integers and
         # booleans become nullable first so that those features are missing values of the column's kind.
@@ -1258,21 +1177,46 @@ class HarmonizeFeatures:
                 raise ValueError(f"The merged var would have the column {name!r} twice; rename the input column.")
             columns[name] = values
 
+        def _same_everywhere(column: str) -> pd.Series:
+            # A gene's final-database names are a property of the gene (the same in every dataset): they agree.
+            merged = self._agreed_values({h: a[column] for h, a in aligned.items()}, var_names)
+            if merged is None:
+                raise AssertionError(f"The datasets disagree on {column!r} for a feature; this is an internal error.")
+            return merged
+
         names = {h: a[self.final_database] for h, a in aligned.items()}
-        agreed = self._agreed_values(names, var_names)
-        if agreed is None:
-            frame = pd.DataFrame({h: s.astype(object) for h, s in names.items()}, index=var_names)
-            examples = frame[frame.nunique(axis=1, dropna=True) > 1].head(10).to_dict(orient="index")
-            raise ValueError(f"Features with different {self.final_database} names across datasets: {examples}.")
-        _add(self.converted_id_column, agreed)
+        alternatives = f"{self.final_database}_alternatives"
+        _add(self.converted_id_column, _same_everywhere(self.final_database))
+        # The gene of a merge partner (kept under its input name) can differ between datasets of different source
+        # releases: then the column is kept per dataset, like an input column.
+        genes = {h: a[self._ENSEMBL_GENE_COLUMN] for h, a in aligned.items()}
+        merged_genes = self._agreed_values(genes, var_names)
+        if merged_genes is not None:
+            _add(self._ENSEMBL_GENE_COLUMN, merged_genes)
+        else:
+            for h, g in genes.items():
+                _add(f"{self._ENSEMBL_GENE_COLUMN}_{h}", g)
+        _add(alternatives, _same_everywhere(alternatives))
+        for column in (self._QUERY_COLUMN, self._STATUS_COLUMN, self._REASON_COLUMN):
+            for h, a in aligned.items():
+                _add(f"{column}_{h}", a[column])
         if mode == "union":
             for h, s in names.items():
                 _add(f"{self.converted_id_column}_{h}", s)
-            _add("intersection", pd.concat(list(names.values()), axis=1).notna().all(axis=1).astype(int))
+            present = pd.DataFrame({h: var_names.isin(v.index) for h, v in var_frames.items()}, index=var_names)
+            _add("intersection", present.all(axis=1).astype(int))
 
+        generated = {
+            self.final_database,
+            alternatives,
+            self._QUERY_COLUMN,
+            self._ENSEMBL_GENE_COLUMN,
+            self._STATUS_COLUMN,
+            self._REASON_COLUMN,
+        }
         input_columns: list[str] = []
         for v in var_frames.values():
-            input_columns += [c for c in v.columns if c not in (self.final_database, "Query ID", *input_columns)]
+            input_columns += [c for c in v.columns if c not in generated and c not in input_columns]
         for column in input_columns:
             per_dataset = {h: a[column] for h, a in aligned.items() if column in a}
             merged = self._agreed_values(per_dataset, var_names)

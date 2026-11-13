@@ -4,30 +4,15 @@
 Tests the DB constants class and related utilities.
 """
 
-import pytest
-
 
 class TestDBConstants:
     """Test the DB constants class."""
-
-    def test_db_class_exists(self):
-        """Test that DB class can be imported."""
-        from idtrack._db import DB
-
-        assert DB is not None
 
     def test_id_ver_delimiter(self):
         """Test ID version delimiter is a dot."""
         from idtrack._db import DB
 
         assert DB.id_ver_delimiter == "."
-
-    def test_first_version_is_integer(self):
-        """Test first_version is an integer."""
-        from idtrack._db import DB
-
-        assert isinstance(DB.first_version, int)
-        assert DB.first_version >= 1
 
     def test_timeout_values_are_positive(self):
         """Test timeout values are positive integers."""
@@ -246,14 +231,6 @@ class TestDBSentinels:
         assert DB.no_new_node_id in DB.alternative_versions
         assert len(DB.alternative_versions) == 2
 
-    def test_hyperconnecting_threshold(self):
-        """Test hyperconnecting threshold is reasonable."""
-        from idtrack._db import DB
-
-        assert isinstance(DB.hyperconnecting_threshold, int)
-        assert DB.hyperconnecting_threshold > 0
-        assert DB.hyperconnecting_threshold == 20
-
 
 class TestDBEdgeAttributes:
     """Test edge attribute constants."""
@@ -263,12 +240,6 @@ class TestDBEdgeAttributes:
         from idtrack._db import DB
 
         assert DB.connection_dict == "connection"
-
-    def test_conn_dict_str_ensembl_base(self):
-        """Test Ensembl base connection string."""
-        from idtrack._db import DB
-
-        assert DB.conn_dict_str_ensembl_base == "ensembl_base"
 
 
 class TestDBExternalSearchSettings:
@@ -290,90 +261,3 @@ class TestDBExternalSearchSettings:
         assert DB.external_search_settings["jump_limit"] > 0
         assert DB.external_search_settings["synonymous_max_depth"] > 0
         assert DB.external_search_settings["nts_backbone"] == DB.nts_ensembl["gene"]
-
-
-class TestDBHDF5Settings:
-    """Test HDF5 settings."""
-
-    def test_placeholder_na(self):
-        """Test placeholder NA value."""
-        from idtrack._db import DB
-
-        assert isinstance(DB.placeholder_na, str)
-        assert len(DB.placeholder_na) > 0
-
-    def test_utf8_constant(self):
-        """Test UTF8 encoding constant."""
-        from idtrack._db import DB
-
-        assert DB.UTF8 == "utf-8"
-
-    def test_utf8_str_dtype(self):
-        """Test UTF8_STR is h5py dtype."""
-        import h5py
-
-        from idtrack._db import DB
-
-        assert DB.UTF8_STR == h5py.string_dtype(encoding=DB.UTF8)
-
-
-class TestEmptyConversionMetricsError:
-    """Test the custom exception class."""
-
-    def test_exception_is_value_error(self):
-        """Test EmptyConversionMetricsError inherits from ValueError."""
-        from idtrack._db import EmptyConversionMetricsError
-
-        assert issubclass(EmptyConversionMetricsError, ValueError)
-
-    def test_exception_can_be_raised(self):
-        """Test exception can be raised and caught."""
-        from idtrack._db import EmptyConversionMetricsError
-
-        with pytest.raises(EmptyConversionMetricsError):
-            raise EmptyConversionMetricsError("test message")
-
-    def test_exception_message(self):
-        """Test exception preserves message."""
-        from idtrack._db import EmptyConversionMetricsError
-
-        msg = "conversion metrics are empty"
-        with pytest.raises(EmptyConversionMetricsError) as exc_info:
-            raise EmptyConversionMetricsError(msg)
-        assert msg in str(exc_info.value)
-
-
-class TestDBImmutability:
-    """Test that DB class attributes behave as expected."""
-
-    def test_db_is_not_instantiated(self):
-        """Test DB class is used directly, not instantiated."""
-        from idtrack._db import DB
-
-        # Access attributes directly from class
-        assert hasattr(DB, "id_ver_delimiter")
-        assert hasattr(DB, "forms_in_order")
-
-    def test_class_attributes_accessible(self):
-        """Test all expected class attributes are accessible."""
-        from idtrack._db import DB
-
-        required_attrs = [
-            "id_ver_delimiter",
-            "first_version",
-            "connection_timeout",
-            "reading_timeout",
-            "ensembl_ftp_base",
-            "rest_server_api",
-            "mysql_host",
-            "assembly_mysqlport_priority",
-            "symbol_databases",
-            "node_type_str",
-            "nts_external",
-            "forms_in_order",
-            "backbone_form",
-            "nts_ensembl",
-            "connection_dict",
-        ]
-        for attr in required_attrs:
-            assert hasattr(DB, attr), f"Missing attribute: {attr}"

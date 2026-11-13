@@ -157,6 +157,7 @@ _SPECIES_CANONICAL_TO_BGEENAMES: dict[str, tuple[str, str]] = {
 
 # --------------------------- Capability registry ---------------------------- #
 
+#: The backends of :py:func:`idtrack._external_mappers._convert.convert_ids` (its ``method`` argument).
 SUPPORTED_METHODS = ("pybiomart", "mygene", "gprofiler", "gget")
 
 _ENSEMBL_INPUT_DB: set[str] = {

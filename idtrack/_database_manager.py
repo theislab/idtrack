@@ -6,26 +6,24 @@
 import bz2
 import copy
 import gzip
+import hashlib
 import io
 import json
 import logging
 import os
 import re
 import time
-from collections import Counter
 from contextlib import contextmanager
 from functools import cached_property
-from itertools import repeat
-from typing import Any
+from typing import Any, SupportsIndex
 
 import numpy as np
 import pandas as pd
 import pymysql
-import requests
 
 import idtrack._utils_hdf5 as hs
 from idtrack._db import DB, EnsemblSchemaError
-from idtrack._ensembl_access import ensembl_access_mode, reachability, rest_get_json
+from idtrack._ensembl_access import EnsemblDownloadError, ensembl_access_mode, https_get, reachability, rest_get_json
 from idtrack._external_databases import ExternalDatabases
 from idtrack._mysql_dump import read_mysql_dump
 
@@ -43,31 +41,38 @@ class DatabaseManager:
     * **Stable, reproducible builds** - every graph, lookup table, or ID-history file is anchored to
       the exact *Ensembl release*, *genome assembly*, and *form* (gene, transcript, translation, …)
       with which the manager was configured.
-    * **Transparent caching** - expensive downloads happen once; subsequent requests are served from
-      disk, making large iterative analyses feasible on modest hardware.
-    * **Unified version logic** - helper methods such as
-      :py:meth:`~DatabaseManager.version_uniformize` and
-      :py:meth:`~DatabaseManager.check_version_info` guarantee that cross-release identifier changes
-      are captured and resolved consistently across the codebase.
+    * **Transparent caching** - expensive downloads happen once; every table is kept in a file of its own in
+      the local repository (:py:attr:`tables_directory`), written atomically and named by everything it depends on
+      (release, form, externals selection), so a table computed for other parameters is never
+      served.
+    * **Versioned ids only** - idtrack follows ``<id>.<version>`` through the releases. A release whose Ensembl
+      ids carry no versions (some organisms, e.g. *S. cerevisiae*) is refused where its id table is read
+      (:py:meth:`~DatabaseManager.create_ids`), with an error that says so: no table is made up for it.
 
     Key public methods/attributes
     -----------------------------
-    * :py:meth:`available_releases` — list releases that can be queried *and* saved locally.
-    * :py:meth:`change_release` — switch the manager to another Ensembl release in-place.
-    * :py:meth:`download_table` — fetch a single MySQL table and write it to ``local_repository``.
-    * :py:meth:`create_external_all` — pull every supported external resource (UniProt, RefSeq, …).
+    * :py:meth:`available_releases` — list releases of the assembly within the ignore window.
+    * :py:meth:`change_release` — a new manager for another Ensembl release (likewise :py:meth:`change_form`,
+      :py:meth:`change_assembly`, :py:meth:`change_release_auto_assembly`).
+    * :py:meth:`get_table` — a raw Ensembl table (stored after the first download); :py:meth:`download_table`
+      fetches one without storing it.
+    * :py:meth:`get_db` — a derived table (ids, history, relations, cross references).
+    * :py:meth:`create_external_all` — the cross references of every assembly the externals YAML enables for the
+      release.
     * :py:attr:`organism`, :py:attr:`form`, :py:attr:`ensembl_release`,
       :py:attr:`genome_assembly` — core configuration knobs, surfaced for quick inspection.
 
-    The class is **stateful**: change-mutating helpers update internal cached properties so that the
-    instance always reflects its current configuration.  Use the built-in :py:meth:`__str__` for a
-    concise, human-readable dump of that state.
+    A manager's configuration does not change after construction; the ``change_*`` methods return new managers.
+    Use the built-in :py:meth:`__str__` for a concise, human-readable dump of that state.
     """
 
     # Keyed by (organism, assembly key, DB.organism_table_version) so that `DB.register_organism` invalidates it.
     _core_db_index_cache: dict[tuple[str, int, int], dict[str, Any]] = {}
-    _ftp_schema_cache: dict[str, dict[str, list[str]]] = {}
-    _ensembl_latest_release_cache: int | None = None
+    _ftp_schema_cache: dict[str, dict[str, list[tuple[str, str]]]] = {}
+    # (latest release, time.monotonic() of the answer)
+    _ensembl_latest_release_cache: tuple[int, float] | None = None
+    # Schema-dump URL resolved per dump directory (one directory listing per database at most).
+    _ftp_schema_url_cache: dict[str, str] = {}
 
     # pymysql error codes that mean the server or the route to it failed (not the query): can't connect,
     # server has gone away, lost connection during query, lost connection at handshake.
@@ -94,6 +99,10 @@ class DatabaseManager:
         Both discovery paths (the MySQL probe and the HTTPS scan) accept only releases inside this window, so they
         agree on what an assembly is even where two assemblies share a core-database suffix.
 
+        Args:
+            organism: Ensembl species name.
+            genome_assembly: Assembly key of the organism table.
+
         Returns:
             tuple[int, Optional[int]]: ``(first, last)``; ``last`` is ``None`` for an open-ended assembly.
         """
@@ -103,9 +112,20 @@ class DatabaseManager:
 
     @classmethod
     def _ensembl_latest_release(cls) -> int:
+        """Return Ensembl's latest release, asked from REST once per :py:attr:`idtrack.DB.rest_species_cache_seconds`.
+
+        The answer expires (one day by default) so that a long-running process learns of a new release. If Ensembl
+        REST does not answer (after its retries), :py:class:`idtrack.EnsemblRestError` propagates.
+
+        Returns:
+            int: The latest release.
+
+        Raises:
+            ValueError: If the answer is not the expected payload.
+        """
         cached = cls._ensembl_latest_release_cache
-        if cached is not None:
-            return int(cached)
+        if cached is not None and time.monotonic() - cached[1] < float(DB.rest_species_cache_seconds):
+            return int(cached[0])
 
         url = f"{DB.rest_server_api}/info/data"
         payload = rest_get_json("/info/data", what="the latest Ensembl release")
@@ -114,7 +134,7 @@ class DatabaseManager:
             raise ValueError(f"Unexpected Ensembl REST payload at {url!r}: expected non-empty 'releases' list.")
 
         latest = max(int(r) for r in releases)
-        cls._ensembl_latest_release_cache = int(latest)
+        cls._ensembl_latest_release_cache = (int(latest), time.monotonic())
         return int(latest)
 
     @staticmethod
@@ -194,47 +214,66 @@ class DatabaseManager:
     def _ftp_find_core_db_dir(
         cls, *, organism: str, genome_assembly: int, release: int
     ) -> tuple[str | None, str | None]:
-        """Locate the core DB directory name (may include patch letters) and its HTTPS directory URL."""
+        """Locate the core DB directory name (may include patch letters) and its HTTPS directory URL.
+
+        The exact name is probed first; if Ensembl answers that it does not exist (HTTP 404), the release's
+        directory is listed to find a name with patch letters (e.g. ``homo_sapiens_core_54_36p``). If Ensembl does
+        not answer (after the retries of :py:func:`idtrack._ensembl_access.https_get`), its
+        :py:class:`idtrack.EnsemblDownloadError` propagates: "unknown" is never taken for "absent".
+
+        Args:
+            organism: Ensembl species name.
+            genome_assembly: Assembly key of the organism table.
+            release: Ensembl release.
+
+        Returns:
+            tuple[Optional[str], Optional[str]]: ``(name, url)``, or ``(None, None)`` when Ensembl answered that the
+            release has no such database.
+        """
         release = int(release)
         genome_assembly = int(genome_assembly)
         expected = f"{organism}_core_{release}_{DB.db_suffix(organism, genome_assembly)}"
         pattern = re.compile(rf"^{re.escape(expected)}[a-z]*$")
-        log = logging.getLogger("database_manager")
 
         for root in cls._ftp_mysql_root_candidates(organism=organism, genome_assembly=genome_assembly, release=release):
             # Fast path: exact directory (no patch letter)
-            try:
-                with requests.get(
-                    f"{root}{expected}/",
-                    timeout=(DB.connection_timeout, DB.reading_timeout),
-                    stream=True,
-                ) as resp:
-                    if resp.status_code == 200:
-                        return expected, f"{root}{expected}/"
-            except requests.RequestException as exc:
-                # Fall back to listing below; keep this quiet unless debugging connectivity.
-                log.debug("Failed to probe Ensembl dump directory %r: %s", f"{root}{expected}/", exc)
+            resp = https_get(f"{root}{expected}/", what=f"the dump directory of {expected}", stream=True)
+            if resp is not None:
+                resp.close()
+                return expected, f"{root}{expected}/"
 
             # Slow path: list and look for patch-letter variants (e.g. `_36p`).
-            listing: str | None = None
-            try:
-                listing = requests.get(root, timeout=(DB.connection_timeout, DB.reading_timeout)).text
-            except requests.RequestException as exc:
-                log.debug("Failed to list Ensembl dump root %r: %s", root, exc)
+            listing = https_get(root, what=f"the dump listing of release {release}")
             if listing is None:
-                continue
-
-            matches = [d for d in cls._parse_apache_dir_listing_dirs(listing) if pattern.match(d)]
+                continue  # Ensembl has no such release directory under this root.
+            matches = [d for d in cls._parse_apache_dir_listing_dirs(listing.text) if pattern.match(d)]
             if matches:
-                db_name = min(matches, key=len)
+                db_name = min(matches, key=lambda d: (len(d), d))
                 return db_name, f"{root}{db_name}/"
 
         return None, None
 
     @classmethod
     def _get_core_db_index_from_ftp(cls, *, organism: str, genome_assembly: int, ports: list[int]) -> dict[str, Any]:
-        """Build a core-DB availability index by probing the Ensembl HTTPS/FTP MySQL dumps."""
-        log = logging.getLogger("database_manager")
+        """Build a core-DB availability index by probing the Ensembl HTTPS/FTP MySQL dumps.
+
+        Every release of the assembly's window (:py:meth:`_release_window`, up to Ensembl's latest release) is looked
+        up with :py:meth:`_ftp_find_core_db_dir`. A release is left out only when Ensembl answered that it has no
+        core database of this assembly; a request that fails after its retries raises, so an incomplete index is
+        never built (and never cached or saved). An assembly that has no release at all gives an index with an empty
+        release list. A request that stays unanswered raises
+        :py:class:`idtrack.EnsemblDownloadError`; if the latest Ensembl release cannot be learnt,
+        :py:class:`idtrack.EnsemblRestError` propagates.
+
+        Args:
+            organism: Ensembl species name.
+            genome_assembly: Assembly key of the organism table.
+            ports: Configured MySQL ports of the assembly (releases are assigned to them).
+
+        Returns:
+            dict[str, Any]: The index (see :py:meth:`_get_core_db_index`), with ``scanned_up_to``.
+        """
+        log = logging.getLogger(__name__)
         latest_release = cls._ensembl_latest_release()
         min_release, range_max = cls._release_window(organism, int(genome_assembly))
         max_release = min(int(range_max) if range_max is not None else int(latest_release), int(latest_release))
@@ -243,48 +282,10 @@ class DatabaseManager:
             f"(core suffix {DB.db_suffix(organism, int(genome_assembly))!r}) for releases {min_release}-{max_release}."
         )
 
-        releases_range = range(min_release, max_release + 1)
-
         releases: set[int] = set()
         db_for_release: dict[int, str] = {}
         db_dir_url_by_release: dict[int, str] = {}
-
-        # First pass: exact directory names only (cheap). Track min/max to constrain patch-letter scans.
-        exact_hits: list[int] = []
-        suffix = DB.db_suffix(organism, int(genome_assembly))
-        for rel in releases_range:
-            expected = f"{organism}_core_{int(rel)}_{suffix}"
-            found = None
-            found_url = None
-            for root in cls._ftp_mysql_root_candidates(
-                organism=organism, genome_assembly=genome_assembly, release=int(rel)
-            ):
-                try:
-                    with requests.get(
-                        f"{root}{expected}/",
-                        timeout=(DB.connection_timeout, DB.reading_timeout),
-                        stream=True,
-                    ) as resp:
-                        if resp.status_code == 200:
-                            found = expected
-                            found_url = f"{root}{expected}/"
-                            break
-                except requests.RequestException as exc:
-                    log.debug("Failed to probe Ensembl dump directory %r: %s", f"{root}{expected}/", exc)
-            if found:
-                releases.add(int(rel))
-                db_for_release[int(rel)] = found
-                db_dir_url_by_release[int(rel)] = str(found_url)
-                exact_hits.append(int(rel))
-
-        # Second pass: scan *all* releases for patch-letter variants.
-        # Older releases often use patch-letter suffixes (e.g. `_37a`) and may live outside the contiguous
-        # window where exact (no-suffix) directory names exist.
-        scan_range = releases_range
-
-        for rel in scan_range:
-            if int(rel) in releases:
-                continue
+        for rel in range(min_release, max_release + 1):
             db_name, db_dir_url = cls._ftp_find_core_db_dir(
                 organism=organism, genome_assembly=genome_assembly, release=int(rel)
             )
@@ -295,9 +296,9 @@ class DatabaseManager:
 
         releases_union = sorted(releases)
         if not releases_union:
-            raise ValueError(
-                f"No Ensembl core MySQL dump directories found on https://{DB.ensembl_ftp_base}/pub "
-                f"for {organism!r} assembly {int(genome_assembly)} in releases {min_release}..{latest_release}."
+            log.warning(
+                f"Ensembl's HTTPS dumps have no core database of {organism!r} assembly {int(genome_assembly)} "
+                f"in releases {min_release}..{max_release}."
             )
 
         # Assign each release to the first configured port that could plausibly host it (based on min-release rules).
@@ -342,10 +343,11 @@ class DatabaseManager:
     ) -> bool:
         """Return whether a core-DB index answers for every release up to *needed_up_to*.
 
-        An index built from the network in this process always does. An index read from disk does when its scan
-        reached *needed_up_to* (``None``: the latest Ensembl release, which only the network knows), or the end of
-        the assembly's release range: releases that existed at the scan cannot disappear, and releases after it are
-        not needed.
+        An index answers when its scan reached *needed_up_to* (``None``: the latest Ensembl release), clipped to the
+        end of the assembly's release range: releases that existed at the scan cannot disappear, and releases after
+        it are not needed. Otherwise only an index scanned from the network in this process, less than
+        :py:attr:`idtrack.DB.rest_species_cache_seconds` ago, answers (it reached the latest release then; a
+        long-running process scans again to learn of a new one).
 
         Args:
             index: A core-DB index (see :py:meth:`_get_core_db_index`).
@@ -356,17 +358,16 @@ class DatabaseManager:
         Returns:
             bool: ``True`` if *index* can be used without scanning again.
         """
-        if index.get("scanned_live"):
-            return True
-        scanned_up_to = index.get("scanned_up_to")
-        if scanned_up_to is None:
-            return False
         _, range_max = cls._release_window(organism, int(genome_assembly))
         if needed_up_to is None:
             need = range_max
         else:
             need = int(needed_up_to) if range_max is None else min(int(needed_up_to), int(range_max))
-        return need is not None and int(scanned_up_to) >= int(need)
+        scanned_up_to = index.get("scanned_up_to")
+        if need is not None and scanned_up_to is not None and int(scanned_up_to) >= int(need):
+            return True
+        scanned_at = index.get("scanned_live_at")
+        return scanned_at is not None and time.monotonic() - float(scanned_at) < float(DB.rest_species_cache_seconds)
 
     @classmethod
     def _https_index_signature(cls, organism: str, genome_assembly: int, ports: list[int]) -> dict[str, Any]:
@@ -460,7 +461,7 @@ class DatabaseManager:
                 json.dump(payload, handle, indent=1, sort_keys=True)
             os.replace(tmp_path, path)
         except OSError as exc:
-            logging.getLogger("database_manager").warning("Could not save the HTTPS-dump index %r: %s", path, exc)
+            logging.getLogger(__name__).warning("Could not save the HTTPS-dump index %r: %s", path, exc)
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
 
@@ -488,13 +489,14 @@ class DatabaseManager:
             needed_up_to: Last release needed; ``None`` for the latest Ensembl release.
 
         Returns:
-            dict[str, Any]: The HTTPS-dump index; ``scanned_live`` is ``True`` when it was scanned in this call.
+            dict[str, Any]: The HTTPS-dump index; ``scanned_live_at`` (``time.monotonic()``) is set when it was scanned
+            in this call.
         """
         path = cls._https_index_path(local_repository, organism, genome_assembly) if local_repository else None
         if path is not None:
             saved = cls._read_https_index(path, organism, genome_assembly, ports)
             if saved is not None and cls._index_covers(saved, organism, genome_assembly, needed_up_to):
-                logging.getLogger("database_manager").info(
+                logging.getLogger(__name__).info(
                     "Ensembl releases of %s assembly %s read from %r (scanned up to release %s).",
                     organism,
                     genome_assembly,
@@ -505,7 +507,7 @@ class DatabaseManager:
         index = cls._get_core_db_index_from_ftp(organism=organism, genome_assembly=int(genome_assembly), ports=ports)
         if path is not None:
             cls._write_https_index(path, index, ports)
-        return {**index, "scanned_live": True}
+        return {**index, "scanned_live_at": time.monotonic()}
 
     @classmethod
     def _probe_mysql_core_schemas_by_port(
@@ -518,6 +520,14 @@ class DatabaseManager:
         :py:attr:`idtrack.DB.mysql_port_assembly` reserves for another assembly are never queried. Ports that the
         process-wide :py:data:`idtrack._ensembl_access.reachability` reports unusable (blocked, or ``"https"``
         access mode) are skipped without a connection attempt.
+
+        Args:
+            organism: Ensembl species name.
+            genome_assembly: Assembly key of the organism table.
+            ports: Configured MySQL ports of the assembly.
+
+        Returns:
+            tuple: ``(releases_by_port, db_by_port_release, connection_errors)``.
         """
         # Some Ensembl releases encode patch builds as a trailing letter, e.g. `homo_sapiens_core_56_37a`.
         # Treat these as part of the same assembly for configuration and graph-level purposes.
@@ -702,8 +712,9 @@ class DatabaseManager:
         Returns:
             dict[str, Any]: Mapping describing reachable releases/ports for this organism/assembly.
 
-        Raises:
-            ValueError: If *organism* or *genome_assembly* is not configured.
+        If the dump scan cannot be completed (a request stays unanswered), its
+        :py:class:`idtrack.EnsemblDownloadError` propagates; no partial index is ever returned or
+        cached. An unknown organism or assembly raises the organism table's error.
         """
         key = (organism, int(genome_assembly), int(DB.organism_table_version))
         cached = cls._core_db_index_cache.get(key)
@@ -740,45 +751,15 @@ class DatabaseManager:
                     mysql_db_for_release[int(rel)] = db_by_port_release[int(port)][int(rel)]
                     break
 
-        ftp_index: dict[str, Any] | None = None
-        ftp_exc: Exception | None = None
-        try:
-            ftp_index = cls._https_index(
-                organism=organism,
-                genome_assembly=int(genome_assembly),
-                ports=[int(p) for p in ports],
-                local_repository=local_repository,
-                needed_up_to=needed_up_to,
-            )
-        except Exception as exc:
-            ftp_index = None
-            ftp_exc = exc
-
-        if ftp_index is None:
-            if not mysql_releases:
-                raise ValueError(
-                    f"No Ensembl core databases found for {organism!r} on assembly {int(genome_assembly)} "
-                    f"across ports {ports}. Connection errors: {connection_errors}. FTP error: {ftp_exc}"
-                )
-
-            index = {
-                "organism": organism,
-                "genome_assembly": int(genome_assembly),
-                "ports": tuple(int(p) for p in ports),
-                "releases_by_port": releases_by_port,
-                "db_by_port_release": db_by_port_release,
-                "releases": mysql_releases,
-                "port_for_release": mysql_port_for_release,
-                "db_for_release": mysql_db_for_release,
-                "releases_on_mysql": mysql_releases,
-                "mysql_connection_errors": {
-                    int(port): f"{exc.__class__.__name__}: {exc}" for port, exc in sorted(connection_errors.items())
-                },
-                "source": "mysql",
-                "scanned_live": True,
-            }
-            cls._core_db_index_cache[key] = index
-            return index
+        # The HTTPS dumps hold every release; the live MySQL service only recent ones. An index without the dump scan
+        # would silently lack releases, so a failed scan raises (and nothing is cached).
+        ftp_index = cls._https_index(
+            organism=organism,
+            genome_assembly=int(genome_assembly),
+            ports=[int(p) for p in ports],
+            local_repository=local_repository,
+            needed_up_to=needed_up_to,
+        )
 
         # Merge: use FTP for the full release catalogue (historic snapshots), but keep MySQL-derived
         # per-port availability for releases that are on the live service.
@@ -819,7 +800,7 @@ class DatabaseManager:
             },
             "source": "merged" if mysql_releases else "ftp",
             "scanned_up_to": ftp_index.get("scanned_up_to"),
-            "scanned_live": bool(ftp_index.get("scanned_live")),
+            "scanned_live_at": ftp_index.get("scanned_live_at"),
         }
         cls._core_db_index_cache[key] = index
         return index
@@ -833,7 +814,7 @@ class DatabaseManager:
         ignore_before: int | None = None,
         ignore_after: int | float | None = None,
         store_raw_always: bool = True,
-        genome_assembly: int | None = None,
+        genome_assembly: SupportsIndex | float | str | None = None,
     ):
         """Initialize a :py:class:`DatabaseManager` for a specific organism, release, and assembly.
 
@@ -842,19 +823,24 @@ class DatabaseManager:
                 :py:attr:`idtrack.DB.supported_organisms`, otherwise :py:class:`NotImplementedError` is raised.
             form (str): Biological entity level of interest—one of ``"gene"``, ``"transcript"``,
                 ``"translation"``, …—governing which stable-ID columns will be expected downstream.
-            local_repository (str): Absolute or relative path to a writable directory that will hold
-                all downloaded MySQL dumps, intermediate parquet/Feather files, and ready-to-use
-                artefacts. The directory must already exist and be both readable and writable.
+            local_repository (str): Directory of the cached tables (:py:attr:`tables_directory`, one HDF5 file per
+                table), the saved index of Ensembl's dumps and the graphs. It must exist and be readable; it must be
+                writable only when a table has to be computed and stored (a read-only repository serves what it
+                holds).
             ensembl_release (Optional[int]): Target Ensembl release number. If ``None`` the most
                 recent release available for *genome_assembly* is selected automatically.
             ignore_before (Optional[int]): Earliest release to include when building cross-release ID
-                histories. Defaults to the minimum release supported by the selected assembly.
+                histories. Defaults to the first release of the organism in the organism table
+                (:py:meth:`idtrack.DB.first_release`, over all its assemblies), the same default as
+                :py:class:`idtrack.API` uses.
             ignore_after (Optional[int | float]): Latest release to include when building histories.
                 ``np.inf`` (the default) disables the upper bound and includes all newer releases.
-            store_raw_always (bool): When ``True`` raw MySQL tables are *always* copied to
-                ``local_repository`` before conversion; when ``False`` they are kept only in memory.
+            store_raw_always (bool): When ``True`` (default) raw Ensembl tables are stored in the repository after
+                their download; when ``False`` they are not, and every derived table that needs them downloads them
+                again.
             genome_assembly (Optional[int]): Assembly key of the organism table
-                (:py:attr:`idtrack.DB.assembly_mysqlport_priority`). This selects the **primary** assembly used for
+                (:py:attr:`idtrack.DB.assembly_mysqlport_priority`), as an integer of any integer type, an integral
+                float or a string of digits (:py:meth:`idtrack.DB.assembly_key`). This selects the **primary** assembly used for
                 data access (e.g. ``38`` = human GRCh38, ``39`` = mouse GRCm39, ``111`` = pig Sscrofa11.1,
                 ``10`` = rhesus Mmul_10). The key usually equals the code in core schema names
                 (``<organism>_core_<release>_<code>``); see the table's ``DbSuffix``. If omitted, the highest-priority
@@ -883,8 +869,10 @@ class DatabaseManager:
 
         if not os.path.isdir(local_repository):
             raise ValueError(f"`local_repository` must be an existing directory: {local_repository!r}")
-        if not (os.access(local_repository, os.R_OK) and os.access(local_repository, os.W_OK)):
-            raise ValueError(f"`local_repository` must be readable and writable: {local_repository!r}")
+        # Write access is needed only when a table is to be stored (see `_store`): a repository on a read-only volume
+        # serves the tables and graphs it holds.
+        if not os.access(local_repository, os.R_OK):
+            raise ValueError(f"`local_repository` must be readable: {local_repository!r}")
 
         if form not in DB.forms_in_order:
             raise ValueError(f"Form {form!r} is not supported. Supported forms: {DB.forms_in_order}")
@@ -934,10 +922,11 @@ class DatabaseManager:
             raise ValueError("Floating-point Ensembl releases (e.g. 18.2) are not supported; pass an integer release.")
 
         if genome_assembly is None:
-            # Pick the highest-priority assembly that is *actually available* (MySQL or HTTPS dumps). If the user
-            # requested an explicit release, restrict to assemblies that contain that release; otherwise to assemblies
-            # with at least one release inside the ignore window (e.g. a mouse snapshot at release 100 is GRCm38,
-            # because GRCm39 starts at 103).
+            # Pick the highest-priority assembly that has the requested release (or, without one, a release inside the
+            # ignore window; e.g. a mouse snapshot at release 100 is GRCm38, because GRCm39 starts at 103). An
+            # assembly is passed over only when its complete index lacks the release; an index that cannot be built
+            # raises, because taking the next assembly would silently give another primary assembly (one failed
+            # request would make human GRCh37).
             requested_release = int(ensembl_release) if ensembl_release is not None else None
 
             def _has_release_in_window(index: dict[str, Any]) -> bool:
@@ -947,21 +936,11 @@ class DatabaseManager:
                     for r in index.get("releases", [])
                 )
 
-            assemblies_by_priority = DB.assemblies_by_priority(organism)
-
-            candidate_indexes: dict[int, dict[str, Any]] = {}
-            last_exc: Exception | None = None
-
-            for asm in assemblies_by_priority:
-                try:
-                    candidate_indexes[int(asm)] = self._get_core_db_index(
-                        organism=organism, genome_assembly=int(asm), **index_kwargs
-                    )
-                except Exception as exc:
-                    last_exc = exc
-                    continue
-
-                index = candidate_indexes[int(asm)]
+            available_summary: dict[int, tuple[int | None, int | None]] = {}
+            for asm in DB.assemblies_by_priority(organism):
+                index = self._get_core_db_index(organism=organism, genome_assembly=int(asm), **index_kwargs)
+                releases = index.get("releases") or []
+                available_summary[int(asm)] = (min(releases), max(releases)) if releases else (None, None)
                 if (requested_release is None and _has_release_in_window(index)) or (
                     requested_release is not None and requested_release in index["port_for_release"]
                 ):
@@ -969,27 +948,22 @@ class DatabaseManager:
                     break
 
             if genome_assembly is None:
-                available_summary = {
-                    asm: (
-                        min(idx["releases"]) if idx.get("releases") else None,
-                        max(idx["releases"]) if idx.get("releases") else None,
-                    )
-                    for asm, idx in candidate_indexes.items()
-                }
                 raise ValueError(
-                    f"Unable to infer a default genome assembly for {organism!r} "
-                    f"with requested release {requested_release!r} "
-                    f"(window {ignore_before_effective}..{ignore_after_effective}). "
-                    f"Available (min,max) release ranges by assembly: {available_summary}. "
-                    f"Last error while probing assemblies: {last_exc}"
+                    f"No assembly of {organism!r} has a core database "
+                    + (
+                        f"at release {requested_release}"
+                        if requested_release is not None
+                        else f"in the window {ignore_before_effective}..{ignore_after_effective}"
+                    )
+                    + f". Available (min, max) releases by assembly: {available_summary}."
                 )
         else:
-            if int(genome_assembly) not in configured_assemblies:
+            genome_assembly = DB.assembly_key(genome_assembly)
+            if genome_assembly not in configured_assemblies:
                 raise ValueError(
-                    f"Genome assembly {int(genome_assembly)} is not configured for organism {organism!r}. "
+                    f"Genome assembly {genome_assembly} is not configured for organism {organism!r}. "
                     f"Supported assemblies: {sorted(configured_assemblies)}"
                 )
-            genome_assembly = int(genome_assembly)
 
         # MYSQL Settings
         self.genome_assembly = genome_assembly
@@ -1031,7 +1005,7 @@ class DatabaseManager:
         }
 
         # The logger for informing the user about the progress.
-        self.log = logging.getLogger("database_manager")
+        self.log = logging.getLogger(__name__)
 
         # Instance attributes
         self.local_repository = local_repository
@@ -1039,14 +1013,13 @@ class DatabaseManager:
         self.form = form
         self.store_raw_always = store_raw_always
         if ignore_before_effective is None:
-            ignore_before_effective = int(core_index["releases"][0])
+            ignore_before_effective = DB.first_release(organism)
         self.ignore_before = int(ignore_before_effective)
         # If ignore_after is not specified, then set it to infinite.
         self.ignore_after: int | float = ignore_after_effective
 
         # Protected attributes
         self.available_form_of_interests = copy.deepcopy(DB.forms_in_order)  # Warning: the order is important.
-        self._available_version_info = ["add_version", "without_version", "with_version"]
         self._column_sep = "_COL_"
         self._identifiers = [f"{self.form}_stable_id", f"{self.form}_version"]
 
@@ -1153,73 +1126,34 @@ class DatabaseManager:
 
     @cached_property
     def available_releases_all_assemblies(self) -> list[int]:
-        """Return all Ensembl releases reachable across every configured assembly.
+        """Return all Ensembl releases that have a core database of at least one configured assembly.
 
         For clean-handoff species (e.g. mouse: 37 → 38 → 39), no single assembly spans the full release
         history. Graph construction and YAML template generation therefore need a release catalogue that is the
         union over *all* assemblies configured for :py:attr:`organism` in
-        :py:data:`idtrack._db.DB.assembly_mysqlport_priority`.
+        :py:data:`idtrack.DB.assembly_mysqlport_priority`.
 
         The list is filtered by the manager's ``ignore_before`` / ``ignore_after`` window and cached for the
-        lifetime of this :py:class:`DatabaseManager` instance.
+        lifetime of this :py:class:`DatabaseManager` instance. Every assembly's index must be complete: if one cannot
+        be built (Ensembl does not answer), the error is raised instead of leaving that assembly's releases out.
 
         Returns:
             list[int]: Sorted release numbers available for at least one configured assembly.
         """
-        log = logging.getLogger("database_manager")
-        ensembl_access_mode()  # an invalid mode must raise here, not be logged as a failed assembly
         releases: set[int] = set()
-        cfg = DB.assembly_mysqlport_priority[self.organism]
-        assemblies_failed: list[int] = []
-        for asm in cfg:
-            try:
-                core_index = self._get_core_db_index(
-                    organism=self.organism, genome_assembly=int(asm), **self._core_index_kwargs
-                )
-                releases.update(r for r in core_index["releases"] if self.ignore_after >= r >= self.ignore_before)
-            except Exception as exc:
-                assemblies_failed.append(int(asm))
-                log.warning(
-                    "Failed to get core DB index for %s assembly %s: %s. "
-                    "Releases for this assembly will not be included.",
-                    self.organism,
-                    asm,
-                    exc,
-                )
-        if assemblies_failed:
-            log.warning(
-                "available_releases_all_assemblies: %d/%d assemblies failed for %s: %s",
-                len(assemblies_failed),
-                len(cfg),
-                self.organism,
-                sorted(assemblies_failed),
+        for asm in DB.assemblies_by_priority(self.organism):
+            core_index = self._get_core_db_index(
+                organism=self.organism, genome_assembly=int(asm), **self._core_index_kwargs
             )
+            releases.update(int(r) for r in core_index["releases"] if self.ignore_after >= r >= self.ignore_before)
         return sorted(releases)
 
-    @cached_property
-    def available_releases_no_save(self) -> list[int]:
-        """Return reachable Ensembl releases without persisting the discovery to disk.
-
-        Functionally identical to :py:meth:`available_releases`, except that the discovered list is **not**
-        written to the on-disk YAML cache. This helper is useful when users want a quick, read-only view
-        of server availability—e.g., inside CI pipelines—without contaminating the persistent cache.
-        The value is still memoized in memory for the current :py:class:`DatabaseManager` instance.
-
-        Returns:
-            list[int]: Sorted release numbers reachable on the remote MySQL server and compliant with the
-            ignore window.
-        """
-        return self.available_releases_versions(save_after_calculation=False)
-
-    def available_releases_versions(self, **kwargs) -> list[int]:
+    def available_releases_versions(self) -> list[int]:
         """Discover valid Ensembl releases for the configured organism and assembly.
 
         Availability is discovered via the cached, multi-port aware core index built by
         :py:meth:`_get_core_db_index`. The resulting union of releases is filtered against the manager's
         ``ignore_before`` / ``ignore_after`` bounds and returned in ascending order.
-
-        Args:
-            kwargs: Kept for backward compatibility; currently unused.
 
         Returns:
             list[int]: Sorted list of release numbers that exist on the mirror and comply with the ignore window.
@@ -1377,27 +1311,129 @@ class DatabaseManager:
         release 48. The index merges the live MySQL catalogue (where its ports are usable) with the HTTPS dump
         listings, so the list is the same whichever way Ensembl is reached. Core databases of assemblies that the
         table does not declare, or outside their ranges, are not listed. An assembly for which no database is found
-        is skipped with a warning.
+        contributes nothing; a failure to build an index raises.
+
+        An invalid Ensembl access mode raises its own ``ValueError`` here (see
+        :py:func:`idtrack._ensembl_access.ensembl_access_mode`).
 
         Returns:
             pandas.DataFrame: One column named ``"available_databases"``, sorted.
-
-        Raises:
-            ValueError: If the Ensembl access mode is invalid (see :py:func:`idtrack._ensembl_access.ensembl_access_mode`).
         """
         ensembl_access_mode()  # an invalid mode must raise here, not be read as "no databases found"
         self.log.info(f"Available core databases for {self.organism} are being listed.")
         names: set[str] = set()
         for assembly in DB.assemblies_by_priority(self.organism):
-            try:
-                core_index = self._get_core_db_index(
-                    organism=self.organism, genome_assembly=int(assembly), **self._core_index_kwargs
-                )
-            except ValueError as exc:
-                self.log.warning("No core databases found for %s assembly %s: %s", self.organism, assembly, exc)
-                continue
+            core_index = self._get_core_db_index(
+                organism=self.organism, genome_assembly=int(assembly), **self._core_index_kwargs
+            )
             names.update(str(v) for v in core_index.get("db_for_release", {}).values() if v)
         return pd.DataFrame(sorted(names), columns=["available_databases"])
+
+    # ------------------------------------------------------------------------------------------------------------
+    # Cached tables: one file per table (see idtrack._utils_hdf5); the file name carries every parameter the table
+    # depends on, and the file records them again (checked when it is read).
+
+    @property
+    def tables_directory(self) -> str:
+        """Folder of this organism's and assembly's cached tables: ``<local_repository>/idtrack_tables/<org>_assembly-<key>``."""
+        return os.path.join(
+            self.local_repository, "idtrack_tables", f"{self.organism}_assembly-{int(self.genome_assembly)}"
+        )
+
+    def table_path(self, name: str, ensembl_release: int | None = None) -> str:
+        """Return the file of a cached table.
+
+        Args:
+            name: The table's key without the release, e.g. ``"mysql_gene__cols=gene_id+stable_id+version"`` or
+                ``"idhistory-narrow_gene"``; it names every parameter the table depends on.
+            ensembl_release: Release of the table; the manager's release by default.
+
+        Returns:
+            str: ``<tables_directory>/ens<release>_<name>.h5``.
+        """
+        release = int(self.ensembl_release if ensembl_release is None else ensembl_release)
+        return os.path.join(self.tables_directory, f"ens{release}_{name}.h5")
+
+    def table_digests(self) -> dict[str, str]:
+        """Return ``{file name: content SHA-256}`` of every table stored for this organism and assembly.
+
+        The digests identify the tables' content (:py:func:`idtrack._utils_hdf5.read_table_digest`), so that a graph
+        can record what it was built from.
+
+        Returns:
+            dict[str, str]: Sorted by file name; empty if nothing is stored.
+        """
+        if not os.path.isdir(self.tables_directory):
+            return {}
+        out = {}
+        for name in sorted(os.listdir(self.tables_directory)):
+            if name.endswith(".h5"):
+                digest = hs.read_table_digest(os.path.join(self.tables_directory, name))
+                if digest is not None:
+                    out[name] = digest
+        return out
+
+    def _table_params(self, name: str, ensembl_release: int | None = None, **extra: Any) -> dict[str, Any]:
+        """Return the parameters recorded with a cached table (checked again when it is read)."""
+        params: dict[str, Any] = {
+            "organism": self.organism,
+            "genome_assembly": int(self.genome_assembly),
+            "table": name,
+            "ensembl_release": int(self.ensembl_release if ensembl_release is None else ensembl_release),
+        }
+        params.update(extra)
+        return params
+
+    def _store(self, path: str, df: pd.DataFrame, params: dict[str, Any]) -> None:
+        """Write a table to the repository (atomically, see :py:func:`idtrack._utils_hdf5.write_table`).
+
+        Args:
+            path: The table's file.
+            df: The table.
+            params: Parameters the table depends on.
+
+        Raises:
+            PermissionError: If the repository is not writable; the message names it.
+        """
+        if not os.access(self.local_repository, os.W_OK):
+            raise PermissionError(
+                f"Table {os.path.basename(path)!r} has to be computed and stored, but `local_repository` "
+                f"{self.local_repository!r} is not writable. A read-only repository serves only the tables and "
+                "graphs it already holds."
+            )
+        self.log.info(f"Storing table `{os.path.basename(path)}` in `{self.tables_directory}`.")
+        hs.write_table(path, df, params)
+
+    def _cached(
+        self,
+        path: str,
+        params: dict[str, Any],
+        compute: Any,
+        create_even_if_exist: bool,
+        save_after_calculation: bool,
+    ) -> pd.DataFrame:
+        """Return the table stored at *path* with *params*, or compute it (and store it when asked).
+
+        Args:
+            path: File of the table (:py:meth:`table_path`).
+            params: Parameters the table depends on.
+            compute: Zero-argument callable that computes the table.
+            create_even_if_exist: Compute the table even if it is stored; the stored copy is then replaced (when
+                *save_after_calculation*), so the next call reads the new table.
+            save_after_calculation: Store a computed table.
+
+        Returns:
+            pandas.DataFrame: The table.
+        """
+        if not create_even_if_exist:
+            stored = hs.load_table(path, params, logger=self.log)
+            if stored is not None:
+                return stored
+        df: pd.DataFrame = compute()
+        if save_after_calculation:
+            df = df.reset_index(drop=True)
+            self._store(path, df, params)
+        return df
 
     def get_table(
         self,
@@ -1405,72 +1441,46 @@ class DatabaseManager:
         usecols: list | None = None,
         create_even_if_exist: bool = False,
         save_after_calculation: bool = True,
-        overwrite_even_if_exist: bool = False,
     ) -> pd.DataFrame:
-        """Download, cache, or read a raw MySQL table for the current release.
+        """Return a raw Ensembl table of the manager's release, from the repository or downloaded.
 
-        A high-level wrapper that coordinates three steps:
-
-        1. **Path resolution** - determines the HDF5 file and internal key under the local repository that
-           belong to *table_key* (and *usecols*, if provided).
-        2. **Fetch or reuse** - if the target key is absent, unreadable, or forcibly refreshed, delegates to
-           :py:meth:`download_table` to query the MySQL server; otherwise loads the dataframe from disk.
-        3. **Persistence** - optionally stores the freshly downloaded dataframe back to disk, shrinking the
-           number of future network calls.
+        The table is read from its file in :py:attr:`tables_directory` if one exists (one file per table, release
+        and column set); otherwise it is downloaded (:py:meth:`download_table`) and, if *save_after_calculation*,
+        stored. A raw table depends only on the release's core database, so it is shared by every manager of the
+        assembly whatever its form or window.
 
         Args:
             table_key (str): Name of the MySQL table (e.g. ``"gene"``, ``"xref"``, ``"mapping_session"``).
             usecols (list[str] | None): Column subset to retrieve. ``None`` (default) selects *all* columns.
-            create_even_if_exist (bool): Ignore any on-disk cache and re-download the table unconditionally.
-            save_after_calculation (bool): Persist the dataframe to the computed HDF5 path when ``True``.
-            overwrite_even_if_exist (bool): Replace an existing HDF5 key even when it is already present.
+            create_even_if_exist (bool): Download the table even if it is stored, and replace the stored copy.
+            save_after_calculation (bool): Store a downloaded table.
 
         Returns:
-            pandas.DataFrame: The requested raw table with column order mirroring *usecols* when supplied,
-                otherwise the server's natural order.
+            pandas.DataFrame: The requested raw table, its columns in the order of *usecols* when given, otherwise in
+                the schema's order.
 
         Raises:
-            ValueError: If *usecols* is an empty list, not a list, or otherwise fails basic validation.
+            ValueError: If *usecols* is an empty list or not a list.
         """
         if not (usecols is None or (isinstance(usecols, list) and len(usecols) > 0)):
             raise ValueError("Empty 'usecols' parameter, or 'usecols' is not a list.")
-
-        # Get the file name associated with table_key and columns of interest.
-        hierarchy, file_path = self.file_name("mysql", table_key, usecols)
-
-        # If the file name is not accessible for reading, or if the hdf5 file does not contain the table,
-        # or explicitly prompt to do so, then download the table.
-        if not os.access(file_path, os.R_OK) or create_even_if_exist or (not hs.check_h5_key(file_path, hierarchy)):
-            df = self.download_table(table_key, usecols)
-        else:  # Otherwise, just read the file that is already in the directory.
-            df = hs.read_exported(hierarchy, file_path)
-
-        # If prompt, save the dataframe in requested format.
-        if save_after_calculation:
-            hs.export_disk(df, hierarchy, file_path, overwrite_even_if_exist, logger=self.log)
-
+        cols = sorted(str(c) for c in usecols) if usecols is not None else None
+        name = f"mysql_{table_key}" + (f"__cols={'+'.join(cols)}" if cols else "")
+        path = self.table_path(name)
+        params = self._table_params(name, columns=cols)
+        df = self._cached(
+            path,
+            params,
+            lambda: self.download_table(table_key, usecols),
+            create_even_if_exist,
+            save_after_calculation,
+        )
+        if usecols is not None and list(df.columns) != list(usecols):
+            df = df[list(usecols)]
         return df
 
-    def tables_in_disk(self) -> list[str]:
-        """List all dataframes cached for this manager on local disk.
-
-        The helper inspects the HDF5 file located at the path generated by
-        :py:meth:`file_name` (``df_type="common"``) and returns every key it contains.
-        When the file does not exist yet, an empty list is returned instead of raising.
-
-        Returns:
-            list[str]: Sorted HDF5 keys corresponding to dataframes already materialised for this manager.
-        """
-        _, file_name = self.file_name("common", "place_holder")
-
-        if not os.path.isfile(file_name):
-            return list()
-        else:
-            with hs.HDFStore(file_name, mode="r") as f:
-                return list(f.keys())
-
     def _ftp_db_dir_url(self) -> str:
-        """Return the HTTPS directory URL for the current core database dump."""
+        """Return the HTTPS directory URL for the current core database dump (from the core-database index)."""
         core_index = self._get_core_db_index(
             organism=self.organism, genome_assembly=self.genome_assembly, **self._core_index_kwargs
         )
@@ -1484,54 +1494,53 @@ class DatabaseManager:
             organism=self.organism, genome_assembly=self.genome_assembly, release=release
         ):
             candidate = f"{root}{db_name}/"
-            try:
-                with requests.get(candidate, timeout=(DB.connection_timeout, DB.reading_timeout), stream=True) as resp:
-                    if resp.status_code == 200:
-                        return candidate
-            except requests.RequestException as exc:
-                self.log.debug("Failed to probe Ensembl dump directory %r: %s", candidate, exc)
+            resp = https_get(candidate, what=f"the dump directory of {db_name}", stream=True)
+            if resp is not None:
+                resp.close()
+                return candidate
 
         raise FileNotFoundError(
-            f"Unable to locate Ensembl MySQL dump directory for {self.organism!r} release {release} "
+            f"Ensembl has no MySQL dump directory for {self.organism!r} release {release} "
             f"assembly {int(self.genome_assembly)} (expected db {db_name!r})."
         )
 
     def _ftp_schema_url(self) -> str:
-        """Return a working schema-dump URL (`*.sql.gz` or `*.sql.gz.bz2`) for the current DB dump directory."""
+        """Return the schema-dump URL (``*.sql.gz`` or ``*.sql.gz.bz2``) of the current DB dump directory.
+
+        Resolved once per dump directory and process: the conventional name is asked first, a directory listing
+        only when Ensembl answers that it does not exist.
+
+        Returns:
+            str: The URL.
+        """
         db_dir_url = self._ftp_db_dir_url()
+        cached = type(self)._ftp_schema_url_cache.get(db_dir_url)
+        if cached is not None:
+            return cached
+        url = self._resolve_ftp_schema_url(db_dir_url)
+        type(self)._ftp_schema_url_cache[db_dir_url] = url
+        return url
+
+    def _resolve_ftp_schema_url(self, db_dir_url: str) -> str:
+        """Find the schema dump in *db_dir_url* (see :py:meth:`_ftp_schema_url`)."""
         db_name = self.mysql_database
+        for url in (f"{db_dir_url}{db_name}.sql.gz", f"{db_dir_url}{db_name}.sql.gz.bz2"):
+            resp = https_get(url, what=f"the schema dump of {db_name}", stream=True)
+            if resp is not None:
+                resp.close()
+                return url
 
-        # Fast path: the conventional naming.
-        candidates = (
-            f"{db_dir_url}{db_name}.sql.gz",
-            f"{db_dir_url}{db_name}.sql.gz.bz2",
-        )
-        for url in candidates:
-            try:
-                with requests.get(url, timeout=(DB.connection_timeout, DB.reading_timeout), stream=True) as resp:
-                    if resp.status_code == 200:
-                        return url
-            except requests.RequestException as exc:
-                self.log.debug("Failed to probe Ensembl schema dump %r: %s", url, exc)
-
-        # Slow path: directory listing (needed for some releases where Ensembl ships `.sql.gz.bz2` or mismatched names).
-        try:
-            listing = requests.get(db_dir_url, timeout=(DB.connection_timeout, DB.reading_timeout)).text
-        except Exception as exc:
-            raise FileNotFoundError(f"Unable to list Ensembl dump directory: {db_dir_url!r}") from exc
-
+        # Slow path: directory listing (needed for some releases where Ensembl ships mismatched names).
+        listing = https_get(db_dir_url, what=f"the dump listing of {db_name}")
+        if listing is None:
+            raise FileNotFoundError(f"Ensembl dump directory does not exist: {db_dir_url!r}")
         sql_files = [
             f
-            for f in self._parse_apache_dir_listing_files(listing)
+            for f in self._parse_apache_dir_listing_files(listing.text)
             if f.endswith(".sql.gz") or f.endswith(".sql.gz.bz2")
         ]
         if not sql_files:
             raise FileNotFoundError(f"No `.sql.gz` schema dump found in Ensembl directory: {db_dir_url!r}")
-
-        # Prefer an exact match; otherwise fall back deterministically.
-        exact = [f for f in sql_files if f == f"{db_name}.sql.gz" or f == f"{db_name}.sql.gz.bz2"]
-        if exact:
-            return f"{db_dir_url}{sorted(exact, key=len)[0]}"
 
         # Heuristic: prefer the schema file whose name matches organism + assembly, closest release number.
         m_db = re.match(r"^(?P<org>.+)_core_(?P<rel>[0-9]+)_(?P<asm>[0-9]+)(?P<patch>[a-z]*)$", str(db_name))
@@ -1539,7 +1548,6 @@ class DatabaseManager:
             org = m_db.group("org")
             asm = int(m_db.group("asm"))
             rel_target = int(self.ensembl_release)
-
             scored: list[tuple[int, int, str]] = []
             for fname in sql_files:
                 base = fname
@@ -1548,9 +1556,7 @@ class DatabaseManager:
                         base = base[: -len(suffix)]
                         break
                 m = re.match(r"^(?P<org>.+)_core_(?P<rel>[0-9]+)_(?P<asm>[0-9]+)(?P<patch>[a-z]*)$", base)
-                if not m:
-                    continue
-                if m.group("org") != org or int(m.group("asm")) != asm:
+                if not m or m.group("org") != org or int(m.group("asm")) != asm:
                     continue
                 rel = int(m.group("rel"))
                 scored.append((abs(rel - rel_target), -rel, fname))
@@ -1561,29 +1567,50 @@ class DatabaseManager:
         # Final fallback: pick the first (stable) in sorted order.
         return f"{db_dir_url}{sorted(sql_files)[0]}"
 
+    #: MySQL column types read as text on both routes (so the type of a column never depends on its content).
+    _TEXT_SQL_TYPES = frozenset(
+        {
+            "char",
+            "varchar",
+            "tinytext",
+            "text",
+            "mediumtext",
+            "longtext",
+            "enum",
+            "set",
+            "date",
+            "datetime",
+            "timestamp",
+            "time",
+            "year",
+        }
+    )
+
     @classmethod
-    def _ftp_schema_for_sql_url(cls, sql_url: str) -> dict[str, list[str]]:
-        """Return a table->columns mapping parsed from an Ensembl `<db>.sql.gz` schema dump."""
+    def _is_text_sql_type(cls, sql_type: str) -> bool:
+        """Return whether a MySQL column type (e.g. ``"varchar(128)"``, ``"enum('a','b')"``) is read as text."""
+        base = re.split(r"[\s(]", str(sql_type).strip().lower(), maxsplit=1)[0]
+        return base in cls._TEXT_SQL_TYPES
+
+    @classmethod
+    def _ftp_schema_for_sql_url(cls, sql_url: str) -> dict[str, list[tuple[str, str]]]:
+        """Return ``{table: [(column, MySQL type), ...]}`` parsed from an Ensembl ``<db>.sql.gz`` schema dump."""
         cached = cls._ftp_schema_cache.get(sql_url)
         if cached is not None:
             return cached
 
-        try:
-            resp = requests.get(sql_url, timeout=(DB.connection_timeout, DB.reading_timeout))
-            resp.raise_for_status()
-            payload = resp.content
+        resp = https_get(sql_url, what="an Ensembl schema dump")
+        if resp is None:
+            raise FileNotFoundError(f"Ensembl schema dump does not exist: {sql_url!r}")
+        data = resp.content
+        # Some releases ship nested compression: `.sql.gz.bz2` → bz2(gzip(sql)).
+        if sql_url.endswith(".bz2") or data.startswith(b"BZh"):
+            data = bz2.decompress(data)
+        if sql_url.endswith(".gz") or data.startswith(b"\x1f\x8b"):
+            data = gzip.decompress(data)
+        sql_text = data.decode("utf-8", errors="replace")
 
-            data = payload
-            # Some releases ship nested compression: `.sql.gz.bz2` → bz2(gzip(sql)).
-            if sql_url.endswith(".bz2") or data.startswith(b"BZh"):
-                data = bz2.decompress(data)
-            if sql_url.endswith(".gz") or data.startswith(b"\x1f\x8b"):
-                data = gzip.decompress(data)
-            sql_text = data.decode("utf-8", errors="replace")
-        except Exception as exc:  # pragma: no cover - network dependent
-            raise RuntimeError(f"Unable to download or decompress Ensembl schema dump: {sql_url!r}") from exc
-
-        schema: dict[str, list[str]] = {}
+        schema: dict[str, list[tuple[str, str]]] = {}
         create_re = re.compile(
             r"CREATE TABLE(?: IF NOT EXISTS)? `([^`]+)` \((.*?)\)\s*ENGINE",
             flags=re.DOTALL,
@@ -1591,9 +1618,9 @@ class DatabaseManager:
         for match in create_re.finditer(sql_text):
             table = match.group(1)
             block = match.group(2)
-            columns = re.findall(r"^\s*`([^`]+)`\s+", block, flags=re.MULTILINE)
+            columns = re.findall(r"^\s*`([^`]+)`\s+([A-Za-z]+(?:\([^)]*\))?)", block, flags=re.MULTILINE)
             if columns:
-                schema[str(table)] = [str(c) for c in columns]
+                schema[str(table)] = [(str(c), str(t)) for c, t in columns]
 
         if not schema:
             raise ValueError(f"No CREATE TABLE blocks found in Ensembl schema dump: {sql_url!r}")
@@ -1604,19 +1631,28 @@ class DatabaseManager:
     @staticmethod
     @contextmanager
     def _open_decompressed_http_text(url: str):
-        """Yield a text stream for an Ensembl dump file, handling `.gz`, `.bz2`, and nested `.gz.bz2`."""
+        """Yield a text stream for an Ensembl dump file, handling `.gz`, `.bz2`, and nested `.gz.bz2`.
+
+        Args:
+            url: The dump file.
+
+        Yields:
+            The decompressed text stream, or ``None`` if Ensembl answers that the file does not exist.
+        """
         # Some environments/proxies apply HTTP-level content encoding to already-compressed dump files.
         # If urllib3 decodes that content, its Content-Length accounting can break and surface as
         # `IncompleteRead(..., negative_remaining)` during streaming reads. Force identity transfer and
         # disable urllib3 decoding so we always operate on the raw bytes indicated by the URL suffix.
-        resp = requests.get(
+        resp = https_get(
             url,
-            timeout=(DB.connection_timeout, DB.reading_timeout),
+            what="an Ensembl table dump",
             stream=True,
             headers={"Accept-Encoding": "identity", "Connection": "close"},
         )
+        if resp is None:
+            yield None
+            return
         try:
-            resp.raise_for_status()
             if hasattr(resp.raw, "decode_content"):
                 resp.raw.decode_content = False
             if hasattr(resp.raw, "enforce_content_length"):
@@ -1641,17 +1677,47 @@ class DatabaseManager:
         finally:
             resp.close()
 
-    def _download_table_from_ftp(self, table_key: str, usecols: list[str] | None = None) -> pd.DataFrame:
-        """Download a table from Ensembl's HTTPS MySQL dumps (no direct MySQL connection)."""
-        db_dir_url = self._ftp_db_dir_url()
-        sql_url = self._ftp_schema_url()
+    def _schema_of(self, table_key: str) -> list[tuple[str, str]]:
+        """Return the ``[(column, MySQL type)]`` of *table_key* in the release's schema dump.
 
+        Args:
+            table_key: The table.
+
+        Returns:
+            list[tuple[str, str]]: Columns and their MySQL types, in schema order.
+
+        Raises:
+            EnsemblSchemaError: If the release has no table *table_key*.
+        """
+        sql_url = self._ftp_schema_url()
         schema = self._ftp_schema_for_sql_url(sql_url)
         if table_key not in schema:
             raise EnsemblSchemaError(
                 f"Table {table_key!r} not found in Ensembl schema dump {sql_url!r}.", table=table_key
             )
-        columns = schema[table_key]
+        return schema[table_key]
+
+    def _download_table_from_ftp(self, table_key: str, usecols: list[str] | None = None) -> pd.DataFrame:
+        """Download a table from Ensembl's HTTPS MySQL dumps (no direct MySQL connection).
+
+        The table file is requested directly (``<table>.txt.gz``, then ``<table>.txt.gz.bz2`` if Ensembl answers that
+        the first does not exist). Columns of text types are read as text (see :py:meth:`_is_text_sql_type`).
+
+        Args:
+            table_key: The table.
+            usecols: Columns to keep (in this order); all by default.
+
+        Returns:
+            pandas.DataFrame: The table.
+
+        Raises:
+            EnsemblSchemaError: If the release has no such table, or the table lacks an element of *usecols*.
+            EnsemblDownloadError: If the dump cannot be read (after the retries).
+        """
+        db_dir_url = self._ftp_db_dir_url()
+        typed = self._schema_of(table_key)
+        columns = [c for c, _ in typed]
+        text_columns = [c for c, t in typed if self._is_text_sql_type(t)]
 
         if usecols is not None:
             missing = [c for c in usecols if not isinstance(c, str) or c not in columns]
@@ -1660,43 +1726,33 @@ class DatabaseManager:
                     f"Missing columns in {table_key!r}: {missing}", table=table_key, missing_columns=tuple(missing)
                 )
 
-        table_url_candidates = (
-            f"{db_dir_url}{table_key}.txt.gz",
-            f"{db_dir_url}{table_key}.txt.gz.bz2",
-        )
-        table_url: str | None = None
-        for candidate in table_url_candidates:
-            try:
-                with requests.get(candidate, timeout=(DB.connection_timeout, DB.reading_timeout), stream=True) as resp:
-                    if resp.status_code == 200:
-                        table_url = candidate
-                        break
-            except requests.RequestException as exc:
-                self.log.debug("Failed to probe Ensembl table dump %r: %s", candidate, exc)
-        if table_url is None:
-            raise pymysql.err.OperationalError(
-                f"Unable to locate table dump for {table_key!r} under {db_dir_url!r} "
-                f"(tried {table_url_candidates})."
-            )
-
-        max_attempts = 3
+        max_attempts = max(1, int(DB.rest_attempts))
         last_exc: Exception | None = None
+        df: pd.DataFrame | None = None
+        table_url: str | None = None
         for attempt in range(max_attempts):
             try:
-                with self._open_decompressed_http_text(table_url) as fh:
-                    # Decode MySQL's dump escaping (escaped tabs/newlines/backslashes, NULL as `\N`) so that the
-                    # rows are the ones the MySQL server would return.
-                    df = read_mysql_dump(fh, columns=columns, usecols=usecols)
+                for candidate in (f"{db_dir_url}{table_key}.txt.gz", f"{db_dir_url}{table_key}.txt.gz.bz2"):
+                    with self._open_decompressed_http_text(candidate) as fh:
+                        if fh is None:
+                            continue
+                        table_url = candidate
+                        # Decode MySQL's dump escaping (escaped tabs/newlines/backslashes, NULL as `\N`) so that the
+                        # rows are the ones the MySQL server would return.
+                        df = read_mysql_dump(fh, columns=columns, usecols=usecols, text_columns=text_columns)
+                        break
                 last_exc = None
                 break
+            except EnsemblDownloadError:
+                raise  # already retried by `https_get`
             except Exception as exc:  # noqa: BLE001 - retry only on known transient classes
                 last_exc = exc
                 if attempt < max_attempts - 1 and self._is_retryable_http_read_error(exc):
-                    sleep_s = 0.5 * (2**attempt)
+                    sleep_s = float(DB.rest_retry_wait) * (2**attempt)
                     self.log.warning(
                         "Transient error while downloading %r from %s (attempt %d/%d): %s. Retrying in %.1fs.",
                         table_key,
-                        table_url,
+                        db_dir_url,
                         attempt + 1,
                         max_attempts,
                         exc.__class__.__name__,
@@ -1707,32 +1763,84 @@ class DatabaseManager:
                 break
 
         if last_exc is not None:
-            raise pymysql.err.OperationalError(
-                f"Unable to fetch table {table_key!r} from Ensembl HTTPS dumps: {table_url!r}"
+            raise EnsemblDownloadError(
+                f"Unable to read table {table_key!r} of {self.mysql_database!r} from Ensembl HTTPS dumps "
+                f"({db_dir_url!r})."
             ) from last_exc
+        if df is None:
+            raise EnsemblDownloadError(
+                f"The schema of {self.mysql_database!r} has table {table_key!r}, but Ensembl's dump directory "
+                f"{db_dir_url!r} has no file for it."
+            )
 
         info_usecols = " for following columns: " + ", ".join(usecols) + "." if usecols else "."
         self.log.info(
             f"Raw table for `{table_key}` on ensembl release `{self.ensembl_release}` "
-            f"was downloaded via HTTPS/FTP dumps{info_usecols}"
+            f"was downloaded via HTTPS/FTP dumps ({table_url}){info_usecols}"
         )
         return df
+
+    @staticmethod
+    def _typed_mysql_frame(rows: list[tuple], typed: list[tuple[str, str]], table_key: str) -> pd.DataFrame:
+        """Build a frame from MySQL rows with the column types the HTTPS route gives.
+
+        Text-type columns (:py:meth:`_is_text_sql_type`) become text in pandas' default text dtype (bytes decoded as
+        UTF-8, dates and times in MySQL's text form ``YYYY-MM-DD[ HH:MM:SS]``, as in the dumps); the other columns are
+        numbers (``NULL`` makes an integer column float, as in the dumps).
+
+        Args:
+            rows: The rows of the query.
+            typed: ``[(column, MySQL type)]`` of the selected columns.
+            table_key: The table, for the messages.
+
+        Returns:
+            pandas.DataFrame: The table.
+
+        Raises:
+            ValueError: If a value of a text column cannot be decoded.
+        """
+        names = [c for c, _ in typed]
+        text_dtype = pd.Series(["a"]).dtype
+        data: dict[str, Any] = {}
+        for k, (col, sql_type) in enumerate(typed):
+            values = np.empty(len(rows), dtype=object)
+            values[:] = [row[k] for row in rows]
+            if DatabaseManager._is_text_sql_type(sql_type) and pd.api.types.infer_dtype(values, skipna=True) in (
+                "string",
+                "empty",
+            ):
+                data[col] = pd.Series(values, dtype=text_dtype).where(pd.notna(values), np.nan)
+            elif DatabaseManager._is_text_sql_type(sql_type):
+                out = np.empty(len(values), dtype=object)
+                for i, v in enumerate(values):
+                    if v is None:
+                        out[i] = np.nan
+                    elif isinstance(v, str):
+                        out[i] = v
+                    elif isinstance(v, (bytes, bytearray)):
+                        try:
+                            out[i] = bytes(v).decode("utf-8")
+                        except UnicodeDecodeError as exc:
+                            raise ValueError(f"Table {table_key!r} column {col!r} holds undecodable bytes.") from exc
+                    else:
+                        out[i] = str(v)  # datetime, date, Decimal...: the text MySQL prints
+                data[col] = pd.Series(out, dtype=text_dtype)
+            else:
+                series = pd.Series([np.nan if v is None else v for v in values], dtype=object)
+                data[col] = pd.to_numeric(series)
+        return pd.DataFrame(data, columns=names)
 
     def download_table(self, table_key: str, usecols: list | None = None) -> pd.DataFrame:
         """Download a raw Ensembl MySQL table and return it as a DataFrame.
 
-        The method forms the low-level backbone of all table acquisition in *IDTrack*.  When the release is on the
-        live Ensembl MySQL service and its port is usable (see :py:mod:`idtrack._ensembl_access`: the port answered
-        its one probe in this process and the access mode is not ``"https"``), it opens a direct connection to the
-        core schema, issues a `SELECT` statement against *table_key*, converts the results into a
-        :py:class:`pandas.DataFrame`, and performs a minimal sanitisation pass (bytes-to-string decoding, column
-        subset validation, logging). Otherwise, or if the MySQL query fails, the same table is read from Ensembl's
-        HTTPS dumps (:py:meth:`_download_table_from_ftp`), which yields the same rows and values; over HTTPS the
-        column types are inferred from the text, so a text column holding only digit strings comes back as numbers.
-        Public code is expected to call
-        :py:meth:`DatabaseManager.get_table`, which wraps this helper with caching and post-processing,
-        but keeping this routine separate allows fine-grained testing, mocking, and reuse in advanced
-        workflows.
+        When the release is on the live Ensembl MySQL service and its port is usable (see
+        :py:mod:`idtrack._ensembl_access`: the port answered its probe and the access mode is not ``"https"``), the
+        table is selected from the core schema with a server-side cursor (rows are streamed, not held twice);
+        otherwise it is read from Ensembl's HTTPS dumps (:py:meth:`_download_table_from_ftp`). Both routes give the
+        same rows with the same column types: columns of text types (character, enumeration, date and time) are
+        text, the others numbers. Only a failure to reach the MySQL server makes the HTTPS route take over (with a
+        warning that names the cause); a query or data error is raised. Public code is expected to call
+        :py:meth:`DatabaseManager.get_table`, which wraps this helper with caching.
 
         Args:
             table_key (str): Name of the raw table as it appears in the remote Ensembl database
@@ -1748,7 +1856,10 @@ class DatabaseManager:
         Raises:
             EnsemblSchemaError: If the release has no table *table_key*, or the table lacks an element of
                 *usecols* (:py:class:`idtrack._db.EnsemblSchemaError`).
-            ValueError: If the query returns binary payloads that cannot be coerced into native Python types.
+            ValueError: If the query returns text that cannot be decoded.
+
+        Notes:
+            If the HTTPS dumps cannot be read, :py:class:`idtrack.EnsemblDownloadError` propagates.
         """
         if usecols == []:
             usecols = None
@@ -1769,84 +1880,74 @@ class DatabaseManager:
             return self._download_table_from_ftp(table_key, usecols=usecols)
 
         # If MySQL is unreachable (common when outbound 3306/5306 is blocked) or the access mode is "https", use the
-        # HTTPS dumps. The port is probed at most once per process.
+        # HTTPS dumps.
         if not reachability.mysql_port_usable(int(self.mysql_settings["port"])):
             return self._download_table_from_ftp(table_key, usecols=usecols)
 
         which_mysql_server = dict(**self.mysql_settings, **{"database": self.mysql_database})
-
+        table_sql = _quote_identifier(table_key)
         try:
-            # Connect to the MYSQL server, close the connection after the code block
             with pymysql.connect(**which_mysql_server) as connection:
-                table_sql = _quote_identifier(table_key)
-
-                # Create a cursor to be able to make some queries: First get the associated column names.
                 with connection.cursor() as cur1:
-                    cur1.execute(f"SHOW columns FROM {table_sql}")  # noqa: S608
-                    column_names = pd.DataFrame(cur1.fetchall())[0]
+                    cur1.execute(f"SHOW COLUMNS FROM {table_sql}")  # noqa: S608
+                    typed = []
+                    for row in cur1.fetchall():
+                        name, sql_type = row[0], row[1]
+                        name = name.decode("utf-8") if isinstance(name, bytes) else str(name)
+                        sql_type = sql_type.decode("utf-8") if isinstance(sql_type, bytes) else str(sql_type)
+                        typed.append((name, sql_type))
+                if not typed:
+                    raise ValueError(f"Table {table_key!r} has no columns.")
+                if any(self._column_sep in c for c, _ in typed):
+                    raise ValueError(f"Column names of {table_key!r} contain the separator {self._column_sep!r}.")
 
-                    if pd.isna(column_names).any():
-                        raise ValueError("There is no column in the table")
-
-                    # The MYSQL sever before 'DB.mysql_port_min_version' gives the result as bytes, but
-                    # the one after gives as string.
-                    if not isinstance(column_names.iloc[0], str):
-                        # Convert everything to string to be consistent.
-                        column_names = column_names.str.decode("utf-8")
-                    # Just to make sure conversion is successful, no problem is expected to arise afterwards.
-                    if not all([isinstance(k, str) and self._column_sep not in k for k in column_names]):
-                        raise ValueError(
-                            f"Column names must be strings without separator {self._column_sep!r}. "
-                            f"Invalid columns found in table {table_key!r}."
+                if usecols is not None:
+                    names = {c for c, _ in typed}
+                    missing = [c for c in usecols if not isinstance(c, str) or c not in names]
+                    if missing:
+                        raise EnsemblSchemaError(
+                            f"Missing columns in {table_key!r}: {missing}",
+                            table=table_key,
+                            missing_columns=tuple(missing),
                         )
+                    by_name = dict(typed)
+                    typed = [(c, by_name[c]) for c in usecols]
+                select_sql = ", ".join(_quote_identifier(c) for c, _ in typed)
 
-                # Create a cursor to be able to make some queries: Second get the associated table content.
-                with connection.cursor() as cur2:
-                    if usecols is None:
-                        select_sql = "*"
-                    else:
-                        col_set = {str(c) for c in column_names.tolist()}
-                        missing = [c for c in usecols if not isinstance(c, str) or c not in col_set]
-                        if missing:
-                            raise EnsemblSchemaError(
-                                f"Missing columns in {table_key!r}: {missing}",
-                                table=table_key,
-                                missing_columns=tuple(missing),
-                            )
-                        select_sql = ", ".join(_quote_identifier(col) for col in usecols)
-
+                # A server-side cursor streams the rows instead of materialising the whole result first.
+                rows: list[tuple] = []
+                with connection.cursor(pymysql.cursors.SSCursor) as cur2:
                     cur2.execute(f"SELECT {select_sql} FROM {table_sql}")  # noqa: S608
-                    # Fetch all the content and save as a tuple file.
-                    results_content = cur2.fetchall()
-
-                # Create a dataframe using the columns fetched.
-                df = pd.DataFrame(results_content, columns=column_names if usecols is None else usecols)
-                # Align MySQL NULL semantics with the HTTPS/FTP dumps: in dumps missing values are encoded as `\N`
-                # which we map to pandas NA. MySQL returns NULL as `None`; normalise to `np.nan` for consistency.
-                df = df.replace({None: np.nan})
-                # Make sure the content does not contain any bytes object.
-                if np.any(df.map(lambda x: isinstance(x, bytes))):
-                    raise ValueError(
-                        f"Table {table_key!r} contains bytes objects that could not be decoded to strings."
-                    )
-
-                info_usecols = " for following columns: " + ", ".join(usecols) + "." if usecols else "."
-                self.log.info(
-                    f"Raw table for `{table_key}` on ensembl release `{self.ensembl_release}` "
-                    f"was downloaded{info_usecols}"
-                )
-
-                return df
+                    while True:
+                        chunk = cur2.fetchmany(100_000)
+                        if not chunk:
+                            break
+                        rows.extend(chunk)
         except EnsemblSchemaError:
             # The live schema answered: the dumps have the same schema, so asking them cannot help.
             raise
         except Exception as exc:
-            if self._is_mysql_connection_failure(exc):
-                # A connection that worked before and fails now: do not try this port again in this process.
-                reachability.mark_unreachable(
-                    str(self.mysql_settings["host"]), int(self.mysql_settings["port"]), str(exc)
-                )
+            if not self._is_mysql_connection_failure(exc):
+                raise
+            # A connection that worked before and fails now: do not try this port again for a while.
+            reachability.mark_unreachable(str(self.mysql_settings["host"]), int(self.mysql_settings["port"]), str(exc))
+            self.log.warning(
+                "MySQL %s:%s failed while reading %r (%s: %s); reading it from the HTTPS dumps instead.",
+                self.mysql_settings["host"],
+                self.mysql_settings["port"],
+                table_key,
+                exc.__class__.__name__,
+                exc,
+            )
             return self._download_table_from_ftp(table_key, usecols=usecols)
+
+        df = self._typed_mysql_frame(rows, typed, table_key)
+        del rows
+        info_usecols = " for following columns: " + ", ".join(usecols) + "." if usecols else "."
+        self.log.info(
+            f"Raw table for `{table_key}` on ensembl release `{self.ensembl_release}` was downloaded{info_usecols}"
+        )
+        return df
 
     @staticmethod
     def _determine_usecols_ids(form: str) -> tuple[list[str], list[str], list[str]]:
@@ -1860,7 +1961,7 @@ class DatabaseManager:
 
         Args:
             form (str): Molecular form whose identifier columns are requested. Must be one of
-                :py:data:`idtrack._db.DB.forms_in_order` (``"gene"``, ``"transcript"``, or
+                :py:data:`idtrack.DB.forms_in_order` (``"gene"``, ``"transcript"``, or
                 ``"translation"``).
 
         Returns:
@@ -1899,8 +2000,8 @@ class DatabaseManager:
         This method pulls the appropriate MySQL table(s) for *form*, copes with schema differences
         across Ensembl releases (e.g. the historical ``*_stable_id`` split tables), coerces data
         types, and standardises column names so that downstream graph-building steps all consume the
-        same shape.  It finishes by delegating to :py:meth:`DatabaseManager.version_uniformize` to
-        ensure the *Version* field is either a proper integer or ``NaN`` across the entire DataFrame.
+        same shape.  Every id must carry a version (:py:meth:`DatabaseManager._require_versions`): a release
+        whose ids have none, or only some, is refused here, so no derived table exists for it.
 
         Args:
             form (str): Target molecular form - ``"gene"``, ``"transcript"``, or ``"translation"``.
@@ -1915,8 +2016,10 @@ class DatabaseManager:
                 * **translation** - ``translation_id``, ``transcript_id``, ``translation_stable_id``,
                   ``translation_version``
 
-                All ID columns are ``int64`` except the ``*_stable_id`` strings; version columns are
-                ``int64`` or ``float64`` (with ``NaN`` when absent).
+                All ID columns are ``int64`` except the ``*_stable_id`` strings; version columns are ``int64``.
+
+        Raises:
+            ValueError: If ids of the release carry no version (organisms without versioned ids are not supported).
         """
         # Determine which columns are interesting for each form.
         stable_id_version, usecols_core, usecols_asso = DatabaseManager._determine_usecols_ids(form)
@@ -1960,7 +2063,7 @@ class DatabaseManager:
         df = df.drop_duplicates(ignore_index=True)  # Remove duplicates if exists
         df = df.reset_index(drop=True)
 
-        return self.version_uniformize(df, version_str=f"{form}_version")
+        return self._require_versions(df, f"{form}_version", form)
 
     def create_relation_current(self) -> pd.DataFrame:
         """Build a current-release gene-transcript-translation mapping table.
@@ -1972,7 +2075,7 @@ class DatabaseManager:
         columns and compress the information into three canonical node labels
         (``"<stable_id>.<version>"``).  The resulting mapping is the authoritative
         per-release link between molecular forms and is consumed by downstream
-        graph-building utilities such as :py:meth:`DatabaseManager.create_graph`.
+        graph-building utilities such as :py:meth:`idtrack.GraphMaker.construct_graph`.
 
         Returns:
             pandas.DataFrame: Three columns—``gene``, ``transcript``, and
@@ -2001,12 +2104,11 @@ class DatabaseManager:
         """Convert an ID/version matrix into the canonical three-column relationship table.
 
         The helper is used by :py:meth:`DatabaseManager.create_relation_current`
-        and is not intended for direct use.  It validates the incoming frame, fixes inconsistent
-        version numbers (via :py:meth:`DatabaseManager.version_fix` and
-        :py:meth:`DatabaseManager.version_fix_incomplete`), converts missing
-        translations to ``NaN``-compatible floats, casts all stable-ID columns to
-        string, and finally compresses each *ID + version* pair into the compact
-        node label used throughout *ID-track* graphs.
+        and is not intended for direct use.  It validates the incoming frame, keeps the
+        versions of genes and transcripts as integers and those of translations as
+        ``NaN``-compatible floats (a transcript without translation has none), casts all
+        stable-ID columns to string, and finally compresses each *ID + version* pair into
+        the compact node label used throughout *ID-track* graphs.
 
         Args:
             df (pandas.DataFrame): A six-column frame with exactly the following
@@ -2035,16 +2137,13 @@ class DatabaseManager:
         if not (len(df.columns) == len(set(df.columns).intersection(cols)) == 6):
             raise ValueError(f"Expected 6 columns {sorted(cols)}, got {len(df.columns)} columns: {list(df.columns)}.")
 
-        # Process the dataframe
+        # Every transcript has a gene, both with a version; a transcript without translation has neither a
+        # translation id nor a translation version.
         for col in ["gene", "transcript"]:
-            df[f"{col}_version"] = df[f"{col}_version"].astype(int, errors="raise")
-            # Transcript may have different version info than gene.
-            df = self.change_form(col).version_fix(df, f"{col}_version")
-
-        for col in ["translation"]:
-            # Translation may have different version info than gene/transcript.
-            df = self.change_form(col).version_fix_incomplete(df, f"{col}_stable_id", f"{col}_version")
-            df[f"{col}_version"] = df[f"{col}_version"].astype(float, errors="raise")  # due to np.nans
+            df[f"{col}_version"] = df[f"{col}_version"].astype(int)
+        df["translation_version"] = (
+            df["translation_version"].where(df["translation_stable_id"].notna()).astype(float, errors="raise")
+        )
 
         for col in ["gene_stable_id", "translation_stable_id", "transcript_stable_id"]:
             df[col] = df[col].fillna("").astype(str)
@@ -2063,7 +2162,8 @@ class DatabaseManager:
         """Retrieve historical relationships between successive Ensembl stable IDs.
 
         Build a cross-release lineage table mapping every obsolete ID version to its immediate successor for the
-        configured *organism*, *form*, and release window.  The information is assembled from the Core tables
+        configured *organism* and *form*, over every mapping session that the release's tables record (all earlier
+        releases; :py:meth:`get_db` restricts it to the manager's window).  The information is assembled from the Core tables
         ``stable_id_event`` and ``mapping_session`` and then normalised so that all identifiers follow the canonical
         ``<stable_id>.<version>`` convention.  Downstream graph-construction utilities depend on this table to
         reconstruct how genes, transcripts, or translations evolve across Ensembl releases.
@@ -2086,7 +2186,7 @@ class DatabaseManager:
 
         Raises:
             ValueError: If the identifier delimiter
-                :py:data:`idtrack._db.DB.id_ver_delimiter` is found inside any ``*_stable_id`` field, indicating
+                :py:data:`idtrack.DB.id_ver_delimiter` is found inside any ``*_stable_id`` field, indicating
                 malformed input.
         """
         # Get the tables from the server
@@ -2111,10 +2211,13 @@ class DatabaseManager:
                 ],
             )
 
-        # Correct the version based on version_info for each old_stable_id and new_stable_id columns.
-        sm = self.version_fix_incomplete(
-            self.version_fix_incomplete(sm, "old_stable_id", "old_version"), "new_stable_id", "new_version"
-        )
+        # A side of an event without an id (a birth, a retirement) has no version; a side with an id has one.
+        sm = sm.reset_index(drop=True)
+        for side in ("old", "new"):
+            has_id = sm[f"{side}_stable_id"].notna()
+            versions = pd.to_numeric(sm[f"{side}_version"], errors="coerce").where(has_id)
+            self._require_versions(pd.DataFrame({"version": versions[has_id]}), "version", self.form)
+            sm[f"{side}_version"] = versions.astype(float)
         # Convert np.nan's to "" so that saving to hdf5 file is not a problem.
         for col in ["new_stable_id", "old_stable_id"]:
             sm[col] = sm[col].fillna("")
@@ -2128,9 +2231,9 @@ class DatabaseManager:
             raise ValueError(f"new_stable_id column contains delimiter {DB.id_ver_delimiter!r} which is not allowed.")
         if not np.all(sm["old_stable_id"].str.find(DB.id_ver_delimiter) == -1):
             raise ValueError(f"old_stable_id column contains delimiter {DB.id_ver_delimiter!r} which is not allowed.")
-        # No need to check for version as it can be already float or int by fix_stable_events
 
-        sm = sm[(self.ignore_after >= sm["old_release"]) & (sm["old_release"] >= self.ignore_before)]
+        # Every mapping session the release records is kept: the table does not depend on the manager's window, which
+        # `get_db` applies when the table is read (a table computed for one window is then never served to another).
         sm = sm.drop_duplicates(ignore_index=True)  # Remove duplicates if exists
         sm = sm.reset_index(drop=True)
         return sm
@@ -2195,8 +2298,8 @@ class DatabaseManager:
                     row per Ensembl→external identifier edge. ``graph_id`` is the Ensembl stable ID (+version), while
                     the two *identity* columns store Smith-Waterman percent identities (*float16*) for QC.
                 * For ``"database"`` / ``"relevant-database"`` - two-column frame
-                    ``["name_db", "count"]`` giving how many distinct ``graph_id`` values each external database
-                    touches. ``count`` is an ``int64``.
+                    ``["name_db", "count"]`` giving the number of rows of each external database (most rows first,
+                    ties by name). ``count`` is an ``int64``.
 
         Raises:
             ValueError: If *filter_mode* is not one of the accepted literals **or** if the YAML allow-list claims a
@@ -2208,64 +2311,29 @@ class DatabaseManager:
             *Synonym handling* - any synonym brought in from ``external_synonym`` is prefixed with
             :py:data:`DB.synonym_id_nodes_prefix`, and its ``name_db`` is likewise prefixed so that synonym nodes remain
             distinguishable during graph building.
-            *Caching* - the heavy MySQL queries are executed only if the processed frame is not already present in the
-            manager's per-organism HDF5 cache; otherwise the cached frame is read from disk, ensuring repeat calls are
-            inexpensive.
+            *Caching* - this method always computes; :py:meth:`get_db` stores and reuses its results
+            (``external``, ``external_database``, and ``external_relevant`` keyed by the enabled databases). The raw
+            tables it reads are stored by :py:meth:`get_table`.
+            *Restriction first* - with ``relevant`` the raw tables are restricted to the enabled databases before
+            the join (identical result, a fraction of the memory). External ids and synonyms are stripped of
+            surrounding white space; ids that are empty after it are dropped. The rows are in a total order (database,
+            Ensembl id, external id, identities).
         """
-        # Get the necessary tables from the server
-        m = {"save_after_calculation": self.store_raw_always}
-        a = self.get_db(f"idsraw_{self.form}", save_after_calculation=self.store_raw_always)
-        ox = self.get_table(
-            "object_xref", usecols=["ensembl_id", "ensembl_object_type", "xref_id", "object_xref_id"], **m
-        )
-        x = self.get_table("xref", usecols=["xref_id", "external_db_id", "dbprimary_acc", "display_label"], **m)
-        ed = self.get_table("external_db", usecols=["external_db_id", "db_name", "db_display_name"], **m)
-        # Handle column name changes in identity_xref table across Ensembl releases.
-        # Old releases (e.g., release 48) use: target_identity, query_identity
-        # New releases use: ensembl_identity, xref_identity
-        try:
-            ix = self.get_table("identity_xref", usecols=["ensembl_identity", "xref_identity", "object_xref_id"], **m)
-        except EnsemblSchemaError as e:
-            if {"ensembl_identity", "xref_identity"} & set(e.missing_columns):
-                self.log.info(
-                    "Using legacy column names (target_identity, query_identity) for identity_xref table "
-                    f"in Ensembl release {self.ensembl_release}."
-                )
-                try:
-                    ix = self.get_table(
-                        "identity_xref", usecols=["target_identity", "query_identity", "object_xref_id"], **m
-                    )
-                    # Rename legacy columns to current naming convention
-                    ix = ix.rename(
-                        columns={"target_identity": "ensembl_identity", "query_identity": "xref_identity"},
-                    )
-                except EnsemblSchemaError:
-                    # If neither column naming scheme works, create empty identity columns
-                    self.log.warning(
-                        f"identity_xref table missing identity columns for Ensembl release {self.ensembl_release}. "
-                        "Using NaN values for ensembl_identity and xref_identity."
-                    )
-                    ix = self.get_table("identity_xref", usecols=["object_xref_id"], **m)
-                    ix["ensembl_identity"] = np.nan
-                    ix["xref_identity"] = np.nan
-            else:
-                raise
-        es = self.get_table("external_synonym", usecols=["xref_id", "synonym"], **m)
+        if filter_mode not in ("all", "relevant", "database", "relevant-database"):
+            raise ValueError(
+                f"filter_mode must be 'all', 'relevant', 'database', or 'relevant-database', got {filter_mode!r}."
+            )
+        relevant = filter_mode in ("relevant", "relevant-database")
+        prefix = DB.synonym_id_nodes_prefix
+        identities = ["ensembl_identity", "xref_identity"]
+        db_id, db_name, id_graph = "id_db", "name_db", "graph_id"
 
-        # Make entities in synonyms table appended to the xref file as additional lines
-        es = es.merge(x, how="inner", on="xref_id", validate="many_to_one")
-        es = es.drop(columns=["display_label"])
-        es = es.rename(columns={"synonym": "display_label"})
-        es["display_label"] = DB.synonym_id_nodes_prefix + es["display_label"]
-        x = pd.concat([x, es], ignore_index=True)
-
-        # Tables loaded via HTTPS/FTP dumps (or legacy on-disk caches) can contain join-key columns as strings.
-        # Some older releases also include malformed/continuation lines that shift text into numeric ID columns.
-        # Pandas refuses merges when dtypes disagree (e.g. int64 vs object), so normalise here.
+        # Tables loaded via HTTPS/FTP dumps can contain join-key columns as strings. Some older releases also include
+        # malformed/continuation lines that shift text into numeric ID columns. Pandas refuses merges when dtypes
+        # disagree (e.g. int64 vs object), so normalise here.
         def _coerce_numeric_key(df: pd.DataFrame, col: str, table_name: str) -> pd.DataFrame:
             if col not in df.columns or pd.api.types.is_numeric_dtype(df[col]):
                 return df
-
             numeric = pd.to_numeric(df[col], errors="coerce")
             bad = numeric.isna() & df[col].notna()
             if bad.any():
@@ -2279,108 +2347,157 @@ class DatabaseManager:
                 )
                 df = df.loc[~bad].copy()
                 numeric = numeric.loc[~bad]
-
             df[col] = numeric
             return df
 
-        x = _coerce_numeric_key(x, "external_db_id", "xref")
+        # External databases first: with `relevant`, everything below is restricted to the enabled databases before
+        # any join (the result is the same; the join of all cross references is never built).
+        m = {"save_after_calculation": self.store_raw_always}
+        ed = self.get_table("external_db", usecols=["external_db_id", "db_name", "db_display_name"], **m)
         ed = _coerce_numeric_key(ed, "external_db_id", "external_db")
+        isin_list: list[str] = []
+        if relevant:
+            isin_list = list(self.external_inst.give_list_for_case(give_type="db"))
+            # A database is named by `db_name` (accession rows) or `db_display_name` (label rows), with the synonym
+            # prefix for synonym rows; keep the external_db rows that can produce one of the enabled names.
+            bare = {n[len(prefix) :] if n.startswith(prefix) else n for n in isin_list}
+            ed = ed[ed["db_name"].isin(bare) | ed["db_display_name"].isin(bare)]
 
-        # Merge the tables as requested
+        x = self.get_table("xref", usecols=["xref_id", "external_db_id", "dbprimary_acc", "display_label"], **m)
+        x = _coerce_numeric_key(x, "external_db_id", "xref")
+        if relevant:
+            x = x[x["external_db_id"].isin(ed["external_db_id"])]
+        es = self.get_table("external_synonym", usecols=["xref_id", "synonym"], **m)
+        if relevant:
+            es = es[es["xref_id"].isin(x["xref_id"])]
+        ox = self.get_table(
+            "object_xref", usecols=["ensembl_id", "ensembl_object_type", "xref_id", "object_xref_id"], **m
+        )
+        ox = ox[ox["ensembl_object_type"].str.lower() == self.form.lower()]
+        if relevant:
+            ox = ox[ox["xref_id"].isin(x["xref_id"])]
+        # Handle column name changes in identity_xref table across Ensembl releases.
+        # Old releases (e.g., release 48) use: target_identity, query_identity
+        # New releases use: ensembl_identity, xref_identity
+        try:
+            ix = self.get_table("identity_xref", usecols=["ensembl_identity", "xref_identity", "object_xref_id"], **m)
+        except EnsemblSchemaError as e:
+            if not ({"ensembl_identity", "xref_identity"} & set(e.missing_columns)):
+                raise
+            self.log.info(
+                "Using legacy column names (target_identity, query_identity) for identity_xref table "
+                f"in Ensembl release {self.ensembl_release}."
+            )
+            try:
+                ix = self.get_table(
+                    "identity_xref", usecols=["target_identity", "query_identity", "object_xref_id"], **m
+                )
+                ix = ix.rename(columns={"target_identity": "ensembl_identity", "query_identity": "xref_identity"})
+            except EnsemblSchemaError:
+                self.log.warning(
+                    f"identity_xref table missing identity columns for Ensembl release {self.ensembl_release}. "
+                    "Using NaN values for ensembl_identity and xref_identity."
+                )
+                ix = self.get_table("identity_xref", usecols=["object_xref_id"], **m)
+                ix["ensembl_identity"] = np.nan
+                ix["xref_identity"] = np.nan
+        ix = ix[ix["object_xref_id"].isin(ox["object_xref_id"])]
+
+        # External ids and synonyms without surrounding white space (Ensembl stores some synonyms with a trailing
+        # blank, which no query written without it would match).
+        x = x.assign(
+            dbprimary_acc=x["dbprimary_acc"].str.strip(),
+            display_label=x["display_label"].str.strip(),
+        )
+        # Make entities in synonyms table appended to the xref file as additional lines
+        es = es.merge(x, how="inner", on="xref_id", validate="many_to_one")
+        es = es.drop(columns=["display_label"]).rename(columns={"synonym": "display_label"})
+        es["display_label"] = prefix + es["display_label"].str.strip()
+        x = pd.concat([x, es], ignore_index=True)
+        del es
+
+        a = self.get_db(f"idsraw_{self.form}")
         comb = pd.merge(
             a,
-            ox[ox["ensembl_object_type"].str.lower() == self.form.lower()],
+            ox,
             how="left",
             left_on=f"{self.form}_id",
             right_on="ensembl_id",
             validate="one_to_many",
         )
+        del ox
         comb = comb.merge(x, how="left", on="xref_id", validate="many_to_many")
+        del x
         comb = comb.merge(ed, how="left", on="external_db_id", validate="many_to_one")
         comb = comb.merge(ix, how="left", on="object_xref_id", validate="many_to_one")
+        del ix
 
-        # Remove unnecessary columns and reset the index.
-        stable_id_version, usecols_core, usecols_asso = DatabaseManager._determine_usecols_ids(self.form)
-        ids_only = list(set(usecols_asso + usecols_core) - set(stable_id_version))
-        comb = comb.drop(
-            columns=["ensembl_id", "object_xref_id", "ensembl_object_type", "xref_id", "external_db_id"] + ids_only,
+        # Node name "ID.Version" once per id of the form, then attached by the internal key.
+        names = pd.Series(self.id_ver_from_df(a[self._identifiers].reset_index(drop=True)), index=a[f"{self.form}_id"])
+        graph_ids = comb[f"{self.form}_id"].map(names)
+        del a
+
+        # One row per (Ensembl id, external id, database): labels with the display name, accessions with the name.
+        parts = []
+        for id_col, name_col in (("display_label", "db_display_name"), ("dbprimary_acc", "db_name")):
+            part = pd.DataFrame(
+                {
+                    id_graph: graph_ids.to_numpy(),
+                    db_id: comb[id_col].to_numpy(),
+                    db_name: comb[name_col].to_numpy(),
+                    identities[0]: comb[identities[0]].to_numpy(),
+                    identities[1]: comb[identities[1]].to_numpy(),
+                }
+            )
+            parts.append(part)
+        del comb, graph_ids
+        res = pd.concat(parts, axis=0, ignore_index=True)
+        del parts
+        bare_id = res[db_id].where(
+            ~res[db_id].astype(object).str.startswith(prefix, na=False), res[db_id].str[len(prefix) :]
         )
-        comb = comb.reset_index(drop=True)
+        res = res[~(res[id_graph].isna() | res[db_name].isna() | res[db_id].isna()) & (bare_id != "")]
 
-        # Processing the merged dataframe
-
-        # Constants for the processing
-        identities = ["ensembl_identity", "xref_identity"]
-        db_id = "id_db"
-        db_name = "name_db"
-        id_graph = "graph_id"
-        count_col = "count"
-
-        def comb_renamer(col_list):
-            return {col_list[0]: db_id, col_list[1]: db_name}
-
-        # Create "ID.Version"
-        # No need for version_uniformize as the gene_ids are obtained from create_id
-        comb_temp = pd.Series(self.id_ver_from_df(comb[self._identifiers]))
-        # Basically split below columns as separate rows and rename the columns.
-        comb_3_columns = ["display_label", "db_display_name"]
-        comb_4_columns = ["dbprimary_acc", "db_name"]
-        comb_3, comb_4 = pd.DataFrame(), pd.DataFrame()
-        comb_3[id_graph], comb_4[id_graph] = comb_temp, comb_temp
-        comb_3[comb_3_columns + identities] = comb[comb_3_columns + identities]
-        comb_4[comb_4_columns + identities] = comb[comb_4_columns + identities]
-        comb_3 = comb_3.rename(columns=comb_renamer(comb_3_columns), errors="raise")
-        comb_4 = comb_4.rename(columns=comb_renamer(comb_4_columns), errors="raise")
-        comb_3 = comb_3.reset_index(drop=True)
-        comb_4 = comb_4.reset_index(drop=True)
-        res = pd.concat([comb_3, comb_4], axis=0, ignore_index=True)
-        res = res[~(res[id_graph].isna() | res[db_name].isna() | res[db_id].isna())]
-        res = res.sort_values(by=[db_name, id_graph, db_id])
-        res = res.reset_index(drop=True)
-        # Add the release information at the leftmost place
-        res.insert(0, "release", pd.Series(repeat(self.ensembl_release, len(res))))
-
+        # A total order (all columns, stable), so that the table does not depend on the order of the input rows; the
+        # identities are compared as float64 (pandas cannot sort by float16 columns).
+        res = res.astype({identities[0]: np.float64, identities[1]: np.float64})
+        res = res.sort_values(by=[db_name, id_graph, db_id, *identities], kind="stable", na_position="last")
         # Convert some columns type for convenience.
-        res[identities[0]] = res[identities[0]].astype(np.float16, errors="raise")
-        res[identities[1]] = res[identities[1]].astype(np.float16, errors="raise")
-        res["release"] = res["release"].astype(np.uint8, errors="raise")
-
+        res = res.astype({identities[0]: np.float16, identities[1]: np.float16})
         # Drop duplicates if exists. Note that it is not trivial, there are many duplicated lines after adding
         # these columns as rows. Because, for some of them, comb_X_columns are actually the same.
         res = res.drop_duplicates(ignore_index=True)
+        res.insert(0, "release", np.full(len(res), self.ensembl_release, dtype=np.uint8))
 
         # Change the synonym IDs' database name
-        to_add = np.array(
-            [DB.synonym_id_nodes_prefix if i else "" for i in res[db_id].str.startswith(DB.synonym_id_nodes_prefix)]
-        )
-        res[db_name] = to_add + res[db_name]
+        is_synonym = res[db_id].astype(object).str.startswith(prefix).to_numpy(dtype=bool)
+        res[db_name] = np.where(is_synonym, prefix, "").astype(object) + res[db_name].astype(object)
+        res[db_name] = res[db_name].astype(pd.Series(["a"]).dtype)
         # Unless you specifically look at synonyms, they will not mean the same thing as the counterparts.
         # They will be used as the bridging point in the pathfinder algorithm only.
 
-        if filter_mode in ["relevant", "relevant-database"]:
-            # In order to prevent the search space to be too big and to prevent unnecessary data to be kept in the disk
-            # and in the memory.
-            isin_list = self.external_inst.give_list_for_case(give_type="db")
-            available_databases = set(np.unique(res[db_name]))
-            if not all([il in available_databases for il in isin_list]):
-                raise ValueError("Inconsistency between external yaml file and current state of DatabaseManager.")
+        if relevant:
+            available_databases = set(res[db_name].unique())
+            missing_databases = sorted(d for d in isin_list if d not in available_databases)
+            if missing_databases:
+                raise ValueError(
+                    f"The externals YAML enables {missing_databases} for {self.organism} {self.form}, assembly "
+                    f"{self.genome_assembly}, release {self.ensembl_release}, but Ensembl's tables of that release have "
+                    f"no such cross references. Correct the YAML "
+                    f"({self.external_inst.file_name_modified_yaml(mode='configured')!r})."
+                )
             res = res[res[db_name].isin(isin_list)]
 
         res = res.reset_index(drop=True)
-
-        if filter_mode in ["all", "relevant"]:
+        if filter_mode in ("all", "relevant"):
             return res
-        elif filter_mode in ["database", "relevant-database"]:
-            databases = pd.DataFrame(Counter(res[db_name]).most_common(), columns=[db_name, count_col])
-            return databases
-        else:
-            raise ValueError(f"filter_mode must be 'all', 'database', or 'relevant-database', got {filter_mode!r}.")
+        return self._count_databases(res)
 
     def create_database_content(self, just_download: bool = False) -> pd.DataFrame:
         """Retrieve and optionally cache external-database metadata for every assembly, release, and form.
 
         The helper iterates over every genome assembly configured for the current organism in
-        :py:attr:`idtrack._db.DB.assembly_mysqlport_priority`, every available Ensembl release for each assembly,
+        :py:attr:`idtrack.DB.assembly_mysqlport_priority`, every available Ensembl release for each assembly,
         and every identifier *form* supported by the package, downloading the ``external_database`` table for
         each combination.  The resulting frames are concatenated, enriched with ``assembly``, ``release``,
         ``form``, and ``organism`` columns, and returned to the caller.  When ``just_download`` is ``True`` the
@@ -2396,29 +2513,26 @@ class DatabaseManager:
             pandas.DataFrame: External-database relationships augmented with assembly, release, form, and organism
                 columns.  Empty when ``just_download`` is ``True``.
         """
-        df = pd.DataFrame()
-        assemblies_processed = []
-        assemblies_failed = []
+        frames: list[pd.DataFrame] = []
+        assemblies_processed: list[int] = []
+        assemblies_without_release: list[int] = []
 
-        for k in DB.assembly_mysqlport_priority[self.organism].keys():
-            try:
-                self.log.info(f"Processing assembly {k} for {self.organism}...")
-                dm_assembly = self.change_assembly(k, last_possible_ensembl_release=True)
-                assemblies_processed.append(k)
-            except ValueError as e:
-                assemblies_failed.append(k)
+        for k in DB.assemblies_by_priority(self.organism):
+            # An assembly is left out only when its complete index has no release in the window; a failure to build
+            # the index raises (a template made without an assembly would silently lack its databases).
+            core_index = self._get_core_db_index(
+                organism=self.organism, genome_assembly=int(k), **self._core_index_kwargs
+            )
+            if not any(self.ignore_before <= int(r) <= self.ignore_after for r in core_index["releases"]):
+                assemblies_without_release.append(int(k))
                 self.log.warning(
-                    f"Skipping assembly {k} for {self.organism}: {str(e)[:200]}... "
-                    f"This assembly will NOT be included in the external database template YAML."
+                    f"Assembly {k} of {self.organism} has no Ensembl release in the window "
+                    f"{self.ignore_before}..{self.ignore_after}; it has no entries in the template YAML."
                 )
                 continue
-            except Exception as e:
-                assemblies_failed.append(k)
-                self.log.error(
-                    f"Unexpected error while processing assembly {k} for {self.organism}: "
-                    f"{type(e).__name__}: {str(e)[:200]}. Skipping this assembly."
-                )
-                continue
+            self.log.info(f"Processing assembly {k} for {self.organism}...")
+            dm_assembly = self.change_assembly(k, last_possible_ensembl_release=True)
+            assemblies_processed.append(int(k))
             for j in dm_assembly.available_form_of_interests:  # For all assemblies possible.
                 for i in dm_assembly.available_releases:
                     self.log.info(
@@ -2426,28 +2540,15 @@ class DatabaseManager:
                         f"`{self.organism}`, assembly `{k}`, form `{j}`, ensembl release `{i}`"
                     )
                     df_temp = dm_assembly.change_release(i).change_form(j).get_db("external_database")
-                    df_temp["assembly"] = k
-                    df_temp["release"] = i
-                    df_temp["form"] = j
                     if not just_download:
-                        df = pd.concat([df, df_temp], axis=0)
+                        df_temp = df_temp.assign(assembly=k, release=i, form=j)
+                        frames.append(df_temp)
 
-        # Log summary of assembly processing
-        all_configured = sorted(DB.assembly_mysqlport_priority[self.organism].keys())
         self.log.info(
-            f"Assembly processing complete for {self.organism}: "
-            f"Successfully processed {len(assemblies_processed)}/{len(all_configured)} assemblies. "
-            f"Processed: {sorted(assemblies_processed)}, Failed: {sorted(assemblies_failed) if assemblies_failed else 'none'}"
+            f"Assembly processing complete for {self.organism}: processed {sorted(assemblies_processed)}, "
+            f"without a release in the window: {sorted(assemblies_without_release) or 'none'}."
         )
-
-        if assemblies_failed:
-            self.log.warning(
-                f"IMPORTANT: {len(assemblies_failed)} assembly(ies) were skipped for {self.organism}. "
-                "The external database YAML template will only include data "
-                f"for assemblies: {sorted(assemblies_processed)}. "
-                "To include all assemblies, check the warnings above for details on why "
-                f"assemblies {sorted(assemblies_failed)} failed."
-            )
+        df = pd.concat(frames, axis=0, ignore_index=True) if frames else pd.DataFrame()
 
         if not just_download:
             df["organism"] = self.organism
@@ -2459,10 +2560,10 @@ class DatabaseManager:
     def create_release_id(self) -> pd.DataFrame:
         """Return deduplicated stable-identifier/version pairs for the current form and release.
 
-        Raw identifiers are fetched via :py:meth:`DatabaseManager.get_db`, normalised with
-        :py:meth:`DatabaseManager.version_fix`, trimmed to the canonical columns, and sanity-checked.  Two
+        Raw identifiers are fetched via :py:meth:`DatabaseManager.get_db`, trimmed to the canonical columns, and
+        sanity-checked.  Two
         integrity rules are enforced: (1) the delimiter
-        :py:data:`idtrack._db.DB.id_ver_delimiter` must **not** appear inside any stable identifier, and
+        :py:data:`idtrack.DB.id_ver_delimiter` must **not** appear inside any stable identifier, and
         (2) every stable identifier must be unique after deduplication.  Violations raise
         :py:class:`ValueError`.
 
@@ -2474,7 +2575,6 @@ class DatabaseManager:
                 unique after deduplication.
         """
         dbm_the_ids = self.get_db(f"idsraw_{self.form}")
-        dbm_the_ids = self.version_fix(dbm_the_ids, f"{self.form}_version")
         dbm_the_ids = dbm_the_ids[self._identifiers]
 
         if not np.all(dbm_the_ids[f"{self.form}_stable_id"].str.find(DB.id_ver_delimiter) == -1):
@@ -2488,24 +2588,64 @@ class DatabaseManager:
         dbm_the_ids = dbm_the_ids.drop_duplicates()
         return dbm_the_ids
 
-    def check_if_change_assembly_works(self, db_manager: "DatabaseManager", target_assembly: int) -> bool:
-        """Evaluate whether *db_manager* can be cloned to operate on *target_assembly*.
+    def create_gene_region(self) -> pd.DataFrame:
+        """Tell for every gene of the release whether it lies on the reference sequence of the assembly.
 
-        A lightweight health-check that calls :py:meth:`DatabaseManager.change_assembly` inside a
-        ``try/except`` block and converts the outcome to a boolean flag rather than letting the exception
-        propagate.  It allows batch workflows to skip assemblies that are unavailable or invalid without
-        interrupting processing.
+        Ensembl annotates genes on the chromosomes and scaffolds of an assembly (its reference sequence) and also on
+        sequence regions beside it: alternative loci (haplotypes), assembly patches and LRG records. A gene on such a
+        region is a copy of, or an alternative to, a gene of the reference sequence and has a stable id of its own.
+        The core database marks these regions with the attribute :py:attr:`idtrack.DB.non_reference_attribute`
+        (``seq_region_attrib`` joined to ``attrib_type``), in every release and for every kind of region; the table
+        ``assembly_exception`` lists only some of them and is empty in recent human releases, so it is not read.
+
+        The table is a function of three raw tables of the release (``gene`` with its sequence region,
+        ``seq_region_attrib`` and ``attrib_type``) and of the gene ids (``idsraw_gene``).
+
+        Returns:
+            pandas.DataFrame: One row per gene of the release: ``gene_stable_id``, ``gene_version`` (as in the ``ids``
+            table of the gene form) and ``non_reference`` (``True`` for a gene on a region outside the reference
+            sequence). A release whose core database defines no such attribute or marks no region has ``False``
+            throughout.
+
+        Raises:
+            ValueError: If a gene of the id table has no sequence region in the ``gene`` table.
+        """
+        ids = self.get_db(f"idsraw_{DB.backbone_form}")
+        raw = {"save_after_calculation": self.store_raw_always}
+        regions = self.get_table("gene", usecols=["gene_id", "seq_region_id"], **raw)
+        attributes = self.get_table("attrib_type", usecols=["attrib_type_id", "code"], **raw)
+        marks = self.get_table("seq_region_attrib", usecols=["seq_region_id", "attrib_type_id"], **raw)
+
+        codes = attributes.loc[attributes["code"] == DB.non_reference_attribute, "attrib_type_id"]
+        beside = {int(i) for i in marks.loc[marks["attrib_type_id"].isin(codes), "seq_region_id"].dropna().unique()}
+        region_of = dict(zip(regions["gene_id"].astype(int), regions["seq_region_id"]))
+        gene_regions = ids["gene_id"].astype(int).map(region_of)
+        missing = gene_regions.isna().to_numpy()
+        if missing.any():
+            raise ValueError(
+                f"{int(missing.sum())} genes of {self.organism} release {self.ensembl_release} have no sequence region "
+                f"in the `gene` table, e.g. {ids['gene_stable_id'][missing].iloc[0]!r}."
+            )
+        result = ids[["gene_stable_id", "gene_version"]].copy()
+        result["non_reference"] = gene_regions.astype(np.int64).isin(beside).to_numpy(dtype=bool)
+        return result.drop_duplicates(ignore_index=True)
+
+    def check_if_change_assembly_works(self, target_assembly: int) -> bool:
+        """Tell whether this manager can be cloned to operate on *target_assembly* at its release.
+
+        Calls :py:meth:`DatabaseManager.change_assembly` and turns a :py:class:`ValueError` (the assembly is not
+        configured, or has no core database at this release) into ``False``, so that loops over releases and
+        assemblies can pass over the combinations that do not exist. Any other error propagates.
 
         Args:
-            db_manager (DatabaseManager): Manager instance to probe.
             target_assembly (int): Genome-assembly code to test (a key of
-                :py:attr:`idtrack._db.DB.assembly_mysqlport_priority` for the manager's organism).
+                :py:attr:`idtrack.DB.assembly_mysqlport_priority` for the manager's organism).
 
         Returns:
             bool: ``True`` if the assembly switch succeeds without raising :py:class:`ValueError`; ``False`` otherwise.
         """
         try:
-            db_manager.change_assembly(target_assembly)
+            self.change_assembly(target_assembly)
             return True
         except ValueError:
             return False
@@ -2516,7 +2656,7 @@ class DatabaseManager:
         """Download and collate cross-reference mappings from every supported genome assembly.
 
         The manager cycles through every genome assembly recognised for the current organism (ordered by
-        :py:data:`idtrack._db.DB.assembly_mysqlport_priority`), fetches either the filtered
+        :py:data:`idtrack.DB.assembly_mysqlport_priority`), fetches either the filtered
         *external_relevant* mapping table (when ``narrow_external=True``) or the full *external* mapping table
         (when ``narrow_external=False``) for each via :py:meth:`~DatabaseManager.get_db`, labels every row with
         its source assembly, and finally concatenates the tables. Because this helper is intended for
@@ -2558,36 +2698,26 @@ class DatabaseManager:
             ValueError: If *return_mode* is not ``"all"``, ``"unique"``, or ``"duplicated"``.
         """
         ass = self.external_inst.give_list_for_case(give_type="assembly")
-        df = pd.DataFrame()
-
         df_indicator = "external_relevant" if narrow_external else "external"
 
         cfg = DB.assembly_mysqlport_priority[self.organism]
-        ass_supported = [int(a) for a in ass if int(a) in cfg]
-        ass_sorted = sorted(ass_supported, key=lambda a: cfg[a]["Priority"])
-        assemblies_skipped: list[int] = []
+        ass_sorted = sorted({int(a) for a in ass if int(a) in cfg}, key=lambda a: cfg[a]["Priority"])
+        frames: list[pd.DataFrame] = []
         for i in ass_sorted:  # sort according to per-organism priority (1 = newest)
-            try:
-                dm = self.change_assembly(i)
-            except ValueError as exc:
-                self.log.warning(
-                    "create_external_all: skipping assembly %s for %s due to ValueError: %s", i, self.organism, exc
+            # An assembly is passed over only when its complete index has no core database at this release; a failure
+            # to build the index raises (leaving the assembly out would silently drop its external edges).
+            core_index = self._get_core_db_index(organism=self.organism, genome_assembly=i, **self._core_index_kwargs)
+            if int(self.ensembl_release) not in core_index["port_for_release"]:
+                self.log.info(
+                    "create_external_all: %s assembly %s has no core database at release %s.",
+                    self.organism,
+                    i,
+                    self.ensembl_release,
                 )
-                assemblies_skipped.append(i)
                 continue
-            df_temp = dm.get_db(df_indicator)
-            df_temp["assembly"] = i
-            df = pd.concat([df, df_temp])
-        df = df.reset_index(drop=True)
-
-        if assemblies_skipped:
-            self.log.warning(
-                "create_external_all: %d/%d assemblies were skipped for %s: %s",
-                len(assemblies_skipped),
-                len(ass_sorted),
-                self.organism,
-                sorted(assemblies_skipped),
-            )
+            df_temp = self.change_assembly(i).get_db(df_indicator)
+            frames.append(df_temp.assign(assembly=i))
+        df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
 
         compare_columns = [
             i for i in df.columns if i != "assembly" and not i.endswith("_identity")
@@ -2616,312 +2746,108 @@ class DatabaseManager:
         else:
             raise ValueError(f"Undefined parameter for 'return_mode': {return_mode}.")
 
-    def create_version_info(self) -> pd.DataFrame:
-        """Determine whether each Ensembl release stores identifiers with or without version suffixes.
-
-        Ensembl stable identifiers can appear either *with* a ``.version`` facet (e.g. *ENSG00000139618.17*)
-        or *without* it (e.g. *YAL001C* in *S. cerevisiae*).  For robust cross-release tracking the package
-        needs to know which convention applies to every release of the current organism.  The method loops
-        over :py:attr:`available_releases`, downloads the raw identifier table for *self.form*, and inspects
-        the ``<form>_version`` column:
-
-        * **All values NaN** → the release uses *unversioned* identifiers.
-        * **No values NaN**  → the release uses *versioned* identifiers.
-        * **Mixed NaN / non-NaN** → unsupported; raises :py:class:`NotImplementedError`.
-
-        The outcome is encoded as a Boolean flag per release and later consumed by
-        :py:meth:`~DatabaseManager.check_version_info` to decide whether version strings should be kept,
-        stripped, or synthesised.
-
-        Returns:
-            pandas.DataFrame: Two-column table with:
-                * ``ensembl_release`` - integer release number.
-                * ``version_info``   - ``True`` if *all* identifiers **lack** a version suffix, ``False`` if
-                    *all* identifiers **include** a version suffix.
-
-        Raises:
-            NotImplementedError: If any individual release contains a mixture of versioned and unversioned
-                identifiers, indicating an inconsistent upstream annotation.
-        """
-        ver = list()
-
-        for i in sorted(self.available_releases, reverse=True):
-            db_manager_temp = self.change_release(i)
-            df_ids = db_manager_temp.get_db(f"idsraw_{self.form}", save_after_calculation=self.store_raw_always)
-            _vv = pd.isna(df_ids[f"{self.form}_version"])
-
-            if np.all(_vv):
-                with_version = True
-
-            elif np.any(_vv):
-                raise NotImplementedError("Some identifiers with versions that are NaN, some are not.")
-
-            else:
-                with_version = False
-
-            ver.append([i, with_version])
-
-        df = pd.DataFrame(ver, columns=["ensembl_release", "version_info"])
-        return df
-
     def get_db(
         self,
         df_indicator: str,
         create_even_if_exist: bool = False,
         save_after_calculation: bool = True,
-        overwrite_even_if_exist: bool = False,
-    ) -> pd.DataFrame | pd.Series:
-        """Retrieve or create a cached data table defined by an indicator string.
+    ) -> pd.DataFrame:
+        """Return a derived table, from the repository or computed.
 
-        This method is the central gateway for *all* tabular resources managed by
-        :py:class:`~DatabaseManager`.  It interprets a compact *indicator* string,
-        decides whether the requested table already exists in the local HDF5
-        repository, and either loads the cached copy or triggers the appropriate
-        builder (``create_*`` helper) to download/assemble it.  A consistent naming
-        convention is maintained so that subsequent calls with the same indicator
-        transparently reuse the on-disk cache, ensuring reproducible builds and
-        minimal network traffic.
+        Every stored table is kept in a file of its own whose name carries everything the table depends on, so a
+        table computed for one window or externals selection is never served for another:
 
-        **Supported base indicators**
-
-        * ``external`` — cross-reference database registry; optional qualifier
-            ``relevant`` | ``database`` | ``relevant-database`` narrows the view.
-        * ``idsraw`` — raw Ensembl identifiers for a given form *(``gene``,
-          ``transcript``, ``translation``)*; requires the form as qualifier.
-        * ``ids`` — release-specific identifier table (no qualifier).
-        * ``externalcontent`` — summary of per-database content.
-        * ``relationcurrent`` — current gene/ID relationships.
-        * ``idhistory`` — full ID history; qualifier ``narrow`` restricts to current IDs.
-        * ``versioninfo`` — version comparison across releases.
-        * ``availabledatabases`` — names of the organism's core databases (all releases and assemblies).
-
-        Additional indicators may be introduced by subclass extensions; consult the
-        module documentation for the authoritative list.
+        * ``external`` (all cross references of the form), ``external_database`` (row counts per database): keyed by
+          release and form.
+        * ``external_relevant``: the rows of the databases the externals YAML enables for this form, assembly and
+          release; keyed by release, form and the sorted list of those databases (its digest in the file name, the
+          list itself in the file, checked on read). ``external_relevant-database`` counts its rows (not stored).
+        * ``idhistory`` and ``idhistory_narrow``: Ensembl's id history of the release, stored for every mapping
+          session the release records (keyed by release and form) and restricted on reading to the sessions whose
+          ``old_release`` lies in the manager's window.
+        * ``relationcurrent``: gene, transcript and translation node names per transcript; keyed by release.
+        * Not stored, because they are cheap functions of stored tables: ``idsraw_<form>`` (raw ids of *form*,
+          :py:meth:`create_ids`), ``ids`` (ids and versions of the manager's form, :py:meth:`create_release_id`),
+          ``generegion`` (which genes of the release lie outside the reference sequence,
+          :py:meth:`create_gene_region`), ``externalcontent`` (:py:meth:`create_database_content`) and
+          ``availabledatabases`` (:py:meth:`create_available_databases`).
 
         Args:
-            df_indicator (str): Compact descriptor of the table to retrieve.  Must
-                follow the ``base[qualifier]`` pattern described above.
-            create_even_if_exist (bool): Force a rebuild/download even if
-                a cached copy is present.  Defaults to ``False``.
-            save_after_calculation (bool): Persist a newly created table
-                to the local HDF5 store.  Has no effect when the table is merely
-                loaded from disk.  Defaults to ``True``.
-            overwrite_even_if_exist (bool): When saving, replace an
-                existing HDF5 key with the same hierarchy (file-internal path).
-                Defaults to ``False``.
+            df_indicator (str): One of the indicators above.
+            create_even_if_exist (bool): Compute a stored table again and replace the stored copy.
+            save_after_calculation (bool): Store a computed table (ignored for the tables that are not stored).
 
         Returns:
-            pandas.DataFrame | pandas.Series: The requested dataset.  The exact
-            shape, index, and column layout depend on ``df_indicator``; see the
-            indicator list above for semantic details.
+            pandas.DataFrame: The requested table.
 
         Raises:
-            ValueError: If *df_indicator* is malformed, references an unsupported
-                resource, or its qualifier violates the expected pattern (e.g.,
-                missing form for ``idsraw``).
+            ValueError: If *df_indicator* is not one of the indicators above.
         """
-
-        def check_exist_as_diff_release(_df_type, _df_indicator):
-            # Get the file name associated with table_key and columns of interest.
-            _, _file_path = self.file_name(_df_type, _df_indicator)
-
-            # The below pattern is based on file_name function with some modifications.
-            # Organism name is excluded as it does not change the resulting file.
-            #
-            # IMPORTANT: For `processed` artefacts we *must* include `self.form` because the HDF5 hierarchy
-            # keys are form-specific (see `file_name_processed`). Otherwise we may “detect” a release based
-            # on another form's cached table and later try to delete or load a non-existent key.
-            _suffix = f"_{self.form}" if _df_type == "processed" else ""
-            _pattern = re.compile(
-                rf"^ens([0-9]+)_{re.escape(_df_type)}_{re.escape(_df_indicator)}{re.escape(_suffix)}$"
-            )
-
-            if not os.access(_file_path, os.R_OK):
-                return None, list()
-
-            with hs.HDFStore(_file_path, mode="r") as f:
-                _keys = [k.lstrip("/") for k in f.keys()]
-
-            _downloaded_rel_set = set()
-            for _k in _keys:
-                _m = _pattern.match(_k)
-                if _m:
-                    _downloaded_rel_set.add(int(_m.group(1)))
-
-            # Descending order so we prefer the most recent cached release (widest coverage).
-            _downloaded_rels = sorted(_downloaded_rel_set, reverse=True)
-
-            for _dr in _downloaded_rels:
-                if _dr >= self.ensembl_release:
-                    return _dr, _downloaded_rels
-            return None, _downloaded_rels
-
-        def remove_redundant_exist(_df_type, _df_indicator, _keep_rel, _all_rel_lst):
-            if _keep_rel is None:
-                # No cached table is suitable for reuse; avoid deleting older artefacts before a fresh
-                # table is successfully created and persisted.
-                return
-            for _arl in _all_rel_lst:
-                if _arl != _keep_rel:
-                    _hi, _fi = self.file_name(_df_type, _df_indicator, ensembl_release=_arl)
-                    with hs.HDFStore(_fi, mode="a") as f:
-                        if _hi not in f:
-                            self.log.warning(
-                                f"Redundant-cache cleanup skipped because the expected HDF5 key is missing: "
-                                f"`{os.path.basename(_fi)}` with key `{_hi}`."
-                            )
-                            continue
-                        f.remove(_hi)
-                    self.log.info(
-                        f"Redundant cached table removed from `{os.path.basename(_fi)}` with key `{_hi}`. "
-                        f"This could cause hdf5 file to not reclaim the emptied disk space."
-                    )
-
-        # Split the df_indicator with "_", to get the extra parameters.
-        # Main point of naming and df_indicator is to include the paramters in the file_names
-        # for exporting and importing without writing explicit methods of read/write for each case.
         split_ind = df_indicator.split("_")
         main_ind = split_ind[0]
         param1_ind = split_ind[1] if len(split_ind) > 1 else None
         if len(split_ind) > 2:
             raise ValueError(f"df_indicator {df_indicator!r} has too many underscore-separated parts (max 2).")
 
-        # For 'availabledatabases', do *not* reuse another release's cached result.
-        #
-        # Multi-port assemblies can resolve to different ports depending on release. Since the server-side
-        # database catalogue is port-specific, reusing a "later" release's cached catalogue can silently
-        # drop earlier releases that only exist on a different port.
+        def cached(name: str, compute: Any, **params: Any) -> pd.DataFrame:
+            return self._cached(
+                self.table_path(name),
+                self._table_params(name, **params),
+                compute,
+                create_even_if_exist,
+                save_after_calculation,
+            )
+
+        if main_ind == "idsraw":
+            if param1_ind not in self.available_form_of_interests:
+                raise ValueError(
+                    f"'idsraw' should be used together with one "
+                    f"of followings: {','.join(self.available_form_of_interests)}."
+                )
+            return self.create_ids(form=param1_ind)
+
+        if main_ind == "ids" and param1_ind is None:
+            return self.create_release_id()
+
+        if main_ind == "generegion" and param1_ind is None:
+            return self.create_gene_region()
+
+        if main_ind == "external" and param1_ind in (None, "database"):
+            name = f"external{'-database' if param1_ind else ''}_{self.form}"
+            return cached(name, lambda: self.create_external_db(filter_mode=param1_ind or "all"))
+
+        if main_ind == "external" and param1_ind in ("relevant", "relevant-database"):
+            selection = sorted(self.external_inst.give_list_for_case(give_type="db"))
+            digest = hashlib.sha256(json.dumps(selection).encode("utf-8")).hexdigest()[:16]
+            name = f"external-relevant_{self.form}__dbs={digest}"
+            rows = cached(name, lambda: self.create_external_db(filter_mode="relevant"), databases=selection)
+            return rows if param1_ind == "relevant" else self._count_databases(rows)
+
+        if main_ind == "idhistory" and param1_ind in (None, "narrow"):
+            name = f"idhistory{'-narrow' if param1_ind else ''}_{self.form}"
+            history = cached(name, lambda: self.create_id_history(narrow=param1_ind == "narrow"))
+            in_window = (history["old_release"] >= self.ignore_before) & (history["old_release"] <= self.ignore_after)
+            return history[in_window].reset_index(drop=True)
+
+        if main_ind == "relationcurrent" and param1_ind is None:
+            return cached("relationcurrent", self.create_relation_current)
+
+        if main_ind == "externalcontent" and param1_ind is None:
+            return self.create_database_content()
+
         if main_ind == "availabledatabases" and param1_ind is None:
-            hierarchy, file_path = self.file_name("common", df_indicator)
+            return self.create_available_databases()
 
-        elif main_ind == "versioninfo" and param1_ind is None:
-            xr1, xr1_a = check_exist_as_diff_release("processed", df_indicator)
-            remove_redundant_exist("processed", df_indicator, xr1, xr1_a)
-            hierarchy, file_path = self.file_name("processed", df_indicator, ensembl_release=xr1)
+        raise ValueError(f"Unexpected entry for 'df_indicator': {df_indicator!r}.")
 
-        elif param1_ind is None and main_ind == "relationcurrent":
-            hierarchy, file_path = self.file_name("common", df_indicator)
-
-        else:
-            # Get the file name associated with table_key and columns of interest.
-            hierarchy, file_path = self.file_name("processed", df_indicator)
-
-        # If the file name is not accessible for reading, or if the hdf5 file does not contain the table,
-        # or explicitly prompt to do so, then download the table.
-        if not os.access(file_path, os.R_OK) or create_even_if_exist or (not hs.check_h5_key(file_path, hierarchy)):
-            if main_ind == "external" and param1_ind is None:
-                df = self.create_external_db(filter_mode="all")
-
-            elif main_ind == "external" and param1_ind in ["relevant", "database", "relevant-database"]:
-                df = self.create_external_db(filter_mode=param1_ind)
-
-            elif main_ind == "idsraw":
-                if param1_ind not in self.available_form_of_interests:
-                    raise ValueError(
-                        f"'idsraw' should be used together with one "
-                        f"of followings: {','.join(self.available_form_of_interests)}."
-                    )
-                df = self.create_ids(form=param1_ind)
-
-            elif main_ind == "ids" and param1_ind is None:
-                df = self.create_release_id()
-
-            elif main_ind == "externalcontent" and param1_ind is None:
-                df = self.create_database_content()
-
-            elif main_ind == "relationcurrent" and param1_ind is None:
-                df = self.create_relation_current()
-
-            elif main_ind == "idhistory" and param1_ind is None:
-                df = self.create_id_history(narrow=False)
-
-            elif main_ind == "idhistory" and param1_ind == "narrow":
-                df = self.create_id_history(narrow=True)
-
-            elif main_ind == "versioninfo" and param1_ind is None:
-                df = self.create_version_info()
-
-            elif main_ind == "availabledatabases" and param1_ind is None:
-                df = self.create_available_databases()
-
-            else:
-                raise ValueError("Unexpected entry for 'df_indicator'.")
-
-        else:  # Otherwise, just read the file that is already in the directory.
-            df = hs.read_exported(hierarchy, file_path)
-
-        # If prompt, save the dataframe in requested format.
-        if save_after_calculation:
-            hs.export_disk(df, hierarchy, file_path, overwrite_even_if_exist, logger=self.log)
-
-        return df
-
-    def file_name(self, df_type: str, *args, ensembl_release: int | None = None, **kwargs) -> tuple[str, str]:
-        """Resolve HDF5 hierarchy key and absolute file path for a dataframe request.
-
-        This internal helper centralises every rule that :py:class:`DatabaseManager` uses to build HDF5
-        *hierarchy* keys and their corresponding on-disk filenames, ensuring that any two call-sites
-        confronted with the same combination of organism, genome assembly, Ensembl release, dataframe
-        *kind*, and optional column subset produce **identical** results.  By funnelling every I/O
-        operation through this method the wider package avoids silent cache misses, duplicate downloads,
-        and hard-to-trace inconsistencies in downstream analytics.  Public code is expected to invoke
-        higher-level wrappers such as :py:meth:`DatabaseManager.get_db`; use this routine only when
-        implementing new caching utilities or in low-level tests.
-
-        Args:
-            df_type (str): Category of dataframe whose name is required. Accepted values are
-                ``"processed"``, ``"mysql"``, and ``"common"``; any other string triggers :py:class:`ValueError`.
-            ensembl_release (int, optional): Ensembl release to encode in the filename.  If *None*, the
-                current :py:attr:`DatabaseManager.ensembl_release` is used instead.
-            kwargs: Additional keyword arguments forwarded to the helper that handles the selected
-                *df_type* (currently only ``usecols`` for the *mysql* path).
-            args: Positional arguments interpreted according to *df_type*:
-
-                - **processed** - ``df_indicator`` (str): symbolic label such as ``"idhistory"`` or
-                  ``"idsraw_gene"``.  The manager appends :py:attr:`DatabaseManager.form` so that artefacts
-                  for different biological forms do not collide.
-
-                - **mysql** - ``table_key`` (str): raw MySQL table name (e.g. ``"gene"``, ``"exon"``).
-                  An optional ``usecols`` (list[str]) must then be supplied via *kwargs*; the column list
-                  is embedded in the hierarchy using the delimiter held in
-                  :py:attr:`DatabaseManager._column_sep`.
-
-                - **common** - ``df_indicator`` (str): same as the processed case **but without** the form
-                  suffix, allowing cross-form artefacts (e.g. ``"availabledatabases"``) to share a single key.
-
-        Returns:
-            tuple[str, str]: Two-element tuple ``(hierarchy_key, file_path)`` where *hierarchy_key* is
-                the internal node path (e.g. ``"ens111_mysql_gene_COL_gene_id"``) and *file_path* is the
-                absolute path to ``<local_repository>/<organism>_assembly-<assembly>.h5``.  The path is
-                **not** created on disk—callers remain responsible for reading or writing the HDF5 file.
-
-        Raises:
-            ValueError: If *df_type* is not one of the accepted categories or if the positional/keyword
-                argument combination does not satisfy the expectations for that category (e.g. missing
-                ``table_key`` when *df_type* is ``"mysql"``).
-        """
-        ensembl_release = self.ensembl_release if not ensembl_release else ensembl_release
-
-        def file_name_processed(df_indicator: str):
-            return f"ens{ensembl_release}_{df_type}_{df_indicator}_{self.form}"
-
-        def file_name_mysql(table_key: str, usecols: list | None = None):
-            col_suffix = f"{self._column_sep}{self._column_sep.join(sorted(usecols))}" if usecols is not None else ""
-            return f"ens{ensembl_release}_{df_type}_{table_key}{col_suffix}"
-
-        def file_name_noform(df_indicator: str):
-            return f"ens{ensembl_release}_{df_type}_{df_indicator}"
-
-        if df_type not in ["processed", "mysql", "common"]:
-            raise ValueError("The parameter is not in specified format: df_type")
-        if df_type == "processed":
-            hierarchy = file_name_processed(*args, **kwargs)
-        elif df_type == "common":
-            hierarchy = file_name_noform(*args, **kwargs)
-        else:
-            hierarchy = file_name_mysql(*args, **kwargs)
-
-        return hierarchy, os.path.join(self.local_repository, f"{self.organism}_assembly-{self.genome_assembly}.h5")
+    @staticmethod
+    def _count_databases(rows: pd.DataFrame) -> pd.DataFrame:
+        """Return ``name_db``/``count`` (rows per database), most rows first, ties by name."""
+        counts = rows["name_db"].value_counts(sort=False)
+        out = pd.DataFrame({"name_db": counts.index.astype(object), "count": counts.to_numpy(dtype=np.int64)})
+        out = out.sort_values(["count", "name_db"], ascending=[False, True], kind="stable", ignore_index=True)
+        out["name_db"] = out["name_db"].astype(pd.Series(["a"]).dtype)
+        return out
 
     def id_ver_from_df(self, dbm_the_ids: pd.DataFrame) -> list[str]:
         """Assemble fully qualified node names from a *stable-ID / version* DataFrame.
@@ -2943,22 +2869,37 @@ class DatabaseManager:
                 exception is raised.
 
         Returns:
-            list[str]: Ordered list where each element is either
-                ``"<ID>.<version>"`` when a valid numeric version is present or simply
-                ``"<ID>"`` when the version is *None* / *NaN* / an alternative marker
-                (see :py:data:`idtrack._db.DB.alternative_versions`).
+            list[str]: Ordered list where each element is ``"<ID>.<version>"``; for a row
+                without version (the empty id of a transcript that has no translation)
+                the id itself.
 
         Raises:
             ValueError: If ``dbm_the_ids`` does not contain the expected column
                 names stored in :py:data:`self._identifiers`.
         """
-        if np.all(dbm_the_ids.columns != self._identifiers):
+        if list(dbm_the_ids.columns) != list(self._identifiers):
             raise ValueError(
                 f"Column names of the 'dbm_the_ids' is not as expected. "
-                f"{dbm_the_ids.columns} vs {self._identifiers}"
+                f"{list(dbm_the_ids.columns)} vs {self._identifiers}"
             )
-        gri_generator = (DatabaseManager.node_dict_maker(i, j) for i, j in dbm_the_ids.values)
-        return list(map(DatabaseManager.node_name_maker, gri_generator))
+        ids = dbm_the_ids.iloc[:, 0]
+        versions = dbm_the_ids.iloc[:, 1]
+        if not pd.api.types.is_numeric_dtype(versions):
+            # Text versions (e.g. the `Retired`/`Void` sentinels of DB.alternative_versions): element by element.
+            return [
+                DatabaseManager.node_name_maker(DatabaseManager.node_dict_maker(i, j))
+                for i, j in zip(ids.to_numpy(dtype=object), versions.to_numpy(dtype=object))
+            ]
+        names = pd.Series(ids.to_numpy(dtype=object, copy=True), dtype=object)  # never write into the caller's frame
+        has = versions.notna().to_numpy()
+        if has.any():
+            numbers = versions.to_numpy()[has]
+            whole = numbers.astype(np.int64)
+            if np.any(whole != numbers):
+                bad = int(np.flatnonzero(whole != numbers)[0])
+                raise ValueError(f"Version is floating: {(names[has].iloc[bad], numbers[bad])}")
+            names[has] = names[has] + DB.id_ver_delimiter + pd.Series(whole, dtype=np.int64).astype(str).to_numpy()
+        return names.tolist()
 
     @staticmethod
     def node_name_maker(node_dict: dict[str, Any]) -> str:
@@ -2967,10 +2908,11 @@ class DatabaseManager:
         Given the miniature dictionary returned by
         :py:meth:`DatabaseManager.node_dict_maker`, this helper builds the string
         representation that uniquely identifies a biological entity within the graph
-        layer.  When a numeric version is available, it appends that value to the
-        stable ID using :py:data:`idtrack._db.DB.id_ver_delimiter` (``"."`` by
-        default).  For organisms or datasets lacking versioned identifiers, it falls
-        back to the bare stable ID to preserve compatibility.
+        layer.  It appends the version (a number, or one of the markers of
+        :py:data:`idtrack.DB.alternative_versions`) to the stable ID using
+        :py:data:`idtrack.DB.id_ver_delimiter` (``"."`` by default).  An entry
+        without version is an absent identifier (the empty id of a transcript that
+        has no translation) and is returned as it is.
 
         Args:
             node_dict (dict[str, Any]): Mapping with exactly two keys, ``"ID"`` and
@@ -2978,11 +2920,11 @@ class DatabaseManager:
                 :py:meth:`DatabaseManager.node_dict_maker`.
 
         Returns:
-            str: Either ``"<ID>.<version>"`` or ``"<ID>"`` depending on whether a
-                non-null, non-alternative version is present.
+            str: ``"<ID>.<version>"``, or ``"<ID>"`` for an entry without version.
         """
-        if node_dict["Version"] and not pd.isna(node_dict["Version"]):
-            return node_dict["ID"] + DB.id_ver_delimiter + str(node_dict["Version"])
+        version = node_dict["Version"]
+        if version is not None and not (pd.api.types.is_scalar(version) and pd.isna(version)) and version != "":
+            return node_dict["ID"] + DB.id_ver_delimiter + str(version)
         else:
             return node_dict["ID"]
 
@@ -2994,7 +2936,7 @@ class DatabaseManager:
         :py:meth:`DatabaseManager.node_name_maker` and higher-level graph utilities,
         ensuring that version numbers are strictly integers whenever possible.  It
         also recognises special placeholders defined in
-        :py:data:`idtrack._db.DB.alternative_versions` (e.g. ``"Retired"`` or
+        :py:data:`idtrack.DB.alternative_versions` (e.g. ``"Retired"`` or
         ``"Void"``) and passes them through unchanged so that downstream code can
         handle deprecated or missing entries appropriately.
 
@@ -3015,153 +2957,45 @@ class DatabaseManager:
                 component (e.g. ``1.2``), indicating a malformed identifier that cannot
                 be represented as an integer version.
         """
-        if version_entry and not pd.isna(version_entry) and version_entry not in DB.alternative_versions:
+        if (
+            version_entry is not None
+            and not pd.isna(version_entry)
+            and version_entry != ""
+            and version_entry not in DB.alternative_versions
+        ):
             if int(version_entry) != float(version_entry):
                 raise ValueError(f"Version is floating: {(id_entry, version_entry)}")
             else:
                 version_entry = int(version_entry)
         return {"ID": id_entry, "Version": version_entry}
 
-    def version_uniformize(self, df: pd.DataFrame, version_str: str) -> pd.DataFrame:
-        """Normalise a *Version* column so every entry is either an ``int`` or ``NaN``.
+    def _require_versions(self, df: pd.DataFrame, version_column: str, form: str) -> pd.DataFrame:
+        """Return *df* with the versions of its ids as integers; refuse ids that carry no version.
 
-        This post-processing helper finalises the output of :py:meth:`DatabaseManager.create_ids`.
-        Ensembl releases differ: some assign an explicit integer version to every stable identifier,
-        whereas others omit the suffix entirely.  Downstream code expects a *uniform* dtype, so this
-        routine coerces the designated column to a proper integer when *all* entries are present or
-        fills the entire column with ``np.nan`` when *none* are.  Mixed presence is forbidden because
-        it would break the ID-version pairing logic used by :py:meth:`DatabaseManager.node_name_maker`.
+        idtrack follows ``<id>.<version>`` through the releases: the graph's nodes, the history and the tables that
+        feed them are named that way. Ensembl gives the ids of some organisms no versions (*S. cerevisiae*:
+        ``YAL001C``), in all or in some releases. Such an organism is not supported, and nothing is made up for it
+        (no synthetic version, no table without versions): the id table of the release is refused here, and with it
+        every table that is derived from it.
 
         Args:
-            df (pandas.DataFrame): Frame returned by :py:meth:`create_ids`; must already contain a
-                column named *version_str*.
-            version_str (str): Name of the column that holds version information (e.g. ``"gene_version"``).
+            df: A table whose rows all have an id.
+            version_column: Its column of versions.
+            form: The form of the ids (``"gene"``, ``"transcript"``, ``"translation"``), for the message.
 
         Returns:
-            pandas.DataFrame: Same object *df* with *version_str* either cast to ``int64`` or overwritten
-                with ``np.nan`` for every row.
+            pandas.DataFrame: *df* itself, with *version_column* as integers.
 
         Raises:
-            NotImplementedError: If some rows have a version and others do not, indicating an Ensembl
-                release with inconsistent schema.  Such a release is currently unsupported.
+            ValueError: If the column holds no version, or a version for some of the ids only.
         """
-        contains_na = pd.isna(df[version_str])
-        if np.all(contains_na):
-            # If there is no version information associated with stable_ids. For some organisms like S. cerevisiae
-            df[version_str] = np.nan
-            return df
-
-        elif np.any(contains_na):
-            raise NotImplementedError("Some identifiers with versions that are NaN, some are not.")
-
-        else:
-            df[version_str] = df[version_str].astype(int)
-            return df
-
-    def version_fix_incomplete(self, df_fx: pd.DataFrame, id_col_fx: str, ver_col_fx: str) -> pd.DataFrame:
-        """Clean up version columns when *some* identifiers are entirely missing.
-
-        Ensembl *translation* tables occasionally encode parent IDs without a version while descendants
-        retain one, producing frames where *id_col_fx* is ``NaN`` but *ver_col_fx* contains a number.
-        This helper splits the frame, delegates to :py:meth:`version_fix` for each subset, then stitches
-        the pieces back together so that every row obeys a single “with/without/add version” policy.
-
-        Args:
-            df_fx (pandas.DataFrame): Data to harmonise.  The frame **must** include *id_col_fx* and *ver_col_fx*.
-            id_col_fx (str): Column holding the *stable* part of the identifier (e.g. ``"translation_id"``).
-            ver_col_fx (str): Column holding the integer version suffix.
-
-        Returns:
-            pandas.DataFrame: Frame whose *ver_col_fx* is consistent with the organism-level policy
-                determined by :py:meth:`check_version_info`.
-        """
-        # Get the columns that do not have any id
-        na_cols_fx = pd.isna(df_fx[id_col_fx])
-
-        # Split the dataframe to process separately
-        df_fm1, df_fm2 = df_fx[na_cols_fx].copy(deep=True), df_fx[~na_cols_fx].copy(deep=True)
-        version_info = self.check_version_info()
-        df_fm1 = self.version_fix(df_fm1, ver_col_fx, version_info="without_version")
-        df_fm2 = self.version_fix(df_fm2, ver_col_fx, version_info=version_info)
-
-        # Concatenate the results and return.
-        df_fx = pd.concat([df_fm1, df_fm2], axis=0)
-        df_fx = df_fx.reset_index(drop=True)
-
-        return df_fx
-
-    def version_fix(self, df: pd.DataFrame, version_str: str, version_info: str | None = None) -> pd.DataFrame:
-        """Apply a *global* ID-version policy to a DataFrame.
-
-        Depending on the organism and its historical annotation quirks, identifiers may (1) **never**
-        include a version, (2) **always** include a version, or (3) require a *synthetic* version when
-        mixing cross-release data.  The *version_info* flag encodes that policy:
-
-        * ``"without_version"`` — strip all versions (set column to ``NaN``).
-        * ``"with_version"``    — cast column to ``int64`` (all values must exist).
-        * ``"add_version"``     — fill missing entries with :py:data:`DB.first_version`.
-
-        Args:
-            df (pandas.DataFrame): Frame whose *version_str* column needs harmonising.
-            version_str (str): Name of the column that stores version numbers.
-            version_info (Optional[str]): One of ``"add_version"``, ``"without_version"``, or
-                ``"with_version"``.  When ``None`` (default) the method calls
-                :py:meth:`check_version_info` to determine the correct policy automatically.
-
-        Returns:
-            pandas.DataFrame: Same object *df* with *version_str* updated in-place.
-
-        Raises:
-            ValueError: If *version_info* is not recognised.
-        """
-        # If version_info is not entered, just re-calculate.
-        version_info = version_info if version_info else self.check_version_info()
-
-        if version_info == "add_version":
-            # Set the constant value of DB.first_version as the Version.
-            df[version_str] = DB.first_version
-
-        elif version_info == "without_version":
-            df[version_str] = np.nan
-
-        elif version_info == "with_version":
-            df[version_str] = df[version_str].astype(int)
-
-        else:
-            raise ValueError("Undefined choice for 'version_info'.")
-
+        missing = pd.isna(df[version_column])
+        if missing.any():
+            found = "no version" if missing.all() else f"no version for {int(missing.sum())} of {len(df)} ids"
+            raise ValueError(
+                f"Organisms whose Ensembl ids carry no versions are not supported: the {form} ids of {self.organism} "
+                f"have {found} at Ensembl release {self.ensembl_release} (genome assembly {self.genome_assembly}). "
+                "idtrack follows `<id>.<version>` through the releases."
+            )
+        df[version_column] = df[version_column].astype(int)
         return df
-
-    def check_version_info(self) -> str:
-        """Infer whether the organism's Ensembl IDs come **with**, **without**, or **mixed** versions.
-
-        The method scans all releases available for the current genome assembly and inspects the boolean
-        flag in the ``version_info`` column of a pre-computed table (``get_db("versioninfo")``).  Three
-        mutually exclusive scenarios exist:
-
-        * All releases lack version suffixes: ``"without_version"``
-        * All releases include suffixes: ``"with_version"``
-        * A mixture of both states: ``"add_version"`` (synthetic versions will be injected)
-
-        Returns:
-            str: One of ``"without_version"``, ``"with_version"``, or ``"add_version"``.  Callers use the
-                string to decide how to standardise identifier columns.
-
-        Raises:
-            ValueError: If the *version_info* column in the source table is not strictly boolean, signalling
-                a corrupted download or schema drift.
-        """
-        vi_df = self.get_db("versioninfo")
-        narrowed = vi_df["version_info"].unique()
-
-        if narrowed.dtype != np.dtype("bool"):
-            raise ValueError("Data type of 'version_info' column must be boolean.")
-
-        if len(narrowed) == 1 and narrowed[0]:
-            return "without_version"
-
-        elif len(narrowed) == 1:
-            return "with_version"
-
-        else:
-            return "add_version"

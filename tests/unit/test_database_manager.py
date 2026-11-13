@@ -7,7 +7,6 @@ data-processing logic.
 """
 
 from dataclasses import dataclass
-from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -24,15 +23,13 @@ class _SyntheticMySQL:
 
 
 def _synthetic_mysql_tables() -> _SyntheticMySQL:
-    def gene_table(with_versions: bool) -> pd.DataFrame:
-        versions: list[Any] = [1, 1] if with_versions else [np.nan, np.nan]
-        return pd.DataFrame(
-            {
-                "gene_id": [1, 2],
-                "stable_id": ["ENSG00000000001", "ENSG00000000002"],
-                "version": versions,
-            }
-        )
+    gene = pd.DataFrame(
+        {
+            "gene_id": [1, 2],
+            "stable_id": ["ENSG00000000001", "ENSG00000000002"],
+            "version": [1, 1],
+        }
+    )
 
     transcript = pd.DataFrame(
         {
@@ -125,8 +122,8 @@ def _synthetic_mysql_tables() -> _SyntheticMySQL:
     }
 
     tables_by_release = {
-        100: {"gene": gene_table(with_versions=True), **base_tables},
-        101: {"gene": gene_table(with_versions=False), **base_tables},
+        100: {"gene": gene, **base_tables},
+        101: {"gene": gene, **base_tables},
     }
     return _SyntheticMySQL(tables_by_release=tables_by_release, available_releases=[100, 101])
 
@@ -177,11 +174,6 @@ def synthetic_dm(tmp_path, monkeypatch) -> DatabaseManager:
         genome_assembly=38,
         store_raw_always=True,
     )
-
-
-def test_import_database_manager():
-    """Import smoke test for DatabaseManager."""
-    assert DatabaseManager is not None
 
 
 def test_init_rejects_unsupported_organism(tmp_path):
@@ -387,11 +379,9 @@ def test_external_db_merge_coerces_string_external_db_id(synthetic_dm, monkeypat
 
 
 def test_release_discovery_and_mysql_database_from_server_catalog(tmp_path, monkeypatch):
-    """available_releases/mysql_database should be discovered from server catalog.
-
-    Offline: the MySQL port is reported usable and the HTTPS scan is unavailable, so the index comes from the
-    (mocked) MySQL catalogue alone.
-    """
+    """available_releases/mysql_database should be discovered from server catalog."""
+    # Offline: the MySQL port is reported usable and the (mocked) HTTPS scan answers that the dumps hold none of these
+    # releases, so they come from the (mocked) MySQL catalogue.
     import pymysql
 
     from idtrack._ensembl_access import reachability
@@ -399,8 +389,19 @@ def test_release_discovery_and_mysql_database_from_server_catalog(tmp_path, monk
     monkeypatch.setattr(reachability, "mysql_port_usable", lambda port: True)
     monkeypatch.setattr(DatabaseManager, "_core_db_index_cache", {})
 
-    def _no_https(cls, **_kwargs):
-        raise RuntimeError("HTTPS dumps are not used in this unit test")
+    def _no_https(cls, *, organism, genome_assembly, ports):
+        return {
+            "organism": organism,
+            "genome_assembly": genome_assembly,
+            "ports": tuple(ports),
+            "releases_by_port": {int(p): set() for p in ports},
+            "db_by_port_release": {int(p): {} for p in ports},
+            "releases": [],
+            "port_for_release": {},
+            "db_for_release": {},
+            "db_dir_url_by_release": {},
+            "scanned_up_to": 101,
+        }
 
     monkeypatch.setattr(DatabaseManager, "_get_core_db_index_from_ftp", classmethod(_no_https))
 
@@ -454,14 +455,14 @@ def test_create_ids_does_not_hide_a_failure_behind_the_stable_id_table_fallback(
     # and the user saw `Table 'gene_stable_id' not found` instead of the real error.
     import idtrack._utils_hdf5 as hs
 
-    original_export = hs.export_disk
+    original_write = hs.write_table
 
-    def _failing_export(df, hierarchy, *args, **kwargs):
-        if "stable_id" in df.columns and "gene_stable_id" not in hierarchy:
+    def _failing_write(path, df, params):
+        if "stable_id" in df.columns and "gene_stable_id" not in path:
             raise ValueError("Unsupported dtype for column 'stable_id'")
-        return original_export(df, hierarchy, *args, **kwargs)
+        return original_write(path, df, params)
 
-    monkeypatch.setattr(hs, "export_disk", _failing_export)
+    monkeypatch.setattr(hs, "write_table", _failing_write)
     with pytest.raises(ValueError, match="Unsupported dtype for column 'stable_id'"):
         synthetic_dm.create_ids("gene")
 

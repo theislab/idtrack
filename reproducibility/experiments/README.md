@@ -2,6 +2,8 @@
 
 This folder contains experiment notebooks and small helper modules used to generate figures/tables for the IDTrack manuscript.
 
+**Version.** These notebooks and helpers were run with IDTrack 0.0.5, the version released on PyPI on 2026-01-20 (the code of this repository at commit `d8514ab`, where they were last changed). They are records of the published analysis, not maintained code: they are not kept running against later versions of IDTrack, whose API, graph files and answers differ (see `docs/changes.rst`). To rerun them, install that version (`pip install idtrack==0.0.5`, or check out `d8514ab`).
+
 ## Notebook Index
 
 -   `experiment_hlca/00_hlca_manuscript_table1_and_figures.ipynb`

@@ -16,7 +16,7 @@ from idtrack import _connection_bridge as connection_bridge
 def _bridge_cleanup():
     """Ensure the process-wide bridge state is reset between tests."""
     yield
-    connection_bridge.ConnectionBridge._force_disable_bridge(verbose=False)
+    connection_bridge.ConnectionBridge.stop_all(verbose=False)
 
 
 def test_connection_bridge_patches_and_restores_socket_and_env(monkeypatch):
@@ -105,3 +105,78 @@ def test_connection_bridge_resets_mysql_reachability():
     reachability.mark_unreachable(DB.mysql_host, 3306, "blocked through the bridge")
     bridge.stop(verbose=False)
     assert reachability.known() == {}
+
+
+def test_an_unreferenced_bridge_stays_active_until_stop_all():
+    """storage_net-12: `ConnectionBridge(...).start()` without keeping the object keeps the bridge on."""
+    import gc
+
+    import socks
+
+    original_socket_cls = socket.socket
+    assert idtrack.ConnectionBridge(proxy_port=1080).start(test=False, verbose=False) is True
+    gc.collect()
+    assert socket.socket is socks.socksocket
+    assert os.environ.get("ALL_PROXY") == "socks5h://127.0.0.1:1080"
+    idtrack.ConnectionBridge.stop_all(verbose=False)
+    assert socket.socket is original_socket_cls
+
+
+def test_instances_started_before_stop_all_count_as_stopped():
+    """storage_net-12: after `stop_all`, an old handle's `stop` does not undo a bridge started later."""
+    import socks
+
+    old = idtrack.ConnectionBridge()
+    old.start(test=False, verbose=False)
+    idtrack.ConnectionBridge.stop_all(verbose=False)
+    new = idtrack.ConnectionBridge()
+    new.start(test=False, verbose=False)
+    old.stop(verbose=False)
+    assert socket.socket is socks.socksocket
+    new.stop(verbose=False)
+
+
+def test_with_block_raises_when_the_check_fails(monkeypatch):
+    """storage_net-13: the `with` form never runs its block unbridged."""
+    original_socket_cls = socket.socket
+    monkeypatch.setattr(idtrack.ConnectionBridge, "test_connection", lambda self, **kw: False)
+    ran = []
+    with pytest.raises(ConnectionError, match="does not reach Ensembl"):
+        with idtrack.ConnectionBridge():
+            ran.append(True)
+    assert ran == [] and socket.socket is original_socket_cls
+
+
+def test_stop_restores_a_default_proxy_with_credentials():
+    """storage_net-14: a pre-existing PySocks proxy with credentials is restored exactly, without raising."""
+    import socks
+
+    socks.set_default_proxy(socks.SOCKS5, "10.0.0.1", 9050, True, "user", "pw")
+    try:
+        before = socks.get_default_proxy()
+        bridge = idtrack.ConnectionBridge()
+        bridge.start(test=False, verbose=False)
+        bridge.stop(verbose=False)
+        assert socks.get_default_proxy() == before
+        assert connection_bridge.ConnectionBridge._STATE.original_socks_proxy is None
+    finally:
+        socks.socksocket.default_proxy = None
+
+
+def test_check_does_not_probe_mysql_in_https_mode(monkeypatch):
+    """storage_net-15 (b): in the "https" access mode the connectivity check opens no MySQL connection."""
+    from unittest.mock import MagicMock
+
+    from idtrack._db import DB
+    from idtrack._ensembl_access import reachability
+
+    monkeypatch.setattr(DB, "ensembl_access", "https")
+    probe = MagicMock(return_value=True)
+    monkeypatch.setattr(type(reachability), "_probe", staticmethod(probe))
+    ok = MagicMock()
+    ok.text = "{}"
+    monkeypatch.setattr("requests.get", lambda *a, **k: ok)
+    bridge = idtrack.ConnectionBridge()
+    bridge.start(test=False, verbose=False)
+    assert bridge.test_connection(verbose=False) is True
+    probe.assert_not_called()

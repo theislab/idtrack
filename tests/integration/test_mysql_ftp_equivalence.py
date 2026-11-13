@@ -145,7 +145,6 @@ def test_get_table_cache_overwrite_is_source_independent(human38_mysql_release: 
             usecols=usecols,
             create_even_if_exist=True,
             save_after_calculation=True,
-            overwrite_even_if_exist=True,
         )
 
         # 2) Force MySQL and overwrite the same cached key.
@@ -160,7 +159,6 @@ def test_get_table_cache_overwrite_is_source_independent(human38_mysql_release: 
             usecols=usecols,
             create_even_if_exist=True,
             save_after_calculation=True,
-            overwrite_even_if_exist=True,
         )
 
         df_mysql_cached = df_mysql_cached.sort_values(by="coord_system_id").reset_index(drop=True)

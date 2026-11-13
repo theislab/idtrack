@@ -37,7 +37,7 @@ These tutorials are the **primary learning resource** for IDTrack. They are writ
       - External database configuration (YAML) for human, mouse, pig, rhesus and cynomolgus macaque, extending a YAML to new Ensembl releases, and how to add a new organism
       - :doc:`_notebooks/02_prepare_new_external_yaml`
     * - Part 3
-      - Build snapshot graphs (multi-assembly where applicable), reuse caches, and manage rebuilds across organisms and output assemblies
+      - Build snapshot graphs (multi-assembly where applicable), load them from the local repository, and manage graph files across organisms and snapshots
       - :doc:`_notebooks/03_initialization_graph`
     * - Part 4
       - Core API usage (single + batch conversion, explainability, introspection)

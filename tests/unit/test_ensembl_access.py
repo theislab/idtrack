@@ -158,6 +158,7 @@ class TestDatabaseManagerUsesTheMemory:
         monkeypatch.setattr(
             DatabaseManager, "_get_core_db_index", classmethod(lambda cls, **kw: {"releases_on_mysql": [100]})
         )
+        dm.log = MagicMock()
         monkeypatch.setattr(
             pymysql, "connect", MagicMock(side_effect=pymysql.err.OperationalError(2013, "Lost connection"))
         )
@@ -170,7 +171,7 @@ class TestDatabaseManagerUsesTheMemory:
         assert probes == [(DB.mysql_host, 3306)]
 
     def test_query_error_does_not_mark_port(self, fresh_reachability, monkeypatch):
-        """Query error does not mark port."""
+        """A query error is raised as it is: no silent HTTPS fallback, and the port stays usable (access-9)."""
         _probes, answers = fresh_reachability
         monkeypatch.setattr(DB, "ensembl_access", "auto")
         answers[(DB.mysql_host, 3306)] = True
@@ -184,10 +185,11 @@ class TestDatabaseManagerUsesTheMemory:
         monkeypatch.setattr(
             pymysql, "connect", MagicMock(side_effect=pymysql.err.ProgrammingError(1146, "Table doesn't exist"))
         )
-        monkeypatch.setattr(
-            DatabaseManager, "_download_table_from_ftp", lambda self, table_key, usecols=None: pd.DataFrame({"a": [1]})
-        )
-        dm.download_table("gene")
+        https = MagicMock(return_value=pd.DataFrame({"a": [1]}))
+        monkeypatch.setattr(DatabaseManager, "_download_table_from_ftp", https)
+        with pytest.raises(pymysql.err.ProgrammingError):
+            dm.download_table("gene")
+        https.assert_not_called()
         assert reachability.known()[(DB.mysql_host, 3306)] is True
 
 
@@ -199,19 +201,11 @@ def test_dump_reader_is_used_for_https_tables(monkeypatch):
     monkeypatch.setattr(DatabaseManager, "_ftp_db_dir_url", lambda self: "https://x/db/")
     monkeypatch.setattr(DatabaseManager, "_ftp_schema_url", lambda self: "https://x/db/db.sql.gz")
     monkeypatch.setattr(
-        DatabaseManager, "_ftp_schema_for_sql_url", classmethod(lambda cls, url: {"external_db": ["id", "text"]})
+        DatabaseManager,
+        "_ftp_schema_for_sql_url",
+        classmethod(lambda cls, url: {"external_db": [("id", "int(10) unsigned"), ("text", "varchar(40)")]}),
     )
-
-    class _Resp:
-        status_code = 200
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            return False
-
-    monkeypatch.setattr("idtrack._database_manager.requests.get", lambda *a, **k: _Resp())
+    dm.__dict__["mysql_database"] = "sus_scrofa_core_100_111"
 
     class _Ctx:
         def __enter__(self):
@@ -250,3 +244,59 @@ class TestInvalidAccessMode:
         monkeypatch.setattr(DB, "ensembl_access", "mysql-only")
         with pytest.raises(ValueError, match="not a valid Ensembl access mode"):
             dm.create_available_databases()
+
+
+def test_an_unreachable_port_is_probed_again_after_a_while(monkeypatch):
+    """storage_net-16: a failed port is retried after `retry_after_seconds`, and the wait doubles per failure."""
+    import idtrack._ensembl_access as ea
+
+    clock = [1000.0]
+    monkeypatch.setattr(ea.time, "monotonic", lambda: clock[0])
+    memory = PortReachability()
+    answers = iter([False, False, True])
+    probes = []
+    monkeypatch.setattr(PortReachability, "_probe", staticmethod(lambda h, p, t: probes.append(p) or next(answers)))
+    assert memory.can_connect("h", 1) is False
+    clock[0] += memory.retry_after_seconds - 1
+    assert memory.can_connect("h", 1) is False and len(probes) == 1
+    clock[0] += 2
+    assert memory.can_connect("h", 1) is False and len(probes) == 2  # probed again; second failure
+    clock[0] += memory.retry_after_seconds + 1
+    assert memory.can_connect("h", 1) is False and len(probes) == 2  # the wait doubled
+    clock[0] += memory.retry_after_seconds
+    assert memory.can_connect("h", 1) is True and len(probes) == 3
+    clock[0] += 10 * memory.max_retry_after_seconds
+    assert memory.can_connect("h", 1) is True and len(probes) == 3  # "reachable" is kept
+
+
+def test_https_get_tells_absent_from_unknown(monkeypatch):
+    """access-3: 404 is "absent" (None); time-outs and 5xx are retried and then raised."""
+    import requests
+
+    import idtrack._ensembl_access as ea
+
+    monkeypatch.setattr(DB, "rest_retry_wait", 0.0)
+    monkeypatch.setattr(DB, "rest_attempts", 3)
+    calls = []
+
+    def resp(status):
+        r = MagicMock()
+        r.status_code, r.ok, r.reason, r.headers = status, status == 200, "x", {}
+        return r
+
+    script = {"a": [resp(404)], "b": [requests.ReadTimeout("t"), resp(503), resp(200)], "c": [resp(503)] * 3}
+
+    class _S:
+        def get(self, url, **kw):
+            calls.append(url)
+            item = script[url].pop(0)
+            if isinstance(item, Exception):
+                raise item
+            return item
+
+    monkeypatch.setattr(ea, "_session", lambda: _S())
+    assert ea.https_get("a", what="x") is None
+    assert ea.https_get("b", what="x").status_code == 200
+    with pytest.raises(ea.EnsemblDownloadError, match="HTTP 503"):
+        ea.https_get("c", what="x")
+    assert calls.count("b") == 3 and calls.count("c") == 3

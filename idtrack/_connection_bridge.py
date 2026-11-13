@@ -13,7 +13,9 @@ The bridge is intentionally lightweight and process-scoped:
 
 - It does **not** modify system-wide proxy configuration.
 - It only affects the current interpreter (one Python process / one Jupyter kernel).
-- It is reversible via :py:meth:`idtrack.ConnectionBridge.stop` and also cleaned up best-effort at interpreter exit.
+- It is reversible via :py:meth:`idtrack.ConnectionBridge.stop` (or :py:meth:`idtrack.ConnectionBridge.stop_all`)
+  and also cleaned up best-effort at interpreter exit. It stays active until then, also when the object that started
+  it is no longer referenced (``idtrack.ConnectionBridge(proxy_port=1080).start()`` works as written).
 """
 
 from __future__ import annotations
@@ -26,7 +28,6 @@ import threading
 from dataclasses import dataclass
 from typing import Any
 
-from idtrack._db import DB
 from idtrack._ensembl_access import reachability
 
 
@@ -60,14 +61,18 @@ class ConnectionBridge:
     ``start()`` monkeypatches :py:data:`socket.socket` to :py:class:`socks.socksocket` (PySocks) and optionally sets the
     environment variables ``ALL_PROXY`` and ``all_proxy`` so subprocesses spawned from this process inherit the proxy.
 
-    A private, process-wide :py:class:`~idtrack._connection_bridge.ConnectionBridge._BridgeState` singleton stores the
+    A private, process-wide :py:class:`~idtrack.ConnectionBridge._BridgeState` singleton stores the
     original socket class, environment variables, and PySocks default proxy to ensure :py:meth:`stop` can restore the
     prior state precisely. The singleton also implements a simple reference counter so multiple
     :py:class:`~idtrack.ConnectionBridge` instances can share the same active bridge.
 
     Notes:
         - The bridge affects only the current Python process (one Jupyter kernel). Closing the Python process/kernel
-          automatically removes the monkeypatch.
+          automatically removes the monkeypatch. It is not undone when the instance is garbage-collected:
+          :py:meth:`stop` of the instance (or the end of its ``with`` block), :py:meth:`stop_all` or the end of the
+          process undo it.
+        - The ``with ConnectionBridge(...):`` form raises :py:class:`ConnectionError` when the connectivity check fails,
+          so the block never runs unbridged.
         - To avoid surprises, call :py:meth:`start` **before** the first network access in your program.
         - Status messages are emitted via the logger named ``"connection_bridge"`` and, when ``verbose=True``, printed
           to stdout for immediate visibility in notebooks.
@@ -92,6 +97,8 @@ class ConnectionBridge:
         original_env: dict[str, str | None] | None = None
         original_socks_proxy: Any = None
         atexit_registered: bool = False
+        # Incremented by `stop_all`, so that instances started before it count as stopped.
+        generation: int = 0
 
     _STATE = _BridgeState()
     _LOCK = threading.RLock()
@@ -116,7 +123,7 @@ class ConnectionBridge:
             proxy_port: Effective proxy port for this instance.
             set_env_proxy: Whether this instance sets proxy environment variables when activating the bridge.
         """
-        self.log = logging.getLogger("connection_bridge")
+        self.log = logging.getLogger(__name__)
         self.proxy_host = str(proxy_host)
         self.proxy_port = int(proxy_port)
         self.set_env_proxy = bool(set_env_proxy)
@@ -152,7 +159,7 @@ class ConnectionBridge:
     def _emit_global(cls, message: str, *, verbose: bool, level: int = logging.INFO) -> None:
         """Emit a message without requiring an instance (used by ``atexit`` cleanup)."""
         try:
-            logging.getLogger("connection_bridge").log(level, message)
+            logging.getLogger(__name__).log(level, message)
         except Exception:
             if verbose:
                 print(message)
@@ -173,30 +180,54 @@ class ConnectionBridge:
 
     @staticmethod
     def _restore_socks_default_proxy(socks_module: Any, original_proxy: Any) -> None:
-        """Restore the PySocks default proxy configuration (best effort)."""
-        if original_proxy is None:
-            socks_module.set_default_proxy()
-            return
-        if isinstance(original_proxy, tuple):
-            socks_module.set_default_proxy(*original_proxy)
-            return
-        socks_module.set_default_proxy()
+        """Restore the PySocks default proxy exactly as it was saved.
+
+        The saved value is put back as it is (:py:func:`socks.get_default_proxy` returns credentials as bytes, which
+        :py:func:`socks.set_default_proxy` would try to encode again).
+
+        Args:
+            socks_module: The imported PySocks module.
+            original_proxy: The value saved by :py:meth:`start`.
+        """
+        socks_module.socksocket.default_proxy = original_proxy
+
+    @classmethod
+    def _restore_state(cls, state: ConnectionBridge._BridgeState, socks: Any) -> None:
+        """Undo the process-wide changes recorded in *state* and clear it (the caller holds the lock)."""
+        try:
+            if state.original_socket_cls is not None:
+                socket.socket = state.original_socket_cls  # type: ignore[misc]
+            if state.original_env is not None:
+                for key, value in state.original_env.items():
+                    if value is None:
+                        os.environ.pop(key, None)
+                    else:
+                        os.environ[key] = value
+            if socks is not None:
+                cls._restore_socks_default_proxy(socks, state.original_socks_proxy)
+        finally:
+            state.active_count = 0
+            state.original_socket_cls = None
+            state.original_env = None
+            state.original_socks_proxy = None
+            # The route to Ensembl changed back: forget which MySQL ports were (un)reachable.
+            reachability.reset()
 
     @staticmethod
     def _atexit_cleanup() -> None:
         """Best-effort cleanup hook registered via :py:mod:`atexit`."""
         try:
-            ConnectionBridge._force_disable_bridge(verbose=False)
+            ConnectionBridge.stop_all(verbose=False)
         except Exception:
             # Never block interpreter shutdown.
             return
 
     @classmethod
-    def _force_disable_bridge(cls, *, verbose: bool) -> None:
-        """Disable the bridge regardless of which instance started it (best-effort).
+    def stop_all(cls, *, verbose: bool = True) -> None:
+        """Disable the bridge for the whole process, whichever instances started it.
 
-        This method is used by the ``atexit`` hook and by unit tests to ensure a clean process state. It intentionally
-        bypasses instance-level bookkeeping (e.g. ``self._started`` flags).
+        Every instance that started the bridge counts as stopped afterwards. Used by the ``atexit`` hook, and the way
+        to end a bridge whose starting instance is not at hand (e.g. ``ConnectionBridge(proxy_port=1080).start()``).
 
         Args:
             verbose: If ``True``, print a status message to stdout.
@@ -211,29 +242,10 @@ class ConnectionBridge:
             state = cls._STATE
             if state.active_count <= 0:
                 return
+            state.generation += 1
+            cls._restore_state(state, socks)
 
-            state.active_count = 0
-
-            if state.original_socket_cls is not None:
-                socket.socket = state.original_socket_cls  # type: ignore[misc]
-
-            if state.original_env is not None:
-                for key, value in state.original_env.items():
-                    if value is None:
-                        os.environ.pop(key, None)
-                    else:
-                        os.environ[key] = value
-
-            if socks is not None:
-                cls._restore_socks_default_proxy(socks, state.original_socks_proxy)
-
-            state.original_socket_cls = None
-            state.original_env = None
-            state.original_socks_proxy = None
-            # The route to Ensembl changed back: forget which MySQL ports were (un)reachable.
-            reachability.reset()
-
-        cls._emit_global("[idtrack] ConnectionBridge disabled (atexit/test cleanup).", verbose=verbose)
+        cls._emit_global("[idtrack] ConnectionBridge disabled for the whole process.", verbose=verbose)
 
     def start(self, *, test: bool = True, verbose: bool = True) -> bool:
         """Enable the bridge for the current Python process.
@@ -296,6 +308,7 @@ class ConnectionBridge:
                 state.atexit_registered = True
 
             self._started = True
+            self._generation = state.generation
             # The route to Ensembl changed: forget which MySQL ports were (un)reachable.
             reachability.reset()
 
@@ -359,12 +372,13 @@ class ConnectionBridge:
         self._emit(f"[idtrack] ConnectionBridge check OK (Ensembl REST): {payload}", verbose=verbose)
 
         for port, label in ((3306, "3306"), (3337, "3337/GRCh37")):
-            # Probed through the process-wide reachability memory, so the answer is the one IDTrack then uses.
-            if reachability.can_connect(DB.mysql_host, int(port), timeout_s=10.0):
+            # Asked through the process-wide reachability memory, so the answer is the one IDTrack then uses; in the
+            # "https" access mode MySQL is not used and not probed.
+            if reachability.mysql_port_usable(int(port)):
                 self._emit(f"[idtrack] ConnectionBridge check OK (Ensembl MySQL {label}): reachable", verbose=verbose)
             else:
                 self._emit(
-                    f"[idtrack] ConnectionBridge check WARN (Ensembl MySQL {label}): not reachable "
+                    f"[idtrack] ConnectionBridge check WARN (Ensembl MySQL {label}): not reachable or not used "
                     "(IDTrack works via the HTTPS dumps instead).",
                     verbose=verbose,
                     level=logging.WARNING,
@@ -390,7 +404,8 @@ class ConnectionBridge:
         with self.__class__._LOCK:
             state = self.__class__._STATE
 
-            if not self._started:
+            if not self._started or getattr(self, "_generation", state.generation) != state.generation:
+                self._started = False
                 self._emit("[idtrack] ConnectionBridge already stopped.", verbose=verbose)
                 return
 
@@ -399,41 +414,28 @@ class ConnectionBridge:
             if state.active_count > 0:
                 self._emit(f"[idtrack] ConnectionBridge still active (refcount={state.active_count}).", verbose=verbose)
                 return
-
-            if state.original_socket_cls is not None:
-                socket.socket = state.original_socket_cls  # type: ignore[misc]
-
-            if state.original_env is not None:
-                for key, value in state.original_env.items():
-                    if value is None:
-                        os.environ.pop(key, None)
-                    else:
-                        os.environ[key] = value
-
-            if socks is not None:
-                self.__class__._restore_socks_default_proxy(socks, state.original_socks_proxy)
-
-            state.original_socket_cls = None
-            state.original_env = None
-            state.original_socks_proxy = None
-            # The route to Ensembl changed back: forget which MySQL ports were (un)reachable.
-            reachability.reset()
+            self.__class__._restore_state(state, socks)
 
         self._emit("[idtrack] ConnectionBridge disabled: normal networking restored.", verbose=verbose)
 
     def __enter__(self) -> ConnectionBridge:
-        """Enter a context manager that keeps the bridge enabled for the enclosed block."""
-        self.start()
+        """Enter a context manager that keeps the bridge enabled for the enclosed block.
+
+        Returns:
+            ConnectionBridge: This instance.
+
+        Raises:
+            ConnectionError: If the connectivity check fails (the bridge is then already disabled again), so that the
+                block never runs with normal networking by mistake.
+        """
+        if not self.start():
+            raise ConnectionError(
+                f"ConnectionBridge through {self.proxy_host}:{self.proxy_port} does not reach Ensembl REST. Ensure the "
+                "SSH session is established from your local machine (`ssh -R 1080 user@server`) and that the SOCKS port "
+                "is listening on the server (`ss -tlnp | grep 1080`)."
+            )
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
         """Exit the context manager and disable the bridge (best-effort)."""
         self.stop()
-
-    def __del__(self) -> None:  # pragma: no cover
-        """Best-effort safety net: stop the bridge when this instance is garbage-collected."""
-        try:
-            if getattr(self, "_started", False):
-                self.stop(verbose=False)
-        except Exception:
-            return

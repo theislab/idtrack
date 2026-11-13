@@ -6,8 +6,8 @@
 """Allowlists of the externals YAML files shipped in ``idtrack/default_config``.
 
 A shipped ``<organism>_externals_modified.yml`` is the organism's template (made by
-:py:meth:`idtrack._database_manager.DatabaseManager.create_database_content` and
-:py:meth:`idtrack._external_databases.ExternalDatabases.create_template_yaml` over every release and form) with
+:py:meth:`idtrack.DatabaseManager.create_database_content` and
+:py:meth:`idtrack.ExternalDatabases.create_template_yaml` over every release and form) with
 ``Include: true`` set for the ``(form, database, assembly)`` entries of the organism's allowlist below, by
 :py:func:`apply_allowlist`. Nothing else differs between template and modified file. The lists follow one
 conceptual set for every organism, with the species' own symbol databases:

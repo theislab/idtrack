@@ -22,13 +22,15 @@ class VerifyOrganism:
     case-insensitive on both sides. A query equal to a formal name (also written with spaces, e.g.
     ``"Macaca mulatta"``) or to a taxon ID is never ambiguous: a taxon ID that Ensembl also gives to strains or
     breeds resolves to the species-level entry (``9823`` → ``sus_scrofa``). Any other synonym that several species
-    share (``"pig"`` is the common name of every pig breed) raises an error that lists the candidates.
+    share raises an error that lists the candidates, unless idtrack declares it as the alias of one organism
+    (:py:attr:`idtrack.DB.organism_aliases`: ``"pig"``, ``"human"``, ``"mouse"``, ``"rhesus"``, ``"cynomolgus"``;
+    Ensembl lists ``"pig"`` as the common name of every pig breed).
 
     The species list comes from one call to the Ensembl REST API per process and day (``/info/species``, see
     :py:func:`idtrack._ensembl_access.rest_get_json` and :py:attr:`idtrack.DB.rest_species_cache_seconds`), made
     only when it is needed: the formal name of an organism
-    configured in idtrack (:py:attr:`idtrack.DB.supported_organisms`, also written with spaces) resolves without the
-    network; synonyms, taxon IDs and the latest release need it.
+    configured in idtrack (:py:attr:`idtrack.DB.supported_organisms`, also written with spaces) and its declared
+    aliases resolve without the network; other synonyms, taxon IDs and the latest release need it.
 
     After construction the instance offers two high-level helpers::
 
@@ -40,8 +42,12 @@ class VerifyOrganism:
 
     * :py:attr:`~VerifyOrganism.name_synonyms_dataframe` — maps every synonym returned by the REST service to the chosen
       formal name and flags synonyms that are ambiguous across species.
-    * :py:attr:`~VerifyOrganism.ensembl_release_dataframe` — one-row table (indexed by *formal_name*) holding the latest
-      Ensembl release number.
+    * :py:attr:`~VerifyOrganism.ensembl_release_dataframe` — one row per Ensembl species (indexed by *formal_name*)
+      holding its latest Ensembl release number.
+
+    The names of the assemblies of the organism table (also of earlier assemblies, e.g. ``"GRCh37"``) resolve to their
+    organism without the network; they name the organism, not the assembly. A malformed species entry of Ensembl is
+    left out with a warning, unless it is one of idtrack's organisms (then it is an error).
     """
 
     # Species tables per REST URL with the time they were fetched; shared by the instances of a process.
@@ -57,7 +63,7 @@ class VerifyOrganism:
                 stripped, lower-case string before processing.
         """
         # Instance attributes
-        self.log = logging.getLogger("verify_organism")
+        self.log = logging.getLogger(__name__)
         self.organism_query = self.normalize(organism_query)
 
     @property
@@ -87,10 +93,30 @@ class VerifyOrganism:
         return cached[1]
 
     def _configured_formal_name(self) -> str | None:
-        """Return the query as the formal name of a configured organism (no network), else ``None``."""
+        """Return the configured organism the query names without the network, else ``None``.
+
+        The query names a configured organism when it is its formal name (also with spaces or hyphens), one of its
+        declared aliases (:py:attr:`idtrack.DB.organism_aliases`: ``"pig"``, ``"human"``; a declared alias wins over
+        whatever Ensembl lists under the same word) or the name of one of its assemblies in the organism table
+        (``"GRCh37"``, ``"Sscrofa10.2"``, ``"Mmul_8.0.1"``; matched case-insensitively). An assembly name resolves
+        the organism only; it does not select that assembly.
+
+        Returns:
+            Optional[str]: The organism's formal name, or ``None``.
+        """
         for candidate in (self.organism_query, re.sub(r"[\s\-]+", "_", self.organism_query)):
             if candidate in DB.supported_organisms:
                 return str(candidate)
+        for organism, aliases in DB.organism_aliases.items():
+            if self.organism_query in aliases:
+                return organism
+        owners = sorted(
+            organism
+            for organism, assemblies in DB.assembly_mysqlport_priority.items()
+            if any(self.normalize(entry.get("Name", "")) == self.organism_query for entry in assemblies.values())
+        )
+        if len(owners) == 1:
+            return owners[0]
         return None
 
     def get_latest_release(self) -> int:
@@ -119,7 +145,8 @@ class VerifyOrganism:
         Resolution, in this order (all comparisons on normalised, lower-case strings):
 
         1. the query is a formal name (``"homo_sapiens"``), also with spaces or hyphens for underscores
-           (``"Macaca mulatta"``); for an organism configured in idtrack this needs no network;
+           (``"Macaca mulatta"``), or an alias that idtrack declares for an organism (``"pig"``); for an organism
+           configured in idtrack this needs no network;
         2. the query is a taxon ID: the organism with that ID, or—when Ensembl gives the ID to several strains or
            breeds—the species-level entry (the formal name of two words, ``sus_scrofa`` for ``9823``);
         3. any other synonym of :py:data:`~VerifyOrganism.name_synonyms_dataframe` (common names, display names,
@@ -178,7 +205,7 @@ class VerifyOrganism:
             integer column.
 
         The request uses the timeouts and retries of :py:func:`idtrack._ensembl_access.rest_get_json`, whose
-        :py:class:`idtrack._db.EnsemblRestError` propagates when Ensembl does not answer
+        :py:class:`idtrack.EnsemblRestError` propagates when Ensembl does not answer
         (:py:attr:`idtrack.DB.connection_timeout`, :py:attr:`idtrack.DB.reading_timeout`,
         :py:attr:`idtrack.DB.rest_attempts`). :py:meth:`_species_tables` keeps the result for the process.
 
@@ -200,28 +227,37 @@ class VerifyOrganism:
         name_synonyms: list = []
         latest_ensembl_releases: dict = {}
 
+        skipped: list[str] = []
         for organism in decoded_results:
-            # Make sure the organisms are as they should be.
-            if "core" not in organism["groups"]:
-                raise ValueError(
-                    f"`{organism['name']}` does not contain 'core' group. "
-                    f"This causes many errors when downloading databases in this package."
-                )
-                # Note that 'core' is used in the MySQL or FTP queries by the idtrack package.
-
-            # Make sure there is one and only one item for a given organism.
-            if organism["name"] in latest_ensembl_releases:
-                raise ValueError(f"`{organism['name']}` has defined more than one latest release.")
-
-            # In very early releases, there are floating releases like "18.2". This package does not support those.
-            if not float(organism["release"]) == int(organism["release"]):
-                raise ValueError(
-                    f"Ensembl release is not in integer format: {organism['release']!r} "
-                    f"(organism: {organism['name']!r})"
-                )
+            # An entry that idtrack cannot use: an error for an organism configured in idtrack, otherwise the entry is
+            # left out (one odd species among Ensembl's hundreds must not break every look-up).
+            name = str(organism.get("name", "")).lower() if isinstance(organism, dict) else ""
+            problem = None
+            if not name:
+                problem = "an entry without a name"
+            elif "core" not in (organism.get("groups") or []):
+                # 'core' is used in the MySQL or FTP queries by the idtrack package.
+                problem = f"`{name}` does not contain 'core' group"
+            elif name in latest_ensembl_releases:
+                problem = f"`{name}` has defined more than one latest release"
+            else:
+                try:
+                    release_number = float(str(organism.get("release")))
+                except ValueError:
+                    release_number = float("nan")
+                # In very early releases, there are floating releases like "18.2". This package does not support those.
+                if not release_number.is_integer():
+                    problem = (
+                        f"Ensembl release is not in integer format: {organism.get('release')!r} (organism: {name!r})"
+                    )
+            if problem is not None:
+                if name in DB.supported_organisms:
+                    raise ValueError(f"Unexpected Ensembl species entry: {problem}.")
+                skipped.append(problem)
+                continue
 
             # Save the associated the latest release
-            latest_ensembl_releases[organism["name"].lower()] = int(organism["release"])
+            latest_ensembl_releases[name] = int(float(str(organism["release"])))
 
             # Fetch all the organism names associated with the organism; match on normalised strings.
             formal_name = organism["name"].lower()
@@ -237,6 +273,8 @@ class VerifyOrganism:
             kinds[formal_name] = "formal_name"
             name_synonyms.extend((synonym, formal_name, kind) for synonym, kind in kinds.items())
 
+        if skipped:
+            self.log.warning(f"{len(skipped)} Ensembl species entries are left out: {'; '.join(skipped[:10])}.")
         name_synonyms_df = pd.DataFrame(name_synonyms, columns=["synonym", "formal_name", "kind"])
         #  If it is associated with another organism, mark as 'ambiguous'.
         name_synonyms_df["ambiguous"] = name_synonyms_df.duplicated(subset=["synonym"], keep=False)

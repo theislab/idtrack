@@ -48,8 +48,6 @@ class TestVerifyOrganismInitialization:
 
             resolver = VerifyOrganism("homo_sapiens")
 
-            assert hasattr(resolver, "name_synonyms_dataframe")
-            assert hasattr(resolver, "ensembl_release_dataframe")
             assert isinstance(resolver.name_synonyms_dataframe, pd.DataFrame)
             assert isinstance(resolver.ensembl_release_dataframe, pd.DataFrame)
 
@@ -166,11 +164,11 @@ class TestFetchOrganismAndLatestRelease:
             assert session_instance.get.call_count == DB.rest_attempts
 
     def test_validates_core_group(self, mock_requests_session):
-        """Test ValueError when organism lacks 'core' group."""
+        """A configured organism without a 'core' group is an error; another such species is left out (OE-6)."""
         invalid_response = {
             "species": [
                 {
-                    "name": "test_organism",
+                    "name": "sus_scrofa",
                     "common_name": "test",
                     "display_name": "Test",
                     "taxon_id": "12345",
@@ -197,7 +195,24 @@ class TestFetchOrganismAndLatestRelease:
             from idtrack._verify_organism import VerifyOrganism
 
             with pytest.raises(ValueError, match="core"):
-                VerifyOrganism("test_organism").ensembl_release_dataframe
+                VerifyOrganism("sus_scrofa").ensembl_release_dataframe
+            VerifyOrganism._species_cache.clear()
+            invalid_response["species"][0]["name"] = "test_organism"
+            invalid_response["species"].append(
+                {
+                    "name": "homo_sapiens",
+                    "common_name": "human",
+                    "taxon_id": "9606",
+                    "release": "116.5",
+                    "groups": ["x"],
+                }
+            )
+            invalid_response["species"][1]["groups"] = ["core"]
+            invalid_response["species"][1]["release"] = "116"
+            invalid_response["species"].append({"name": "odd_species", "release": "116.5", "groups": ["core"]})
+            frame = VerifyOrganism("human").ensembl_release_dataframe
+            assert list(frame.index) == ["homo_sapiens"]
+            assert VerifyOrganism("human").get_formal_name() == "homo_sapiens"
 
     def test_validates_duplicate_organism(self, mock_requests_session):
         """Test ValueError for duplicate organism entries."""
@@ -576,8 +591,43 @@ class TestNetworkUse:
         # A list older than `DB.rest_species_cache_seconds` is fetched again (once).
         for url, (fetched, tables) in list(vo.VerifyOrganism._species_cache.items()):
             vo.VerifyOrganism._species_cache[url] = (fetched - 2 * DB.rest_species_cache_seconds, tables)
-        vo.VerifyOrganism("human").get_formal_name()
+        vo.VerifyOrganism("9606").get_formal_name()
         assert len(calls) == 2
+
+    def test_declared_aliases_resolve_without_the_network_and_win_over_ensembl(self, monkeypatch):
+        """Decision 22: `pig` is sus_scrofa although Ensembl lists it as the common name of every pig breed."""
+        import idtrack._verify_organism as vo
+
+        calls = []
+
+        def _fake(path, *, what):
+            calls.append(path)
+            return {
+                "species": [
+                    _species("sus_scrofa", "pig", "9823", "Sscrofa11.1"),
+                    _species("sus_scrofa_duroc", "pig", "9823", "Duroc_v1"),
+                    _species("sus_scrofa_landrace", "pig", "9823", "Landrace_v1"),
+                    _species("bos_taurus", "cow", "9913", "ARS-UCD1.2", aliases=["cattle"]),
+                    _species("bos_indicus", "cow", "9915", "Bos_indicus_1.0"),
+                ]
+            }
+
+        monkeypatch.setattr(vo, "rest_get_json", _fake)
+        expected = {
+            "pig": "sus_scrofa",
+            "Pig": "sus_scrofa",
+            " HUMAN ": "homo_sapiens",
+            "mouse": "mus_musculus",
+            "rhesus": "macaca_mulatta",
+            "cynomolgus": "macaca_fascicularis",
+        }
+        for query, organism in expected.items():
+            assert vo.VerifyOrganism(query).get_formal_name() == organism, query
+        assert calls == []
+        # a common name that idtrack does not declare is still ambiguous when Ensembl gives it to several species
+        with pytest.raises(ValueError, match="ambiguous"):
+            vo.VerifyOrganism("cow").get_formal_name()
+        assert vo.VerifyOrganism("cattle").get_formal_name() == "bos_taurus"
 
 
 class TestRestGetJson:
@@ -658,3 +708,24 @@ class TestRestGetJson:
         with pytest.raises(EnsemblRestError, match="HTTP 400"):
             ea.rest_get_json("/info/ping", what="a ping")
         assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("query", "organism"),
+    [
+        ("GRCh37", "homo_sapiens"),
+        ("grcm38", "mus_musculus"),
+        ("Sscrofa10.2", "sus_scrofa"),
+        ("Mmul_8.0.1", "macaca_mulatta"),
+    ],
+)
+def test_assembly_names_of_the_table_resolve_without_the_network(query, organism, monkeypatch):
+    """organisms_externals-6/-7: every assembly name of the organism table names its organism, offline."""
+    from idtrack._verify_organism import VerifyOrganism
+
+    monkeypatch.setattr(
+        VerifyOrganism,
+        "fetch_organism_and_latest_release",
+        lambda self: (_ for _ in ()).throw(AssertionError("network")),
+    )
+    assert VerifyOrganism(query).get_formal_name() == organism

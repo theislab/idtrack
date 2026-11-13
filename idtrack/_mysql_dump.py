@@ -21,7 +21,8 @@ input). Records without escapes or quotes, the vast majority, pass through untou
 
 import csv
 import io
-from typing import Any
+from collections.abc import Collection
+from typing import Any, cast
 
 import pandas as pd
 
@@ -182,10 +183,26 @@ class MySQLDumpCSVStream(io.TextIOBase):
         return out
 
 
-def _parse_csv(stream: "MySQLDumpCSVStream", columns: list[str], usecols: list[str] | None) -> pd.DataFrame:
-    r"""Parse the CSV produced by :py:class:`MySQLDumpCSVStream` (tab-separated, double-quote quoting, ``\N`` NULL)."""
+def _parse_csv(
+    stream: "MySQLDumpCSVStream", columns: list[str], usecols: list[str] | None, text_columns: Collection[str]
+) -> pd.DataFrame:
+    r"""Parse the CSV produced by :py:class:`MySQLDumpCSVStream` (tab-separated, double-quote quoting, ``\N`` NULL).
+
+    Columns in *text_columns* are read as text whatever they hold (an all-digit ``varchar`` stays text, leading zeros
+    included); the types of the other columns are inferred from the whole column.
+
+    Args:
+        stream: The CSV stream.
+        columns: Column names of the table, in schema order.
+        usecols: Columns to keep, or ``None``.
+        text_columns: Columns read as text.
+
+    Returns:
+        pandas.DataFrame: The parsed table.
+    """
+    kept = set(columns if usecols is None else usecols)
     return pd.read_csv(
-        stream,
+        cast(Any, stream),
         sep="\t",
         header=None,
         names=columns,
@@ -193,6 +210,7 @@ def _parse_csv(stream: "MySQLDumpCSVStream", columns: list[str], usecols: list[s
         keep_default_na=False,
         low_memory=False,
         usecols=usecols,
+        dtype=cast(Any, {c: str for c in text_columns if c in kept} or None),
         lineterminator="\n",
         quoting=csv.QUOTE_MINIMAL,
         quotechar='"',
@@ -205,6 +223,7 @@ def read_mysql_dump(
     source: Any,
     columns: list[str],
     usecols: list[str] | None = None,
+    text_columns: Collection[str] = (),
 ) -> pd.DataFrame:
     """Parse a MySQL table dump into a DataFrame with the values MySQL would return.
 
@@ -212,13 +231,15 @@ def read_mysql_dump(
         source: Readable text stream of the decompressed ``<table>.txt`` dump.
         columns: Column names of the table, in schema order.
         usecols: Optional subset of *columns* to keep (in this order).
+        text_columns: Columns that the schema declares as text (character, enumeration, date and time types); they
+            are read as text in the default text dtype of pandas, so their type does not depend on their content.
 
     Returns:
         pandas.DataFrame: One row per record; SQL ``NULL`` is ``NaN``; empty strings stay empty strings.
     """
     stream = MySQLDumpCSVStream(source)
     try:
-        df = _parse_csv(stream, columns, usecols)
+        df = _parse_csv(stream, columns, usecols, text_columns)
     except pd.errors.EmptyDataError:
         # An empty table: the MySQL server returns no rows, with the table's columns.
         return pd.DataFrame(columns=list(usecols) if usecols is not None else list(columns))
@@ -227,7 +248,8 @@ def read_mysql_dump(
         for record_index, field_index, value in stream.restore:
             column = columns[field_index] if field_index < len(columns) else None
             if column in kept:
-                if df[column].dtype != object:
+                dtype = df[column].dtype
+                if not (isinstance(dtype, pd.StringDtype) or pd.api.types.is_object_dtype(dtype)):
                     df[column] = df[column].astype(object)
                 df.at[record_index, column] = value
     if usecols is not None:

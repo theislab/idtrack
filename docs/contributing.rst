@@ -303,18 +303,36 @@ Tests are located in the ``tests/`` directory:
 .. code-block:: text
 
     tests/
-    ├── conftest.py               # Shared fixtures, markers and the per-organism real-graph settings
-    ├── _real_graph_builder.py    # Builds the tiny real graphs of the end-to-end tests (MySQL or HTTPS)
+    ├── conftest.py               # Shared fixtures (among them the graphs of real organisms) and markers
+    ├── _real_tables.py           # Serves real Ensembl tables, cut down to a few hundred genes, to DatabaseManager
+    ├── data/real/                # Per organism: the cut tables, the gene list, the expected answers, the build script
     ├── test_main.py              # Command-line entry point
     ├── test_external_mappers.py  # External mapping backends (slow classes query live services)
-    ├── unit/                     # Offline tests, one file per module (test_api.py, test_db.py, ...)
-    └── integration/              # Network-backed tests against Ensembl (MySQL and HTTPS dumps, end to end)
+    ├── unit/                     # Offline tests, one file per module (test_api.py, test_db.py, ...) and test_real_*.py
+    └── integration/              # Network-backed tests against Ensembl (MySQL and HTTPS dumps)
 
-Markers: ``slow`` (skipped unless ``--runslow`` or ``IDTRACK_SKIP_SLOW=0``), ``network``, ``integration`` and
-``database``. The end-to-end tests run for every organism that ships a default externals YAML
-(``IDTRACK_TEST_ORGANISMS=a,b`` selects others); their small real graphs are cached in
-``IDTRACK_TEST_CACHE_DIR``. Where the Ensembl MySQL ports are closed, the graphs are built from the HTTPS dumps,
-which happens only with ``--runslow``.
+Markers: ``slow`` (skipped unless ``--runslow`` or ``IDTRACK_SKIP_SLOW=0``), ``network``, ``integration``,
+``database`` and ``wrong_argument_type`` (a test that passes an argument of a wrong type on purpose; skipped in the
+typeguard session, where typeguard refuses the argument first).
+
+The tests that can catch a wrong mapping are ``tests/unit/test_real_*.py``. They need no network:
+``tests/_real_tables.py`` serves real Ensembl tables of pig and human, cut down to a few hundred genes
+(``tests/data/real/<organism>.tables.json.xz``, each under 500 kB), to :py:class:`idtrack.DatabaseManager`, so the
+graphs of both organisms are built by the production code (tables, history, graph file, engine, API) in the test
+session. Conversions are compared with expected answers that were derived from Ensembl's own files
+(``tests/data/real/<organism>.truth.jsonl``) and with the tables themselves, read by independent code; the package's
+self-tests (:py:class:`idtrack.TrackTests`) run on the same graphs.
+
+To write a table file again from a gene list (``tests/data/real/<organism>.genes.txt``), for example after adding
+genes that a new test needs:
+
+.. code-block:: console
+
+    $ poetry run python tests/data/real/build_real_tables.py --organism sus_scrofa --repository <local repository>
+
+It reads the tables from the local repository and downloads what the repository lacks over HTTPS.
+``tests/integration/test_real_tables_source.py`` (``--runslow``, network) fetches one release of each organism again
+and compares it with the stored file.
 
 
 Building Documentation
@@ -369,6 +387,9 @@ When contributing to the documentation website:
 - **Tutorial notebooks are source of truth for narrative workflows**: notebooks live in ``docs/_notebooks`` and are
   rendered by *nbsphinx* without execution during builds.
 - **Avoid huge notebook outputs**: keep outputs concise and deterministic so the rendered docs remain readable.
+- **Outputs come from running the code**: after changing a notebook, run it in full (with the graphs of the pinned
+  snapshot release the tutorials use, 115) so that every shown output is what the code prints; never edit an output
+  by hand. The examples of :doc:`usage` and the README show outputs of the same snapshot.
 
 
 Submitting Changes
@@ -389,7 +410,7 @@ Workflow Overview
       - Create your own copy of the repository
     * - 2
       - Branch
-      - Create a feature branch from ``development``
+      - Create a feature branch from ``main``
     * - 3
       - Develop
       - Make your changes with tests
@@ -416,8 +437,8 @@ Step-by-Step Guide
 
 .. code-block:: console
 
-    $ git checkout development
-    $ git pull upstream development
+    $ git checkout main
+    $ git pull upstream main
     $ git checkout -b feature/your-feature-name
 
 Use descriptive branch names:
@@ -447,7 +468,7 @@ All tests and checks must pass before submitting.
 
     $ git push origin feature/your-feature-name
 
-Then open a pull request on GitHub against the ``development`` branch.
+Then open a pull request on GitHub against the ``main`` branch.
 
 Pull Request Guidelines
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -494,52 +515,37 @@ IDTrack follows these conventions:
     * - Aspect
       - Convention
     * - **Formatting**
-      - Black (automatically applied by pre-commit)
+      - Black, line length 120, and isort (applied by the pre-commit hooks)
     * - **Linting**
-      - Ruff
+      - flake8 with flake8-docstrings, darglint, flake8-bugbear, flake8-bandit, flake8-rst-docstrings and pep8-naming
+        (``.flake8``), pyupgrade ``--py312-plus``
     * - **Type hints**
-      - Use type annotations for public APIs
+      - Type annotations for public APIs; mypy (``nox --session=mypy``)
     * - **Docstrings**
-      - NumPy style
+      - Google style (``docstring-convention = google``); every argument, return value and raised error documented
+        (darglint checks it); cross-references with the ``:py:meth:``, ``:py:class:`` ... roles
+
+The pre-commit session (``nox --session=pre-commit``) runs all of these.
 
 Example Function
 ~~~~~~~~~~~~~~~~
 
+A docstring in the style of the package (modelled on :py:meth:`idtrack.API.valid_final_databases`):
+
 .. code-block:: python
 
-    def convert_identifier(
-        self,
-        identifier: str,
-        to_release: int,
-        explain: bool = False,
-    ) -> ConversionResult:
-        """Convert a biological identifier to a target release.
+    def valid_final_databases(self, to_release: int | None = None) -> list[str]:
+        """Return the values accepted as ``final_database`` for a target release, sorted.
 
-        Parameters
-        ----------
-        identifier
-            The identifier to convert (e.g., gene symbol, Ensembl ID).
-        to_release
-            Target Ensembl release number.
-        explain
-            If True, include detailed mapping information.
+        These are the external databases of the genome assembly that is primary at *to_release* and the two
+        Ensembl gene namespaces (versioned ``ensembl_gene`` and ``base_ensembl_gene``).
 
-        Returns
-        -------
-        ConversionResult
-            The conversion result with mapped identifiers.
+        Args:
+            to_release (int | None): The target release; ``None`` means the graph's snapshot release.
 
-        Raises
-        ------
-        ValueError
-            If the identifier format is not recognized.
-
-        Examples
-        --------
-        >>> api.convert_identifier("TP53", to_release=112)
-        ConversionResult(...)
+        Returns:
+            list[str]: The database names.
         """
-        ...
 
 
 Adding Organism Support
@@ -571,10 +577,12 @@ from it. Rhesus and cynomolgus macaque were added this way. The recipe:
    public MySQL ports in preference order (3306 and 5306 serve release 48 onwards; 3337 is the GRCh37 archive
    and may be listed for human GRCh37 only, see ``DB.mysql_port_assembly``); ``Priority`` 1 is the preferred, newest
    assembly. Add the organism's symbol databases to ``DB.symbol_databases`` (e.g. ``("VGNC Symbol", "HGNC
-   Symbol")``). The table is validated at import.
+   Symbol")``) and its short names to ``DB.organism_aliases`` (lower case, unique across organisms, e.g.
+   ``("rhesus",)``). The table is validated at import. IDTrack reads Ensembl ids with versions: an organism whose ids
+   carry no versions is not supported.
 
 3. **Try it without editing the package.** ``idtrack.DB.register_organism(name, assemblies,
-   symbol_databases)`` adds the same entry for the running Python session, validates it, and recomputes
+   symbol_databases, aliases)`` adds the same entry for the running Python session, validates it, and recomputes
    everything derived from the table.
 
 4. **Make the externals file.** Generate the template over every release and form

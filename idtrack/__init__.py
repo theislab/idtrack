@@ -3,15 +3,15 @@
 # Kemal Inecik
 # k.inecik@gmail.com
 
-"""Top-level package initialisation for **idtrack**.
+"""Top-level package of **idtrack**: the public classes, the errors a caller may want to catch, and the metadata.
 
-This module only exposes the public API (re-exporting key classes) and
-stores package metadata.  No runtime behaviour has been changed.
+The names are imported on first access (``idtrack.API`` imports the conversion core only; ``idtrack.HarmonizeFeatures``
+also imports anndata and scipy), so that ``import idtrack`` itself is cheap.
 """
 
-from __future__ import annotations
-
+import importlib
 from importlib import metadata as _metadata
+from typing import Any
 
 __author__: str = "Kemal Inecik"
 __email__: str = "k.inecik@gmail.com"
@@ -22,30 +22,40 @@ try:  # pragma: no cover
 except _metadata.PackageNotFoundError:  # Local/editable install
     __version__ = "0.0.5"
 
+_EXPORTS: dict[str, str] = {
+    "API": "idtrack._api",
+    "ConnectionBridge": "idtrack._connection_bridge",
+    "DatabaseManager": "idtrack._database_manager",
+    "DB": "idtrack._db",
+    "EnsemblDownloadError": "idtrack._ensembl_access",
+    "EnsemblRestError": "idtrack._db",
+    "ExternalDatabases": "idtrack._external_databases",
+    "GraphMaker": "idtrack._graph_maker",
+    "GraphMismatchError": "idtrack._the_graph",
+    "HarmonizeFeatures": "idtrack._harmonize_features",
+    "HistoryValidationError": "idtrack._graph_maker",
+    "InactiveAtReleaseError": "idtrack._track",
+    "SearchBudgetExceededError": "idtrack._track",
+    "TheGraph": "idtrack._the_graph",
+    "Track": "idtrack._track",
+    "TrackTests": "idtrack._track_tests",
+    "UnknownVersionError": "idtrack._track",
+    "VerifyOrganism": "idtrack._verify_organism",
+}
 
-# Public re-exports
-from idtrack._api import API as API  # noqa: F401
-from idtrack._connection_bridge import ConnectionBridge as ConnectionBridge  # noqa: F401
-from idtrack._database_manager import DatabaseManager as DatabaseManager  # noqa: F401
-from idtrack._db import DB as DB  # noqa: F401
-from idtrack._external_databases import ExternalDatabases as ExternalDatabases  # noqa: F401
-from idtrack._graph_maker import GraphMaker as GraphMaker  # noqa: F401
-from idtrack._harmonize_features import HarmonizeFeatures as HarmonizeFeatures  # noqa: F401
-from idtrack._the_graph import TheGraph as TheGraph  # noqa: F401
-from idtrack._track import Track as Track  # noqa: F401
-from idtrack._track_tests import TrackTests as TrackTests  # noqa: F401
-from idtrack._verify_organism import VerifyOrganism as VerifyOrganism  # noqa: F401
+__all__: list[str] = sorted(_EXPORTS)
 
-__all__: list[str] = [
-    "API",
-    "ConnectionBridge",
-    "DatabaseManager",
-    "DB",
-    "ExternalDatabases",
-    "HarmonizeFeatures",
-    "TheGraph",
-    "GraphMaker",
-    "Track",
-    "VerifyOrganism",
-    "TrackTests",
-]
+
+def __getattr__(name: str) -> Any:
+    """Import a public name on first access (PEP 562)."""
+    module = _EXPORTS.get(name)
+    if module is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    value = getattr(importlib.import_module(module), name)
+    globals()[name] = value
+    return value
+
+
+def __dir__() -> list[str]:
+    """List the module's names, including the public names not imported yet."""
+    return sorted(set(globals()) | set(_EXPORTS))

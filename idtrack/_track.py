@@ -4,103 +4,165 @@
 # k.inecik@gmail.com
 
 import bisect
-import copy
-import itertools
+import heapq
 import logging
-import warnings
+import math
+import operator
+import time
 from collections import Counter
-from collections.abc import Callable, Iterable
-from functools import cached_property
-from typing import Any
+from typing import TYPE_CHECKING, Any, SupportsIndex
 
-import networkx as nx
-import numpy as np
-import pandas as pd
+from idtrack._db import DB
+from idtrack._the_graph import ReleaseSet, served_mask
 
-from idtrack._database_manager import DatabaseManager
-from idtrack._db import DB, EmptyConversionMetricsError
-from idtrack._graph_maker import GraphMaker
-from idtrack._the_graph import TheGraph
+if TYPE_CHECKING:
+    from idtrack._database_manager import DatabaseManager
+    from idtrack._the_graph import TheGraph
 
 
-class Track:
-    """Bidirectional path-finding resolver for biological identifiers.
+class InactiveAtReleaseError(ValueError):
+    """The identifier is not active at the release the caller gave as ``from_release``.
 
-    `Track` builds and queries a *bio-ID* multigraph that stitches together
-    Ensembl history edges (genes, transcripts, proteins) and cross-reference
-    edges to external databases (UniProt, RefSeq, …).  Given a **source
-    identifier**, a **target Ensembl release**, and/or a **target database**,
-    the class:
-
-    1. **Normalises** the source to an Ensembl *gene* node when necessary.
-    2. **Time-travels** through historical edges—forward or backward—until it
-       reaches the requested release, optionally "beaming-up" through external
-       IDs when the backbone is disconnected.
-    3. **Converts** the resolved Ensembl gene into the requested external
-       database (or returns the gene itself) while annotating the result with
-       confidence scores and the full traversal path.
-
-
-    Two mutually-recursive engines power the search:
-
-    * `_recursive_function`   — depth-first search along temporal edges.
-    * `_recursive_synonymous` — search for synonymous nodes at a single
-      release to enable the external "beam-up".
-
-    Attributes
-    ----------
-    graph : networkx.MultiDiGraph
-        The pre-computed bio-ID graph produced by
-        :py:class:`_graph_maker.GraphMaker`.
-    version_info : dict
-        Metadata about the graph build (Ensembl releases included, build date,
-        Git commit, etc.).
-    _external_entrance_placeholder : dict[bool, int]
-        Sentinel node IDs that mark artificial edges used when an external ID
-        is pulled onto the Ensembl backbone (`False → -1`, `True → 10001`).
-    _external_entrance_placeholders : list[int]
-        Sorted list of the sentinel values above.
+    Attributes:
+        identifier (str): The graph node of the query.
+        release (int): The release that was given.
+        active_ranges (list[list[int]]): Inclusive ``[first, last]`` release ranges in which the identifier is active.
     """
 
-    # ENSG00000263464
-    def __init__(self, db_manager: DatabaseManager, **kwargs):
-        """Create a `Track` resolver and load (or build) its graph.
+    def __init__(self, identifier: str, release: int, active_ranges: list[list[int]]):
+        """Keep the query, the release and the releases at which the identifier is active.
 
         Args:
-            db_manager (DatabaseManager): Connection manager that knows how to fetch Ensembl and
-                cross-reference tables from a local cache or a live MySQL mirror.
-                The same instance is forwarded to :py:class:`_graph_maker.GraphMaker`.
-            kwargs: Additional keyword arguments forwarded verbatim to
-                :py:meth:`_graph_maker.GraphMaker.get_graph`: ``narrow``, ``create_even_if_exist`` (rebuild even if
-                a cached graph exists), ``save_after_calculation``, ``overwrite_even_if_exist``, ``form_list`` and
-                ``narrow_external``.
+            identifier (str): The graph node of the query.
+            release (int): The release that was given.
+            active_ranges (list[list[int]]): Inclusive release ranges in which the identifier is active.
         """
-        self.log = logging.getLogger("track")
-        self.db_manager = db_manager
-        graph_creator = GraphMaker(self.db_manager)
+        super().__init__(identifier, release, active_ranges)
+        self.identifier = identifier
+        self.release = release
+        self.active_ranges = active_ranges
 
-        # Calculate/Load the graph
-        self.graph = graph_creator.get_graph(**kwargs)
-        self.version_info = self.graph.graph["version_info"]
-        self._external_entrance_placeholder = {False: -1, True: 10001}
-        self._external_entrance_placeholders = sorted(self._external_entrance_placeholder.values())
-        self._ensure_assembly_priority_cache()
+    def __str__(self) -> str:
+        """Name the releases at which the identifier is active.
 
-    def _ensure_assembly_priority_cache(self) -> None:
-        """Ensure per-graph assembly-priority caches exist.
+        Returns:
+            str: The message of the error.
+        """
+        ranges = ", ".join(f"{a}" if a == b else f"{a}-{b}" for a, b in self.active_ranges) or "none"
+        return (
+            f"{self.identifier!r} is not active at Ensembl release {self.release}; it is active at the releases: "
+            f"{ranges}. Give one of these as `from_release`, or leave it out to start from the target release when "
+            "the identifier is active there and from its latest active release otherwise."
+        )
 
-        Some test fixtures construct `Track` via `Track.__new__()` (bypassing `__init__`). Keep
-        the conversion code robust by lazily initialising the per-graph assembly-priority mapping.
+
+class UnknownVersionError(ValueError):
+    """The identifier is an Ensembl id with a version that the graph does not hold.
+
+    The version never existed, or the graph cannot know it (a version lower than the latest, or of an id that is no
+    longer active). It is not answered with another version's gene.
+
+    Attributes:
+        identifier (str): The identifier as given.
+        versions (tuple[str, ...]): The ``<id>.<version>`` ids that the graph holds, by ascending version.
+    """
+
+    def __init__(self, identifier: str, versions: tuple[str, ...]):
+        """Keep the query and the versions that exist.
+
+        Args:
+            identifier (str): The identifier as given.
+            versions (tuple[str, ...]): The versions of the id that the graph holds.
+        """
+        super().__init__(identifier, versions)
+        self.identifier = identifier
+        self.versions = versions
+
+    def __str__(self) -> str:
+        """Name the versions that exist.
+
+        Returns:
+            str: The message of the error.
+        """
+        return (
+            f"{self.identifier!r} names a version that this graph does not hold; the versions that exist are: "
+            f"{', '.join(self.versions)}. Give one of them, or the id without version."
+        )
+
+
+class SearchBudgetExceededError(RuntimeError):
+    """A conversion needed more search states or more time than its budget allows.
+
+    Attributes:
+        identifier (str): The graph node of the query.
+        states (int): Number of search states expanded when the search stopped.
+        seconds (float): Seconds spent when the search stopped.
+        budget_states (int): The budget of states of the call.
+        budget_seconds (float): The budget of seconds of the call.
+    """
+
+    def __init__(self, identifier: str, states: int, seconds: float, budget_states: int, budget_seconds: float):
+        """Keep the work done and the budget.
+
+        Args:
+            identifier (str): The graph node of the query.
+            states (int): Number of search states expanded when the search stopped.
+            seconds (float): Seconds spent when the search stopped.
+            budget_states (int): The budget of states of the call.
+            budget_seconds (float): The budget of seconds of the call.
+        """
+        super().__init__(identifier, states, seconds, budget_states, budget_seconds)
+        self.identifier = identifier
+        self.states = states
+        self.seconds = seconds
+        self.budget_states = budget_states
+        self.budget_seconds = budget_seconds
+
+    def __str__(self) -> str:
+        """Say how far the search got and what its budget was.
+
+        Returns:
+            str: The message of the error.
+        """
+        return (
+            f"The conversion of {self.identifier!r} was stopped after {self.states} search states and "
+            f"{self.seconds:.1f} s (budget: {self.budget_states} states, {self.budget_seconds:.1f} s). Raise "
+            "`Track.search_budget_states` or `Track.search_budget_seconds` to let it run longer."
+        )
+
+
+class _GraphReader:
+    """The engine's view of the graph: its accessors in the engine's order, and the primary line of releases.
+
+    The engine never touches the attribute layout of nodes and edges. It reads the graph through the accessor
+    methods of :py:class:`idtrack.TheGraph` (``node_type``, ``base_id``, ``version``, ``history_edges``,
+    ``xref_edges``, ``active_ranges``, ``trios``, ``resolve_name``, ``versions_of``, ``spelling``,
+    ``hyperconnective_nodes``, ``assembly_releases``, ``backbone_assembly``); this class adds the order in which the
+    search visits edges and the question whether an edge holds at a release on the primary line. Nothing is computed
+    for the whole graph.
+    """
+
+    def __init__(self, graph: "TheGraph"):
+        """Bind the reader to a graph and read the facts that hold for the whole graph.
+
+        Args:
+            graph (TheGraph): The graph that is queried.
 
         Raises:
-            ValueError: If the graph's organism is not registered in the organism table.
+            ValueError: If the graph's organism is not registered in the organism table, so that its assemblies
+                cannot be ordered.
         """
-        if hasattr(self, "_assembly_priority_by_assembly") and hasattr(self, "_assembly_priority"):
-            return
+        self.graph = graph
+        self.log = logging.getLogger(__name__)
+        self.backbone_type: str = DB.external_search_settings["nts_backbone"]
+        self.base_type: str = DB.nts_base_ensembl[DB.backbone_form]
 
-        organism = self.graph.graph.get("organism")
-        assemblies = sorted(self.graph.available_genome_assemblies)
+        self.releases: tuple[int, ...] = tuple(sorted(int(r) for r in graph.graph["confident_for_release"]))
+        self.release_set = frozenset(self.releases)
+        self.first_release = self.releases[0]
+        self.last_release = self.releases[-1]
 
+        organism = graph.graph.get("organism")
         # Assembly keys carry no order of their own (rhesus Mmul_8.0.1 is 801 but older than Mmul_10, 10): the order
         # comes from the organism table only.
         if not isinstance(organism, str) or organism not in DB.assembly_mysqlport_priority:
@@ -109,2197 +171,1688 @@ class Track:
                 f"(supported: {DB.supported_organisms}), so its assemblies cannot be ordered. Register it with "
                 "`idtrack.DB.register_organism` before loading the graph."
             )
-        cfg = DB.assembly_mysqlport_priority[organism]
-        priority_by_assembly: dict[int, int] = {a: int(cfg[a]["Priority"]) for a in assemblies if a in cfg}
+        self._organism_table = DB.assembly_mysqlport_priority[organism]
+        self._assembly_releases: dict[int, frozenset] | None = None
+        self._primary_line: dict[int, ReleaseSet] | None = None
+        self._primary_assembly: dict[int, int] | None = None
+        self._priority: dict[int, int] | None = None
 
-        missing = [a for a in assemblies if a not in cfg]
-        if missing:
-            self.log.warning(
-                "Graph contains genome assemblies not configured for organism %r: %s. "
-                "Treating them as lowest priority; add them with `idtrack.DB.register_organism` to set an explicit "
-                "order.",
-                organism,
-                sorted(missing),
-            )
-            # Keep configured priorities for known assemblies; treat unknown assemblies as lowest priority so we do
-            # not silently "prefer" an unconfigured assembly.
-            start_rank = (max(priority_by_assembly.values()) if priority_by_assembly else 0) + 1
-            for offset, assembly in enumerate(sorted(missing), start=0):
-                priority_by_assembly[int(assembly)] = start_rank + offset
+    # Nodes
 
-        self._assembly_priority_by_assembly = priority_by_assembly
-        self._assembly_priority = sorted(set(priority_by_assembly.values()), reverse=True)
-
-    def _recursive_synonymous(
-        self,
-        _the_id: str,
-        synonymous_ones: list,
-        synonymous_ones_db: list,
-        filter_node_type: set[str],
-        the_path: list | None = None,
-        the_path_db: list | None = None,
-        depth_max: int = 0,
-        from_release: int | None = None,
-        ensembl_backbone_shallow_search: bool = False,
-        account_for_hyperconnected_nodes: bool = True,
-    ):
-        """Helper method to be used in :py:meth:`_graph.Track.synonymous_nodes`.
-
-        Recursively explore the bio-ID graph to collect **synonymous paths**
-        starting at `_the_id` and ending on a node whose *type* is a member of `filter_node_type`.
-
-        A *path* is a list of node identifiers (`_the_path`) together with a
-        parallel list of their node-type strings (`_the_path_db`).
-        The search is **breadth-limited**: the *depth* of a path is defined as
-        the **maximum count of any single node-type** it contains
-        (e.g. a path with three `external` nodes has depth 3).  Recursion
-        stops when that depth would exceed `depth_max`.
-
-        Additional pruning rules:
-
-        - The walk never visits the same node twice (no cycles).
-        - It never traverses two consecutive edges whose source and target
-            share the **same node-type**—this prevents "time-travel" within the
-            Ensembl history backbone.
-        - When `ensembl_backbone_shallow_search` is *True*, the search is
-            restricted to the **reverse** direction except for node-types listed
-            in :py:attr:`DB.nts_bidirectional_synonymous_search`.
-
-        On reaching a terminating node the method *appends* the discovered
-        paths to `synonymous_ones` and `synonymous_ones_db`. It does not
-        return anything. Results are accumulated in `synonymous_ones` and `synonymous_ones_db`.
+    def has_node(self, n: Any) -> bool:
+        """Tell whether ``n`` is a node name of the graph.
 
         Args:
-            _the_id (str): Identifier of the starting node (Ensembl or
-                external).
-            synonymous_ones (list): Mutable list that will receive
-                each successful identifier path.
-            synonymous_ones_db (list): Mutable list that will receive
-                the corresponding node-type paths.
-            filter_node_type (set[str]): Allowed node-types for the **final**
-                node of a path (e.g. `{'ensembl_gene'}`).
-            the_path (list | None): Current path leading to
-                `_the_id`; *None* for the root invocation.
-            the_path_db (list | None): Node-type counterpart of
-                `the_path`; *None* for the root invocation.
-            depth_max (int): Maximum allowed depth as defined above.
-            from_release (int | None): If given, only keep terminal
-                nodes that are *active* in this Ensembl release.
-            ensembl_backbone_shallow_search (bool): Activate the
-                shallow, mostly-reverse search mode described above.
-            account_for_hyperconnected_nodes (bool): If ``True``, skip nodes
-                that are marked as hyperconnective (very high connectivity) to
-                prevent search explosion and low-quality paths. Defaults to ``True``.
-        """
-
-        def decide_terminate_externals():
-            if input_node_type == DB.nts_external:  # last node nts in the path
-                if len(_the_path) > 1:
-                    edge_key = self.edge_key_orientor(*_the_path[-2:], 0)
-                    the_data = self.graph.get_edge_data(*edge_key)[DB.connection_dict]  # edge_data
-                else:
-                    the_data = self.graph.combined_edges[_the_id]  # last node is _the_id, node_data
-
-                for _ed1 in the_data:  # database
-                    if _ed1 in filter_node_type:
-                        for _ed2 in the_data[_ed1]:  # assembly
-                            if from_release is None or from_release in the_data[_ed1][_ed2]:
-                                return True
-            return False
-
-        def decide_terminate_others():
-            if input_node_type != DB.nts_external:  # last node nts in the path
-                if input_node_type in filter_node_type and (
-                    from_release is None
-                    or TheGraph.is_point_in_range(self.graph.get_active_ranges_of_id[_the_id], from_release)
-                ):
-                    return True
-            return False
-
-        input_node_type = self.graph.nodes[_the_id][DB.node_type_str]
-        _the_path = [_the_id] if the_path is None else the_path
-        _the_path_db = [input_node_type] if the_path_db is None else the_path_db
-
-        if decide_terminate_others() or decide_terminate_externals():
-            synonymous_ones.append(_the_path)
-            synonymous_ones_db.append(_the_path_db)
-
-        if depth_max > max(Counter(_the_path_db).values()):  # The depth is all node_type.
-            for graph in (
-                (self.graph, self.graph.rev)
-                # if ensembl_backbone_shallow_search activated, follow only reverse direction. This should typically
-                # start from the ensembl_gene nodes.
-                # Allow bidirectional search for certain nts when ensembl_backbone_shallow_search activated, this is to
-                # make sure assembl_nodes are bridging correctly.
-                if not ensembl_backbone_shallow_search or input_node_type in DB.nts_bidirectional_synonymous_search
-                else (self.graph.rev,)
-            ):
-                for _next_neighbour in graph.neighbors(_the_id):
-                    if _next_neighbour in _the_path:
-                        # prevent bouncing.
-                        continue
-
-                    if account_for_hyperconnected_nodes and _next_neighbour in self.graph.hyperconnective_nodes:
-                        continue
-
-                    gnt = self.graph.nodes[_next_neighbour][DB.node_type_str]
-
-                    if gnt == input_node_type:
-                        # prevent history travel. Note that only backbone node type (ensembl_gene) actually
-                        # has connection to the same node type. 'combined_edges' in TheGraph class checks that.
-                        continue
-
-                    if len(_the_path) >= 2:
-                        # prevent bouncing between transcript and gene id.versions
-                        # [..., l1, l2, gnt]
-                        if (
-                            # if the addition of new element is a bouncing event (like A-B-A)
-                            _the_path_db[-2] == gnt
-                            # Allow bouncing if it bridges two 'external' nodes.
-                            and gnt != DB.nts_external
-                            # Allow bouncing if it bridges two 'ensembl base' nodes.
-                            and gnt != DB.nts_base_ensembl[DB.backbone_form]  # transcript/translation base depracated.
-                            # Check if 1st and 3rd element are the same 'ID' (could have different 'Versions'.)
-                            and self.graph.nodes[_the_path[-2]]["ID"] == self.graph.nodes[_next_neighbour]["ID"]
-                        ):
-                            continue
-
-                    if from_release is not None:
-                        # assert len(graph[_the_id][_next_neighbour]) == 1
-                        # To use of '0' below, this is verified by TheGraph.is_node_consistency_robust
-
-                        if from_release not in graph.get_edge_data(_the_id, _next_neighbour, 0)["available_releases"]:
-                            # Do not care which assembly or which database.
-                            continue
-
-                    self._recursive_synonymous(
-                        _next_neighbour,
-                        synonymous_ones,
-                        synonymous_ones_db,
-                        filter_node_type,
-                        the_path=_the_path + [_next_neighbour],
-                        the_path_db=_the_path_db + [gnt],
-                        depth_max=depth_max,
-                        from_release=from_release,
-                        ensembl_backbone_shallow_search=ensembl_backbone_shallow_search,
-                        account_for_hyperconnected_nodes=account_for_hyperconnected_nodes,
-                    )
-
-    def synonymous_nodes(
-        self,
-        the_id: str,
-        depth_max: int,
-        filter_node_type: set[str],
-        from_release: int | None = None,
-        ensembl_backbone_shallow_search: bool = False,
-        account_for_hyperconnected_nodes: bool = True,
-    ):
-        """Public wrapper around :py:meth:`_recursive_synonymous`.
-
-        The method returns **all minimal-length synonym paths** emanating from `the_id`.
-
-        The function first runs a *default* depth search determined by
-        `DB.external_search_settings['synonymous_max_depth']`.
-        If no synonym is found and `depth_max` is greater than that default,
-        a second, deeper search is attempted.
-
-        For every distinct *target* node the shortest path is kept; longer
-        paths to the same target are discarded.
-
-        Args:
-            the_id (str): Source identifier.
-            depth_max (int): Maximum search depth to try if the default search fails.
-            filter_node_type (set[str]): Node-types that are acceptable for the
-                *target* node(s).  Must *not* include the generic
-                `'external'` type—specify the concrete external DB instead.
-            from_release (int | None): Constrain targets to those active in this Ensembl release.
-            ensembl_backbone_shallow_search (bool): If *True*,
-                restricts the graph traversal as explained in :py:meth:`_recursive_synonymous`.
-            account_for_hyperconnected_nodes (bool): If ``True``, skip nodes
-                that are marked as hyperconnective (very high connectivity) to
-                prevent search explosion and low-quality paths. Defaults to ``True``.
+            n (Any): Candidate node name.
 
         Returns:
-            list[list[list[str]]]: A list whose elements are `[identifier_path, node_type_path]` pairs,
-                each representing the minimal route to one synonymous node.
-
-        Raises:
-            ValueError: If `filter_node_type` improperly contains the generic
-                external type, or if `depth_max` is incompatible with `ensembl_backbone_shallow_search`.
+            bool: ``True`` for an exact node name.
         """
-        if DB.nts_external in filter_node_type:
-            raise ValueError(f"Define which external database: `{filter_node_type}`.")
+        try:
+            return n in self.graph.nodes
+        except TypeError:
+            return False
 
-        if ensembl_backbone_shallow_search:
-            if depth_max != 2:
-                raise ValueError("Does not allowed.")
+    def node_type(self, n: str) -> str:
+        """Return the node type of ``n``.
 
-        # Use default depth max if there is at least one item in the syn path.
-        synonymous_ones: list = []
-        synonymous_ones_db: list = []
-        self._recursive_synonymous(
-            the_id,
-            synonymous_ones,
-            synonymous_ones_db,
-            filter_node_type,
-            depth_max=DB.external_search_settings["synonymous_max_depth"],
-            from_release=from_release,
-            ensembl_backbone_shallow_search=ensembl_backbone_shallow_search,
-            account_for_hyperconnected_nodes=account_for_hyperconnected_nodes,
+        Args:
+            n (str): Node name.
+
+        Returns:
+            str: For example ``ensembl_gene``, ``base_ensembl_gene``, ``ensembl_transcript`` or ``external``.
+        """
+        return self.graph.node_type(n)
+
+    def base_id(self, n: str) -> str:
+        """Return the stable id of an Ensembl node without its version.
+
+        Args:
+            n (str): Name of an Ensembl node.
+
+        Returns:
+            str: The stable id.
+        """
+        return self.graph.base_id(n)
+
+    def version(self, n: str) -> str:
+        """Return the version of an Ensembl node.
+
+        Args:
+            n (str): Name of an Ensembl node.
+
+        Returns:
+            str: The version, or ``Void`` / ``Retired`` for the two artificial nodes of a gene id.
+        """
+        return str(self.graph.version(n))
+
+    def is_backbone(self, n: str) -> bool:
+        """Tell whether ``n`` is a gene node of the history backbone.
+
+        Args:
+            n (str): Node name.
+
+        Returns:
+            bool: ``True`` for ``id.version`` gene nodes and for their ``Void`` and ``Retired`` nodes.
+        """
+        return self.graph.node_type(n) == self.backbone_type
+
+    def is_real_gene(self, n: str) -> bool:
+        """Tell whether ``n`` is a gene id with a version (not ``Void`` or ``Retired``).
+
+        Args:
+            n (str): Name of a backbone node.
+
+        Returns:
+            bool: ``True`` for a gene that exists in some release.
+        """
+        return self.version(n) not in DB.alternative_versions
+
+    def is_hyperconnective(self, n: str) -> bool:
+        """Tell whether the external id ``n`` is shared by so many genes at once that it identifies none of them.
+
+        Args:
+            n (str): Name of an external node.
+
+        Returns:
+            bool: ``True`` when the graph counts the node as hyper-connective
+            (:py:attr:`idtrack.TheGraph.hyperconnective_nodes`).
+        """
+        return n in self.graph.hyperconnective_nodes
+
+    def resolve_name(
+        self, identifier: str, release: int | None = None, database: str | None = None, target: int | None = None
+    ) -> tuple[str | None, str | None]:
+        """Find the node an identifier written by a user stands for at a release.
+
+        Args:
+            identifier (str): The identifier as given.
+            release (int | None): The release the identifier is read at; ``None``: the last release of the graph.
+            database (str | None): The external database the identifier is meant as; ``None``: any.
+            target (int | None): The release the conversion goes to (it matters without ``release`` only).
+
+        Returns:
+            tuple[str | None, str | None]: The node name and how the graph matched it (``exact``, ``case``,
+            ``separator``, ``version``, each also as ``synonym:<how>``), or ``(None, None)`` when nothing matches.
+        """
+        return self.graph.resolve_name(identifier, release, database, target)
+
+    # Edges
+
+    def history_edges(self, n: str, reverse: bool) -> list[tuple]:
+        """Return the history edges of a backbone node in the order in which the search visits them.
+
+        Args:
+            n (str): Name of a backbone node.
+            reverse (bool): ``False`` for the edges that leave ``n``, ``True`` for those that enter it.
+
+        Returns:
+            list[tuple]: ``(other node, old_release, new_release, weight, key)`` per edge, sorted by the release of
+            the event (``old_release`` for leaving, ``new_release`` for entering edges), the other node and the key.
+        """
+        position = 2 if reverse else 1
+        return sorted(
+            (tuple(edge) for edge in self.graph.history_edges(n, reverse=reverse)),
+            key=lambda e: (e[position], e[0], e[4]),
         )
 
-        # Otherwise use supplemented depth_max, which is generally 1, 2 higher than default.
-        if len(synonymous_ones) == 0 and depth_max != DB.external_search_settings["synonymous_max_depth"]:
-            self._recursive_synonymous(
-                the_id,
-                synonymous_ones,
-                synonymous_ones_db,
-                filter_node_type,
-                depth_max=depth_max,
-                from_release=from_release,
-                ensembl_backbone_shallow_search=ensembl_backbone_shallow_search,
-                account_for_hyperconnected_nodes=account_for_hyperconnected_nodes,
-            )
+    def xref_edges(self, n: str, reverse: bool) -> list[tuple]:
+        """Return the cross-reference edges of a node, ordered by the node at the other end.
 
-        remove_set: set = set()
-        the_ends_min: dict = dict()
-
-        # Below is to choose the minimum path to the same target
-        for p in synonymous_ones:
-            e = p[-1]  # get the the target of each path
-            lp = len(p)
-            am = the_ends_min.get(e, None)
-            if am is None or am > lp:
-                the_ends_min[e] = lp
-            # Create a dictionary of lengths to process in the next step
-
-        for ind in range(len(synonymous_ones)):
-            # Determine which elements will be deleted
-            e = synonymous_ones[ind][-1]
-            am = the_ends_min[e]
-            lp = len(synonymous_ones[ind])
-            if lp > am:
-                remove_set.add(ind)
-
-        return [  # Remove and return the result. Zip two list together while returning.
-            [synonymous_ones[ind], synonymous_ones_db[ind]]
-            for ind in range(len(synonymous_ones))
-            if ind not in remove_set
-        ]
-
-    @staticmethod
-    def get_from_release_and_reverse_vars(lor: list, p: int, mode: str):
-        """Derive a list of `(release, reverse)` tuples.
-
-        Derive a list of `(release, reverse)` tuples that indicate *which*
-        Ensembl release to start the graph walk from and *whether* that walk
-        should move **backwards in time**.
-
-        Given a collection of active-range intervals `lor` and a pivot
-        release `p`, the algorithm selects one or two release points per
-        interval depending on `mode`:
-
-        * 'closest' - choose the release **nearest** to `p` within or at
-            the ends of the interval.
-        * 'distant' - choose the release **farthest** from `p` within the
-            interval.
-
-        The boolean in each tuple is *True* when the walk should start **after**
-        the selected release and move backwards (i.e. "reverse mode"), and
-        *False* when it should move forwards.
+        These are all edges that are not history: external id to Ensembl id, base gene id to gene, transcript to
+        gene, translation to transcript. They point towards the backbone.
 
         Args:
-            lor (list): List of inclusive
-                `(first_release, last_release)` intervals in ascending order.
-            p (int): Pivot release around which "closest" or "distant" is
-                evaluated.
-            mode (str): Either `'closest'` or `'distant'`.
+            n (str): Node name.
+            reverse (bool): ``False`` for the edges that leave ``n`` (towards the backbone), ``True`` for those that
+                enter it.
 
         Returns:
-            list[tuple[int, bool]]: Release / reverse-flag pairs, ordered in
-            the sequence they should be tried by the path-finder.
+            list[tuple]: ``(other node, items)`` sorted by the other node; ``items`` is the tuple of
+            ``(database, assembly, releases)`` of the edge's :py:class:`idtrack._the_graph.Connection`.
+        """
+        return sorted(
+            ((other, connection.items) for other, connection in self.graph.xref_edges(n, reverse=reverse)),
+            key=lambda e: e[0],
+        )
+
+    def active_ranges(self, n: str) -> list[list]:
+        """Return the release ranges in which a backbone node exists.
+
+        Args:
+            n (str): Name of a backbone node.
+
+        Returns:
+            list[list]: Inclusive ``[first, last]`` ranges in ascending order; ``last`` is ``inf`` for a gene that is
+            alive at the last release of the graph.
+        """
+        return self.graph.active_ranges(n)
+
+    def trios(self, n: str) -> frozenset:
+        """Return every ``(database, assembly, release)`` in which a node occurs.
+
+        Args:
+            n (str): Node name.
+
+        Returns:
+            frozenset: The triples of the node, computed by the graph from the node's own edges.
+        """
+        return self.graph.trios(n)
+
+    # Assemblies and the primary line of releases
+
+    @property
+    def priority(self) -> dict[int, int]:
+        """Priority rank per assembly of the graph (1 is the primary assembly of the organism).
+
+        Returns:
+            dict[int, int]: Assembly key to rank; assemblies missing from the organism table rank last.
+        """
+        if self._priority is None:
+            assemblies = sorted(self.assembly_releases)
+            priority = {a: int(self._organism_table[a]["Priority"]) for a in assemblies if a in self._organism_table}
+            missing = [a for a in assemblies if a not in self._organism_table]
+            if missing:
+                self.log.warning(
+                    "Graph contains genome assemblies not configured for organism %r: %s. "
+                    "Treating them as lowest priority; add them with `idtrack.DB.register_organism` to set an "
+                    "explicit order.",
+                    self.graph.graph.get("organism"),
+                    missing,
+                )
+                start_rank = (max(priority.values()) if priority else 0) + 1
+                for offset, assembly in enumerate(missing):
+                    priority[assembly] = start_rank + offset
+            self._priority = priority
+        return self._priority
+
+    @property
+    def assembly_releases(self) -> dict[int, frozenset]:
+        """Releases that each assembly has in the graph.
+
+        Returns:
+            dict[int, frozenset]: Assembly key to the releases at which the graph holds data of that assembly.
+        """
+        if self._assembly_releases is None:
+            self._assembly_releases = {
+                int(assembly): frozenset(releases) & self.release_set
+                for assembly, releases in self.graph.assembly_releases.items()
+            }
+        return self._assembly_releases
+
+    @property
+    def primary_assembly(self) -> dict[int, int]:
+        """The assembly that Ensembl served as primary at each release of the graph.
+
+        Returns:
+            dict[int, int]: Release to the assembly that serves it in the backbone of the graph
+            (:py:attr:`idtrack.TheGraph.backbone_assembly`): the highest-priority assembly of the organism
+            that has the release.
+        """
+        if self._primary_assembly is None:
+            backbone = self.graph.backbone_assembly
+            self._primary_assembly = {r: int(backbone[r]) for r in self.releases if r in backbone}
+        return self._primary_assembly
+
+    @property
+    def primary_line(self) -> dict[int, ReleaseSet]:
+        """The releases at which each assembly is the primary one.
+
+        Returns:
+            dict[int, ReleaseSet]: Assembly key to its releases on the primary line: the graph's own statement of
+            which assembly serves which release (:py:attr:`idtrack._the_graph.TheGraph.serving_line`), within the
+            releases of the graph.
+        """
+        if self._primary_line is None:
+            within = ReleaseSet.of(self.releases).mask
+            self._primary_line = {
+                int(assembly): ReleaseSet.from_mask(releases.mask & within)
+                for assembly, releases in self.graph.serving_line.items()
+            }
+        return self._primary_line
+
+    def primary_releases(self, items: tuple, exclude_databases: frozenset = frozenset()) -> frozenset:
+        """Return the releases at which an edge holds on the primary line.
+
+        Args:
+            items (tuple): ``(database, assembly, releases)`` of one cross-reference edge.
+            exclude_databases (frozenset): Databases whose release sets do not count.
+
+        Returns:
+            frozenset: Releases ``r`` listed by the edge for the assembly that is primary at ``r``
+            (:py:func:`idtrack._the_graph.served_mask`, the graph's one rule for where a link counts).
+        """
+        return ReleaseSet.from_mask(served_mask(items, self.primary_line, exclude=exclude_databases))
+
+    def holds(self, items: tuple, release: int, database: str | None = None, any_assembly: bool = False) -> bool:
+        """Tell whether an edge holds at a release on the primary line.
+
+        Args:
+            items (tuple): ``(database, assembly, releases)`` of one cross-reference edge.
+            release (int): The release asked about.
+            database (str | None): If given, only this database's release sets count.
+            any_assembly (bool): If ``True``, the release may be listed for any assembly (for an identifier that
+                no assembly has at a release it serves).
+
+        Returns:
+            bool: ``True`` when the edge lists the release for the assembly that is primary at that release.
+        """
+        if any_assembly:
+            return any(
+                (database is None or item_database == database) and release in releases
+                for item_database, _, releases in items
+            )
+        return bool(served_mask(items, self.primary_line, database) >> release & 1)
+
+
+class _Search:
+    """Scratch memory of one conversion: facts of the nodes it touches, its budget, and its counters."""
+
+    def __init__(self, reader: _GraphReader, identifier: str, budget_states: int, budget_seconds: float):
+        """Start the clock of a conversion.
+
+        Args:
+            reader (_GraphReader): The reader of the graph.
+            identifier (str): The query node (for error messages).
+            budget_states (int): Maximum number of search states the conversion may expand.
+            budget_seconds (float): Maximum number of seconds the conversion may take.
+        """
+        self.reader = reader
+        self.identifier = identifier
+        self.budget_states = budget_states
+        self.budget_seconds = budget_seconds
+        self.started = time.monotonic()
+        self.states = 0
+        self._history: dict[tuple, list] = {}
+        self._xrefs: dict[tuple, list] = {}
+        self._ranges: dict[str, list] = {}
+        self._chains: dict[str, list] = {}
+
+    def spend(self, amount: int = 1) -> None:
+        """Count work against the budget of the conversion.
+
+        Args:
+            amount (int): Number of units of work (expanded states or bridge candidates).
 
         Raises:
-            ValueError: If an interval in `lor` is malformed, `mode` is
-                not recognised, or internal consistency checks fail.
+            SearchBudgetExceededError: If the conversion is over its budget of states or seconds.
         """
-        result = list()
-        # Note that there is no need to consider assembly here because always this function is used in the context of
-        # graph backbone nodes (ensembl gene), and the backbone is always the latest (currently 38).
-        for l1, l2 in lor:
-            if l1 > l2:
-                raise ValueError("l1 > l2")
+        self.states += amount
+        if self.states > self.budget_states or (
+            self.states % 256 < amount and time.monotonic() - self.started > self.budget_seconds
+        ):
+            raise SearchBudgetExceededError(
+                self.identifier,
+                self.states,
+                time.monotonic() - self.started,
+                self.budget_states,
+                self.budget_seconds,
+            )
 
-            elif mode == "closest" and p == l1:
-                result.append((l1, False))
+    def history(self, n: str, reverse: bool) -> list:
+        """History edges of a node, read once per conversion.
 
-            elif mode == "closest" and p < l1:
-                result.append((l1, True))
+        Args:
+            n (str): Name of a backbone node.
+            reverse (bool): Direction, as in :py:meth:`_GraphReader.history_edges`.
 
-            elif mode == "closest" and l2 <= p:
-                result.append((l2, False))
+        Returns:
+            list: The edges in the reader's order.
+        """
+        key = (n, reverse)
+        if key not in self._history:
+            self._history[key] = self.reader.history_edges(n, reverse)
+        return self._history[key]
 
-            elif mode == "closest" and l1 < p < l2:
-                result.append((l1, True))
-                result.append((l2, False))
+    def xrefs(self, n: str, reverse: bool) -> list:
+        """Cross-reference edges of a node, read once per conversion.
 
-            elif mode == "distant" and p <= l1:
-                result.append((l2, True))
+        Args:
+            n (str): Node name.
+            reverse (bool): Direction, as in :py:meth:`_GraphReader.xref_edges`.
 
-            elif mode == "distant" and l2 <= p:
-                result.append((l1, False))
+        Returns:
+            list: The edges in the reader's order.
+        """
+        key = (n, reverse)
+        if key not in self._xrefs:
+            self._xrefs[key] = self.reader.xref_edges(n, reverse)
+        return self._xrefs[key]
 
-            elif mode == "distant" and l1 < p < l2:
-                result.append((l2, True))
-                result.append((l1, False))
+    def ranges(self, n: str) -> list:
+        """Active ranges of a backbone node, read once per conversion.
 
+        Args:
+            n (str): Name of a backbone node.
+
+        Returns:
+            list: Inclusive ``[first, last]`` ranges.
+        """
+        if n not in self._ranges:
+            self._ranges[n] = self.reader.active_ranges(n)
+        return self._ranges[n]
+
+    def range_at(self, n: str, release: int) -> tuple | None:
+        """Return the active range of a backbone node that contains a release.
+
+        Args:
+            n (str): Name of a backbone node.
+            release (int): The release asked about.
+
+        Returns:
+            tuple | None: ``(first, last)`` or ``None`` when the node does not exist at that release.
+        """
+        for a, b in self.ranges(n):
+            if a <= release <= b:
+                return a, b
+        return None
+
+
+class Track:
+    """Convert a gene identifier of one Ensembl release into its counterpart at another release.
+
+    ``Track`` holds the graph (:py:class:`idtrack.TheGraph`) and answers one question: given an identifier
+    (an Ensembl gene id with or without version, a transcript or translation id, or an id of an external database
+    such as a gene symbol), optionally the release it comes from, a target release and optionally a target database,
+    which genes correspond to it at the target release, and which ids of the target database those genes carry.
+
+    How a conversion works (:py:meth:`convert`):
+
+    1. **Starting release.** With ``from_release`` the identifier is read at that release and must be active there.
+       Without it the identifier is read at the target release if it is active there, and at the latest release at
+       which it is active otherwise. The rule is the same for every kind of identifier.
+    2. **Entry.** An identifier that is not a versioned gene id is replaced by the genes it stands for at the
+       starting release: a gene id without version by its version of that release, any other id by the genes that
+       Ensembl's cross-references of that release attach it to.
+    3. **History.** From those genes the search follows Ensembl's stable-id history (version changes, merges,
+       splits, retirements) forward or backward in time until the target release. It is a best-first search over
+       states ``(gene, release)``: every state is expanded once, so the work is bounded by the size of the part of
+       the history that the query can reach, and every call has a budget.
+    4. **Bridges.** Only when the history leads to no gene at the target release, the search may pass from a gene to
+       another gene that carried the same external id (or the same transcript) at the same time or later (the gap in
+       releases is reported), at most ``DB.external_search_settings["jump_limit"]`` times, and it uses as few
+       bridges as possible.
+    5. **Copies beside the reference sequence.** Genes on alternative loci and assembly patches, and LRG records,
+       leave the answer when a gene of the reference sequence was reached too; they are reported apart.
+    6. **Final conversion.** Each gene found is reported as itself or converted to the ids of ``final_database``
+       that are attached to it at the target release.
+    7. **Order.** The result is ordered, best first; ``prioritize_to_one_filter`` keeps only the best, which is
+       several genes when the identifier stands for several genes equally (a tie).
+
+    Throughout, an edge of the graph counts at a release only on the assembly that was Ensembl's primary assembly
+    at that release (the *primary line* of releases): an earlier assembly that Ensembl keeps serving beside a newer
+    one (GRCh37 beside GRCh38) is not part of a conversion.
+
+    Results never depend on the order of sets or on the hash seed of the process.
+
+    Attributes:
+        graph (TheGraph): The graph that is queried.
+        search_budget_states (int): Largest number of search states one conversion may expand before
+            :py:class:`SearchBudgetExceededError` is raised.
+        search_budget_seconds (float): Longest time one conversion may take before the same error is raised.
+        non_bridging_databases (frozenset[str]): External databases whose ids are names of a clone or region rather
+            than of a gene; they are never used as a bridge between two genes.
+    """
+
+    search_budget_states: int = 200_000
+    search_budget_seconds: float = 30.0
+    non_bridging_databases: frozenset = frozenset(
+        {
+            "Clone_based_ensembl_gene",
+            "Clone_based_vega_gene",
+            "Clone_based_ensembl_transcript",
+            "Clone_based_vega_transcript",
+        }
+    )
+
+    def __init__(self, db_manager: "DatabaseManager", **kwargs):
+        """Create a ``Track`` and load (or build) its graph.
+
+        Args:
+            db_manager (DatabaseManager): The manager of the organism's tables; it is handed to
+                :py:class:`idtrack.GraphMaker`.
+            kwargs: Keyword arguments for :py:meth:`idtrack.GraphMaker.get_graph`: ``narrow``,
+                ``create_even_if_exist``, ``save_after_calculation``, ``form_list`` and ``narrow_external``.
+        """
+        from idtrack._graph_maker import GraphMaker  # needed only to load or build; conversions do not use it
+
+        self.log = logging.getLogger(__name__)
+        # ``None`` for a ``Track`` made by :py:meth:`from_graph`.
+        self.db_manager: DatabaseManager | None = db_manager
+        self.graph = GraphMaker(db_manager).get_graph(**kwargs)
+
+    @classmethod
+    def from_graph(cls, graph: "TheGraph") -> "Track":
+        """Create a ``Track`` on a graph that is already in memory, without a database manager.
+
+        Args:
+            graph (TheGraph): A graph built by :py:class:`idtrack.GraphMaker` (or loaded from a file).
+
+        Returns:
+            Track: A resolver that answers from that graph; no network and no tables are needed.
+        """
+        track = cls.__new__(cls)
+        track.log = logging.getLogger(__name__)
+        track.db_manager = None
+        track.graph = graph
+        return track
+
+    @property
+    def _reader(self) -> _GraphReader:
+        """The reader of the graph, created at first use.
+
+        Returns:
+            _GraphReader: The reader bound to :py:attr:`graph`.
+        """
+        reader = self.__dict__.get("_reader_cache")
+        if reader is None or reader.graph is not self.graph:
+            reader = _GraphReader(self.graph)
+            self.__dict__["_reader_cache"] = reader
+        return reader
+
+    # Arguments
+
+    def _check_release(self, release: Any, name: str) -> int:
+        """Turn a release argument into a plain ``int`` and make sure the graph has that release.
+
+        Args:
+            release (Any): The value given by the caller (``int`` or an integer type such as ``numpy.int64``).
+            name (str): The parameter's name, for the error message.
+
+        Returns:
+            int: The release as ``int``.
+
+        Raises:
+            TypeError: If the value is not an integer (``bool``, ``float`` and ``str`` are rejected).
+            ValueError: If the graph does not contain that release.
+        """
+        if isinstance(release, bool):
+            raise TypeError(f"`{name}` must be an integer Ensembl release, not {release!r}.")
+        try:
+            value = operator.index(release)
+        except TypeError:
+            raise TypeError(
+                f"`{name}` must be an integer Ensembl release, not {release!r} of type {type(release).__name__}."
+            ) from None
+        reader = self._reader
+        if value not in reader.release_set:
+            raise ValueError(
+                f"`{name}`={value} is not a release of this graph, which covers the Ensembl releases "
+                f"{reader.first_release} to {reader.last_release}."
+            )
+        return value
+
+    def final_databases(self, to_release: int | None = None) -> list[str]:
+        """Return the databases a conversion to a release can end in.
+
+        These are the external databases of the genome assembly that is primary at the release, and the two forms
+        of gene ids (``ensembl_gene`` with version, ``base_ensembl_gene`` without).
+
+        Args:
+            to_release (int | None): The target release. ``None``: the last release of the graph.
+
+        Returns:
+            list[str]: The accepted values of ``final_database`` of :py:meth:`convert`, sorted.
+
+        Raises:
+            TypeError: If the release is not an integer.
+            ValueError: If the graph does not contain that release.
+        """
+        reader = self._reader
+        target = reader.last_release if to_release is None else self._check_release(to_release, "to_release")
+        allowed = set(self.graph.available_external_databases_assembly.get(reader.primary_assembly[target], set()))
+        allowed.update({DB.nts_ensembl[DB.backbone_form], DB.nts_base_ensembl[DB.backbone_form]})
+        return sorted(allowed)
+
+    def _check_final_database(self, final_database: str | None, to_release: int) -> str | None:
+        """Make sure the target database exists on the assembly of the target release.
+
+        Args:
+            final_database (str | None): The database asked for, or ``None``.
+            to_release (int): The target release.
+
+        Returns:
+            str | None: ``None`` when the gene itself is the target, else the database name.
+
+        Raises:
+            ValueError: If the database is not one of :py:meth:`final_databases` of the target release.
+        """
+        if final_database is None or final_database == DB.nts_ensembl[DB.backbone_form]:
+            return None
+        allowed = self.final_databases(to_release)
+        if final_database not in allowed:
+            raise ValueError(
+                f"`final_database`={final_database!r} is not a database of this graph at Ensembl release "
+                f"{to_release} (genome assembly {self._reader.primary_assembly[to_release]}). Available: {allowed}."
+            )
+        return final_database
+
+    # Starting release and entry onto the backbone
+
+    def _active_releases(self, search: _Search, node: str, database: str | None = None) -> tuple[frozenset, bool]:
+        """Return the releases at which a node is active.
+
+        A versioned gene is active in its history ranges, a gene id without version where one of its own versions is,
+        any other node where one of its edges towards the backbone holds on the primary line. A node that never is
+        on the primary line (an id of an archive assembly only) is active wherever any of its edges holds.
+
+        Args:
+            search (_Search): Scratch memory of the conversion.
+            node (str): The node.
+            database (str | None): For an external id, the database it is meant as: only edges of that database
+                count.
+
+        Returns:
+            tuple[frozenset, bool]: The releases, and ``True`` when they had to be taken from all assemblies.
+        """
+        reader = self._reader
+        node_type = reader.node_type(node)
+
+        def of_gene(gene: str) -> set:
+            return {
+                r for a, b in search.ranges(gene) for r in range(int(a), int(min(b, reader.last_release)) + 1)
+            } & reader.release_set
+
+        if node_type == reader.backbone_type:
+            return frozenset(of_gene(node)), False
+
+        edges = search.xrefs(node, False)
+        if database is not None:
+            edges = [
+                (other, tuple(item for item in items if item[0] == database))
+                for other, items in edges
+                if any(item[0] == database for item in items)
+            ]
+        if node_type == reader.base_type:
+            releases: set = set()
+            for version, _ in edges:
+                if reader.is_backbone(version) and reader.is_real_gene(version):
+                    releases |= of_gene(version)
+            if releases:
+                return frozenset(releases), False
+
+        releases = set()
+        for _, items in edges:
+            releases |= reader.primary_releases(items)
+        if releases:
+            return frozenset(releases), False
+        for _, items in edges:
+            for _, _, edge_releases in items:
+                releases.update(edge_releases)
+        return frozenset(releases) & reader.release_set, True
+
+    def _entries(
+        self, search: _Search, node: str, release: int, any_assembly: bool, database: str | None = None
+    ) -> tuple[list[tuple], dict[str, set]]:
+        """Return the genes a node stands for at a release, each with the chain of edges that leads to it.
+
+        An identifier stands for a gene when a database attaches it, at the release, to the gene itself or to a
+        transcript or translation of the gene. Every such attachment is followed, and the databases of all of them
+        are reported per gene: one database may attach the identifier to the gene and another to its translation.
+
+        Args:
+            search (_Search): Scratch memory of the conversion.
+            node (str): The query node.
+            release (int): The starting release.
+            any_assembly (bool): ``True`` for a node that exists in an archive assembly only.
+            database (str | None): For an external id, the database it is meant as: only the genes that this
+                database attaches the identifier to are entered.
+
+        Returns:
+            tuple[list[tuple], dict[str, set]]: ``(gene, steps)`` sorted by gene, where ``steps`` is the shortest
+            chain of ``(source, target, 0, release)`` to the gene (empty when the node is itself a gene); and, per
+            gene entered, every database that attaches the node to it at the release, whether the gene was entered
+            through that database or not (empty for a gene id with version; for another Ensembl id the Ensembl
+            relation that attaches it to the gene: ``base_ensembl_gene``, ``ensembl_transcript``, ...).
+        """
+        reader = self._reader
+        if reader.is_backbone(node):
+            return [(node, ())], {}
+
+        found: dict[str, tuple] = {}
+        attached: dict[str, set] = {}
+
+        def keep(gene: str, steps: tuple) -> None:
+            if gene not in found or (len(steps), steps) < (len(found[gene]), found[gene]):
+                found[gene] = steps
+
+        if reader.node_type(node) == reader.base_type:
+            # a gene id without version stands for its version of the release; it is read through its own relation
+            for version, items in search.xrefs(node, False):
+                if reader.is_backbone(version) and reader.is_real_gene(version):
+                    if search.range_at(version, release) is not None:
+                        keep(version, ((node, version, 0, release),))
+                        attached[version] = {
+                            item_database
+                            for item_database, _, _ in items
+                            if reader.holds(items, release, database=item_database, any_assembly=any_assembly)
+                        }
+            if found:
+                return sorted(found.items()), attached
+
+        def walk(current: str, steps: tuple, depth: int, databases: frozenset, entered: bool) -> None:
+            for other, items in search.xrefs(current, False):
+                if not reader.holds(items, release, any_assembly=any_assembly):
+                    continue
+                if depth == 1:
+                    # the databases of the first edge that hold at the release: they attach the identifier
+                    databases = frozenset(
+                        item_database
+                        for item_database, _, _ in items
+                        if reader.holds(items, release, database=item_database, any_assembly=any_assembly)
+                    )
+                    entered = database is None or database in databases
+                step = steps + ((current, other, 0, release),)
+                if reader.is_backbone(other):
+                    if reader.is_real_gene(other) and search.range_at(other, release) is not None:
+                        attached.setdefault(other, set()).update(databases)
+                        if entered:
+                            keep(other, step)
+                elif depth < 3 and reader.node_type(other) != DB.nts_external:
+                    walk(other, step, depth + 1, databases, entered)
+
+        walk(node, (), 1, frozenset(), False)
+        return sorted(found.items()), {gene: attached[gene] for gene in found}
+
+    def _start(
+        self, search: _Search, node: str, from_release: int | None, to_release: int, database: str | None = None
+    ) -> tuple[int, list, dict[str, set], bool]:
+        """Decide the release a query is read at and the genes it stands for there.
+
+        Args:
+            search (_Search): Scratch memory of the conversion.
+            node (str): The query node.
+            from_release (int | None): The release given by the caller, or ``None``.
+            to_release (int): The target release.
+            database (str | None): For an external id, the database it is meant as.
+
+        Returns:
+            tuple[int, list, dict[str, set], bool]: The starting release, the entries of :py:meth:`_entries` and
+            the databases that attach the node to each of them, and ``True`` when the node exists in an archive
+            assembly only.
+
+        Raises:
+            InactiveAtReleaseError: If ``from_release`` is given and the node is not active at it.
+        """
+        active, any_assembly = self._active_releases(search, node, database)
+        start = self._starting_release(node, active, from_release, to_release)
+        if start is None:
+            return to_release, [], {}, any_assembly
+        entries, attached = self._entries(search, node, start, any_assembly, database)
+        return start, entries, attached, any_assembly
+
+    @staticmethod
+    def _starting_release(identifier: str, active: frozenset, from_release: int | None, to_release: int) -> int | None:
+        """Apply the one rule for the release an identifier is read at.
+
+        Args:
+            identifier (str): The query, for the error message.
+            active (frozenset): The releases at which the identifier is active.
+            from_release (int | None): The release given by the caller, or ``None``.
+            to_release (int): The target release.
+
+        Returns:
+            int | None: ``from_release`` when given; else the target release if the identifier is active there, else
+            its latest active release; ``None`` for an identifier that is never active.
+
+        Raises:
+            InactiveAtReleaseError: If ``from_release`` is given and the identifier is not active at it.
+        """
+        if from_release is not None:
+            if from_release not in active:
+                raise InactiveAtReleaseError(identifier, from_release, _to_ranges(active))
+            return from_release
+        if not active:
+            return None
+        return to_release if to_release in active else int(max(active))
+
+    def _version_at_start(
+        self, search: _Search, stable_id: str, versions: tuple, from_release: int | None, to_release: int
+    ) -> tuple[str, int] | None:
+        """Choose the version that an Ensembl id without version stands for, and the release it is read at.
+
+        Transcript and translation ids have no node without version (gene ids have the base gene id). Such an id is
+        active where one of its versions is, its starting release follows the rule of every identifier, and it
+        stands for its version of that release (the highest one, should a parallel assembly hold another version at
+        the same release).
+
+        Args:
+            search (_Search): Scratch memory of the conversion.
+            stable_id (str): The id as given, without version.
+            versions (tuple): Its ``<id>.<version>`` nodes by ascending version.
+            from_release (int | None): The release given by the caller, or ``None``.
+            to_release (int): The target release.
+
+        Returns:
+            tuple[str, int] | None: The version node and the starting release; ``None`` when no version is ever
+            active.
+        """
+        active = {version: self._active_releases(search, version)[0] for version in versions}
+        start = self._starting_release(stable_id, frozenset().union(*active.values()), from_release, to_release)
+        if start is None:
+            return None
+        return [version for version in versions if start in active[version]][-1], start
+
+    # The search
+
+    def _bridges(self, search: _Search, gene: str) -> list[tuple]:
+        """Return the chains of cross-reference edges that link a gene to other genes.
+
+        A chain has one external id or one shared transcript in the middle. For each chain the releases at which
+        its two sides hold on the primary line are returned, so that the caller can place the bridge in time.
+
+        Args:
+            search (_Search): Scratch memory of the conversion; the result is kept there per gene.
+            gene (str): The gene the walk stands on.
+
+        Returns:
+            list[tuple]: ``(other gene, releases of the near side, releases of the far side at which the other gene
+            is active, near-side edges, far-side edges)`` in a fixed order. Edges are ``(source, target)`` pairs in
+            the direction of the walk.
+        """
+        if gene in search._chains:
+            return search._chains[gene]
+        reader = self._reader
+        skip = self.non_bridging_databases
+        chains: list[tuple] = []
+
+        def far_releases(other: str, releases: frozenset) -> tuple:
+            return tuple(r for r in sorted(releases) if search.range_at(other, r) is not None)
+
+        def add(other: str, near: frozenset, far: frozenset, near_edges: tuple, far_edges: tuple) -> None:
+            if other == gene or not near or not far or not reader.is_real_gene(other):
+                return
+            far_active = far_releases(other, far)
+            if far_active:
+                chains.append((other, tuple(sorted(near)), far_active, near_edges, far_edges))
+
+        def through_external(external: str, near: frozenset, near_edges: tuple, direct_only: bool) -> None:
+            if not near or reader.is_hyperconnective(external):
+                return
+            search.spend()
+            for other, items in search.xrefs(external, False):
+                far = reader.primary_releases(items, skip)
+                if not far:
+                    continue
+                if reader.is_backbone(other):
+                    add(other, near, far, near_edges, ((external, other),))
+                elif not direct_only:
+                    for upper, upper_items in search.xrefs(other, False):
+                        far_2 = far & reader.primary_releases(upper_items)
+                        if not far_2:
+                            continue
+                        if reader.is_backbone(upper):
+                            add(upper, near, far_2, near_edges, ((external, other), (other, upper)))
+                        else:
+                            for top, top_items in search.xrefs(upper, False):
+                                far_3 = far_2 & reader.primary_releases(top_items)
+                                if far_3 and reader.is_backbone(top):
+                                    add(top, near, far_3, near_edges, ((external, other), (other, upper), (upper, top)))
+
+        for first, items in search.xrefs(gene, True):
+            first_type = reader.node_type(first)
+            if first_type == DB.nts_external:
+                through_external(first, reader.primary_releases(items, skip), ((gene, first),), False)
+            elif first_type != reader.base_type:  # a transcript of the gene
+                near_1 = reader.primary_releases(items)
+                if not near_1:
+                    continue
+                for other, other_items in search.xrefs(first, False):  # a transcript shared with another gene
+                    if reader.is_backbone(other) and reader.base_id(other) != reader.base_id(gene):
+                        add(other, near_1, reader.primary_releases(other_items), ((gene, first),), ((first, other),))
+                for second, second_items in search.xrefs(first, True):
+                    second_type = reader.node_type(second)
+                    if second_type == DB.nts_external:
+                        near_2 = near_1 & reader.primary_releases(second_items, skip)
+                        through_external(second, near_2, ((gene, first), (first, second)), True)
+                    else:  # a translation of the transcript
+                        near_2 = near_1 & reader.primary_releases(second_items)
+                        if not near_2:
+                            continue
+                        for third, third_items in search.xrefs(second, True):
+                            if reader.node_type(third) == DB.nts_external:
+                                near_3 = near_2 & reader.primary_releases(third_items, skip)
+                                through_external(third, near_3, ((gene, first), (first, second), (second, third)), True)
+        chains.sort()
+        search._chains[gene] = chains
+        return chains
+
+    @staticmethod
+    def _place_bridge(near: tuple, far: tuple, low: int, high: int, target: int, reverse: bool) -> tuple | None:
+        """Place a bridge in time.
+
+        Forward, the walk leaves the gene at a release ``x`` of the near side within ``[low, high]`` and enters the
+        other gene at a release ``y`` of the far side with ``x <= y <= target``. The pair with the smallest gap is
+        chosen, and among those the latest ``x``. Reverse is the mirror image.
+
+        Args:
+            near (tuple): Sorted releases at which the near side of the chain holds.
+            far (tuple): Sorted releases at which the far side holds and the other gene is active.
+            low (int): First release of the window in which the walk stands on the gene.
+            high (int): Last release of that window.
+            target (int): The target release.
+            reverse (bool): Direction of the walk.
+
+        Returns:
+            tuple | None: ``(x, y)`` or ``None`` when the bridge cannot be placed.
+        """
+        best: tuple | None = None
+        if not reverse:
+            for i in range(bisect.bisect_right(near, high) - 1, -1, -1):
+                x = near[i]
+                if x < low:
+                    break
+                j = bisect.bisect_left(far, x)
+                if j < len(far) and far[j] <= target:
+                    gap = far[j] - x
+                    if best is None or gap < best[0]:
+                        best = (gap, x, far[j])
+                        if gap == 0:
+                            break
+        else:
+            for i in range(bisect.bisect_left(near, low), len(near)):
+                x = near[i]
+                if x > high:
+                    break
+                j = bisect.bisect_right(far, x) - 1
+                if j >= 0 and far[j] >= target:
+                    gap = x - far[j]
+                    if best is None or gap < best[0]:
+                        best = (gap, x, far[j])
+                        if gap == 0:
+                            break
+        return None if best is None else (int(best[1]), int(best[2]))
+
+    def _search_paths(
+        self, search: _Search, entries: list, start: int, to_release: int, go_external: bool
+    ) -> dict[str, dict]:
+        """Find the genes at the target release that the entry genes lead to, each with its best path.
+
+        Args:
+            search (_Search): Scratch memory of the conversion.
+            entries (list): ``(gene, steps)`` pairs of :py:meth:`_entries`.
+            start (int): The starting release.
+            to_release (int): The target release.
+            go_external (bool): Whether bridges through external ids may be used when the history leads nowhere.
+
+        Returns:
+            dict[str, dict]: Per destination gene: ``entry_gene`` (the entry gene its path starts from),
+            ``external_jump``, ``external_gap``, ``external_step``, ``score``, ``ensembl_step`` and ``the_path``.
+        """
+        reader = self._reader
+        reverse = start > to_release
+        jump_limit = int(DB.external_search_settings["jump_limit"]) if go_external else 0
+
+        # cost = (bridges, bridge gap, external steps, -score, history steps); state = (gene, release, bridges, beamed)
+        heap: list = []
+        settled: dict[tuple, tuple] = {}
+        destinations: dict[str, tuple] = {}
+        counter = 0
+
+        def push(cost: tuple, state: tuple, parent: tuple | None, steps: tuple) -> None:
+            nonlocal counter
+            if state not in settled:
+                counter += 1
+                heapq.heappush(heap, (cost, state, counter, parent, steps))
+
+        def loops_passed(gene: str, low: int, high: int) -> tuple[float, tuple]:
+            """Score and steps of the scored self loops of a gene whose event lies in [low, high)."""
+            factor: float = 1.0
+            steps: tuple = ()
+            for other, old, new, weight, key in search.history(gene, False):
+                if other == gene and not math.isinf(new):
+                    event = new if reverse else old
+                    inside = (low < event <= high) if reverse else (low <= event < high)
+                    if inside:
+                        factor *= _weight(weight)
+                        steps += ((gene, gene, key),)
+            return factor, steps
+
+        def arrive(gene: str, cost: tuple, state: tuple, steps: tuple) -> None:
+            if not reader.is_real_gene(gene):
+                return
+            candidate = (cost, state, steps)
+            if gene not in destinations or candidate[0] < destinations[gene][0]:
+                destinations[gene] = candidate
+
+        def expand(cost: tuple, state: tuple, level_states: list) -> None:
+            gene, release, bridges, beamed = state
+            found = search.range_at(gene, release)
+            if found is None:
+                return
+            first, last = found
+            n_bridges, gap, external_steps, negative_score, history_steps = cost
+
+            if (not reverse and to_release <= last) or (reverse and to_release >= first):
+                if not reverse:
+                    factor, loop_steps = loops_passed(gene, release, to_release)
+                else:
+                    factor, loop_steps = loops_passed(gene, to_release, release)
+                arrive(
+                    gene,
+                    (n_bridges, gap, external_steps, negative_score * factor, history_steps + len(loop_steps)),
+                    state,
+                    loop_steps,
+                )
+
+            for other, old, new, weight, key in search.history(gene, reverse):
+                if other == gene:
+                    continue
+                if not reverse:
+                    if not (release <= old <= last and old < to_release):
+                        continue
+                    factor, loop_steps = loops_passed(gene, release, old)
+                    step, entered = (gene, other, key), new
+                else:
+                    if not (first <= new <= release and new > to_release):
+                        continue
+                    factor, loop_steps = loops_passed(gene, new, release)
+                    step, entered = (gene, other, key), old
+                if math.isinf(entered):
+                    continue
+                push(
+                    (
+                        n_bridges,
+                        gap,
+                        external_steps,
+                        negative_score * factor * _weight(weight),
+                        history_steps + len(loop_steps) + 1,
+                    ),
+                    (other, int(entered), bridges, False),
+                    state,
+                    loop_steps + (step,),
+                )
+            if not beamed and reader.is_real_gene(gene):
+                level_states.append((cost, state))
+
+        def run(level_states: list) -> None:
+            while heap:
+                cost, state, _, parent, steps = heapq.heappop(heap)
+                if state in settled:
+                    continue
+                search.spend()
+                settled[state] = (parent, steps)
+                expand(cost, state, level_states)
+
+        def bridge_out(cost: tuple, state: tuple) -> None:
+            gene, release, bridges, _ = state
+            first, last = search.range_at(gene, release)  # type: ignore[misc]
+            n_bridges, gap, external_steps, negative_score, history_steps = cost
+            # The gene is one entity throughout its active range: evidence from any release of that range counts.
+            if not reverse:
+                low, high = int(first), int(min(last, to_release))
             else:
-                raise ValueError("Else?")
+                low, high = int(max(first, to_release)), int(min(last, reader.last_release))
+            for other, near, far, near_edges, far_edges in self._bridges(search, gene):
+                placed = self._place_bridge(near, far, low, high, to_release, reverse)
+                if placed is None:
+                    continue
+                left, entered = placed
+                steps = tuple((u, v, 0, left) for u, v in near_edges) + tuple((u, v, 0, entered) for u, v in far_edges)
+                push(
+                    (
+                        n_bridges + 1,
+                        gap + abs(entered - left),
+                        external_steps + len(near_edges) + len(far_edges),
+                        negative_score,
+                        history_steps,
+                    ),
+                    (other, entered, bridges + 1, True),
+                    state,
+                    steps,
+                )
 
+        for gene, steps in entries:
+            push((0, 0, len(steps), -1.0, 0), (gene, start, 0, False), None, steps)
+
+        level_states: list = []
+        run(level_states)
+        level = 0
+        while not destinations and level < jump_limit:
+            sources, level_states = level_states, []
+            for cost, state in sources:
+                bridge_out(cost, state)
+            run(level_states)
+            level += 1
+
+        result: dict[str, dict] = {}
+        for gene in sorted(destinations):
+            cost, state, last_steps = destinations[gene]
+            path: list = list(last_steps)
+            cursor: tuple | None = state
+            entry_gene = gene
+            while cursor is not None:
+                entry_gene = cursor[0]
+                parent, steps = settled[cursor]
+                path[0:0] = steps
+                cursor = parent
+            result[gene] = {
+                "entry_gene": entry_gene,
+                "external_jump": cost[0],
+                "external_gap": cost[1],
+                "external_step": cost[2],
+                "score": -cost[3],
+                "ensembl_step": cost[4],
+                "the_path": tuple(path) if path else ((None, gene, None),),
+            }
         return result
 
-    def _choose_relevant_synonym_helper(
-        self, from_id, synonym_ids, to_release: int, from_release: int | None, mode: str
-    ):
-        """Select the **most temporally relevant** synonym(s) for an Ensembl gene-ID family.
-
-        The method evaluates each candidate in `synonym_ids` against the
-        *target* release `to_release` and, when applicable, the *source*
-        release `from_release`.  Its job is to decide **where** the path
-        should *enter* the Ensembl backbone and **whether** the remainder of
-        the traversal must run in *reverse* (new → old) order.
-
-        Selection strategy
-        ------------------
-        1. **Fixed `from_release`** - If the caller already knows the release
-           of the starting node, every candidate is paired with that same
-           release and the correct *reverse* flag is derived trivially.
-        2. **Non-backbone start** - When the starting node is not an
-           Ensembl-gene backbone ID, the synonym whose **active range edge** is
-           *closest* (or *farthest*, per `mode`) to `to_release` is chosen.
-        3. **Backbone start** - If the query is itself an Ensembl-gene, the
-           algorithm first looks for *overlapping* ranges between the query
-           and each synonym; if none overlap, it falls back to the distance
-           rule described in step 2.
-
-        Args:
-            from_id (str): Identifier from which the path search will start.
-            synonym_ids (Sequence[str]): Ensembl IDs considered synonyms of
-                `from_id` (typically the *same* gene with different version
-                numbers).
-            to_release (int): Target Ensembl release that the overall conversion
-                aims for.
-            from_release (int | None): Release in which `from_id` is known to
-                be active.  If *None*, the method infers a suitable release for
-                each candidate.
-            mode (str): Either `'closest'` or `'distant'`—controls whether
-                the synonym chosen should minimise or maximise its distance to
-                `to_release`.
-
-        Returns:
-            list[list[Union[str, int, bool]]]: One or more triplets of the form
-            `[synonym_id, entry_release, reverse]` where:
-
-            * `synonym_id` - the chosen synonym,
-            * `entry_release` - release at which to join the backbone, and
-            * `reverse` - *True* if the subsequent history walk must run
-              backwards in time.
-
-        Raises:
-            ValueError: If no synonym satisfies the distance/overlap criteria
-                or if `mode` is invalid.
-        """
-        distance_to_target = list()
-        candidate_ranges = list()
-        # synonym_ids should be ensembl of the same id (different versions)
-
-        if from_release is not None:
-            candidate_ranges.extend([[i, from_release, from_release > to_release] for i in synonym_ids])
-            return candidate_ranges
-
-        # If the queried ID is not 'ensembl_gene':
-        # find the synonym_ID with the closest distance to to_release
-        if self.graph.nodes[from_id][DB.node_type_str] != DB.external_search_settings["nts_backbone"]:
-            for syn_id in synonym_ids:
-                n = self.graph.get_active_ranges_of_id[syn_id]
-                m = Track.get_from_release_and_reverse_vars(n, to_release, mode=mode)
-                # Find the ranges of syn_id and find the reve
-                for m1, m2 in m:
-                    min_distance_of_range = abs(m1 - to_release)
-                    distance_to_target.append(min_distance_of_range)
-                    candidate_ranges.append([syn_id, m1, m2])
-
-        else:
-            # If the queried ID and synonyms has some overlapping ranges:
-            # find the synonym_ID which has coinciding release with from_id and closest to the to_release.
-            for syn_id in synonym_ids:
-                n = self.graph.get_two_nodes_coinciding_releases(from_id, syn_id)
-                m = Track.get_from_release_and_reverse_vars(n, to_release, mode=mode)
-
-                for m1, m2 in m:
-                    min_distance_of_range = abs(m1 - to_release)
-                    distance_to_target.append(min_distance_of_range)
-                    candidate_ranges.append([syn_id, m1, m2])
-            # This can output multiple ID and/or multiple range.
-
-            # If the queried ID and synonyms has no overlapping ranges:
-            # find the synonym_ID with the closest distance to from_id
-            if len(distance_to_target) == 0:
-                # Find the closest point (1 or 2 exist due to reverse orientation thing)
-                # of from_id range to the to_release, if it does not contain it.
-                from_id_range = self.graph.get_active_ranges_of_id[from_id]
-                if TheGraph.is_point_in_range(from_id_range, to_release):
-                    new_to_release = [to_release]
-                else:
-                    flattened_fir = [i for j in from_id_range for i in j]
-                    distances_to_rel = [abs(to_release - i) for i in flattened_fir]
-                    minimum_distance = min(distances_to_rel)
-                    new_to_release = [
-                        edge_rel
-                        for ind, edge_rel in enumerate(flattened_fir)
-                        if minimum_distance == distances_to_rel[ind]
-                    ]
-
-                for syn_id in synonym_ids:
-                    for ntr in new_to_release:
-                        n = self.graph.get_active_ranges_of_id[syn_id]
-                        # Find correct from_release, the closest range edge to the from_id
-                        m = Track.get_from_release_and_reverse_vars(n, ntr, mode=mode)
-                        for m1, _ in m:
-                            # Find correct reverse_info
-                            m2 = to_release <= m1
-                            min_distance_of_range = abs(m1 - ntr)
-                            distance_to_target.append(min_distance_of_range)
-                            candidate_ranges.append([syn_id, m1, m2])
-
-        if len(distance_to_target) == 0:
-            raise ValueError("len(distance_to_target) == 0")
-
-        global_min_distance = min(distance_to_target)
-        result = [item for ind, item in enumerate(candidate_ranges) if global_min_distance == distance_to_target[ind]]
-
-        return result  # [[id, new_from_id, new_reverse], [id, new_from_id, new_reverse], ]
-
-        # a->x->z3,6,9 ise
-        # given final release
-        # given from release
-
-    def choose_relevant_synonym(
-        self, the_id: str, depth_max: int, to_release: int, filter_node_type: set[str], from_release: int | None
-    ):
-        """Wrapper that **discovers, clusters, and ranks** synonymous Ensembl candidates for a given identifier.
-
-        The function performs three steps:
-
-        1. **Discover** paths to *all* Ensembl-gene nodes that share the same
-           biological identity (`synonymous_nodes`).
-        2. **Cluster** those paths by **gene ID** (ignoring version).
-        3. **Rank** each cluster with
-           :py:meth:`_choose_relevant_synonym_helper`, selecting the entry release
-           (and direction) that best suits `to_release`.
-
-        Args:
-            the_id (str): Source identifier (Ensembl or external).
-            depth_max (int): Maximum depth passed to
-                :py:meth:`synonymous_nodes`; governs how far the synonym search is
-                allowed to roam through external nodes.
-            to_release (int): Target Ensembl release required by the overall
-                conversion.
-            filter_node_type (set[str]): Node-types that the synonym search
-                must terminate on (usually `{'ensembl_gene'}`).
-            from_release (int | None): Known active release of `the_id`.  If
-                *None*, the helper will infer one.
-
-        Returns:
-            list[list[Any]]: A list whose elements are
-
-            `[synonym_id, entry_release, reverse, identifier_path, node_type_path]`
-
-            where the last two items reproduce the path returned by
-            :py:meth:`synonymous_nodes`.
-
-        Notes:
-            *The method purposefully keeps **all** equally-ranked candidates;
-            further tie-breaking is deferred to the main path-scoring routine.*
-        """
-        syn = self.synonymous_nodes(the_id, depth_max, filter_node_type, from_release=from_release)
-        # help to choose z for a->x->z3,6,9
-        # filter_node_type == 'ensembl_gene'
-        # it also returns itself, which is important
-
-        syn_ids: dict = dict()
-        for syn_p, syn_db in syn:
-            si = syn_p[-1]
-            s = self.graph.nodes[si]["ID"]
-            if s not in syn_ids:
-                syn_ids[s] = []
-            syn_ids[s].append([si, syn_p, syn_db])
-
-        # remove ens_gene -> ens-transcript -> ens_gene
-
-        result = list()  # si, from_rel, reverse, syn_p, syn_db
-        for s in syn_ids:  # the one with the same id
-            si_list, syn_p_list, syn_db_list = map(list, zip(*syn_ids[s]))
-            # could give route to same id from multiple routes
-
-            best_ids_best_ranges = self._choose_relevant_synonym_helper(
-                the_id, si_list, to_release, from_release, mode="closest"
-            )
-
-            for a1, a2, a3 in best_ids_best_ranges:
-                for_filtering = [i == a1 for i in si_list]
-
-                for b1, b2 in zip(
-                    itertools.compress(syn_p_list, for_filtering), itertools.compress(syn_db_list, for_filtering)
-                ):
-                    result.append([a1, a2, a3, b1, b2])
-
-        return result  # new_from_id, new_from_rel, new_reverse, path, path_db
-
-    def get_next_edges(self, from_id: str, from_release: int, reverse: bool, debugging: bool = False):
-        """Enumerate **chronologically admissible** history edges from a node.
-
-        Starting at `from_id` and release `from_release`, the method scans
-        outgoing (or incoming, when `reverse` is *True*) edges whose
-        timestamps allow the path to **advance** in the desired temporal
-        direction.  It collapses duplicate "same-ID" transitions and flags
-        self-loops so that later heuristics can treat branch points and tips
-        differently.
-
-        Args:
-            from_id (str): Current node from which the search will step.
-            from_release (int): Release at which the current node is known to
-                exist.
-            reverse (bool): *False* to walk **forward** in history
-                (old → new), *True* to walk **backward** (new → old).
-            debugging (bool): If set, disables the duplicate-edge
-                collapse so that unit tests can inspect the raw edge set.
-
-        Returns:
-            list[list[Union[int, bool, str, int]]]: Sorted list of edge
-            descriptors, each of which is
-
-            `[edge_release, is_self_loop, src_node, dst_node, multiedge_key]`.
-
-        Raises:
-            ValueError: If inconsistent multi-edges (same nodes, same release)
-                are detected—this signals a corrupted graph build.
-        """
-        edges: list = list()
-        more_than_one_edges: dict = dict()
-        index_counter: int = 0
-        for node_after in nx.neighbors(self.graph if not reverse else self.graph.rev, from_id):
-            # This forces to follow the same form tree during the recursion
-            if self.graph.nodes[node_after][DB.node_type_str] == self.graph.nodes[from_id][DB.node_type_str]:
-                for multi_edge_id, an_edge in (
-                    (self.graph if not reverse else self.graph.rev).get_edge_data(from_id, node_after).items()
-                ):
-                    self_loop = node_after == from_id
-                    edge_release = an_edge["old_release"] if not reverse else an_edge["new_release"]
-
-                    if (
-                        (not reverse and edge_release >= from_release)
-                        or (reverse and edge_release <= from_release)
-                        or (not reverse and np.isinf(an_edge["new_release"]))
-                    ):  # keep last node
-                        list_to_add = [edge_release, self_loop, from_id, node_after, multi_edge_id]
-
-                        node_after_id = self.graph.nodes[node_after]["ID"]
-                        # node_after_ver = self.graph.nodes[node_after]["Version"]
-                        from_id_id = self.graph.nodes[from_id]["ID"]
-                        bool_check = (
-                            not debugging
-                            and node_after_id == from_id_id  # for the same ID transitions
-                            and from_id != node_after
-                        )  # if it is not self loop
-
-                        if bool_check and node_after_id in more_than_one_edges:  # if this happened one before
-                            prev_edge_release_index = more_than_one_edges[node_after_id]
-                            prev_edge_release = edges[prev_edge_release_index][0]
-                            if prev_edge_release == edge_release:
-                                raise ValueError("prev_edge_release == edge_release")
-                            if (not reverse and prev_edge_release > edge_release) or (
-                                reverse and prev_edge_release < edge_release
-                            ):  # keep only the first possible edge!
-                                edges[prev_edge_release_index] = list_to_add
-                        else:
-                            if bool_check:
-                                more_than_one_edges[node_after_id] = index_counter
-                            edges.append(list_to_add)
-                            index_counter += 1
-
-        simultaneous = [e[0] for e in edges]
-        for ind, edge in enumerate(edges):
-            if edge[1]:
-                if simultaneous.count(edge[0]) > 1:  # it is not only_self_loop, it is branched there.
-                    edges[ind][1] = False
-
-        return sorted(edges, reverse=reverse)  # sort based on history
-
-    def should_graph_reversed(self, from_id, to_release):
-        """Determine the **temporal orientation** of the graph walk.
-
-        Given an identifier that is active in one or more release intervals,
-        the routine decides whether the subsequent path-finder must move
-        **forward in time**, **backward in time**, or explore *both* directions
-        in parallel in order to reach the target release.
-
-        The decision is based on the *closest* boundary of every active
-        interval returned by
-        :py:meth:`Track.get_from_release_and_reverse_vars` (`mode='closest'`).
-
-        Args:
-            from_id (str): The starting identifier (Ensembl gene, transcript,
-                protein, or external ID).
-            to_release (int): The Ensembl release the user wishes to convert
-                *to*.
-
-        Returns:
-            tuple[str, Union[int, tuple[int, int]]]:
-
-                * `'forward'` - walk old → new, starting at the **earliest**
-                    release in which *from_id* is active
-                    &nbsp;&nbsp;&nbsp;→ return `('forward', start_release)`
-                * `'reverse'` - walk new → old, starting at the **latest**
-                    active release
-                    &nbsp;&nbsp;&nbsp;→ return `('reverse', start_release)`
-                * `'both'` - split search: one forward walk and one reverse
-                    walk
-                    &nbsp;&nbsp;&nbsp;→ return `('both', (forward_start,
-                    reverse_start))`
-
-        Raises:
-            ValueError: If *from_id* is never active in or around
-                `to_release` (i.e. no viable starting release can be found).
-        """
-        n = self.graph.get_active_ranges_of_id[from_id]  # calculates ensembl_gene nodes and also any other node.
-        m = Track.get_from_release_and_reverse_vars(n, to_release, mode="closest")
-
-        forward_from_ids = [i for i, j in m if not j]
-        reverse_from_ids = [i for i, j in m if j]
-
-        lffi = len(forward_from_ids)
-        lrfi = len(reverse_from_ids)
-
-        if lrfi and lffi:
-            return "both", (min(forward_from_ids), max(reverse_from_ids))
-        elif lrfi:
-            return "reverse", max(reverse_from_ids)
-        elif lffi:
-            return "forward", min(forward_from_ids)
-        else:
-            raise ValueError("no other choice")
-
-    def path_search(
-        self,
-        from_id: str,
-        from_release: int,
-        to_release: int,
-        reverse: bool,
-        external_settings: dict,
-        external_jump: float | None = None,
-        multiple_ensembl_transition: bool = False,
-    ) -> set:
-        """Enumerate every admissible **history path** from *from_id* at *from_release* to *to_release*.
-
-        The algorithm performs a depth-first traversal of the Ensembl history
-        edges.  Whenever it becomes stranded on a non-backbone node it may
-        "beam-up" via a *synonym path* through an external database, subject to
-        the constraints in `external_settings`:
-
-        * `synonymous_max_depth` - maximum depth of a synonym search.
-        * `jump_limit` - maximum number of external "beam-up" jumps allowed.
-        * `nts_backbone` - canonical node-type of the Ensembl backbone.
-
-        Additional flags control the initial conditions:
-
-        * Setting `external_jump` to *np.inf* **disables** external jumps.
-            Setting it to *None* **enables** them with the counter reset to `0`.
-        * `multiple_ensembl_transition` allows the algorithm to time-travel to
-            a *different* release while still on an external node; this is useful
-            when *from_release* was inferred and might not actually connect.
-
-        Args:
-            from_id (str): Identifier to start the search from.
-            from_release (int): Release number where *from_id* is considered
-                active.
-            to_release (int): Target Ensembl release.
-            reverse (bool): If *True*, traverse the graph **backwards** in time;
-                otherwise forwards.
-            external_settings (dict): Copy of
-                :py:attr:`DB.external_search_settings` that governs depth,
-                jump limits, and backbone node-type.
-            external_jump (float | None): Current external-jump count
-                (*None* starts from zero, *np.inf* forbids any jump).
-            multiple_ensembl_transition (bool): Permit the synonym
-                engine to select a *different* release for an external node when
-                no path exists at *from_release*.
-
-        Returns:
-            set[tuple[tuple[str, str, int]]]:
-                A set of **edge-lists**.  Each edge is stored as
-                `(src, dst, key)`; an empty walk that terminates immediately
-                is represented by `((None, from_id, None),)`.
-
-        Notes:
-            *The method is intentionally side-effect free; it constructs all
-            intermediate data on the stack and returns a fresh set.*
-        """
-
-        def _recursive_function(
-            __from_id: str,
-            __from_release: int,
-            __reverse: bool,
-            __beamed_up: bool,
-            __external_jump: float | None,
-            __edge_hist: list | None,
-            __edge_hist_non_backbone: set | None,
-        ) -> None:
-            def _external_path_maker(a_from_id, a_ens_rel, a_syn_pth, free_from_release: bool, reverse: bool):
-                a_edge_hist_alt = list()
-                a_from_id_ext_path = copy.deepcopy(a_from_id)
-                for a_path_ind, a_next_node in enumerate(a_syn_pth):
-                    if a_path_ind == 0:
-                        continue
-                    # 0 is tested TheGraph.is_node_consistency_robust
-                    a_edge_hist_alt.append(
-                        (
-                            a_from_id_ext_path,
-                            a_next_node,
-                            0,
-                            a_ens_rel if not free_from_release else self._external_entrance_placeholder[reverse],
-                        )
-                    )
-                    a_from_id_ext_path = copy.deepcopy(a_next_node)
-                return a_edge_hist_alt
-
-            def _non_backbone_finder(_syn_path_):
-                return {
-                    i
-                    for i in _syn_path_
-                    if self.graph.nodes[i][DB.node_type_str] != DB.external_search_settings["nts_backbone"]
-                }
-
-            def _recurring_element(_syn_path_):
-                for _syn_path_i in _syn_path_:
-                    if _syn_path_i in _edge_hist_non_backbone:
-                        return False
-
-                return True
-
-            _edge_hist = list() if __edge_hist is None else __edge_hist
-            _edge_hist_non_backbone = set() if __edge_hist_non_backbone is None else __edge_hist_non_backbone
-            _external_jump = 0 if __external_jump is None else __external_jump
-            next_edges = self.get_next_edges(__from_id, __from_release, __reverse)
-
-            if (
-                len(_edge_hist) == 0
-                and len(next_edges) == 0
-                and self.graph.nodes[__from_id][DB.node_type_str] != DB.external_search_settings["nts_backbone"]
-                # the step input is actually external
-            ):
-                # get syn only for given release
-                if not multiple_ensembl_transition:
-                    s = self.choose_relevant_synonym(
-                        __from_id,
-                        depth_max=external_settings["synonymous_max_depth"],
-                        to_release=to_release,
-                        filter_node_type={external_settings["nts_backbone"]},
-                        # do not time travel here, go with the same release
-                        from_release=__from_release,
-                    )
-
-                # If from release is infered by the program (not provided by the user), then run pathfinder from all
-                # possible ones. This will increase the computational demand but yield more robust results.
-                switch_met = False
-                if multiple_ensembl_transition or len(s) == 0:
-                    s = self.choose_relevant_synonym(
-                        __from_id,
-                        depth_max=external_settings["synonymous_max_depth"],
-                        to_release=to_release,
-                        filter_node_type={external_settings["nts_backbone"]},
-                        # if there is way to find with the same release, go just find it in other releases.
-                        from_release=None,
-                    )
-                    switch_met = True
-
-                for s1, s2, s3, s4, _s5 in s:  # new_from_id, new_from_rel, new_reverse, path, path_db
-                    # TODO: remove path_db (s5) from the function and pathfinder.
-
-                    if _recurring_element(s4):
-                        # with synonym route, can't go synonym finding in the next iteration
-                        _recursive_function(
-                            s1,  # __from_id
-                            s2,  # __from_release
-                            s3,  # __reverse
-                            True,  # __beamed_up
-                            _external_jump,  # __external_jump. It does not count as it is starting point
-                            _edge_hist + _external_path_maker(__from_id, s2, s4, switch_met, s3),  # __edge_hist
-                            _edge_hist_non_backbone | _non_backbone_finder(s4),  # __edge_hist_non_backbone
-                        )
-                        # Add parallel path finding searches
-
-            else:
-                for _edge_release, _only_self_loop, _from_id, _node_after, _multi_edge_id in next_edges:
-                    # Synonymous genes of the gene of interest until the next node in the history travel.
-
-                    if not __beamed_up and _external_jump < external_settings["jump_limit"]:
-                        s = self.choose_relevant_synonym(
-                            _from_id,
-                            depth_max=external_settings["synonymous_max_depth"],
-                            to_release=to_release,
-                            filter_node_type={external_settings["nts_backbone"]},
-                            from_release=None,
-                        )
-
-                        for s1, s2, s3, s4, _s5 in s:  # new_from_id, new_from_rel, new_reverse, path, path_db
-                            # TODO: remove path_db (s5) from the function and pathfinder.
-
-                            if _recurring_element(s4):
-                                # with synonym route, don't go synonym finding in the next iteration
-                                _recursive_function(
-                                    s1,  # __from_id
-                                    s2,  # __from_release
-                                    s3,  # __reverse
-                                    True,  # __beamed_up
-                                    _external_jump + 1.0,  # __external_jump
-                                    _edge_hist + _external_path_maker(_from_id, s2, s4, True, s3),  # __edge_hist
-                                    _edge_hist_non_backbone | _non_backbone_finder(s4),  # __edge_hist_non_backbone
-                                )
-                                # Add parallel path finding searches
-
-                    # History travel
-
-                    dict_key = (_from_id, _node_after, _multi_edge_id)
-
-                    if dict_key not in _edge_hist:
-                        # self loops and, o yoldan daha önce geçmiş mi. extinction event'i var mı
-                        _from_id_ver = self.graph.nodes[_from_id]["Version"]
-
-                        if __reverse:
-                            if _edge_release <= to_release:
-                                if _from_id_ver not in DB.alternative_versions:
-                                    all_paths.add(
-                                        tuple(_edge_hist) if len(_edge_hist) > 0 else ((None, __from_id, None),)
-                                    )
-                            elif _only_self_loop:
-                                _edge_other = self.graph.rev.get_edge_data(*dict_key)["old_release"]
-                                if _edge_other <= to_release:  # and _edge_other != np.inf
-                                    all_paths.add(tuple(_edge_hist + [dict_key]))
-                                else:
-                                    _edge_hist.append(dict_key)
-                            else:
-                                _recursive_function(
-                                    _node_after,  # __from_id
-                                    _edge_release,  # __from_release
-                                    __reverse,  # __reverse
-                                    False,  # __beamed_up
-                                    _external_jump,  # __external_jump
-                                    _edge_hist + [dict_key],  # __edge_hist
-                                    _edge_hist_non_backbone,  # __edge_hist_non_backbone
-                                )
-                        else:  # if not reverse
-                            if _edge_release >= to_release:
-                                if _from_id_ver not in DB.alternative_versions:
-                                    all_paths.add(
-                                        tuple(_edge_hist) if len(_edge_hist) > 0 else ((None, __from_id, None),)
-                                    )
-                            elif _only_self_loop:  # latest also goes here
-                                _edge_other = self.graph.get_edge_data(*dict_key)["new_release"]
-                                _is_latest_loop = np.isinf(_edge_other)
-                                if _edge_other >= to_release and not _is_latest_loop:
-                                    all_paths.add(tuple(_edge_hist + [dict_key]))
-                                elif _is_latest_loop:
-                                    all_paths.add(
-                                        tuple(_edge_hist) if len(_edge_hist) > 0 else ((None, __from_id, None),)
-                                    )
-                                else:
-                                    # Do not parallelize (recursive) at that point. keep loop for all.
-                                    _edge_hist.append(dict_key)
-                            else:
-                                _recursive_function(
-                                    _node_after,  # __from_id
-                                    _edge_release,  # __from_release
-                                    __reverse,  # __reverse
-                                    False,  # __beamed_up
-                                    _external_jump,  # __external_jump
-                                    _edge_hist + [dict_key],  # __edge_hist
-                                    _edge_hist_non_backbone,  # __edge_hist_non_backbone
-                                )
-
-        all_paths: set = set()
-        _recursive_function(
-            from_id,  # __from_id
-            from_release,  # __from_release
-            reverse,  # __reverse
-            False,  # __beamed_up
-            external_jump,  # __external_jump
-            None,  # __edge_hist
-            None,  # __edge_hist_non_backbone
-        )
-
-        return all_paths
-
     def get_possible_paths(
-        self,
-        from_id: str,
-        from_release: int,
-        to_release: int,
-        reverse: bool,
-        go_external: bool = True,
-        increase_depth_until: int = 2,
-        increase_jump_until: int = 0,
-        from_release_inferred: bool = False,
+        self, from_id: str, from_release: int, to_release: int, reverse: bool, go_external: bool = True
     ) -> tuple:
-        """Run :py:meth:`path_search` under **progressively relaxed settings**.
+        """Return the path to every gene that an identifier of one release leads to at another release.
 
-        Run :py:meth:`path_search` under **progressively relaxed settings** until at
-        least one viable path is found—or every relaxation level is exhausted.
-
-        Four search stages are attempted in order:
-
-        1. **Backbone-only** - external jumps disabled.
-        2. **External enabled** - allow external jumps; increment synonym depth
-            and jump limit after each failure up to
-            `increase_depth_until`/`increase_jump_until`.
-        3. **Backbone with multiple-Ensembl transition** - external disabled but
-            permit starting release to shift on external nodes.
-        4. **External + multiple-transition** - most permissive search, with
-            iterative depth/jump relaxation as in stage 2.
+        This is the search of :py:meth:`convert` without the final conversion and without ranking: one path per
+        destination gene, the best one.
 
         Args:
-            from_id (str): Identifier to convert.
-            from_release (int): Release at which the search begins.
-            to_release (int): Desired target release.
-            reverse (bool): Traverse the Ensembl history backwards if *True*,
-                forwards otherwise.
-            go_external (bool): If *False*, skip any stage that
-                requires external jumps.
-            increase_depth_until (int): Additional synonym-search
-                depth to allow beyond the default.
-            increase_jump_until (int): Additional external-jump count
-                to allow beyond the default.
-            from_release_inferred (bool): *Reserved for future use.*
-                Indicates that *from_release* was chosen automatically rather
-                than provided by the user.
+            from_id (str): A node of the graph.
+            from_release (int): The release the identifier is read at; it must be active there.
+            to_release (int): The target release.
+            reverse (bool): The direction of the walk, ``True`` when ``from_release`` is later than ``to_release``.
+            go_external (bool): Whether bridges through external ids may be used when the history leads nowhere.
 
         Returns:
-            tuple[tuple[tuple[str, str, int]]]:
-                All paths discovered by the most restrictive stage that yielded
-                **at least one** result, returned as an immutable tuple.
+            tuple: One path per destination gene, ordered by gene. A path is a tuple of steps: ``(source, target,
+            key)`` for a history edge, ``(source, target, 0, release)`` for a cross-reference edge at a release, and
+            the single step ``(None, gene, None)`` for a gene that is its own counterpart.
 
-        Notes:
-            The function copies and mutates
-            :py:attr:`DB.external_search_settings` internally; the caller’s
-            copy is not modified.
+        Raises:
+            ValueError: If ``reverse`` contradicts the two releases.
         """
-        es: dict = copy.deepcopy(DB.external_search_settings)
-        idu = increase_depth_until + es["synonymous_max_depth"]
-        iju = increase_jump_until + es["jump_limit"]
-
-        # Try first with no external jump route
-        es = copy.deepcopy(DB.external_search_settings)
-        all_paths = self.path_search(
-            from_id=from_id,
-            from_release=from_release,
-            to_release=to_release,
-            reverse=reverse,
-            external_settings=es,
-            external_jump=np.inf,
-            multiple_ensembl_transition=False,
-        )
-
-        # Activate external jump and increase the depth of search at each step
-        es = copy.deepcopy(DB.external_search_settings)
-        while go_external and len(all_paths) < 1:
-            all_paths = self.path_search(
-                from_id=from_id,
-                from_release=from_release,
-                to_release=to_release,
-                reverse=reverse,
-                external_settings=es,
-                external_jump=None,
-                multiple_ensembl_transition=False,
+        start_release = self._check_release(from_release, "from_release")
+        target = self._check_release(to_release, "to_release")
+        if start_release != target and bool(reverse) != (start_release > target):
+            raise ValueError(
+                f"`reverse`={reverse!r} contradicts the releases: from {start_release} to {target} is "
+                f"{'backward' if start_release > target else 'forward'} in time."
             )
-            if es["synonymous_max_depth"] < idu:
-                es["synonymous_max_depth"] = es["synonymous_max_depth"] + 1
-            elif es["jump_limit"] < iju:
-                es["jump_limit"] = es["jump_limit"] + 1
-            else:
-                break
+        search = _Search(self._reader, from_id, self.search_budget_states, self.search_budget_seconds)
+        start, entries, _, _ = self._start(search, from_id, start_release, target)
+        found = self._search_paths(search, entries, start, target, go_external)
+        return tuple(found[gene]["the_path"] for gene in sorted(found))
 
-        # If none found, make relaxed search in terms of ensembl transition.
-        es = copy.deepcopy(DB.external_search_settings)
-        if len(all_paths) < 1:
-            all_paths = self.path_search(
-                from_id=from_id,
-                from_release=from_release,
-                to_release=to_release,
-                reverse=reverse,
-                external_settings=es,
-                external_jump=np.inf,
-                multiple_ensembl_transition=True,
-            )
+    # Final conversion
 
-        # The same as above except this time with relaxed transition.
-        es = copy.deepcopy(DB.external_search_settings)
-        while go_external and len(all_paths) < 1:
-            all_paths = self.path_search(
-                from_id=from_id,
-                from_release=from_release,
-                to_release=to_release,
-                reverse=reverse,
-                external_settings=es,
-                external_jump=None,
-                multiple_ensembl_transition=True,
-            )
-            if es["synonymous_max_depth"] < idu:
-                es["synonymous_max_depth"] = es["synonymous_max_depth"] + 1
-            elif es["jump_limit"] < iju:
-                es["jump_limit"] = es["jump_limit"] + 1
-            else:
-                break
-
-        return tuple(all_paths)
-
-    @cached_property
-    def _calculate_node_scores_helper(self):
-        """Build and cache helper look-ups for node-scoring.
-
-        The property constructs two complementary data structures:
-
-        * **filter_set** - the union of
-            (1) every external-database node-type present in the graph, and (2) every Ensembl-specific
-            node-type (gene, transcript, translation, …) across *all* assemblies.
-            This set can therefore be passed unmodified to
-            :py:meth:`synonymous_nodes` to ask for "anything that is not an assembly-less backbone gene".
-        * **ensembl_include** - a mapping
-            `{form → set(node_type_str)}` where each value lists the node-types
-            that should be considered equivalent to that *form* (e.g. *gene*, *transcript*, *translation*) when
-            computing richness metrics.
-
-        Returns:
-            tuple[set[str], dict[str, set[str]]]:
-                `(filter_set, ensembl_include)` exactly as described above.
-        """
-        form_list = [i for i in self.graph.available_forms if i != DB.backbone_form]
-        ensembl_include = dict()
-        filter_set = copy.deepcopy(self.graph.available_external_databases)
-        for i in form_list:
-            ensembl_include_form = set([DB.nts_ensembl[i]] + [DB.nts_assembly[j][i] for j in DB.nts_assembly])
-            ensembl_include[i] = ensembl_include_form
-            filter_set.update(ensembl_include_form)
-        return filter_set, ensembl_include
-
-    def calculate_node_scores(self, the_id, ens_release) -> list:
-        """Rank competing Ensembl targets by the "richness" of their synonyms.
-
-        The method counts, within a radius of *two* synonym hops, how many unique
-        identifiers of various categories point to each candidate and returns the
-        counts as **negative integers** so that *smaller* is *better* for the
-        up-stream sorter.
+    def _final_targets(self, search: _Search, gene: str, database: str, release: int) -> tuple[dict, int]:
+        """Return the ids of a database that a gene carries at a release.
 
         Args:
-            the_id (str): Identifier that is being converted.
-            ens_release (int): Target Ensembl release; only synonyms active in this
-                release are considered.
+            search (_Search): Scratch memory of the conversion.
+            gene (str): A gene that exists at the release.
+            database (str): An external database, or the node type of gene ids without version.
+            release (int): The target release.
 
         Returns:
-            list: `[-ext, -form₁, -form₂]` where
-                * `ext`  - number of distinct **external-database** synonyms.
-                * `form₁` - number of distinct synonyms of the most important Ensembl form (typically *gene*).
-                * `form₂` - number of distinct synonyms of the second form (typically *transcript* or *translation*).
+            tuple[dict, int]: ``{target: path}`` and the confidence: 0 when the ids are attached to the gene (or to
+            its transcripts and translations) at the release; 1 when they are attached at the release to a transcript
+            or translation that belonged to the gene at another release. The dict is empty when there is none.
+        """
+        reader = self._reader
+        if database == reader.base_type:
+            for other, _ in search.xrefs(gene, True):
+                if reader.node_type(other) == reader.base_type:
+                    return {other: ((gene, other, 0, release),)}, 0
+            return {}, 0
+
+        def collect(strict: bool) -> dict:
+            found: dict[str, tuple] = {}
+
+            def keep(target: str, steps: tuple) -> None:
+                if target not in found or (len(steps), steps) < (len(found[target]), found[target]):
+                    found[target] = steps
+
+            def inner(items: tuple) -> bool:
+                return reader.holds(items, release) if strict else True
+
+            def mark(a: str, b: str) -> tuple:
+                return (a, b, 0, release) if strict else (a, b, 0, None)
+
+            for first, items in search.xrefs(gene, True):
+                first_type = reader.node_type(first)
+                if first_type == DB.nts_external:
+                    if strict and reader.holds(items, release, database=database):
+                        keep(first, ((gene, first, 0, release),))
+                elif first_type != reader.base_type and inner(items):
+                    step_1 = (mark(gene, first),)
+                    for second, second_items in search.xrefs(first, True):
+                        if reader.node_type(second) == DB.nts_external:
+                            if reader.holds(second_items, release, database=database):
+                                keep(second, step_1 + ((first, second, 0, release),))
+                        elif inner(second_items):
+                            step_2 = step_1 + (mark(first, second),)
+                            for third, third_items in search.xrefs(second, True):
+                                if reader.node_type(third) == DB.nts_external and reader.holds(
+                                    third_items, release, database=database
+                                ):
+                                    keep(third, step_2 + ((second, third, 0, release),))
+            return found
+
+        targets = collect(strict=True)
+        if targets:
+            return targets, 0
+        return collect(strict=False), 1
+
+    def gene_to_database(self, gene: str, final_database: str, release: int | None = None) -> tuple[list[str], int]:
+        """Return the ids of a database that a gene carries at a release, without any search.
+
+        This is the final conversion of :py:meth:`convert` for one gene. The answer depends on the gene, the
+        database and the release only, never on the identifier a conversion started from, and it costs a few
+        look-ups: a caller that needs the name of a gene it already has (the one fixed name per gene of a data set)
+        asks here instead of converting again.
+
+        Args:
+            gene (str): A gene id with version that exists at the release.
+            final_database (str): An external database of the genome assembly of the release, or
+                ``base_ensembl_gene``.
+            release (int | None): The Ensembl release. ``None``: the last release of the graph.
+
+        Returns:
+            tuple[list[str], int]: The ids as the database wrote them at the release, in ascending order, and the
+            confidence as in :py:meth:`convert` (0: attached at the release; 1: attached at the release to a
+            transcript or translation the gene had at another release). An empty list when the gene has no id in
+            the database.
 
         Raises:
-            ValueError: If the graph does not expose exactly the two expected
-                non-backbone forms, or if a synonym node's type cannot be mapped to
-                *external*, *form₁*, or *form₂*.
+            ValueError: If the release or the database is not one of the graph, or ``gene`` is not a gene id with
+                version that is active at the release.
         """
-        form_list = [i for i in self.graph.available_forms if i != DB.backbone_form]
-        form_importance_order = ["gene", "transcript", "translation"]
-        form_importance_order = [i for i in form_importance_order if i in form_list]
-        if len(form_importance_order) != 2:
-            raise ValueError(form_list, form_importance_order)
+        reader = self._reader
+        target = reader.last_release if release is None else self._check_release(release, "release")
+        database = self._check_final_database(final_database, target)
+        search = _Search(reader, gene, self.search_budget_states, self.search_budget_seconds)
+        if (
+            not reader.has_node(gene)
+            or not reader.is_backbone(gene)
+            or not reader.is_real_gene(gene)
+            or search.range_at(gene, target) is None
+        ):
+            raise ValueError(f"{gene!r} is not a gene id with version that is active at Ensembl release {target}.")
+        if database is None:
+            return [gene], 0
+        targets, confidence = self._final_targets(search, gene, database, target)
+        if database == reader.base_type:
+            return sorted(targets), confidence
+        return sorted(self.graph.spelling(target_id, database, target) for target_id in targets), confidence
 
-        filter_set, ensembl_include = self._calculate_node_scores_helper
-        _temp = [
-            i[-1]
-            for i, _ in self.synonymous_nodes(
-                the_id,
-                depth_max=2,
-                filter_node_type=filter_set,
-                from_release=ens_release,
-                ensembl_backbone_shallow_search=True,
-                account_for_hyperconnected_nodes=True,
-            )
-        ]
-        imp1, imp2, imp3 = set(), set(), set()
-        for i in _temp:
-            nt = self.graph.nodes[i][DB.node_type_str]
-            if nt == DB.nts_external:
-                imp1.add(i)
-            elif nt in ensembl_include[form_importance_order[0]]:
-                imp2.add(i)
-            elif nt in ensembl_include[form_importance_order[1]]:
-                imp3.add(i)
-            else:
-                raise ValueError("unexpected!2")
+    def calculate_node_scores(self, the_id: str, ens_release: int) -> list[int]:
+        """Count how richly a gene is annotated at a release.
 
-        # Importance order is as following
-        return [-len(imp1), -len(imp2), -len(imp3)]  # minus is added to minimize in the method used.
-
-    def calculate_score_and_select(
-        self,
-        all_possible_paths: tuple,
-        reduction: Callable,
-        remove_na: str,
-        from_releases: Iterable[int],
-        to_release: int,
-        score_of_the_queried_item: float,
-        return_path: bool,
-        from_id: str,
-    ) -> dict:
-        """Collapse a set of candidate paths into the single best path per target.
-
-        For each path produced by the search engine the function:
-
-        1. Computes an **edge-score aggregate** using `reduction` while handling
-        missing values as directed by `remove_na`.
-        2. Tallies *external* statistics (steps, jumps, initial conversion
-        confidence) and *assembly* statistics (number of priority drops, final
-        priority).
-        3. Packs all metrics into a dictionary and stores it under the key of the
-        path's final destination node.
-        4. Keeps only the lexicographically "smallest" dictionary per destination
-        via :py:meth:`_path_score_sorter_single_target`.
+        The counts are the last criterion of :py:meth:`convert` with ``prioritize_to_one_filter``: between the
+        successors of one gene that are equal in every other respect, the one with more annotation is preferred
+        (never between the genes that an identifier stands for: those are a tie). Only the gene's own
+        transcripts and translations of that release and the external ids attached to them or to the gene are
+        counted; hyper-connective external ids are left out.
 
         Args:
-            all_possible_paths (tuple): Sequence of edge-lists representing
-                every admissible walk returned by the path-finder.
-            reduction (Callable): Function such as
-                `np.mean` or `sum` used to collapse edge weights into one number.
-            remove_na (str): How to treat *NaN* edge weights - one of
-                `'omit'`, `'to_1'`, `'to_0'`.
-            from_releases (Iterable[int]): Release that each path starts from;
-                must align with `all_possible_paths`.
-            to_release (int): Target release - needed to know whether an edge is
-                traversed forward or reverse.
-            score_of_the_queried_item (float): Fallback weight for the implicit edge
-                that represents the *query ID* itself.
-            return_path (bool): If *True*, embed the full edge-list inside each
-                score dict under the key `'the_path'`.
-            from_id (str): Original identifier being converted - echoed back in the
-                score dict for traceability.
+            the_id (str): A gene node.
+            ens_release (int): The release at which the annotation is counted.
 
         Returns:
-            dict: Mapping
-            `{destination_id → best_score_dict}`.
-            Each *score dict* contains (inter alia)
-            `assembly_jump`, `external_jump`, `external_step`,
-            `edge_scores_reduced`, and `ensembl_step`.
-
-        Raises:
-            ValueError: If an unexpected edge encoding is encountered, if an edge
-                score is invalid/∞, or if `remove_na` is set to an unknown mode.
+            list[int]: ``[-external ids, -transcripts, -translations]`` (negative, so that smaller is better).
         """
-        self._ensure_assembly_priority_cache()
+        search = _Search(self._reader, the_id, self.search_budget_states, self.search_budget_seconds)
+        return self._node_scores(search, the_id, ens_release)
 
-        def er_maker_for_initial_conversion(n1, n2, n3, n4):
-            edge_key = self.edge_key_orientor(n1, n2, n3)
-            return self.graph.get_edge_data(*edge_key)["available_releases"]
-
-        scores: dict = dict()
-
-        for the_path, from_release in zip(all_possible_paths, from_releases):
-            edge_scores = list()
-            external_step = 0
-            external_jump = 0
-            in_external = False
-
-            for the_edge in the_path:
-                if len(the_edge) == 3:
-                    reverse = from_release > to_release
-
-                    if not (the_edge[0] is None and the_edge[2] is None):
-                        w = (self.graph if not reverse else self.graph.rev).get_edge_data(*the_edge)["weight"]
-                    else:
-                        w = score_of_the_queried_item
-
-                    edge_scores.append(w)
-                    in_external = False
-
-                elif len(the_edge) == 4:  # External path is followed.
-                    external_step += 1
-                    if not in_external:  # independent of length of the jump, it should be counted as 1.
-                        external_jump += 1
-                    in_external = True
-                    from_release = the_edge[3]  # _external_path_maker
-
-                else:
-                    raise ValueError("len(edge)")
-
-            # longest continous ens_gene path'ine sahip olan one cikmali?
-
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-
-                # 0 weight means weight is not defined (np.nan in the graph)
-                if any([not isinstance(s, (int, float)) or np.isinf(s) for s in edge_scores]):
-                    raise ValueError(f"Unexpected edge score: {the_path, edge_scores}")
-
-                if remove_na == "omit":
-                    edge_scores_r = reduction([s for s in edge_scores if not pd.isna(s)])
-                elif remove_na == "to_1":
-                    edge_scores_r = reduction([s if not pd.isna(s) else 1 for s in edge_scores])
-                elif remove_na == "to_0":
-                    edge_scores_r = reduction([s if not pd.isna(s) else 0 for s in edge_scores])
-                else:
-                    raise ValueError(f"Undefined parameter for 'remove_na': {remove_na}")
-
-            final_destination = the_path[-1][1]
-            if final_destination not in scores:
-                scores[final_destination] = list()
-
-            if len(the_path) == 1 and (the_path[0][0] is None or the_path[0][2] is None):
-                # Happens when the path is like following: ((None, 'ENSG00000170558.10', None),)
-                # Just check whether this Ensembl ID exist in both assemblies
-                if not (the_path[0][1] is not None and the_path[0][0] is None and the_path[0][2] is None):
-                    raise ValueError(f"Unexpected singleton path shape: {the_path!r}")
-                assemblies = list(
-                    {
-                        j
-                        for i in self.graph.combined_edges_genes[the_path[0][1]]
-                        for j in self.graph.combined_edges_genes[the_path[0][1]][i]
-                    }
-                )
-                step_pri = sorted(self._assembly_priority_by_assembly[i] for i in assemblies)
-                assembly_jump, current_priority = 0, max(step_pri)
-            else:
-                the_path = tuple(
-                    (
-                        tuple(list(the_step[:3]) + [er_maker_for_initial_conversion(*the_step)])
-                        if len(the_step) == 4 and the_step[-1] in self._external_entrance_placeholders
-                        # -1, 10001 is when you have external to graph conversion and from_release is None.
-                        else the_step
-                    )
-                    for the_step in the_path
-                )
-                assembly_jump, step_pri, current_priority = self.minimum_assembly_jumps(the_path)
-            initial_conversion_conf = len(the_path[0]) == 4 and the_path[0][-1] in self._external_entrance_placeholders
-            to_add = {
-                # explain each
-                "from_id": from_id,
-                "assembly_jump": assembly_jump,  # a.k.a assembly penalty
-                "external_jump": external_jump,
-                "external_step": external_step,
-                "initial_conversion_conf": int(not initial_conversion_conf),
-                "edge_scores_reduced": -edge_scores_r,  # 'minus' is added so that all variables should be minimized.
-                "ensembl_step": len(the_path) - external_step,
-                "final_assembly_priority": (step_pri, current_priority),
-            }
-            if return_path:
-                to_add["the_path"] = the_path
-            scores[final_destination].append(to_add)
-
-        # choose the best route to each target, ignore others. Do it for each target separately.
-        max_score = {i: Track._path_score_sorter_single_target(scores[i]) for i in scores}
-
-        return max_score  # dict of dict
-
-    def edge_key_orientor(self, n1: str, n2: str, n3: int):
-        """Return the stored orientation of a multigraph edge.
-
-        For multigraphs every logical edge is stored *once*, but the caller may
-        hold `(u, v, k)` or `(v, u, k)`.
-        This helper resolves the ambiguity so that subsequent attribute look-ups
-        succeed.
+    def _node_scores(self, search: _Search, gene: str, release: int) -> list[int]:
+        """Worker of :py:meth:`calculate_node_scores` that shares the scratch memory of a conversion.
 
         Args:
-            n1 (str): One endpoint of the edge.
-            n2 (str): The other endpoint.
-            n3 (int): Edge key (index) within the `networkx` multi-edge.
+            search (_Search): Scratch memory of the conversion.
+            gene (str): A gene node.
+            release (int): The release at which the annotation is counted.
 
         Returns:
-            tuple[str, str, int]: A triple that is guaranteed to exist as written
-            in `self.graph`.
-
-        Raises:
-            AssertionError: If neither orientation is present in the graph.
+            list[int]: ``[-external ids, -transcripts, -translations]``.
         """
-        if self.graph.has_edge(n1, n2, n3):
-            edge_key = (n1, n2, n3)
-        else:
-            edge_key = (n2, n1, n3)
-            if not self.graph.has_edge(*edge_key):
-                raise AssertionError(edge_key)
+        reader = self._reader
+        externals: set = set()
+        transcripts: set = set()
+        translations: set = set()
+        # An external id counts through external databases only, not through an Ensembl relation that it also has.
+        ensembl_relations = frozenset(DB.nts_ensembl.values()) | frozenset(DB.nts_base_ensembl.values())
 
-        return edge_key
+        def count(node: str, depth: int) -> None:
+            for other, items in search.xrefs(node, True):
+                if not reader.holds(items, release):
+                    continue
+                other_type = reader.node_type(other)
+                if other_type == DB.nts_external:
+                    if release in reader.primary_releases(items, ensembl_relations) and not reader.is_hyperconnective(
+                        other
+                    ):
+                        externals.add(other)
+                elif other_type != reader.base_type and depth < 2:
+                    (transcripts if depth == 0 else translations).add(other)
+                    count(other, depth + 1)
 
-    def path_step_possible_assembly_jumps(self, n1, n2, n3, n4=None):
-        """Return the genome-assembly codes that can legally be used for a single edge.
+        count(gene, 0)
+        return [-len(externals), -len(transcripts), -len(translations)]
 
-        The helper inspects the edge that connects `n1` → `n2` and filters the
-        assemblies recorded on that edge against the *release* constraint `n4`:
-
-        * **None** - the edge is treated as backbone history; the result is the
-            graph-wide default assembly (usually the build on which the backbone was
-            constructed).
-        * **int** - keep only assemblies whose *release set* contains that single release.
-        * **set[int]** - keep assemblies whose release set intersects the provided set.
-
-        Args:
-            n1 (str): Source node identifier.
-            n2 (str): Destination node identifier.
-            n3 (int): Edge key within the NetworkX multigraph.
-            n4 (int | set[int] | None, optional): Release filter as described above.
-
-        Returns:
-            list[int]: Sorted list of assembly codes (species-specific integers; e.g. ``[37, 38]`` for human).
-
-        Raises:
-            ValueError: If `n4` is of an unsupported type.
-        """
-        edge_key = self.edge_key_orientor(n1, n2, n3)
-        if n4 is None:
-            return [self.graph.graph["genome_assembly"]]
-        elif isinstance(n4, int):
-            edge_data = self.graph.get_edge_data(*edge_key)[DB.connection_dict]
-            return sorted({j for i in edge_data for j in edge_data[i] if n4 in edge_data[i][j]})
-        elif isinstance(n4, set):
-            edge_data = self.graph.get_edge_data(*edge_key)[DB.connection_dict]
-            return sorted({j for i in edge_data for j in edge_data[i] if len(n4 & edge_data[i][j]) > 0})
-        else:
-            raise ValueError("isinstance(n4, ...)")
-
-    def minimum_assembly_jumps(self, the_path, step_pri=None, current_priority=None) -> tuple:
-        """Compute the penalty incurred by assembly downgrades along a path.
-
-        Each path step may be annotated with one or more candidate assemblies.
-        These are translated into priority values via the organism-scoped configuration
-        :py:attr:`DB.assembly_mysqlport_priority`.  The algorithm walks the path,
-        tracking the current priority and counting how many times it must drop
-        to a lower priority value—each drop constitutes an "assembly jump"
-        penalty.
-
-        Args:
-            the_path (Iterable[tuple]): Sequence of edge descriptors; each element is
-                either `(n1, n2, k)` or `(n1, n2, k, release)`.
-            step_pri (list[int] | None, optional): Priority list for the first edge.
-                If None, it is derived from `the_path`.
-            current_priority (int | None, optional): Starting priority.  If None,
-                initialised to `max(step_pri)`.
-
-        Returns:
-            tuple[int, list[int], int]:
-                - `assembly_jump` - total number of priority drops.
-                - `step_pri` - priority list of the last processed edge.
-                - `current_priority` - priority value after the final edge.
-        """
-        self._ensure_assembly_priority_cache()
-        assemblies = [self.path_step_possible_assembly_jumps(*i) for i in the_path]
-        # Each per-step priority list must be sorted for bisecting to behave correctly.
-        priorities = [sorted(self._assembly_priority_by_assembly[j] for j in step) for step in assemblies]
-
-        if step_pri is None:
-            step_pri = priorities.pop(0)
-        else:
-            step_pri = sorted(step_pri)
-        if current_priority is None:
-            current_priority = max(step_pri)  # The logic is basically follow the lowest priority if possible.
-
-        return Track._minimum_assembly_jumps_helper(
-            step_pri=step_pri,
-            current_priority=current_priority,
-            priorities=priorities,
-            assembly_priority=self._assembly_priority,
-        )
-
-    @staticmethod
-    def _minimum_assembly_jumps_helper(step_pri, current_priority, priorities, assembly_priority=None):
-        """Internal worker for :py:meth:`minimum_assembly_jumps`.
-
-        Given the priority sets for the remaining edges, iterate until all have
-        been consumed while updating the *current* assembly priority and counting
-        how often it must drop.
-
-        Args:
-            step_pri (list[int]): Priority values of the edge currently under
-                consideration.
-            current_priority (int): Priority value inherited from previous steps.
-            priorities (list[list[int]]): Priority lists for the *rest* of the path,
-                **already sorted** for correct bisecting.
-            assembly_priority (list[int] | None): Optional global priority lattice.
-                If ``None``, it is computed from ``step_pri``, ``current_priority``, and ``priorities``.
-
-        Returns:
-            tuple[int, list[int], int]: Same three-tuple as documented in
-            :py:meth:`minimum_assembly_jumps`.
-        """
-        if assembly_priority is None:
-            priority_values = set(step_pri)
-            priority_values.add(current_priority)
-            for pr in priorities:
-                priority_values.update(pr)
-            assembly_priority = sorted(priority_values, reverse=True)
-
-        def next_priority(p):
-            p_ind = assembly_priority.index(p)
-            # cannot return boundaries due to where the function is called.
-            return assembly_priority[p_ind + 1]
-
-        def next_priority_2(p, p_list):
-            p_ind = bisect.bisect(p_list, p) - 1
-            # bisect cannot return boundaries due to where the function is called.
-            return p_list[p_ind]
-
-        penalty = 0
-
-        # Process the current step and every subsequent step, ensuring `current_priority` is always compatible with
-        # the step's available priorities. The original implementation advanced `step_pri` inside the loop which could
-        # leave the *final* step unprocessed when `priorities` became empty; this version explicitly processes all
-        # steps (including the last) to keep `(step_pri, current_priority)` consistent for downstream scoring.
-        all_steps = [sorted(step_pri)] + [sorted(p) for p in priorities]
-        for step_pri in all_steps:
-            while max(step_pri) < current_priority:
-                # Upgrade (move to a better/smaller priority value) until the current choice becomes feasible.
-                current_priority = next_priority(current_priority)
-
-            if current_priority < min(step_pri):
-                # Downgrade (move to a worse/larger priority value) because this step cannot be satisfied otherwise.
-                current_priority = min(step_pri)
-                penalty += 1
-            elif current_priority not in step_pri:
-                # Snap to the best available priority that is still <= the current setting.
-                current_priority = next_priority_2(current_priority, step_pri)
-
-        return penalty, step_pri, current_priority
-
-    @staticmethod
-    def _path_score_sorter_single_target(lst_of_dict: list[dict]) -> dict:
-        """Select the best score dictionary for *one* conversion target.
-
-        The input is a list of dictionaries produced by
-        :py:meth:`calculate_score_and_select`.  Each dictionary is converted into a
-        tuple according to the *lexicographic importance order*
-
-        `("assembly_jump", "external_jump", "external_step",
-        "edge_scores_reduced", "ensembl_step")`
-
-        and the dictionary with the **smallest** tuple is returned.
-
-        Args:
-            lst_of_dict (list[dict]): Candidate score dictionaries for this target.
-
-        Returns:
-            dict: The chosen "winner" score dictionary.
-
-        Raises:
-            ValueError: If the input list is empty.
-        """
-        importance_order = (  # the variables from to_add in 'calculate_score_and_select'.
-            "assembly_jump",
-            "external_jump",  # e.g. uniprot bridge and hlca bridge becomes equivalent
-            "external_step",  # e.g. uniprot bridge and hlca bridge is different
-            "edge_scores_reduced",
-            "ensembl_step",
-        )  # they all are needed to be minimized
-
-        if not len(lst_of_dict) > 0:
-            raise ValueError("not len(lst_of_dict) > 0")
-
-        minimum_scores = [[dct[i] for i in importance_order] + [ind] for ind, dct in enumerate(lst_of_dict)]
-        minimum_scores = sorted(minimum_scores, reverse=False)
-        best_score_index = minimum_scores[0][-1]
-        return lst_of_dict[best_score_index]  # choose the best & shortest
-
-    def _path_score_sorter_all_targets(self, dict_of_dict: dict, from_id: str, to_release: int) -> dict:
-        """Select the overall best target(s).
-
-        Select the **overall best target(s)** once every candidate Ensembl node
-        has itself been reduced to its single best path.
-
-        The method linearises several per-path metrics into an *importance
-        order* (see the tuple at the top of the function), then:
-
-        1. Computes that ordered score for **each** pair `(ensembl_gene, final_target)`.
-        2. Finds the global minimum; if multiple pairs tie:
-            * Prefer the target whose identifier is identical to `from_id`.
-            * If more than one Ensembl gene still tie, fall back on
-                :py:meth:`calculate_node_scores` to favour the "richer" node.
-        3. Returns a *pruned* copy of `dict_of_dict` that contains only the
-           surviving Ensembl genes, each with only the winning `final_elements` entry.
-           Additional provenance is written to `filter_scores`.
-
-        Args:
-            dict_of_dict (dict): Nested result of
-                :py:meth:`calculate_score_and_select`.  Keys are candidate
-                Ensembl genes; values are dictionaries that already contain
-                *one* best path per final target.
-            from_id (str): Original query identifier; used to break ties in
-                favour of "same as input".
-            to_release (int): Target Ensembl release; forwarded to
-                :py:meth:`calculate_node_scores` during tie-breaking.
-
-        Returns:
-            dict: A reduced version of `dict_of_dict` holding only the winner(s) and enriched with a
-                `final_elements[*]['filter_scores']` sub-dict that records the filters applied.
-
-        Raises:
-            AssertionError: If node-score tie-breaking results in an empty candidate set.
-            ValueError: If `dict_of_dict` is empty.
-        """
-        importance_order = (
-            # the variables from to_add in 'calculate_score_and_select'.
-            "final_conversion_conf",
-            # "initial_conversion_conf", it should be the same for all possible routes.
-            "final_conv_asy_min_prior",  # return the one with latest assembly
-            "assembly_jump",
-            "external_jump",
-            # "external_step",  # TODO: calculate "external_jump_depth" and put here.
-            "final_asy_min_prior",
-            "final_asy_min_prior_count",
-            "final_conv_asy_min_prior_count",
-            # "edge_scores_reduced",
-            # "ensembl_step",  # Not really relevant
-            # "ens_node_importance", # Handled separately at the end due to computational cost
-        )  # they all are needed to be minimized
-
-        # max(external_count), max(protein_count), max(transcript_count)
-
-        if not len(dict_of_dict) > 0:
-            raise ValueError("not len(dict_of_dict) > 0")
-
-        minimum_scores: dict[tuple, list] = dict()
-
-        for dct in dict_of_dict:
-            for target in dict_of_dict[dct]["final_conversion"]["final_elements"]:
-                _temp = dict_of_dict[dct]["final_conversion"]["final_elements"]
-                ordered_score = {i: dict_of_dict[dct][i] for i in importance_order if i in dict_of_dict[dct]}
-                ordered_score["final_asy_min_prior"] = min(dict_of_dict[dct]["final_assembly_priority"][0])
-                ordered_score["assembly_jump"] += _temp[target]["additional_assembly_jump"]
-                fcc = dict_of_dict[dct]["final_conversion"]["final_conversion_confidence"]
-                ordered_score["final_conversion_conf"] = fcc
-                ordered_score["final_conv_asy_min_prior"] = _temp[target]["final_assembly_min_priority"]
-                ordered_score["final_conv_asy_min_prior_count"] = -_temp[target]["final_assembly_priority_count"]
-                ordered_score["final_asy_min_prior_count"] = -len(dict_of_dict[dct]["final_assembly_priority"][0])
-
-                minimum_scores[(dct, target)] = [ordered_score[i] for i in importance_order]
-
-        the_min_key: Callable = minimum_scores.get
-        best_score_key = min(minimum_scores, key=the_min_key)
-        best_score_value = minimum_scores[best_score_key]
-        best_scoring_targets = [i for i in minimum_scores if best_score_value == minimum_scores[i]]
-        the_same_switch, node_score_switch = False, False
-
-        # If multiple target's passed here, choose the target that is the same as from_id.
-        final_targets = {j for _, j in best_scoring_targets}
-        if from_id in final_targets:
-            best_scoring_targets = [(i, j) for i, j in best_scoring_targets if j == from_id]
-            the_same_switch = True
-
-        # If multiple dct's passed here, calculate the node score importance as an additional metric
-        final_ensembl_targets = {i for i, _ in best_scoring_targets}
-        if len(final_ensembl_targets) > 1:
-            minimum_scores_ns = {et: self.calculate_node_scores(et, to_release) for et in final_ensembl_targets}
-            the_min_key_ns: Callable = minimum_scores_ns.get
-            best_score_key_ns = min(minimum_scores_ns, key=the_min_key_ns)
-            best_score_value_ns = minimum_scores_ns[best_score_key_ns]
-            best_scoring_targets_ns = {i for i in minimum_scores_ns if best_score_value_ns == minimum_scores_ns[i]}
-            if not best_scoring_targets_ns:
-                raise AssertionError("Expected at least one best scoring target after node score filtering.")
-            best_scoring_targets = [(i, j) for i, j in best_scoring_targets if i in best_scoring_targets_ns]
-            node_score_switch = True
-
-        # Narrow down the results based on the findings and return.
-        output = dict()
-        for bst, _ in best_scoring_targets:
-            output[bst] = copy.deepcopy(dict_of_dict[bst])
-            output[bst]["final_conversion"]["final_elements"] = dict()
-        for bst, trgt in best_scoring_targets:
-            output[bst]["final_conversion"]["final_elements"][trgt] = dict_of_dict[bst]["final_conversion"][
-                "final_elements"
-            ][trgt]
-            output[bst]["final_conversion"]["final_elements"][trgt]["filter_scores"] = {
-                "initial_filter": minimum_scores[(bst, trgt)],
-                "same_as_input_filter": the_same_switch,
-                "node_importance_filter": minimum_scores_ns[bst] if node_score_switch else None,
-            }
-
-        return output  # choose the best & shortest
+    # The conversion
 
     def convert(
         self,
         from_id: str,
-        from_release: int | None = None,
-        to_release: int | None = None,
+        from_release: SupportsIndex | None = None,
+        to_release: SupportsIndex | None = None,
         final_database: str | None = None,
-        reduction: Callable = np.mean,
-        remove_na="omit",
-        score_of_the_queried_item: float = np.nan,
         go_external: bool = True,
         prioritize_to_one_filter: bool = False,
         return_path: bool = False,
-        deprioritize_lrg_genes: bool = True,
         return_ensembl_alternative: bool = True,
-    ):
-        """End-to-end ID conversion workflow.
+        from_database: str | None = None,
+        budget_states: int | None = None,
+        budget_seconds: float | None = None,
+    ) -> dict[str, Any] | None:
+        """Convert an identifier to the target release and, if asked, to a target database.
 
-        Starting from `from_id` the routine
+        Starting release: with ``from_release`` the identifier is read at that release and must be active there.
+        Without it, the identifier is read at ``to_release`` if it is active there (the answer is then what the
+        identifier means at the target release), and at the latest release at which it is active otherwise. A gene
+        id without version stands for its version of the starting release. The rule is the same for Ensembl ids and
+        for ids of external databases.
 
-        1. Determines the correct **time-travel direction** if
-           `from_release` is unspecified.
-        2. Enumerates *all* admissible paths with
-           :py:meth:`get_possible_paths` (forward and/or reverse).
-        3. Collapses those paths with :py:meth:`calculate_score_and_select`.
-        4. Optionally converts the surviving Ensembl gene(s) into
-           `final_database` via :py:meth:`_final_conversion`.
-        5. Optionally applies a final global selection with
-           :py:meth:`_path_score_sorter_all_targets`.
+        Search: from the genes the identifier stands for, Ensembl's stable-id history is followed to the target
+        release. Only when that leads to no gene, and ``go_external`` allows it, the search passes through an
+        external id or transcript that two genes carried at the same time or one after the other, with as few such
+        bridges as possible. ``external_jump`` in the result tells how many were used (0: history only).
 
-        The output structure mirrors this decision tree and, when
-        `return_path` is *True*, embeds the full edge list so that callers
-        can audit every hop.
+        Final conversion: with ``final_database`` each gene found is converted to the ids of that database attached
+        to it at the target release. One result has one final database: genes that have such an id are returned
+        with it; only if none has one, the genes themselves are returned (``no_target`` is then ``True``), or
+        nothing with ``return_ensembl_alternative=False``.
+
+        Order: the returned dict is ordered, best first. The genes of the best answer come first, in the order in
+        which ``prioritize_to_one_filter`` returns them alone (see "The best answer" below), so the first gene of
+        every answer is the first gene of the best answer. The other genes follow by their evidence: the
+        confidence of the final conversion, the number of bridges, the release gap of the bridges, the support of
+        the query on the entry gene (the number of databases that attach the identifier to that gene at the
+        starting release, to the gene itself or to one of its transcripts or translations), the path score, being
+        the query itself, the number of cross-reference and history steps, and finally the ids themselves.
+
+        Copies beside the reference sequence: Ensembl also annotates genes on alternative loci (haplotypes) and
+        assembly patches, and LRG records (``LRG_<number>``, fixed reference sequences of single genes), each with
+        a stable id of its own and with the names and accessions of the gene it is a copy of. Which genes these
+        are is Ensembl's statement, kept in the graph
+        (:py:meth:`idtrack.TheGraph.is_non_reference` at the target release); nothing is read off an
+        id. When the search reaches genes of the reference sequence and such copies, the copies are not part of
+        the answer, in any strategy; they are listed in ``alternative_locus_genes``. When it reaches copies only
+        (the identifier is such a gene or an LRG record, or a name that only they carry), they are the answer.
+
+        Identity: a gene id that exists at the target release is its own answer. The queried gene id's own version
+        at the target release is never taken out as a copy (a gene that lay on a patch of the assembly of the
+        target release is still that gene), it comes first in the result, and it is the best answer whatever else
+        its history reaches.
+
+        The best answer (``prioritize_to_one_filter``): the queried gene id's own version at the target release when
+        the search reached it; otherwise the entry genes with the best confidence, bridges, gap and
+        support each contribute their best successor (by score, then being the query itself, then, between
+        successors of the one gene that are still equal, the richest annotation); the mapping score and the
+        annotation are compared among the successors of one entry gene only, because neither says which of two
+        genes an identifier stands for. If more than one gene or target remains (an identifier that several genes
+        carry with equal support, a gene that Ensembl split into equal parts, a gene with several ids in the target
+        database), the answer is a tie: all of them are kept and ``tie`` is ``True``. The pairs of a tie are equal
+        in the evidence between entry genes; they are ordered by the mapping score of each to its own entry gene
+        (the higher first), then being the query itself, then the number of steps, then gene id and target id.
+        The assembly cannot differ between candidates, because every candidate lies on the primary assembly of
+        the target release.
 
         Args:
-            from_id (str): Source identifier (Ensembl, UniProt, RefSeq, …).
-            from_release (int | None): Starting Ensembl release.
-                *None* → infer from the graph.
-            to_release (int | None): Target Ensembl release.
-                Defaults to the newest release contained in the graph.
-            final_database (str | None): External database to
-                convert into.  *None* → stay on the Ensembl gene.
-            reduction (Callable): Function (e.g. `numpy.mean`)
-                used to collapse per-edge weights.  Must accept an iterable of
-                floats and return a float.
-            remove_na (str): Strategy for *NaN* edge weights -
-                `'omit'`, `'to_1'`, or `'to_0'`.
-            score_of_the_queried_item (float): Weight assigned to
-                the implicit edge that represents `from_id` itself.
-            go_external (bool): Allow jumps through external
-                databases when the backbone is disconnected.
-            prioritize_to_one_filter (bool): After all scoring,
-                keep only the single globally best target.
-            return_path (bool): Embed the full edge list(s) in the
-                returned dictionary.
-            deprioritize_lrg_genes (bool): If *True* and other
-                results exist, drop LRG_* genomic regions from the final set.
-            return_ensembl_alternative (bool): When converting to an
-                external database, also return the Ensembl gene as a fallback.
+            from_id (str): The identifier. The graph says which node the string means
+                (:py:meth:`idtrack.TheGraph.resolve_name` for ``from_release``, without one for the last
+                release of the graph, and for ``from_database``): a node that exists at that release (as an id of
+                that database, on the assembly that serves the release) before one that does not, whatever the
+                spelling, so a string that is itself the name of a node is not always read as that node. Among
+                those the string is matched exactly before any other way, and "exactly" means as a database wrote
+                the identifier at the release it is read at (the starting release of the rule above), so a name
+                typed as it was written then is that name, not another gene's synonym spelt the same. A
+                transcript or translation id without version stands for its version of the starting release.
+            from_release (SupportsIndex | None): The Ensembl release the identifier comes from, an ``int`` or another
+                integer type (``numpy.int64``). ``None``: see above.
+            to_release (SupportsIndex | None): The target Ensembl release (as ``from_release``). ``None``: the last
+                release of the graph.
+            final_database (str | None): The database to convert the genes into. ``None`` or ``ensembl_gene``:
+                the genes themselves; ``base_ensembl_gene``: gene ids without version; else an external database of
+                the genome assembly of the target release.
+            go_external (bool): Allow bridges through external ids when the history leads to no gene.
+            prioritize_to_one_filter (bool): Keep only the best gene and target.
+            return_path (bool): Include the path to every gene and target in the result.
+            return_ensembl_alternative (bool): When no gene found has an id in ``final_database``, return the genes
+                themselves instead of nothing.
+            from_database (str | None): The external database the identifier is meant as. The same string can be
+                an id of several databases (a number that is an NCBI gene id and an id of another source); with
+                this argument the identifier is read as an id of that database: only the genes that this database
+                attaches it to are entered, and an identifier that is not an id of that database (an Ensembl id, an
+                id of other databases only) has no conversion. The database says which genes are meant, not which
+                evidence counts: between the genes entered, the one that more databases attach the identifier to
+                is still the better supported (``entry_support``). ``None``: all databases.
+            budget_states (int | None): Largest number of search states this call may expand. ``None``:
+                :py:attr:`search_budget_states`.
+            budget_seconds (float | None): Longest time this call may take. ``None``:
+                :py:attr:`search_budget_seconds`.
 
         Returns:
-            dict | None:
-                * **dict** - Structured result as described above.
-                * **None** - No admissible path was found.
+            dict | None: ``None`` when the identifier is unknown or leads to nothing. Otherwise, per gene at the
+            target release (keys in the order described above):
+
+            * ``from_id`` (the node the identifier was read as), ``from_release`` (the starting release),
+              ``from_release_inferred``, ``to_release``,
+              ``from_databases`` (for an external id: the databases through which it was read at the starting
+              release, sorted: every database that attaches it there to one of the genes entered, to the gene
+              itself or to a transcript or translation of the gene; with ``from_database`` that database; more
+              than one means the string is an id of several databases there; for an Ensembl id that is not a
+              gene id with version, the Ensembl relation it is read through, e.g. ``base_ensembl_gene``);
+            * ``entry_gene`` (the gene the identifier was read as at the starting release and from which this gene
+              was reached), ``entry_support`` (the number of databases that attach the identifier to it there, to
+              the gene itself or to one of its transcripts or translations; 1 for Ensembl identifiers);
+            * ``external_jump`` (bridges used), ``external_gap`` (releases between leaving a gene and entering the
+              next, summed over the bridges), ``external_step`` (cross-reference edges on the path),
+              ``ensembl_step`` (history edges on the path);
+            * ``score``: the product of Ensembl's mapping scores along the history edges of the path (1.0 when the
+              path has no scored event);
+            * ``tie``: ``True`` when the best answer of this conversion is shared by several genes or targets (the
+              same value in every entry of a result);
+            * ``alternative_locus_genes``: the genes on alternative loci and patches and the LRG records that the
+              search reached beside genes of the reference sequence, in ascending order; they are not part of the
+              result (the same list in every entry, empty when there is none);
+            * ``the_path`` (with ``return_path``): a tuple of steps, ``(source, target, key)`` for a history edge,
+              ``(source, target, 0, release)`` for a cross-reference edge used at a release, and
+              ``((None, gene, None),)`` for a gene that is its own counterpart;
+            * ``final_conversion``: ``final_database``, ``final_conversion_confidence`` (0: attached at the target
+              release; 1: attached at the target release to a transcript or translation the gene had at another
+              release; ``None``: no gene has an id in the database and the genes themselves are returned),
+              ``no_target`` (``True`` in that last case), ``genes_without_target`` (the genes the search reached
+              that have no id in the database while other genes have one; they are not part of the result; the same
+              list in every entry), and
+              ``final_elements``: per target id (an id of an external database as that database wrote it at the
+              target release, :py:meth:`idtrack.TheGraph.spelling`) a dict with ``the_path`` (with ``return_path``) and,
+              with ``prioritize_to_one_filter``, ``filter_scores``.
 
         Raises:
-            ValueError: For non-callable `reduction`, unsupported
-                `remove_na` modes, unknown `final_database` values, or
-                logical inconsistencies detected during processing.
+            TypeError: If ``from_id`` is not a string or a release is not an integer.
+            ValueError: If a release is outside the graph, ``final_database`` is not available at the target
+                release, ``from_database`` is not an external database of the graph, or a budget is not positive.
+            InactiveAtReleaseError: If ``from_release`` is given and the identifier is not active at that release.
+            UnknownVersionError: If the identifier is an Ensembl id with a version that the graph does not hold and
+                that cannot be newer than the graph (an id with a version higher than all the graph holds, active
+                at the graph's last release, is read as its latest version instead).
+            SearchBudgetExceededError: If the search needs more states or time than the budget of a call.
         """
-        if not callable(reduction):
-            raise ValueError("not callable(reduction)")
-        self._ensure_assembly_priority_cache()
+        if not isinstance(from_id, str):
+            raise TypeError(f"`from_id` must be a string, not {from_id!r} of type {type(from_id).__name__}.")
+        reader = self._reader
+        target = reader.last_release if to_release is None else self._check_release(to_release, "to_release")
+        given = None if from_release is None else self._check_release(from_release, "from_release")
+        database = self._check_final_database(final_database, target)
 
-        # Be defensive: allow callers to pass non-canonical identifiers directly to `Track.convert`.
-        if from_id not in self.graph.nodes:
-            resolved, _converted = self.graph.node_name_alternatives(from_id)
-            if resolved is None:
+        if from_database is not None and from_database not in self.graph.available_external_databases:
+            raise ValueError(
+                f"`from_database`={from_database!r} is not an external database of this graph. Available: "
+                f"{sorted(self.graph.available_external_databases)}."
+            )
+
+        node: str = from_id
+        versions: tuple = ()
+        resolved, _ = reader.resolve_name(from_id, given, from_database, target)
+        if resolved is not None:
+            node = resolved
+        else:
+            held = self.graph.known_versions(from_id)
+            if held:
+                raise UnknownVersionError(from_id, held)
+            # A transcript or translation id without version has no node of its own: it stands for a version.
+            versions = self.graph.versions_of(from_id)
+            if not versions:
                 return None
-            from_id = resolved
-        to_release = to_release if to_release is not None else self.graph.graph["ensembl_release"]
 
-        if from_release is None:
-            should_reversed, fr = self.should_graph_reversed(from_id, to_release)
-            fri = True
-        else:
-            should_reversed = "forward" if from_release <= to_release else "reverse"
-            fr = copy.deepcopy(from_release)
-            fri = False
+        if from_database is not None and (versions or reader.node_type(node) != DB.nts_external):
+            return None  # an Ensembl identifier is not an id of an external database
 
-        # fri stands for from_release_infered. When from release is inferred rather than provided by the user,
-        # get_possible_paths method first strictly looks at ensembl genes defined the inferred release in
-        # external/transcript etc to ensembl gene transition. For ensembl gene query ID, it does not matter.
-        # Starting travel history from the first possible ensembl gene ID sometimes yield lost IDs. When lost, the
-        # program looks at all possible ensembl gene ID transition possible.
+        states = self.search_budget_states if budget_states is None else budget_states
+        seconds = self.search_budget_seconds if budget_seconds is None else budget_seconds
+        if not states > 0 or not seconds > 0:
+            raise ValueError(f"The budget of a conversion must be positive (states: {states!r}, seconds: {seconds!r}).")
 
-        if should_reversed == "both":
-            possible_paths_forward = self.get_possible_paths(
-                from_id,
-                fr[0],
-                to_release,
-                go_external=go_external,
-                reverse=False,
-                from_release_inferred=fri,
-            )
-            possible_paths_reverse = self.get_possible_paths(
-                from_id,
-                fr[1],
-                to_release,
-                go_external=go_external,
-                reverse=True,
-                from_release_inferred=fri,
-            )
-            poss_paths = tuple(list(itertools.chain(possible_paths_forward, possible_paths_reverse)))
-            ff = itertools.chain(
-                itertools.repeat(fr[0], len(possible_paths_forward)),
-                itertools.repeat(fr[1], len(possible_paths_reverse)),
-            )
-        elif should_reversed == "forward":
-            poss_paths = self.get_possible_paths(
-                from_id, fr, to_release, go_external=go_external, reverse=False, from_release_inferred=fri
-            )
-            ff = itertools.chain(itertools.repeat(fr, len(poss_paths)))
-        elif should_reversed == "reverse":
-            poss_paths = self.get_possible_paths(
-                from_id, fr, to_release, go_external=go_external, reverse=True, from_release_inferred=fri
-            )
-            ff = itertools.chain(itertools.repeat(fr, len(poss_paths)))
-        else:
-            raise ValueError("should_reversed")
-
-        if len(poss_paths) == 0:
+        search = _Search(reader, node, states, seconds)
+        read_at = given
+        if versions:
+            chosen = self._version_at_start(search, from_id, versions, given, target)
+            if chosen is None:
+                return None
+            node, read_at = chosen
+            search.identifier = node
+        start, entries, attached, _ = self._start(search, node, read_at, target, from_database)
+        if not entries:
             return None
+        # Through which databases the query belongs to each entry gene at the starting release: every database that
+        # attaches it to the gene itself or to a transcript or translation of the gene. A named database says which
+        # genes are entered (`_start`); the support of an entry gene is every database that attaches the identifier
+        # to it, named or not: what the other databases say about a gene is evidence all the same.
+        read_through = set().union(*attached.values()) if attached else set()
+        from_databases = sorted(read_through if from_database is None else read_through & {from_database})
+        support = {gene: max(1, len(attached.get(gene, ()))) for gene, _ in entries}
+        found = self._search_paths(search, entries, start, target, go_external)
+
+        if not found:
+            return None
+
+        # Copies on alternative loci and patches, and LRG records, are not part of an answer that holds a gene of
+        # the reference sequence. The graph's mark says which genes these are. The queried gene id's own version at
+        # the target release is never taken out: an id that exists at the target release is its own answer.
+        own_id = None
+        if not versions and reader.node_type(node) == reader.base_type:
+            own_id = node
+        elif not versions and reader.is_backbone(node):
+            own_id = reader.base_id(node)
+        own = {gene for gene in found if own_id is not None and reader.base_id(gene) == own_id}
+        copies = sorted(gene for gene in found if gene not in own and self.graph.is_non_reference(gene, target))
+        alternative_locus_genes: list[str] = []
+        if copies and any(not self.graph.is_non_reference(gene, target) for gene in found):
+            alternative_locus_genes = copies
+            found = {gene: record for gene, record in found.items() if gene not in set(copies)}
+
+        # Final conversion: one database and one confidence for the whole result.
+        gene_form = DB.nts_ensembl[DB.backbone_form]
+        finals: dict[str, tuple] = {}
+        without_target: list[str] = []
+        if database is None:
+            finals = {gene: ({gene: ()}, 0) for gene in found}
+            final_name, no_target = gene_form, False
         else:
-            converted = self.calculate_score_and_select(
-                poss_paths, reduction, remove_na, ff, to_release, score_of_the_queried_item, return_path, from_id
-            )  # chooses one path with best score for a given target.
-
-            # They are actually not genes as we understand, they are genomic regions.
-            if deprioritize_lrg_genes:
-                # Not robust coding here.
-                new_converted = {i: converted[i] for i in converted if not i.lower().startswith("lrg")}
-                if len(new_converted) > 0:
-                    converted = new_converted
-
-            main_assembly = int(self.graph.graph["genome_assembly"])
-            allowed_ones = self.graph.available_external_databases_assembly[main_assembly].union(
-                {DB.nts_ensembl[DB.backbone_form], DB.nts_base_ensembl[DB.backbone_form]}
-            )
-            for cnvt in converted:
-                if final_database is not None and final_database not in allowed_ones:
-                    raise ValueError(f"Final database (`final_database`) is not among allowed ones: {allowed_ones}")
-                elif final_database is None or final_database == DB.nts_ensembl[DB.backbone_form]:
-                    prio_list = self._create_priority_list_ensembl(cnvt, to_release)
-                    converted[cnvt]["final_conversion"] = Track._final_conversion_dict_prepare(
-                        confidence=0,
-                        sysns=[cnvt],
-                        paths=[[]] if return_path else None,
-                        add_ass_jump_list=[0],
-                        min_priority_list=[min(prio_list)],
-                        len_priority_list=[len(prio_list)],
-                        final_database=DB.nts_ensembl[DB.backbone_form],
-                    )
-                elif (
-                    final_database in self.graph.available_external_databases
-                    or final_database == DB.nts_base_ensembl[DB.backbone_form]
-                ):
-                    converted = self._final_conversion(
-                        converted, cnvt, final_database, to_release, return_path, return_ensembl_alternative
-                    )
-                else:
-                    raise ValueError("This should not be raised.")
-
-            # if there is no conversable entry, remove the conversion
-            converted = {
-                i: converted[i] for i in converted if len(converted[i]["final_conversion"]["final_elements"]) > 0
-            }
-
-            if len(converted) == 0:
+            converted = {gene: self._final_targets(search, gene, database, target) for gene in found}
+            with_target = {gene: value for gene, value in converted.items() if value[0]}
+            if with_target:
+                best_confidence = min(value[1] for value in with_target.values())
+                finals = {gene: value for gene, value in with_target.items() if value[1] == best_confidence}
+                final_name, no_target = database, False
+                without_target = sorted(gene for gene, value in converted.items() if not value[0])
+            elif return_ensembl_alternative:
+                finals = {gene: ({gene: ()}, None) for gene in found}
+                final_name, no_target = gene_form, True
+            else:
                 return None
-            elif not prioritize_to_one_filter:
-                return converted
-            else:
-                return self._path_score_sorter_all_targets(converted, from_id, to_release)
 
-    def _create_priority_list_ensembl(self, from_id: str, to_release: int):
-        """Build a priority list of assemblies in which `from_id` is active.
+        # An external id is reported as its database wrote it at the target release: the node name is the graph's one
+        # spelling of the id, and a database may write it with other letter case, also from release to release.
+        spell_as = None if no_target or database is None or database == reader.base_type else database
 
-        The priorities are the numeric **assembly rankings** defined in
-        :py:attr:`DB.assembly_mysqlport_priority` (smaller numbers mean
-        higher priority).
+        query_base = node if reader.node_type(node) == reader.base_type else None
 
-        Args:
-            from_id (str): Ensembl gene identifier.
-            to_release (int): Target Ensembl release; only assemblies that
-                contain this release are considered.
+        def is_query(gene: str, target_id: str) -> bool:
+            return target_id == node or (query_base is not None and reader.base_id(gene) == query_base)
 
-        Returns:
-            list[int]: Sorted list of priority values (ascending).
-        """
-        self._ensure_assembly_priority_cache()
-        ceg = self.graph.combined_edges_genes[from_id]
-        ceg_assembly_list = sorted({j for i in ceg for j in ceg[i] if to_release in ceg[i][j]})
-        if len(ceg_assembly_list) == 0:
-            self.log.warning(f"A form of rare event found for {from_id!r}.")
-            return [np.iinfo(np.int32).max]  # placeholder large integer
-        return [self._assembly_priority_by_assembly[i] for i in ceg_assembly_list]
+        # A pair is ranked by: being the queried gene id's own version at the target release; then how the entry gene
+        # compares with the other entry genes (final confidence, bridges, gap of the bridges, support of the query on
+        # the entry gene), then how the gene compares with the other successors of the same entry gene (mapping
+        # score, being the query itself), then steps and ids.
+        pairs = []
+        for gene, (targets, confidence) in finals.items():
+            record = found[gene]
+            lineage = (confidence, record["external_jump"], record["external_gap"], -support[record["entry_gene"]])
+            for target_id in targets:
+                within = (-round(record["score"], 12), 0 if is_query(gene, target_id) else 1)
+                rest = (record["external_step"], record["ensembl_step"], gene, target_id)
+                order = (0 if gene in own else 1,) + lineage + within + rest
+                pairs.append((order, lineage, within, gene, target_id))
+        pairs.sort()
 
-    @staticmethod
-    def _final_conversion_dict_prepare(
-        confidence: int | float,
-        sysns: list,
-        paths: list[list] | None,
-        min_priority_list: list,
-        len_priority_list: list,
-        add_ass_jump_list: list,
-        final_database: str,
-    ):
-        """Assemble the final-conversion section that will be attached to a candidate path.
+        # The best answer. Between entry genes only the lineage evidence counts: the entry genes that are equal in it
+        # all belong to the answer. The mapping score compares the successors of one gene (it says how much of that
+        # gene a successor keeps, not which of two genes a name stands for), then being the query itself, and between
+        # successors that are still equal the richness of annotation decides, as the last resort. What remains is the
+        # answer; more than one pair is a tie.
+        best_pairs: list[tuple] = []
+        by_entry: dict[str, list] = {}
+        candidates = [pair for pair in pairs if pair[3] in own] or pairs  # the id's own version is the best answer
+        for pair in candidates:
+            if pair[1] == candidates[0][1]:
+                by_entry.setdefault(found[pair[3]]["entry_gene"], []).append(pair)
+        node_scores: dict[str, list] = {}
+        for entry_gene in sorted(by_entry):
+            successors = [pair for pair in by_entry[entry_gene] if pair[2] == by_entry[entry_gene][0][2]]
+            equal_genes = sorted({pair[3] for pair in successors})
+            if len(equal_genes) > 1:
+                for gene in equal_genes:
+                    node_scores[gene] = self._node_scores(search, gene, target)
+                richest = min(node_scores[gene] for gene in equal_genes)
+                successors = [pair for pair in successors if node_scores[pair[3]] == richest]
+            best_pairs.extend(successors)
+        best_pairs.sort()
+        tie = len(best_pairs) > 1
 
-        The section contains a global conversion-confidence flag plus one
-        entry per synonym that survived the path-finding stage.  When
-        `paths` is None the structure is identical but omits the
-        `'the_path'` member to save memory.
-
-        Args:
-            confidence (int | float): Heuristic confidence for the *whole*
-                conversion step - `0` for "perfect", larger values for
-                fallback scenarios, `np.inf` when no conversion was
-                possible.
-            sysns (list): List of synonym identifiers *in the same order*
-                as the metric lists below.
-            paths (list[list] | None): One walk (edge list) per synonym, or
-                *None* if the caller does not want to expose paths.
-            min_priority_list (list): Minimum assembly priority reached
-                by each walk.
-            len_priority_list (list): Number of distinct assembly
-                priorities encountered by each walk.
-            add_ass_jump_list (list): Additional assembly-jump penalty
-                incurred during the synonym hop itself.
-            final_database (str): Name of the database these synonyms belong
-                to (e.g. `'uniprot'` or `DB.nts_ensembl[DB.backbone_form]`).
-
-        Returns:
-            dict: Nested dictionary ready to be stored under the key
-            `'final_conversion'`.
-        """
-        if paths is not None:
-            return {
-                "final_conversion_confidence": confidence,
-                "final_database": final_database,
-                "final_elements": {
-                    s: {
-                        "final_assembly_priority_count": len_priority_list[ind],
-                        "final_assembly_min_priority": min_priority_list[ind],
-                        "additional_assembly_jump": add_ass_jump_list[ind],
-                        "the_path": tuple(tuple(i) for i in paths[ind]),
-                    }
-                    for ind, s in enumerate(sysns)
-                },
-            }
+        filter_scores: dict[tuple, dict] = {}
+        if prioritize_to_one_filter:
+            pairs = best_pairs
+            for _, lineage, within, gene, target_id in pairs:
+                filter_scores[(gene, target_id)] = {
+                    "initial_filter": [lineage[0], lineage[1], lineage[2], -lineage[3], -within[0]],
+                    "same_as_input_filter": within[1] == 0,
+                    "node_importance_filter": node_scores.get(gene),
+                }
         else:
-            return {
-                "final_conversion_confidence": confidence,
-                "final_database": final_database,
-                "final_elements": {
-                    s: {
-                        "final_assembly_priority_count": len_priority_list[ind],
-                        "final_assembly_min_priority": min_priority_list[ind],
-                        "additional_assembly_jump": add_ass_jump_list[ind],
-                    }
-                    for ind, s in enumerate(sysns)
-                },
-            }
+            # Every answer, best first by the order that chose the best answer: its pairs come first, as they are
+            # returned alone, and the others follow by their evidence. The evidence alone does not put the best
+            # answer first: the mapping score and the annotation are compared among the successors of one entry
+            # gene only.
+            leading = set(best_pairs)
+            pairs = best_pairs + [pair for pair in pairs if pair not in leading]
 
-    def _final_conversion(
-        self,
-        converted: dict,
-        cnvt: str,
-        final_database: str,
-        ens_release: int,
-        return_path: bool,
-        return_ensembl_alternative: bool,
-        prevent_assembly_jumps: bool = True,
-        account_for_hyperconnected_nodes: bool = False,
-    ):
-        """Convert an Ensembl gene node to the requested external database.
+        result: dict[str, dict] = {}
+        for _, _, _, gene, target_id in pairs:
+            if gene not in result:
+                record = found[gene]
+                entry: dict[str, Any] = {
+                    "from_id": node,
+                    "from_release": start,
+                    "from_release_inferred": given is None,
+                    "from_databases": from_databases,
+                    "entry_gene": record["entry_gene"],
+                    "entry_support": support[record["entry_gene"]],
+                    "to_release": target,
+                    "external_jump": record["external_jump"],
+                    "external_gap": record["external_gap"],
+                    "external_step": record["external_step"],
+                    "ensembl_step": record["ensembl_step"],
+                    "score": record["score"],
+                    "tie": tie,
+                    "alternative_locus_genes": list(alternative_locus_genes),
+                    "final_conversion": {
+                        "final_database": final_name,
+                        "final_conversion_confidence": finals[gene][1],
+                        "no_target": no_target,
+                        "genes_without_target": list(without_target),
+                        "final_elements": {},
+                    },
+                }
+                if return_path:
+                    entry["the_path"] = record["the_path"]
+                result[gene] = entry
+            element: dict[str, Any] = {}
+            if return_path:
+                element["the_path"] = finals[gene][0][target_id]
+            if prioritize_to_one_filter:
+                element["filter_scores"] = filter_scores[(gene, target_id)]
+            reported = target_id if spell_as is None else self.graph.spelling(target_id, spell_as, target)
+            result[gene]["final_conversion"]["final_elements"][reported] = element
+        return result
 
-        Convert an Ensembl gene node to the requested external database and
-        merge the result back into `converted`.
+    # Where a list of identifiers comes from
 
-        The routine:
+    def identify_source(self, dataset_ids: list[str], mode: str) -> list[tuple]:
+        """Count in which assemblies, databases and releases the identifiers of a data set occur.
 
-        1. Builds every legal synonym path from `cnvt` to
-           `final_database` that is active in `ens_release` (or in any
-           release as a fallback).
-        2. Computes assembly-jump penalties for each path.
-        3. Calls :py:meth:`_final_conversion_dict_prepare` to create the
-           conversion sub-dict.
-        4. Optionally falls back to returning the Ensembl gene itself when no
-           synonym exists and `return_ensembl_alternative` is True.
+        Only the edges of the given identifiers are read; nothing is computed for the rest of the graph.
 
         Args:
-            converted (dict): The current accumulator being built by
-                :py:meth:`convert`.
-            cnvt (str): Ensembl gene identifier that is undergoing final
-                conversion.
-            final_database (str): Target external database.
-            ens_release (int): Target Ensembl release.
-            return_path (bool): If True, embed the path(s) that lead to each
-                synonym.
-            return_ensembl_alternative (bool): When no synonym can be found,
-                add a fallback entry that keeps the Ensembl gene.
-            prevent_assembly_jumps (bool): If ``True``, disallow conversion paths
-                that cross between different genome assemblies. Defaults to ``True``.
-            account_for_hyperconnected_nodes (bool): If ``True``, skip nodes
-                that are marked as hyperconnective (very high connectivity) to
-                prevent search explosion and low-quality paths. Defaults to ``False``.
+            dataset_ids (list[str]): Nodes of the graph.
+            mode (str): What to count: ``complete`` for ``(database, assembly, release)``, ``ensembl_release``,
+                ``assembly`` or ``assembly_ensembl_release``.
 
         Returns:
-            dict: The same `converted` dict, updated in place (and also
-            returned for convenience).
+            list[tuple]: ``(origin, count)`` pairs, the most frequent first. Origins with the same count are tied;
+            among them the later release, then the higher-priority assembly, then the database name comes first, so
+            the order does not depend on the input order or on the process.
 
         Raises:
-            EmptyConversionMetricsError: Raised when no valid conversion metrics
-                are available and no alternative conversion path can be found.
+            ValueError: If ``mode`` is not one of the four values.
         """
-
-        def _final_conversion_path(gene_id: str, target_db: str, from_release: int):
-            """Produce every synonym path from an Ensembl gene to *one* external database.
-
-            The search is attempted twice:
-            1. Release-restricted - only synonyms active in
-               `from_release`; confidence = 0.
-            2. Release-agnostic - synonyms active in any release;
-               confidence = 1.
-
-            Args:
-                gene_id (str): Ensembl gene identifier acting as the source.
-                target_db (str): Desired external database.
-                from_release (int): Ensembl release that paths must reach
-                    (first attempt).
-
-            Returns:
-                tuple[list[list], int]:
-                    - `syn_ids_path` - list of edge-lists, one per synonym.
-                    - `confidence`   - 0 for strict, 1 for fallback search.
-            """
-
-            def _final_conversion_path_helper(res_syn_mth, er: int | None):
-                add_to_step = [0] if er is None else [0, er]
-                return [[list(i) + add_to_step for i in zip(m1, m1[1:])] for m1, _ in res_syn_mth]
-
-            def _final_conversion_path_helper_2(one_path):
-                result = list()
-                for k in one_path:
-                    edge_key = self.edge_key_orientor(*k)
-                    ens_rels_avail = self.graph.get_edge_data(*edge_key)["available_releases"]
-                    result.append(ens_rels_avail)
-                return result
-
-            def _contains_assembly(lst, asyml: int, er_for_jumps: int | None, er_for_last_node: int | None):
-
-                # prevent assembly jumps {some ensembl-gene's are also shared, and they are not called as assembly_37..}
-                # just for each returned synonymous, check whether the connection is only possible on assembly 38,
-                # if not just remove this one. check graph ans see whether the nodes returned share 38 assembly.
-
-                def _get_edge_data(u, v):
-                    e1 = self.graph.get_edge_data(u, v)
-                    e2 = self.graph.get_edge_data(v, u)
-                    if e1 is not None and e2 is None:
-                        return e1
-                    elif e2 is not None and e1 is None:
-                        return e2
-                    elif e1 is None and e2 is None:
-                        raise ValueError(f"No edge between {u!r} and {v!r}.")
-                    else:
-                        raise ValueError(f"Bidirectional edge between {u!r} and {v!r}.")
-
-                # these are for external jumps to make it allowed in only assembly defined
-                switch_1 = False
-                for u, v in zip(lst, lst[1:]):
-                    edges = _get_edge_data(u, v)
-                    for _, edge in edges.items():
-                        for _, ae in edge["connection"].items():
-                            for assembly, ensembl_release in ae.items():
-                                if er_for_jumps is None:
-                                    if asyml == assembly:
-                                        switch_1 = True
-                                else:
-                                    if er_for_jumps in ensembl_release and asyml == assembly:
-                                        switch_1 = True
-                switch_2 = False
-                # last node should be in the database requested within assembly defined. See the line:
-                # idt.convert_identifier("ENSG00000199293.1", to_release=94, from_release=94, final_database="RFAM")
-                edges = _get_edge_data(u, v)
-                for _, edge in edges.items():
-                    for assembly, ensembl_release in edge["connection"][target_db].items():
-                        if er_for_last_node is None:
-                            if asyml == assembly:
-                                switch_2 = True
-                        else:
-                            if er_for_last_node in ensembl_release and asyml == assembly:
-                                switch_2 = True
-
-                return all([switch_1, switch_2])
-
-            def _prevent_assembly_jumps(synonymous_nodes_output, er_for_jumps, er_for_last_node):
-                if prevent_assembly_jumps:
-                    return [
-                        i
-                        for i in synonymous_nodes_output
-                        if _contains_assembly(
-                            lst=i[0],  # where node ids are stored.
-                            asyml=int(self.graph.graph["genome_assembly"]),
-                            er_for_jumps=er_for_jumps,
-                            er_for_last_node=er_for_last_node,
-                        )
-                    ]
-                else:
-                    return synonymous_nodes_output
-
-            a = _final_conversion_path_helper(
-                _prevent_assembly_jumps(
-                    self.synonymous_nodes(
-                        the_id=gene_id,
-                        depth_max=2,
-                        filter_node_type={target_db},
-                        from_release=from_release,
-                        ensembl_backbone_shallow_search=True,
-                        account_for_hyperconnected_nodes=account_for_hyperconnected_nodes,
-                    ),
-                    er_for_jumps=from_release,
-                    er_for_last_node=from_release,
-                ),
-                er=from_release,
+        pick = {
+            "complete": lambda trio: trio,
+            "ensembl_release": lambda trio: trio[2],
+            "assembly": lambda trio: trio[1],
+            "assembly_ensembl_release": lambda trio: trio[1:],
+        }
+        if mode not in pick:
+            raise ValueError(
+                f"Unknown mode {mode!r}. Expected one of: 'complete', "
+                "'ensembl_release', 'assembly', 'assembly_ensembl_release'."
             )
+        reader = self._reader
+        counts: Counter = Counter()
+        for identifier in dataset_ids:
+            counts.update({pick[mode](trio) for trio in reader.trios(identifier)})
 
-            if len(a) > 0:
-                confidence = 0
-                return a, confidence  # syns, confidence (lower better)
-            else:
-                the_paths_no_ens_rel = _final_conversion_path_helper(
-                    _prevent_assembly_jumps(
-                        self.synonymous_nodes(
-                            the_id=gene_id,
-                            depth_max=2,
-                            filter_node_type={target_db},
-                            from_release=None,
-                            ensembl_backbone_shallow_search=True,
-                            account_for_hyperconnected_nodes=account_for_hyperconnected_nodes,
-                        ),
-                        er_for_jumps=None,
-                        er_for_last_node=from_release,
-                    ),
-                    er=None,
-                )
+        priority = reader.priority
+        worst = max(priority.values(), default=0) + 1
 
-                for ind1, pt in enumerate(the_paths_no_ens_rel):
-                    ens_rels = _final_conversion_path_helper_2(pt)  # add ens_rel sets
-                    the_paths_no_ens_rel[ind1] = [i + [ens_rels[ind2]] for ind2, i in enumerate(pt)]
-                confidence = 1
-                return the_paths_no_ens_rel, confidence
-
-        def _final_conversion_helper(conv_dict: dict, conv_dict_key: str, a_path: list):
-            """Re-compute assembly-jump metrics after appending the external conversion path.
-
-            Args:
-                conv_dict (dict): Parent entry in `converted` holding the
-                    pre-conversion metrics.
-                conv_dict_key (str): Key of that entry (the Ensembl gene).
-                a_path (list): Edge list representing one complete walk
-                    (history + synonym hop).
-
-            Returns:
-                list[int | float]: `[assembly_jump, min_priority, n_priorities]`.
-            """
-            # the path will continue with final conversion so assembly penalty should be calculated again.
-            _s1, _s2 = conv_dict[conv_dict_key]["final_assembly_priority"]
-            penalty, step_pri, _ = self.minimum_assembly_jumps(a_path, _s1, _s2)
-            return [penalty, min(step_pri), len(step_pri)]
-
-        syn_ids_path, conf = _final_conversion_path(cnvt, final_database, from_release=ens_release)
-
-        syn_ids = [i[-1][1] for i in syn_ids_path]
-
-        if len(syn_ids) == 0 and return_ensembl_alternative:
-            # Alternativelu return ensembl itself, return confidence np.inf [which means unsuccessful]
-            prio_list = self._create_priority_list_ensembl(cnvt, ens_release)
-
-            converted[cnvt]["final_conversion"] = Track._final_conversion_dict_prepare(
-                confidence=np.inf,  # as it is not the main target.
-                sysns=[cnvt],
-                paths=[[]] if return_path else None,
-                add_ass_jump_list=[0],
-                min_priority_list=[min(prio_list)],
-                len_priority_list=[len(prio_list)],
-                final_database=DB.nts_ensembl[DB.backbone_form],
-            )
-        else:
-            conversion_metrics = [_final_conversion_helper(converted, cnvt, i) for i in syn_ids_path]
-            if not conversion_metrics:
-                raise EmptyConversionMetricsError(
-                    "The `conversion_metrics` is emtpy. It happens when `return_ensembl_alternative` "
-                    f"is `false` and no corresponding final conversion possible: {cnvt}\n{converted}."
-                )
-            sl1, sl2, sl3 = list(map(list, zip(*conversion_metrics)))
-            converted[cnvt]["final_conversion"] = Track._final_conversion_dict_prepare(
-                confidence=conf,
-                sysns=syn_ids,
-                paths=syn_ids_path if return_path else None,
-                add_ass_jump_list=sl1,
-                min_priority_list=sl2,
-                len_priority_list=sl3,
-                final_database=final_database,
-            )
-
-        return converted
-
-    def identify_source(self, dataset_ids: list[str], mode: str):
-        """Infer the most likely origin (assembly and/or Ensembl release) of a heterogeneous identifier list.
-
-        The function tallies how often each origin triple appears among
-        `dataset_ids` and returns the counts sorted in descending order.
-
-        Args:
-            dataset_ids (list[str]): Collection of identifiers to analyse.
-            mode (str): Granularity of the origin to extract - one of
-                - 'complete'                  → (assembly, db, release)
-                - 'ensembl_release'           → release only
-                - 'assembly'                  → assembly only
-                - 'assembly_ensembl_release'  → (assembly, release)
-
-        Returns:
-            list[tuple[Any, int]]: Pairs `(origin, count)` sorted by
-            frequency.
-
-        Raises:
-            ValueError: If `mode` is not one of the recognised values.
-        """
-        possible_trios: list[Any] = list()
-        for di in dataset_ids:
-            # assembly = self.get_external_assembly()
+        def tie_order(origin: Any) -> tuple:
             if mode == "complete":
-                possible_trios.extend(self.graph.node_trios[di])
-            elif mode == "ensembl_release":
-                possible_trios.extend({i[2] for i in self.graph.node_trios[di]})
-            elif mode == "assembly":
-                possible_trios.extend({i[1] for i in self.graph.node_trios[di]})
-            elif mode == "assembly_ensembl_release":
-                possible_trios.extend({i[1:] for i in self.graph.node_trios[di]})
-            else:
-                raise ValueError(
-                    f"Unknown mode {mode!r}. Expected one of: 'complete', "
-                    "'ensembl_release', 'assembly', 'assembly_ensembl_release'."
-                )
+                return (-origin[2], priority.get(origin[1], worst), origin[1], origin[0])
+            if mode == "ensembl_release":
+                return (-origin,)
+            if mode == "assembly":
+                return (priority.get(origin, worst), origin)
+            return (-origin[1], priority.get(origin[0], worst), origin[0])
 
-        return list(Counter(possible_trios).most_common())
+        return sorted(counts.items(), key=lambda item: (-item[1], tie_order(item[0])))
 
-    def convert_optimized_multiple(self):
-        """Placeholder for a **batch-optimised** converter.
 
-        The intended behaviour is to accept *multiple* query IDs and choose a
-        conversion target for each such that cross-sample clashes (e.g.
-        duplicate loci) are minimised.
+def _weight(weight: float) -> float:
+    """Return the mapping score of a history edge, 1.0 where Ensembl gives none.
 
-        Note:
-            This method is a placeholder for future implementation. Use
-            :py:meth:`idtrack._api.API.convert_identifier_multiple` for batch
-            conversions until this optimised version is available.
+    Args:
+        weight (float): The ``weight`` of a history edge (NaN when the event has no score).
 
-        Raises:
-            NotImplementedError: Always - the optimisation strategy is not yet implemented.
-        """
-        raise NotImplementedError(
-            "Batch-optimised converter is not yet implemented. Use API.convert_identifier_multiple instead."
-        )
+    Returns:
+        float: The score as a factor of a path's score.
+    """
+    return 1.0 if weight != weight else float(weight)
+
+
+def _to_ranges(releases: frozenset) -> list[list[int]]:
+    """Write a set of releases as inclusive ranges.
+
+    Args:
+        releases (frozenset): Release numbers.
+
+    Returns:
+        list[list[int]]: ``[first, last]`` runs of consecutive releases in ascending order.
+    """
+    ranges: list[list[int]] = []
+    for r in sorted(int(release) for release in releases):
+        if ranges and r == ranges[-1][1] + 1:
+            ranges[-1][1] = r
+        else:
+            ranges.append([r, r])
+    return ranges

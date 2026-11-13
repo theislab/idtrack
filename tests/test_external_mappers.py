@@ -15,21 +15,13 @@ Run integration tests: pytest tests/test_external_mappers.py -v -m slow
 from __future__ import annotations
 
 import json
-import sys
-from pathlib import Path
+import os
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
 
-# Add the idtrack package directory to sys.path to allow importing _external_mappers
-# as a standalone subpackage without triggering the main idtrack __init__.py
-_IDTRACK_DIR = Path(__file__).parent.parent / "idtrack"
-if str(_IDTRACK_DIR) not in sys.path:
-    sys.path.insert(0, str(_IDTRACK_DIR))
-
-# Import utility functions and constants from the standalone subpackage
-from _external_mappers._constants import (  # noqa: E402
+from idtrack._external_mappers._constants import (
     _BM_ATTR_CANDIDATES,
     _DB_ALIASES,
     _ENSEMBL_ARCHIVE_BY_RELEASE,
@@ -41,7 +33,7 @@ from _external_mappers._constants import (  # noqa: E402
     SUPPORTED_DBS,
     SUPPORTED_METHODS,
 )
-from _external_mappers._utils import (  # noqa: E402
+from idtrack._external_mappers._utils import (
     OPTIONAL_DEPENDENCIES,
     _add_mapping_column,
     _as_list,
@@ -325,6 +317,7 @@ class TestStripVersion:
         assert strip_version("ENSG00000141510") == "ENSG00000141510"
         assert strip_version("TP53") == "TP53"
 
+    @pytest.mark.wrong_argument_type
     def test_non_string_passthrough(self):
         """Test non-string values pass through."""
         assert strip_version(12345) == 12345
@@ -540,6 +533,7 @@ class TestAddMappingColumn:
         result = _add_mapping_column(df)
         assert "mapping" in result.columns
 
+    @pytest.mark.wrong_argument_type
     def test_none_input(self):
         """Test None input returns empty result."""
         result = _add_mapping_column(None)
@@ -714,7 +708,7 @@ class TestGprofilerBackend:
 
     def test_import_error_handling(self):
         """Test graceful handling when gprofiler is not installed."""
-        from _external_mappers._backend_gprofiler import map_with_gprofiler
+        from idtrack._external_mappers._backend_gprofiler import map_with_gprofiler
 
         # Mock gprofiler module in sys.modules to simulate ImportError
         with patch.dict("sys.modules", {"gprofiler": None}):
@@ -728,7 +722,7 @@ class TestGprofilerBackend:
 
     def test_unsupported_output_db_raises(self):
         """Test unsupported output DB raises ValueError."""
-        from _external_mappers._backend_gprofiler import map_with_gprofiler
+        from idtrack._external_mappers._backend_gprofiler import map_with_gprofiler
 
         # Mock GProfiler class
         mock_gp_instance = MagicMock()
@@ -748,7 +742,7 @@ class TestGprofilerBackend:
 
     def test_valid_input_and_output_dbs(self):
         """Test that valid DBs are accepted (with mocked backend)."""
-        from _external_mappers._backend_gprofiler import map_with_gprofiler
+        from idtrack._external_mappers._backend_gprofiler import map_with_gprofiler
 
         # Mock GProfiler class with a successful response
         mock_gp_instance = MagicMock()
@@ -772,7 +766,7 @@ class TestMygeneBackend:
 
     def test_import_error_handling(self):
         """Test graceful handling when mygene is not installed."""
-        from _external_mappers._backend_mygene import map_with_mygene
+        from idtrack._external_mappers._backend_mygene import map_with_mygene
 
         # Mock mygene module in sys.modules to simulate ImportError
         with patch.dict("sys.modules", {"mygene": None}):
@@ -786,7 +780,7 @@ class TestMygeneBackend:
 
     def test_mocked_mygene_query(self):
         """Test mygene query with mocked backend."""
-        from _external_mappers._backend_mygene import map_with_mygene
+        from idtrack._external_mappers._backend_mygene import map_with_mygene
 
         # Create a mock mygene module with MyGeneInfo class
         mock_mg_instance = MagicMock()
@@ -812,7 +806,7 @@ class TestPybiomartBackend:
 
     def test_non_ensembl_input_raises(self):
         """Test non-Ensembl input DB raises ValueError."""
-        from _external_mappers._backend_pybiomart import map_with_pybiomart
+        from idtrack._external_mappers._backend_pybiomart import map_with_pybiomart
 
         # Mock pybiomart module to avoid import error
         mock_pybiomart = MagicMock()
@@ -829,7 +823,7 @@ class TestPybiomartBackend:
 
     def test_ensembl_archive_host_resolution(self):
         """Test Ensembl archive host resolution."""
-        from _external_mappers._backend_pybiomart import _ensembl_archive_host_for_release
+        from idtrack._external_mappers._backend_pybiomart import _ensembl_archive_host_for_release
 
         # Known release
         assert _ensembl_archive_host_for_release(104) == "may2021.archive.ensembl.org"
@@ -853,7 +847,7 @@ class TestGgetBackend:
 
     def test_non_ensembl_input_raises(self):
         """Test non-Ensembl input DB raises ValueError."""
-        from _external_mappers._backend_gget import map_with_gget
+        from idtrack._external_mappers._backend_gget import map_with_gget
 
         # Mock gget module to avoid import error
         mock_gget = MagicMock()
@@ -870,7 +864,7 @@ class TestGgetBackend:
 
     def test_import_error_handling(self):
         """Test graceful handling when gget is not installed."""
-        from _external_mappers._backend_gget import map_with_gget
+        from idtrack._external_mappers._backend_gget import map_with_gget
 
         # Mock gget module in sys.modules to simulate ImportError
         with patch.dict("sys.modules", {"gget": None}):
@@ -893,10 +887,10 @@ class TestConvertIds:
 
     def test_empty_input_returns_empty(self):
         """Test empty input returns empty DataFrame."""
-        from _external_mappers._convert import convert_ids
+        from idtrack._external_mappers._convert import convert_ids
 
         # Mock the backend to avoid network calls
-        with patch("_external_mappers._convert.map_with_gprofiler") as mock_gp:
+        with patch("idtrack._external_mappers._convert.map_with_gprofiler") as mock_gp:
             mock_gp.return_value = _empty_result()
             result = convert_ids(
                 [],
@@ -910,7 +904,7 @@ class TestConvertIds:
 
     def test_unsupported_method_raises(self):
         """Test unsupported method raises ValueError."""
-        from _external_mappers._convert import convert_ids
+        from idtrack._external_mappers._convert import convert_ids
 
         with pytest.raises(ValueError, match="method must be one of"):
             convert_ids(
@@ -923,7 +917,7 @@ class TestConvertIds:
 
     def test_release_with_non_pybiomart_raises(self):
         """Test release parameter with non-pybiomart method raises."""
-        from _external_mappers._convert import convert_ids
+        from idtrack._external_mappers._convert import convert_ids
 
         with pytest.raises(ValueError, match="release parameter can only be used"):
             convert_ids(
@@ -937,7 +931,7 @@ class TestConvertIds:
 
     def test_verbose_level_parsing(self):
         """Test verbose level parsing."""
-        from _external_mappers._convert import _normalize_verbose_level
+        from idtrack._external_mappers._convert import _normalize_verbose_level
 
         # Boolean
         assert _normalize_verbose_level(True) == 3
@@ -970,20 +964,23 @@ class TestOrthologModule:
     """Tests for ortholog utilities (require optional dependencies)."""
 
     def test_lazy_import_works(self):
-        """Test lazy import mechanism works."""
-        from _external_mappers import __getattr__
+        """The ortholog utilities are attributes of the subpackage, loaded from its ortholog module when asked for."""
+        import idtrack._external_mappers as mappers
 
-        # Test that accessing ortholog functions triggers lazy import
-        # This should not raise even without dependencies installed
         try:
-            __getattr__("get_ortholog_table")
+            function = mappers.get_ortholog_table
         except (ImportError, RuntimeError):
             pytest.skip("Ortholog optional dependencies not installed")
+        from idtrack._external_mappers import _ortholog
+
+        assert function is _ortholog.get_ortholog_table and callable(function)
+        with pytest.raises(AttributeError, match="no attribute 'no_such_utility'"):
+            mappers.no_such_utility  # noqa: B018
 
     def test_species_resolution(self):
         """Test species resolution in ortholog module."""
         # Import the helper directly from constants
-        from _external_mappers._constants import _SPECIES_ALIASES, _SPECIES_CANONICAL_TO_BGEENAMES
+        from idtrack._external_mappers._constants import _SPECIES_ALIASES, _SPECIES_CANONICAL_TO_BGEENAMES
 
         # Verify human
         assert _SPECIES_ALIASES["human"] == "hsapiens"
@@ -1011,7 +1008,7 @@ class TestIntegrationGprofiler:
 
     def test_real_gprofiler_query(self, gprofiler_available, sample_ids):
         """Test real g:Profiler query."""
-        from _external_mappers._backend_gprofiler import map_with_gprofiler
+        from idtrack._external_mappers._backend_gprofiler import map_with_gprofiler
 
         result = map_with_gprofiler(
             sample_ids[:1],  # Use just one ID to speed up
@@ -1038,7 +1035,7 @@ class TestIntegrationMygene:
 
     def test_real_mygene_query(self, mygene_available, sample_ids):
         """Test real MyGene query."""
-        from _external_mappers._backend_mygene import map_with_mygene
+        from idtrack._external_mappers._backend_mygene import map_with_mygene
 
         result = map_with_mygene(
             sample_ids[:1],
@@ -1064,7 +1061,7 @@ class TestIntegrationPybiomart:
 
     def test_real_pybiomart_query(self, pybiomart_available, sample_ids):
         """Test real pybiomart query."""
-        from _external_mappers._backend_pybiomart import map_with_pybiomart
+        from idtrack._external_mappers._backend_pybiomart import map_with_pybiomart
 
         result = map_with_pybiomart(
             sample_ids[:1],
@@ -1090,7 +1087,7 @@ class TestIntegrationGget:
 
     def test_real_gget_query(self, gget_available, sample_ids):
         """Test real gget query."""
-        from _external_mappers._backend_gget import map_with_gget
+        from idtrack._external_mappers._backend_gget import map_with_gget
 
         result = map_with_gget(
             sample_ids[:1],
@@ -1155,28 +1152,28 @@ class TestPybiomartHelpers:
 
     def test_normalize_biomart_host_with_protocol(self):
         """Test host normalization with protocol."""
-        from _external_mappers._backend_pybiomart import _normalize_biomart_host
+        from idtrack._external_mappers._backend_pybiomart import _normalize_biomart_host
 
         assert _normalize_biomart_host("http://www.ensembl.org") == "http://www.ensembl.org"
         assert _normalize_biomart_host("https://www.ensembl.org") == "http://www.ensembl.org"
 
     def test_normalize_biomart_host_without_protocol(self):
         """Test host normalization without protocol."""
-        from _external_mappers._backend_pybiomart import _normalize_biomart_host
+        from idtrack._external_mappers._backend_pybiomart import _normalize_biomart_host
 
         assert _normalize_biomart_host("www.ensembl.org") == "http://www.ensembl.org"
         assert _normalize_biomart_host("may2021.archive.ensembl.org") == "http://may2021.archive.ensembl.org"
 
     def test_normalize_biomart_host_empty(self):
         """Test host normalization with empty/None input."""
-        from _external_mappers._backend_pybiomart import _normalize_biomart_host
+        from idtrack._external_mappers._backend_pybiomart import _normalize_biomart_host
 
         assert _normalize_biomart_host(None) == "http://www.ensembl.org"
         assert _normalize_biomart_host("") == "http://www.ensembl.org"
 
     def test_biomart_dataset_for_species(self):
         """Test dataset name generation for species."""
-        from _external_mappers._backend_pybiomart import _biomart_dataset_for_species
+        from idtrack._external_mappers._backend_pybiomart import _biomart_dataset_for_species
 
         assert _biomart_dataset_for_species("hsapiens") == "hsapiens_gene_ensembl"
         assert _biomart_dataset_for_species("mmusculus") == "mmusculus_gene_ensembl"
@@ -1184,13 +1181,13 @@ class TestPybiomartHelpers:
 
     def test_biomart_dataset_explicit_override(self):
         """Test explicit dataset name override."""
-        from _external_mappers._backend_pybiomart import _biomart_dataset_for_species
+        from idtrack._external_mappers._backend_pybiomart import _biomart_dataset_for_species
 
         assert _biomart_dataset_for_species("hsapiens", "custom_dataset") == "custom_dataset"
 
     def test_ensembl_archive_host_various_formats(self):
         """Test archive host resolution for various input formats."""
-        from _external_mappers._backend_pybiomart import _ensembl_archive_host_for_release
+        from idtrack._external_mappers._backend_pybiomart import _ensembl_archive_host_for_release
 
         # Integer
         assert _ensembl_archive_host_for_release(100) == "apr2020.archive.ensembl.org"
@@ -1218,7 +1215,7 @@ class TestGgetExtract:
 
     def test_extract_hgnc_symbol(self):
         """Test extracting HGNC symbol from gget output."""
-        from _external_mappers._backend_gget import _gget_extract
+        from idtrack._external_mappers._backend_gget import _gget_extract
 
         df = pd.DataFrame(
             {
@@ -1233,7 +1230,7 @@ class TestGgetExtract:
 
     def test_extract_ensembl_gene(self):
         """Test extracting Ensembl gene from gget output."""
-        from _external_mappers._backend_gget import _gget_extract
+        from idtrack._external_mappers._backend_gget import _gget_extract
 
         df = pd.DataFrame(
             {
@@ -1246,7 +1243,7 @@ class TestGgetExtract:
 
     def test_extract_missing_column(self):
         """Test extraction when target column is missing."""
-        from _external_mappers._backend_gget import _gget_extract
+        from idtrack._external_mappers._backend_gget import _gget_extract
 
         df = pd.DataFrame(
             {
@@ -1269,7 +1266,7 @@ class TestMygeneExtract:
 
     def test_extract_hgnc_symbol(self):
         """Test extracting HGNC symbol from MyGene record."""
-        from _external_mappers._backend_mygene import _mg_extract
+        from idtrack._external_mappers._backend_mygene import _mg_extract
 
         record = {"query": "ENSG00000141510", "symbol": "TP53", "entrezgene": 7157}
         result = _mg_extract(record, "hgnc_symbol")
@@ -1277,7 +1274,7 @@ class TestMygeneExtract:
 
     def test_extract_entrez_gene(self):
         """Test extracting Entrez gene from MyGene record."""
-        from _external_mappers._backend_mygene import _mg_extract
+        from idtrack._external_mappers._backend_mygene import _mg_extract
 
         record = {"query": "TP53", "symbol": "TP53", "entrezgene": 7157}
         result = _mg_extract(record, "entrez_gene")
@@ -1285,7 +1282,7 @@ class TestMygeneExtract:
 
     def test_extract_ensembl_gene_dict(self):
         """Test extracting Ensembl gene from nested dict."""
-        from _external_mappers._backend_mygene import _mg_extract
+        from idtrack._external_mappers._backend_mygene import _mg_extract
 
         record = {
             "query": "TP53",
@@ -1296,7 +1293,7 @@ class TestMygeneExtract:
 
     def test_extract_ensembl_gene_list(self):
         """Test extracting Ensembl gene from nested list."""
-        from _external_mappers._backend_mygene import _mg_extract
+        from idtrack._external_mappers._backend_mygene import _mg_extract
 
         record = {
             "query": "TP53",
@@ -1311,7 +1308,7 @@ class TestMygeneExtract:
 
     def test_extract_uniprot_dict(self):
         """Test extracting UniProt from nested dict."""
-        from _external_mappers._backend_mygene import _mg_extract
+        from idtrack._external_mappers._backend_mygene import _mg_extract
 
         record = {
             "query": "TP53",
@@ -1322,7 +1319,7 @@ class TestMygeneExtract:
 
     def test_extract_hgnc_id_numeric(self):
         """Test extracting HGNC ID with numeric value."""
-        from _external_mappers._backend_mygene import _mg_extract
+        from idtrack._external_mappers._backend_mygene import _mg_extract
 
         record = {"query": "TP53", "hgnc": "11998"}
         result = _mg_extract(record, "hgnc_id")
@@ -1330,7 +1327,7 @@ class TestMygeneExtract:
 
     def test_extract_refseq_mrna(self):
         """Test extracting RefSeq mRNA."""
-        from _external_mappers._backend_mygene import _mg_extract
+        from idtrack._external_mappers._backend_mygene import _mg_extract
 
         record = {
             "query": "TP53",
@@ -1341,7 +1338,7 @@ class TestMygeneExtract:
 
     def test_extract_missing_field(self):
         """Test extraction when field is missing."""
-        from _external_mappers._backend_mygene import _mg_extract
+        from idtrack._external_mappers._backend_mygene import _mg_extract
 
         record = {"query": "TP53", "symbol": "TP53"}
         result = _mg_extract(record, "uniprot")
@@ -1358,7 +1355,7 @@ class TestOrthologHelpers:
 
     def test_canonical_from_alias(self):
         """Test species alias resolution."""
-        from _external_mappers._ortholog import _canonical_from_alias
+        from idtrack._external_mappers._ortholog import _canonical_from_alias
 
         assert _canonical_from_alias("human") == "hsapiens"
         assert _canonical_from_alias("HUMAN") == "hsapiens"
@@ -1367,13 +1364,13 @@ class TestOrthologHelpers:
 
     def test_canonical_from_alias_passthrough(self):
         """Test unknown species passes through."""
-        from _external_mappers._ortholog import _canonical_from_alias
+        from idtrack._external_mappers._ortholog import _canonical_from_alias
 
         assert _canonical_from_alias("unknown_species") == "unknown_species"
 
     def test_species_to_genus_species_human(self):
         """Test species to genus/species conversion for human."""
-        from _external_mappers._ortholog import _species_to_genus_species
+        from idtrack._external_mappers._ortholog import _species_to_genus_species
 
         canonical, genus, species = _species_to_genus_species("human")
         assert canonical == "hsapiens"
@@ -1382,7 +1379,7 @@ class TestOrthologHelpers:
 
     def test_species_to_genus_species_mouse(self):
         """Test species to genus/species conversion for mouse."""
-        from _external_mappers._ortholog import _species_to_genus_species
+        from idtrack._external_mappers._ortholog import _species_to_genus_species
 
         canonical, genus, species = _species_to_genus_species("mouse")
         assert canonical == "mmusculus"
@@ -1391,14 +1388,14 @@ class TestOrthologHelpers:
 
     def test_species_to_genus_species_invalid(self):
         """Test invalid species raises ValueError."""
-        from _external_mappers._ortholog import _species_to_genus_species
+        from idtrack._external_mappers._ortholog import _species_to_genus_species
 
         with pytest.raises(ValueError, match="could not be resolved"):
             _species_to_genus_species("invalid_species_xyz")
 
     def test_aa_composition_vector(self):
         """Test amino acid composition vector calculation."""
-        from _external_mappers._ortholog import AA_ALPHABET, _aa_composition_vector
+        from idtrack._external_mappers._ortholog import AA_ALPHABET, _aa_composition_vector
 
         # Simple sequence with known composition
         seq = "AAACCC"
@@ -1411,7 +1408,7 @@ class TestOrthologHelpers:
 
     def test_aa_composition_ignores_gaps(self):
         """Test that gaps are ignored in composition calculation."""
-        from _external_mappers._ortholog import _aa_composition_vector
+        from idtrack._external_mappers._ortholog import _aa_composition_vector
 
         seq1 = "AAA"
         seq2 = "A-A-A"  # Same sequence with gaps
@@ -1422,26 +1419,142 @@ class TestOrthologHelpers:
         # Should be identical (gaps removed)
         assert list(comp1) == list(comp2)
 
-    def test_parse_clustal_alignment(self):
-        """Test ClustalW alignment parsing."""
-        from _external_mappers._ortholog import parse_clustal_alignment
+    def test_parse_aligned_fasta(self):
+        """An aligned FASTA as MUSCLE writes it: names up to the first white space, sequences over several lines."""
+        from idtrack._external_mappers._ortholog import parse_aligned_fasta
 
-        clustal_text = """CLUSTAL alignment
+        result = parse_aligned_fasta(_RECORDED_MUSCLE_ALIGNMENT)
 
-seq1      MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHFDLSH
-seq2      MVLSGEDKSNIKAAWGKIGGHGAEYGAEALERMFASFPTTKTYFPHFDLSH
-          ****  **.:*:*****:* * ***********:*****************
+        assert list(result) == ["ENSMUSG00000000001", "ENSG00000000002"]
+        assert len(result["ENSMUSG00000000001"]) == len(result["ENSG00000000002"]) == 145
+        assert result["ENSMUSG00000000001"].endswith("SKYR---") and "GGH----GAEAL" in result["ENSG00000000002"]
+        assert parse_aligned_fasta(">a some description\nAC-\n\n-GT\n>b\nACGGT\n") == {"a": "AC--GT", "b": "ACGGT"}
+        assert parse_aligned_fasta("") == {}
 
-seq1      GSAQVKGHGKKVADALTNAVAHVDDMPNALSALSDLHAHKLRVDPVNFK
-seq2      GSAQVKAHGKKVADALTNAVAHVDDMPNALSALSDLHAHKLRVDPVNFK
-          ******:******************************************
+
+# The file that MUSCLE 5.2 (the binary gget 0.30.8 ships) wrote for the two sequences of `_muscle_pair`, recorded once.
+_RECORDED_MUSCLE_ALIGNMENT = """>ENSMUSG00000000001
+MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHFDLSHGSAQVKGHGKKVADALTNAVAHVDDMPNA
+LSALSDLHAHKLRVDPVNFKLLSHCLLVTLAAHLPAEFTPAVHASLDKFLASVSTVLTSKYR---
+>ENSG00000000002
+MVLSGEDKSNIKAAWGKIGGH----GAEALERMFASFPTTKTYFPHFDVSHGSAQVKAHGKKVADALTNAVAHVDDMPNA
+LSALSDLHAHKLRVDPVNFKLLSHCLLVTLASHHPADFTPAVHASLDKFLANVSTVLTSKYRGGS
 """
-        result = parse_clustal_alignment(clustal_text)
+_MUSCLE_PAIR = {
+    "ENSMUSG00000000001": _RECORDED_MUSCLE_ALIGNMENT.split(">")[1].split("\n", 1)[1].replace("\n", "").replace("-", ""),
+    "ENSG00000000002": _RECORDED_MUSCLE_ALIGNMENT.split(">")[2].split("\n", 1)[1].replace("\n", "").replace("-", ""),
+}
 
-        assert "seq1" in result
-        assert "seq2" in result
-        assert len(result["seq1"]) > 0
-        assert len(result["seq1"]) == len(result["seq2"])
+
+class _GgetLikeMuscle:
+    """Stands for ``gget`` where only ``muscle`` is needed, with the contract of gget 0.28 to 0.30.8.
+
+    ``gget.muscle(fasta, super5=False, out=None, verbose=True)`` returns ``None`` always. With ``out`` it writes the
+    aligned FASTA to that path; without it, it prints a view of the alignment and leaves no file.
+    """
+
+    def __init__(self):
+        self.calls: list[dict] = []
+
+    def muscle(self, fasta, super5=False, out=None, verbose=True):
+        """Record the call; write the recorded alignment to ``out`` if one is named; return nothing."""
+        with open(fasta) as fh:
+            text = fh.read()
+        self.calls.append({"fasta_text": text, "super5": super5, "out": out})
+        assert text == "".join(f">{name}\n{seq}\n" for name, seq in _MUSCLE_PAIR.items())
+        if out is None:
+            print("ENSMUSG00000000001 \t MVLS...")  # what gget shows; nothing is returned
+            return None
+        with open(out, "w") as fh:
+            fh.write(_RECORDED_MUSCLE_ALIGNMENT)
+        return None
+
+
+class TestMusclePairwise:
+    """The alignment step of the ortholog features, without network and without the aligner."""
+
+    def test_alignment_is_read_from_the_file_the_aligner_writes(self, monkeypatch):
+        """``gget.muscle`` returns nothing; the aligned sequences come from the file named by ``out``."""
+        import idtrack._external_mappers._ortholog as ortholog
+
+        stub = _GgetLikeMuscle()
+        monkeypatch.setattr(ortholog, "_require_ortholog_deps", lambda: (stub, None, None))
+        (name1, seq1), (name2, seq2) = _MUSCLE_PAIR.items()
+
+        aligned1, aligned2, text = ortholog.run_muscle_pairwise(seq1, seq2, name1=name1, name2=name2, super5=True)
+
+        assert aligned1.replace("-", "") == seq1 and aligned2.replace("-", "") == seq2
+        assert len(aligned1) == len(aligned2) == 145 and aligned1.endswith("---") and "----" in aligned2
+        assert text == _RECORDED_MUSCLE_ALIGNMENT
+        (call,) = stub.calls
+        assert call["super5"] is True and call["out"] is not None
+        assert not os.path.exists(call["out"]) and not os.path.exists(os.path.dirname(call["out"]))  # cleaned up
+
+    def test_missing_or_foreign_alignment_is_an_error(self, monkeypatch):
+        """No output file, or one without the two names, is reported and not passed on as an empty alignment."""
+        import idtrack._external_mappers._ortholog as ortholog
+
+        class Silent:
+            def muscle(self, fasta, super5=False, out=None, verbose=True):
+                return None
+
+        class Foreign:
+            def muscle(self, fasta, super5=False, out=None, verbose=True):
+                with open(out, "w") as fh:
+                    fh.write(">other\nAC\n")
+
+        monkeypatch.setattr(ortholog, "_require_ortholog_deps", lambda: (Silent(), None, None))
+        with pytest.raises(RuntimeError, match="wrote no alignment"):
+            ortholog.run_muscle_pairwise("AC", "AC", name1="a", name2="b")
+        monkeypatch.setattr(ortholog, "_require_ortholog_deps", lambda: (Foreign(), None, None))
+        with pytest.raises(RuntimeError, match="Could not find a/b"):
+            ortholog.run_muscle_pairwise("AC", "AC", name1="a", name2="b")
+
+    def test_real_aligner_keeps_the_contract(self, monkeypatch):
+        """With gget installed: its MUSCLE binary aligns the recorded pair into the recorded file (no network)."""
+        gget = pytest.importorskip("gget", reason="gget not installed")
+        from gget import gget_muscle
+
+        if not os.path.isfile(gget_muscle.PRECOMPILED_MUSCLE_PATH):
+            pytest.skip("gget ships no MUSCLE binary for this platform (it would compile one)")
+        import idtrack._external_mappers._ortholog as ortholog
+
+        monkeypatch.setattr(ortholog, "_require_ortholog_deps", lambda: (gget, None, None))
+        (name1, seq1), (name2, seq2) = _MUSCLE_PAIR.items()
+
+        aligned1, aligned2, text = ortholog.run_muscle_pairwise(seq1, seq2, name1=name1, name2=name2)
+
+        assert aligned1.replace("-", "") == seq1 and aligned2.replace("-", "") == seq2
+        assert len(aligned1) == len(aligned2) and "-" in aligned1 + aligned2
+        assert ortholog.parse_aligned_fasta(text) == {name1: aligned1, name2: aligned2}
+
+    def test_features_of_an_ortholog_pair_with_the_real_aligner(self, monkeypatch, capsys):
+        """With gget and biopython installed: the features are computed (Bgee and the sequences are given, no network)."""
+        gget = pytest.importorskip("gget", reason="Ortholog dependencies (gget, biopython) not installed")
+        pytest.importorskip("Bio.Align", reason="Ortholog dependencies (gget, biopython) not installed")
+        from gget import gget_muscle
+
+        if not os.path.isfile(gget_muscle.PRECOMPILED_MUSCLE_PATH):
+            pytest.skip("gget ships no MUSCLE binary for this platform (it would compile one)")
+        import idtrack._external_mappers._ortholog as ortholog
+
+        (query, query_seq), (target, target_seq) = _MUSCLE_PAIR.items()
+        table = pd.DataFrame({"gene_id": [target], "genus": ["Homo"], "species": ["sapiens"]})
+        monkeypatch.setattr(ortholog, "get_ortholog_table", lambda gene, verbose=True: table)
+        monkeypatch.setattr(ortholog, "fetch_aa_sequence", lambda gene: _MUSCLE_PAIR[gene])
+
+        features = ortholog.align_ortholog_pair_with_features(query, "human", embedding_model_name=None, verbose=True)
+
+        assert "MUSCLE failed" not in capsys.readouterr().out
+        assert list(features) == [target]
+        found = features[target]
+        assert found["alignment_aligned_query"].replace("-", "") == query_seq
+        assert found["alignment_aligned_target"].replace("-", "") == target_seq
+        assert len(found["alignment_aligned_query"]) == len(found["alignment_aligned_target"])
+        assert found["alignment_aligned_fasta"].startswith(">")
+        assert found["score_alignment_length"] == len(found["alignment_aligned_query"])
+        assert 0.8 < found["score_identity_fraction"] < 1.0
+        assert gget.__version__
 
 
 class TestAlignmentScoresDataclass:
@@ -1449,7 +1562,7 @@ class TestAlignmentScoresDataclass:
 
     def test_alignment_scores_creation(self):
         """Test creating AlignmentScores dataclass."""
-        from _external_mappers._ortholog import AlignmentScores
+        from idtrack._external_mappers._ortholog import AlignmentScores
 
         scores = AlignmentScores(
             alignment_length=100,
@@ -1475,7 +1588,7 @@ class TestAlignmentScoresDataclass:
         """Test converting AlignmentScores to dict."""
         from dataclasses import asdict
 
-        from _external_mappers._ortholog import AlignmentScores
+        from idtrack._external_mappers._ortholog import AlignmentScores
 
         scores = AlignmentScores(
             alignment_length=100,
@@ -1508,9 +1621,9 @@ class TestConvertIdsRouting:
 
     def test_routes_to_pybiomart(self):
         """Test routing to pybiomart backend."""
-        from _external_mappers._convert import convert_ids
+        from idtrack._external_mappers._convert import convert_ids
 
-        with patch("_external_mappers._convert.map_with_pybiomart") as mock_bm:
+        with patch("idtrack._external_mappers._convert.map_with_pybiomart") as mock_bm:
             mock_bm.return_value = _empty_result()
             convert_ids(
                 ["ENSG00000141510"],
@@ -1523,9 +1636,9 @@ class TestConvertIdsRouting:
 
     def test_routes_to_mygene(self):
         """Test routing to mygene backend."""
-        from _external_mappers._convert import convert_ids
+        from idtrack._external_mappers._convert import convert_ids
 
-        with patch("_external_mappers._convert.map_with_mygene") as mock_mg:
+        with patch("idtrack._external_mappers._convert.map_with_mygene") as mock_mg:
             mock_mg.return_value = _empty_result()
             convert_ids(
                 ["ENSG00000141510"],
@@ -1538,9 +1651,9 @@ class TestConvertIdsRouting:
 
     def test_routes_to_gprofiler(self):
         """Test routing to gprofiler backend."""
-        from _external_mappers._convert import convert_ids
+        from idtrack._external_mappers._convert import convert_ids
 
-        with patch("_external_mappers._convert.map_with_gprofiler") as mock_gp:
+        with patch("idtrack._external_mappers._convert.map_with_gprofiler") as mock_gp:
             mock_gp.return_value = _empty_result()
             convert_ids(
                 ["ENSG00000141510"],
@@ -1553,9 +1666,9 @@ class TestConvertIdsRouting:
 
     def test_routes_to_gget(self):
         """Test routing to gget backend."""
-        from _external_mappers._convert import convert_ids
+        from idtrack._external_mappers._convert import convert_ids
 
-        with patch("_external_mappers._convert.map_with_gget") as mock_gg:
+        with patch("idtrack._external_mappers._convert.map_with_gget") as mock_gg:
             mock_gg.return_value = _empty_result()
             convert_ids(
                 ["ENSG00000141510"],
@@ -1595,7 +1708,7 @@ class TestIntegrationKnownGene:
 
     def test_mygene_ensembl_to_symbol(self, skip_if_no_mygene):
         """Test MyGene Ensembl to symbol mapping for TP53."""
-        from _external_mappers._backend_mygene import map_with_mygene
+        from idtrack._external_mappers._backend_mygene import map_with_mygene
 
         result = map_with_mygene(
             [self.TP53_ENSEMBL],
@@ -1610,7 +1723,7 @@ class TestIntegrationKnownGene:
 
     def test_mygene_symbol_to_entrez(self, skip_if_no_mygene):
         """Test MyGene symbol to Entrez mapping for TP53."""
-        from _external_mappers._backend_mygene import map_with_mygene
+        from idtrack._external_mappers._backend_mygene import map_with_mygene
 
         result = map_with_mygene(
             [self.TP53_SYMBOL],
@@ -1625,7 +1738,7 @@ class TestIntegrationKnownGene:
 
     def test_gprofiler_ensembl_to_symbol(self, skip_if_no_gprofiler):
         """Test g:Profiler Ensembl to symbol mapping for TP53."""
-        from _external_mappers._backend_gprofiler import map_with_gprofiler
+        from idtrack._external_mappers._backend_gprofiler import map_with_gprofiler
 
         result = map_with_gprofiler(
             [self.TP53_ENSEMBL],
@@ -1658,7 +1771,7 @@ class TestIntegrationMultipleIds:
 
     def test_batch_mapping_preserves_all_inputs(self, skip_if_no_mygene):
         """Test that all input IDs appear in output."""
-        from _external_mappers._backend_mygene import map_with_mygene
+        from idtrack._external_mappers._backend_mygene import map_with_mygene
 
         result = map_with_mygene(
             self.WELL_KNOWN_GENES,
@@ -1674,7 +1787,7 @@ class TestIntegrationMultipleIds:
 
     def test_mapping_column_values(self, skip_if_no_mygene):
         """Test mapping column contains valid values."""
-        from _external_mappers._backend_mygene import map_with_mygene
+        from idtrack._external_mappers._backend_mygene import map_with_mygene
 
         result = map_with_mygene(
             self.WELL_KNOWN_GENES,
@@ -1706,7 +1819,7 @@ class TestOrthologIntegration:
 
     def test_get_ortholog_table(self, skip_if_no_ortholog_deps):
         """Test fetching ortholog table from Bgee."""
-        from _external_mappers._ortholog import get_ortholog_table
+        from idtrack._external_mappers._ortholog import get_ortholog_table
 
         # Use a well-known gene
         df = get_ortholog_table("ENSG00000141510", verbose=False)
@@ -1718,7 +1831,7 @@ class TestOrthologIntegration:
 
     def test_get_ortholog_ids_for_species(self, skip_if_no_ortholog_deps):
         """Test getting ortholog IDs for a specific species."""
-        from _external_mappers._ortholog import get_ortholog_ids_for_species, get_ortholog_table
+        from idtrack._external_mappers._ortholog import get_ortholog_ids_for_species, get_ortholog_table
 
         df = get_ortholog_table("ENSG00000141510", verbose=False)
         mouse_ids = get_ortholog_ids_for_species(df, "mouse")
@@ -1728,7 +1841,7 @@ class TestOrthologIntegration:
 
     def test_pick_ortholog_for_species(self, skip_if_no_ortholog_deps):
         """Test picking a single ortholog for a species."""
-        from _external_mappers._ortholog import get_ortholog_table, pick_ortholog_for_species
+        from idtrack._external_mappers._ortholog import get_ortholog_table, pick_ortholog_for_species
 
         df = get_ortholog_table("ENSG00000141510", verbose=False)
         mouse_ortholog = pick_ortholog_for_species(df, "mouse")

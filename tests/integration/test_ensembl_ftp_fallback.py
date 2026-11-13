@@ -223,12 +223,12 @@ def test_ftp_schema_contains_required_tables(ensembl_latest_release: int, organi
             # or the historic `<form>_stable_id` split table to exist (older releases).
             for form in ("gene", "transcript", "translation"):
                 assert form in schema
-                cols = set(schema[form])
+                cols = {c for c, _ in schema[form]}
                 if {"stable_id", "version"}.issubset(cols):
                     continue
                 stable_table = f"{form}_stable_id"
                 assert stable_table in schema, (organism, int(assembly), int(rel), form, stable_table)
-                stable_cols = set(schema[stable_table])
+                stable_cols = {c for c, _ in schema[stable_table]}
                 assert {"stable_id", "version"}.issubset(stable_cols), (
                     organism,
                     int(assembly),

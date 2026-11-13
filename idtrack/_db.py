@@ -5,18 +5,17 @@
 
 
 import copy
+import numbers
 import re
 from collections.abc import Mapping, Sequence
 from typing import Any
-
-import h5py
 
 
 class DB:
     """Store constants shared across IDTrack modules for Ensembl data access and graph construction.
 
-    This class centralizes every constant that multiple components (e.g. :py:class:`idtrack.graph.GraphMaker`,
-    :py:class:`idtrack.pathfinder.PathFinder`) rely on when talking to the Ensembl FTP mirror, REST API,
+    This class centralizes every constant that multiple components (e.g. :py:class:`idtrack.GraphMaker`,
+    :py:class:`idtrack.Track`) rely on when talking to the Ensembl FTP mirror, REST API,
     and public MySQL instances. Housing the values in one namespace prevents circular imports, ensures a single
     source of truth, and simplifies testing. `DB` is never instantiated; import the class and reference its
     attributes directly. The organism table is the only part meant to change at run time, and only through
@@ -24,7 +23,6 @@ class DB:
 
     Attributes:
         id_ver_delimiter (str): Character separating a stable identifier from its version suffix.
-        first_version (int): Default version assumed when an ID lacks an explicit version component.
 
         connection_timeout (int): TCP connect timeout in seconds used by both FTP and REST clients.
         reading_timeout  (int): Socket read timeout in seconds applied to FTP and REST operations. Raise it (e.g.
@@ -42,9 +40,13 @@ class DB:
 
         mysql_host (str): Hostname of the Ensembl public MySQL server.
         myqsl_user (str): Username for anonymous MySQL access.
-        mysql_togo (str): Placeholder string kept for backward compatibility when assembling connection URLs.
+        mysql_togo (str): Password for the anonymous MySQL access (empty: Ensembl's public server needs none).
 
         mysql_port_min_release (dict[int, int]): Minimum Ensembl release supported by each public MySQL port.
+        mysql_port_assembly (dict[int, tuple[str, int]]): Ports that serve one assembly only, as
+            ``{port: (organism, assembly key)}``. Port 3337, Ensembl's archive server, is read for human GRCh37 only
+            (its copies of other assemblies under later release numbers are not part of a graph); only that assembly
+            may list the port.
         mysql_probe_timeout (float): TCP connect timeout in seconds used the first time a MySQL port is probed in a
             process (see :py:mod:`idtrack._ensembl_access`).
         ensembl_access (Optional[str]): How Ensembl is reached. ``"auto"`` uses the public MySQL service where its
@@ -62,6 +64,17 @@ class DB:
         symbol_databases (dict[str, tuple[str, ...]]): Ordered gene-symbol databases per organism (names as in the
             externals YAML). The first one is the default final database of
             :py:class:`idtrack.HarmonizeFeatures`.
+        organism_aliases (dict[str, tuple[str, ...]]): Short names of the organisms of the table (``"pig"``,
+            ``"human"``). A declared alias names its organism wherever an organism is asked for
+            (:py:class:`idtrack.VerifyOrganism`), without the network, and wins over what Ensembl lists under the
+            same word (``"pig"`` is the common name of every pig breed there). Lower case, unique across organisms.
+        accession_database_prefixes (tuple[str, ...]): Beginnings of the names of the external databases whose ids
+            are sequence accessions, which their sources write with a version (``NM_000546.6``, ``P04637.4``,
+            ``CCDS11118.1``). Only an id of such a database is looked up without a version suffix that the graph
+            does not hold (:py:meth:`idtrack.TheGraph.resolve_name`); a gene symbol never is.
+        non_reference_attribute (str): Code of the attribute by which Ensembl's core databases mark a sequence region
+            that is not part of the reference sequence of an assembly (``attrib_type.code``; an alternative locus, an
+            assembly patch or an LRG record). See :py:meth:`idtrack.DatabaseManager.create_gene_region`.
         organism_table_version (int): Incremented whenever :py:meth:`register_organism` changes the table, so that
             caches derived from it (e.g. the core-database index) can tell they are stale.
 
@@ -72,9 +85,6 @@ class DB:
         no_old_node_id (str): Sentinel used when a historical ID is retired.
         no_new_node_id (str): Sentinel used when no future successor exists.
         alternative_versions (set[str]): Two sentinels—:py:data:`no_new_node_id` and :py:data:`no_old_node_id`.
-
-        hyperconnecting_threshold (int): Maximum allowable out-degree before a node is considered
-            hyper-connected and ignored by breadth-first expansions.
 
         node_type_str (str): Edge/Node attribute key holding the node type value.
         nts_external (str): Canonical node type assigned to entities originating outside Ensembl.
@@ -88,31 +98,22 @@ class DB:
         nts_assembly (dict[int, dict[str, str]]): Assembly key → form → assembly-specific node type (derived).
         nts_assembly_reverse (dict[str, str]): Assembly-specific node type → :py:data:`nts_ensembl` value (derived).
         nts_base_ensembl (dict[str, str]): Reduced node type names stripped of assembly suffixes.
-        nts_base_ensembl_reverse (dict[str, str]): Reverse mapping of :py:data:`nts_base_ensembl`.
 
         nts_bidirectional_synonymous_search (set[str]): Node types for which synonym searches are
             performed bidirectionally.
         nts_assembly_gene (set[str]): Every assembly-specific node type that represents a gene (derived).
 
         connection_dict (str): Edge attribute key whose value stores connection metadata dictionaries.
-        conn_dict_str_ensembl_base (str): Constant placed under :py:data:`connection_dict` when the edge
-            points to an Ensembl data source.
 
         external_search_settings (dict[str, Any]): Default limits for outward traversal into external
             databases. Keys are ``jump_limit``, ``synonymous_max_depth``, and ``nts_backbone``.
-
-        placeholder_na (str): Sentinel stored in HDF5 datasets where a true NA/None value is not
-            permitted or would break downstream type expectations.
-        UTF8 (str): The literal string ``"utf-8"``—a canonical spelling of the UTF-8 encoding name
-            used when writing variable-length strings to HDF5 files.
-        UTF8_STR (h5py.Datatype): Pre-configured variable-length UTF-8 string dtype created via
-            :py:func:`h5py.string_dtype`.  Pass this value when creating HDF5 datasets that should
-            hold arbitrary Unicode text to avoid hard-coding datatypes throughout the codebase.
     """
 
     # Delimiter separating the ID and the version of an ensembl identifier.
     id_ver_delimiter = "."
-    first_version: int = 1  # just and arbitrary assumption
+
+    # Ensembl's attribute of a sequence region outside the reference sequence (`attrib_type.code`).
+    non_reference_attribute: str = "non_ref"
 
     # FTP and REST API Timeouts. It’s a good practice to set connect timeouts to slightly larger than a multiple of 3,
     # which is the default TCP packet retransmission window.
@@ -163,8 +164,9 @@ class DB:
         # Keys and fields
         # ---------------
         # - The key of an assembly entry is an integer that is unique within the organism. It is what the rest of
-        #   idtrack sees: node types (`assembly_<key>_ensembl_gene`), cache files (`<organism>_assembly-<key>.h5`),
-        #   the assembly keys of the externals YAML files and the public `genome_assembly` argument.
+        #   idtrack sees: node types (`assembly_<key>_ensembl_gene`), table folders
+        #   (`idtrack_tables/<organism>_assembly-<key>/`), graph file names (`graph_<organism>_assembly<key>_...`), the
+        #   assembly keys of the externals YAML files and the `genome_assembly` argument of `DatabaseManager`.
         # - Core databases are named `<organism>_core_<release>_<DbSuffix>[patch letter]` (e.g. `..._37a`); patch
         #   letters belong to the same assembly. `DbSuffix` defaults to the key, and the key equals Ensembl's code
         #   wherever that is unambiguous. The code is species-specific (`38` is GRCh38 for human, GRCm38 for mouse).
@@ -210,7 +212,9 @@ class DB:
         "sus_scrofa": {
             # Sscrofa11.1 (Ensembl release 90+; clean handoff from Sscrofa10.2 at release 90)
             111: {"Name": "Sscrofa11.1", "Ports": [3306, 5306], "Priority": 1, "ReleaseRange": [90, None]},
-            # Sscrofa10.2 (archive) — Ensembl release 67–89
+            # Sscrofa10.2 (Ensembl release 67–89). Core databases named `sus_scrofa_core_90_102` to `..._99_102`
+            # exist only on the archive port 3337: frozen copies, not annotation of those releases, and excluded on
+            # purpose (see `mysql_port_assembly`).
             102: {"Name": "Sscrofa10.2", "Ports": [3306, 5306], "Priority": 2, "ReleaseRange": [67, 89]},
             # Sscrofa9 (historic; clean handoff to Sscrofa10.2 at release 67)
             # - Ensembl FTP contains releases 56–66 under directory names like
@@ -251,6 +255,21 @@ class DB:
         "macaca_fascicularis": ("VGNC Symbol", "HGNC Symbol"),
     }
 
+    # Short names of the organisms. A declared alias resolves to its organism before Ensembl's species list is asked,
+    # so it never depends on the network or on how many breeds and strains Ensembl files under the same common name.
+    organism_aliases: dict[str, tuple[str, ...]] = {
+        "homo_sapiens": ("human",),
+        "mus_musculus": ("mouse",),
+        "sus_scrofa": ("pig",),
+        "macaca_mulatta": ("rhesus",),
+        "macaca_fascicularis": ("cynomolgus",),
+    }
+
+    # External databases of sequence accessions (by the beginning of their names in the externals YAML files): RefSeq
+    # (`RefSeq_mRNA`, `RefSeq_peptide`, ...), UniProt accessions (`Uniprot/SWISSPROT`, `Uniprot/SPTREMBL`; not the
+    # gene names of `UniProtKB Gene Name`), CCDS, and the nucleotide and protein archives (`EMBL`, `protein_id`).
+    accession_database_prefixes: tuple[str, ...] = ("RefSeq_", "Uniprot/", "CCDS", "EMBL", "protein_id")
+
     # Fields an assembly entry may carry, and which of them are required.
     assembly_entry_fields = ("Name", "DbSuffix", "Ports", "Priority", "ReleaseRange")
     assembly_entry_required_fields = ("Ports", "Priority", "ReleaseRange")
@@ -261,12 +280,11 @@ class DB:
     supported_organisms: tuple[str, ...] = ()
     all_assemblies: set[int] = set()
 
-    # Protected Non-int Version Strings/Thresholds
+    # Protected Non-int Version Strings
     synonym_id_nodes_prefix = "synonym_id::"
     no_old_node_id = "Void"
     no_new_node_id = "Retired"
     alternative_versions = {no_new_node_id, no_old_node_id}
-    hyperconnecting_threshold = 20
 
     # Node Types
     node_type_str = "node_type"
@@ -289,14 +307,10 @@ class DB:
     nts_base_ensembl: dict[str, str] = {}
     for _form in forms_in_order:
         nts_base_ensembl[_form] = f"base_ensembl_{_form}"
-    nts_base_ensembl_reverse: dict[str, str] = {}
-    for _form, _nts in nts_base_ensembl.items():
-        nts_base_ensembl_reverse[_nts] = _form
     nts_bidirectional_synonymous_search = {nts_external, nts_base_ensembl[backbone_form]}
 
     # Edge/Note Attributes:
     connection_dict: str = "connection"
-    conn_dict_str_ensembl_base = "ensembl_base"  # as a database in connection_dict
 
     # PathFinder Settings
     external_search_settings: dict[str, Any] = {
@@ -305,18 +319,16 @@ class DB:
         "nts_backbone": nts_ensembl[backbone_form],
     }
 
-    # HDF5 Settings
-    placeholder_na = "_PLACEHOLDER_NA_"
-    UTF8 = "utf-8"
-    UTF8_STR = h5py.string_dtype(encoding=UTF8)
-
     # ------------------------------------------------------------------------------------------------------------
     # Organism table: validation, derived attributes, run-time registration and accessors
     # ------------------------------------------------------------------------------------------------------------
 
     @classmethod
     def _validate_organism_table(
-        cls, table: Mapping[str, Mapping[int, Mapping[str, Any]]], symbol_databases: Mapping[str, Sequence[str]]
+        cls,
+        table: Mapping[str, Mapping[int, Mapping[str, Any]]],
+        symbol_databases: Mapping[str, Sequence[str]],
+        organism_aliases: Mapping[str, Sequence[str]] | None = None,
     ) -> None:
         """Check the organism table and the symbol-database table for consistency.
 
@@ -326,11 +338,14 @@ class DB:
         assembly), ``Priority`` and ``ReleaseRange``, plus optionally ``Name`` and ``DbSuffix`` and nothing else;
         priorities are unique per organism and start at 1; release ranges are ``[first, last]`` with ``last``
         ``None`` or not smaller than ``first``; entries of one organism that share a ``DbSuffix`` have
-        non-overlapping release ranges; the symbol-database table names exactly the organisms of the organism table.
+        non-overlapping release ranges; the symbol-database table names exactly the organisms of the organism table;
+        aliases belong to organisms of the table, are lower-case words that are no organism name, and no alias is
+        declared for two organisms.
 
         Args:
             table: Candidate value of :py:attr:`assembly_mysqlport_priority`.
             symbol_databases: Candidate value of :py:attr:`symbol_databases`.
+            organism_aliases: Candidate value of :py:attr:`organism_aliases`; ``None`` for a table without aliases.
 
         Raises:
             ValueError: If any rule is violated; the message names the organism, the assembly and the rule.
@@ -436,6 +451,23 @@ class DB:
             if any(not isinstance(d, str) or not d for d in databases) or len(set(databases)) != len(databases):
                 raise ValueError(f"Organism {organism!r}: symbol databases must be distinct non-empty strings.")
 
+        if organism_aliases is None:
+            return
+        if not isinstance(organism_aliases, Mapping) or not set(organism_aliases) <= set(table):
+            raise ValueError("The alias table must be a mapping {organism of the organism table: (alias, ...)}.")
+        owner_of: dict[str, str] = {}
+        for organism, aliases in organism_aliases.items():
+            if isinstance(aliases, str) or not isinstance(aliases, Sequence):
+                raise ValueError(f"Organism {organism!r}: aliases must be a sequence of names.")
+            for alias in aliases:
+                if not isinstance(alias, str) or not alias or alias != alias.strip().lower() or alias in table:
+                    raise ValueError(
+                        f"Organism {organism!r}: alias {alias!r} must be a non-empty lower-case name that is not "
+                        "an organism name."
+                    )
+                if owner_of.setdefault(alias, organism) != organism or list(aliases).count(alias) > 1:
+                    raise ValueError(f"Alias {alias!r} is declared twice ({owner_of[alias]!r}, {organism!r}).")
+
     @classmethod
     def _rebuild_organism_tables(cls) -> None:
         """Validate the organism table and recompute every attribute derived from it.
@@ -445,7 +477,7 @@ class DB:
         references to any of them taken earlier stay current. (Replacing :py:attr:`assembly_mysqlport_priority` by
         assignment, as some tests do, is not seen by such references.)
         """
-        cls._validate_organism_table(cls.assembly_mysqlport_priority, cls.symbol_databases)
+        cls._validate_organism_table(cls.assembly_mysqlport_priority, cls.symbol_databases, cls.organism_aliases)
 
         cls.supported_organisms = tuple(sorted(cls.assembly_mysqlport_priority))
 
@@ -471,6 +503,7 @@ class DB:
         name: str,
         assemblies: Mapping[int, Mapping[str, Any]],
         symbol_databases: Sequence[str] | None = None,
+        aliases: Sequence[str] | None = None,
     ) -> None:
         """Add an organism to the organism table, or replace its entry, and recompute the derived attributes.
 
@@ -496,6 +529,9 @@ class DB:
                 for a new organism (an empty list if it has none, in which case :py:class:`idtrack.HarmonizeFeatures`
                 needs an explicit ``final_database``). When an organism already in the table is replaced and this is
                 omitted (``None``), its current symbol databases are kept.
+            aliases: Short names of the organism (lower case, e.g. ``["zebrafish"]``), which then resolve to it
+                wherever an organism is asked for. ``None`` keeps the aliases of an organism that is replaced and
+                gives a new organism none.
 
         Raises:
             ValueError: If *symbol_databases* is omitted for a new organism, or if the resulting table violates a
@@ -514,14 +550,47 @@ class DB:
         table[name] = assemblies
         symbols = dict(cls.symbol_databases)
         symbols[name] = tuple(symbol_databases)
-        cls._validate_organism_table(table, symbols)
+        declared: dict[str, Sequence[str]] = dict(cls.organism_aliases)
+        if aliases is not None:
+            declared[name] = aliases
+        cls._validate_organism_table(table, symbols, declared)
 
         cls.assembly_mysqlport_priority[name] = {
             int(key): copy.deepcopy(dict(entry)) for key, entry in assemblies.items()
         }
         cls.symbol_databases[name] = symbols[name]
+        if name in declared:
+            cls.organism_aliases[name] = tuple(declared[name])
         cls.organism_table_version += 1
         cls._rebuild_organism_tables()
+
+    @staticmethod
+    def assembly_key(value: Any) -> int:
+        """Return *value* as an assembly key of the organism table, refusing values that only look like one.
+
+        Accepted: an integer (also a NumPy integer), an integral float (``38.0``) or a string of digits (as read from
+        YAML or JSON). Booleans and fractional numbers are refused: ``int(True)`` and ``int(38.9)`` would silently
+        name another assembly (``1`` is rhesus MMUL_1). This is the one rule for every place that takes an assembly
+        from a caller.
+
+        Args:
+            value: The value given by the caller.
+
+        Returns:
+            int: The assembly key.
+
+        Raises:
+            ValueError: For any other value.
+        """
+        # NumPy booleans are neither `bool` nor registered numbers, so they reach the last line like any other type.
+        if not isinstance(value, bool):
+            if isinstance(value, numbers.Integral):
+                return int(value)
+            if isinstance(value, numbers.Real) and float(value).is_integer():
+                return int(float(value))
+            if isinstance(value, str) and value.strip().isdigit():
+                return int(value.strip())
+        raise ValueError(f"Genome assembly must be an integer key of the organism table, got {value!r}.")
 
     @classmethod
     def _assembly_entry(cls, organism: str, assembly: int) -> Mapping[str, Any]:
@@ -532,23 +601,40 @@ class DB:
                 "Add it with `idtrack.DB.register_organism`."
             )
         entries = cls.assembly_mysqlport_priority[organism]
-        if isinstance(assembly, bool) or int(assembly) not in entries:
+        key = cls.assembly_key(assembly)
+        if key not in entries:
             raise ValueError(
                 f"Genome assembly {assembly!r} is not configured for organism {organism!r}. "
                 f"Supported assemblies: {sorted(entries)}"
             )
-        return entries[int(assembly)]
+        return entries[key]
 
     @classmethod
     def db_suffix(cls, organism: str, assembly: int) -> str:
         """Return the assembly code used in core database names (``DbSuffix``, defaulting to the key)."""
-        return str(cls._assembly_entry(organism, assembly).get("DbSuffix", str(int(assembly))))
+        return str(cls._assembly_entry(organism, assembly).get("DbSuffix", str(cls.assembly_key(assembly))))
 
     @classmethod
     def release_range(cls, organism: str, assembly: int) -> tuple[int, int | None]:
         """Return the configured ``(first, last)`` release of an assembly; ``last`` is ``None`` when open-ended."""
         first, last = cls._assembly_entry(organism, assembly)["ReleaseRange"]
         return int(first), (None if last is None else int(last))
+
+    @classmethod
+    def first_release(cls, organism: str) -> int:
+        """Return the first Ensembl release of an organism in the organism table (over all its assemblies).
+
+        This is the default start of every release window (``ignore_before`` of
+        :py:class:`idtrack.DatabaseManager` and of the graphs :py:class:`idtrack.API` builds and loads): a window
+        that starts there covers the whole history that idtrack can read for the organism.
+
+        Args:
+            organism: Ensembl production name.
+
+        Returns:
+            int: The smallest first release of the ``ReleaseRange`` of the organism's assemblies.
+        """
+        return min(cls.release_range(organism, assembly)[0] for assembly in cls.assemblies_by_priority(organism))
 
     @classmethod
     def assembly_name(cls, organism: str, assembly: int) -> str | None:
@@ -607,12 +693,6 @@ class DB:
 
 
 DB._rebuild_organism_tables()
-
-
-class EmptyConversionMetricsError(ValueError):
-    """Raised when conversion_metrics is empty and no alternative conversion is possible."""
-
-    pass
 
 
 class EnsemblRestError(ConnectionError):

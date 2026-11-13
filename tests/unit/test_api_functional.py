@@ -210,30 +210,24 @@ class TestAPIInitialization:
         """Test API can be initialized."""
         api = API(str(tmp_path))
         assert api.local_repository == str(tmp_path)
-        assert api.logger_configured is False
         assert api.track is None
 
-    def test_configure_logger_first_time(self, tmp_path):
-        """Test logger configuration on first call."""
-        api = API(str(tmp_path))
-        api.configure_logger()
-        assert api.logger_configured is True
-
-    def test_configure_logger_second_time(self, tmp_path):
-        """Test logger configuration on subsequent call."""
-        api = API(str(tmp_path))
-        api.configure_logger()
-        # Second call should not reconfigure
-        api.configure_logger()
-        assert api.logger_configured is True
-
-    def test_configure_logger_with_level(self, tmp_path):
-        """Test logger configuration with custom level."""
+    def test_configure_logger_configures_only_the_package_logger(self, tmp_path):
+        """configure_logger touches the "idtrack" logger, never the root logger, and adds one handler only."""
         import logging
 
-        api = API(str(tmp_path))
-        api.configure_logger(level=logging.DEBUG)
-        assert api.logger_configured is True
+        root = logging.getLogger()
+        package = logging.getLogger("idtrack")
+        saved = (root.level, list(root.handlers), package.level, list(package.handlers))
+        try:
+            API(str(tmp_path)).configure_logger()
+            API(str(tmp_path)).configure_logger(level=logging.DEBUG)
+            assert (root.level, list(root.handlers)) == saved[:2]
+            assert package.level == logging.DEBUG
+            assert len(package.handlers) == len(saved[3]) + 1
+        finally:
+            package.setLevel(saved[2])
+            package.handlers[:] = saved[3]
 
 
 class TestAPIRequireTrack:

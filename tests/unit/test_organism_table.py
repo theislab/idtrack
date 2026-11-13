@@ -8,6 +8,7 @@ MMUL_1 release, and key 1 (MMUL_1) never a Mmul_10 release, although both are na
 """
 
 import copy
+import time
 from contextlib import contextmanager
 from types import MappingProxyType
 from unittest.mock import MagicMock, patch
@@ -32,9 +33,12 @@ def restored_organism_table():
     """Run a block that changes the organism table and put the original back afterwards."""
     table = copy.deepcopy(DB.assembly_mysqlport_priority)
     symbols = dict(DB.symbol_databases)
+    aliases = dict(DB.organism_aliases)
     try:
         yield
     finally:
+        DB.organism_aliases.clear()
+        DB.organism_aliases.update(aliases)
         # Restore in place (as `register_organism` changes it) and move the version forward, never back, so that
         # index-cache entries made under the temporary table are not reused.
         DB.assembly_mysqlport_priority.clear()
@@ -253,6 +257,37 @@ class TestRegisterOrganism:
             DB.register_organism("danio_rerio", {11: _entry()}, symbol_databases=[])
             assert DB.symbol_databases["danio_rerio"] == ()
 
+    def test_aliases_are_declared_with_the_organism(self):
+        """Decision 22: an alias belongs to one organism of the table and is registered with it."""
+        assert DB.organism_aliases == {
+            "homo_sapiens": ("human",),
+            "mus_musculus": ("mouse",),
+            "sus_scrofa": ("pig",),
+            "macaca_mulatta": ("rhesus",),
+            "macaca_fascicularis": ("cynomolgus",),
+        }
+        with restored_organism_table():
+            DB.register_organism("danio_rerio", {11: _entry()}, symbol_databases=["ZFIN"], aliases=["zebrafish"])
+            assert DB.organism_aliases["danio_rerio"] == ("zebrafish",)
+            from idtrack._verify_organism import VerifyOrganism
+
+            assert VerifyOrganism("Zebrafish").get_formal_name() == "danio_rerio"
+            # replacing the organism without `aliases` keeps them
+            DB.register_organism("danio_rerio", {11: _entry(ReleaseRange=[95, None])})
+            assert DB.organism_aliases["danio_rerio"] == ("zebrafish",)
+        assert "danio_rerio" not in DB.organism_aliases
+        for bad, message in (
+            (["pig"], "declared twice"),
+            (["Zebrafish"], "lower-case"),
+            (["homo_sapiens"], "not an organism name"),
+            ([""], "non-empty"),
+            ("zebrafish", "sequence of names"),
+        ):
+            before = (copy.deepcopy(DB.assembly_mysqlport_priority), dict(DB.organism_aliases))
+            with pytest.raises(ValueError, match=message):
+                DB.register_organism("danio_rerio", {11: _entry()}, symbol_databases=["ZFIN"], aliases=bad)
+            assert (DB.assembly_mysqlport_priority, DB.organism_aliases) == before
+
     def test_unregistered_organism_error_points_to_register(self, tmp_path):
         """Unregistered organism error points to register."""
         with pytest.raises(NotImplementedError, match="register_organism"):
@@ -288,6 +323,49 @@ class TestCoreDatabaseNames:
         assert DB.db_suffix("homo_sapiens", 38) == "38"
         assert DB.db_suffix("macaca_mulatta", 801) == "801"
         assert DB.db_suffix("macaca_mulatta", 1) == "10"
+
+
+class TestAssemblyKey:
+    """One rule for every place that takes an assembly key from a caller."""
+
+    @pytest.mark.parametrize("good", [38, "38", " 38 ", 38.0])
+    def test_integral_values_are_keys(self, good):
+        """Integers, integral floats and digit strings name the assembly."""
+        assert DB.assembly_key(good) == 38
+
+    def test_numpy_integers_and_integral_floats_are_keys(self):
+        """Scalars of NumPy are accepted as their Python counterparts."""
+        import numpy as np
+
+        assert DB.assembly_key(np.int64(38)) == 38
+        assert DB.assembly_key(np.float64(38.0)) == 38
+        assert type(DB.assembly_key(np.int64(38))) is int
+
+    def test_values_that_only_look_like_a_key_are_refused(self):
+        """A boolean is not rhesus MMUL_1 (key 1) and `38.9` is not GRCh38."""
+        import numpy as np
+
+        for bad in (True, False, np.True_, 38.9, np.float64(38.9), "38a", "", None, float("nan"), [38]):
+            with pytest.raises(ValueError, match="integer key"):
+                DB.assembly_key(bad)
+
+    @pytest.mark.parametrize("accessor", ["release_range", "db_suffix", "assembly_name", "core_db_name_pattern"])
+    @pytest.mark.parametrize("bad", [True, 1.5])
+    def test_accessors_refuse_booleans_and_fractions(self, accessor, bad):
+        """An accessor asked for assembly `True` raised nothing before and answered for MMUL_1 (key 1)."""
+        with pytest.raises(ValueError, match="integer key"):
+            getattr(DB, accessor)("macaca_mulatta", bad)
+
+    def test_accessors_accept_the_same_spellings_of_a_key(self):
+        """A key given as text or as an integral float reads the same entry."""
+        assert DB.release_range("macaca_mulatta", "801") == DB.release_range("macaca_mulatta", 801.0) == (86, 97)
+        assert DB.db_suffix("macaca_mulatta", "1") == "10"
+        assert DB.db_suffix("homo_sapiens", 38.0) == "38"
+
+    def test_unknown_key_names_the_configured_assemblies(self):
+        """A well-formed key that the organism does not have is reported with the keys it has."""
+        with pytest.raises(ValueError, match=r"not configured for organism 'sus_scrofa'.*\[9, 102, 111\]"):
+            DB.release_range("sus_scrofa", 38)
 
 
 def _fake_mysql_connect(names: list[str]):
@@ -364,9 +442,11 @@ class TestReleaseRangeOnHTTPSListing:
         name = url.rstrip("/").rsplit("/", 1)[-1]
         response.status_code = 200 if name in RHESUS_CORE_DBS.values() else 404
         if url.endswith("/mysql/"):
+            response.status_code = 200
             release = int(url.split("/release-")[1].split("/")[0])
             db = RHESUS_CORE_DBS.get(release)
             response.text = f'<a href="{db}/">{db}/</a>' if db else ""
+        response.ok = response.status_code == 200
         return response
 
     @pytest.mark.parametrize(
@@ -379,8 +459,9 @@ class TestReleaseRangeOnHTTPSListing:
     )
     def test_rhesus_assemblies_get_only_their_releases(self, monkeypatch, assembly, expected):
         """Rhesus assemblies get only their releases."""
-        monkeypatch.setattr(DatabaseManager, "_ensembl_latest_release_cache", 116)
-        with patch("idtrack._database_manager.requests.get", side_effect=self._fake_get) as fake_get:
+        monkeypatch.setattr(DatabaseManager, "_ensembl_latest_release_cache", (116, time.monotonic()))
+        fake_get = MagicMock(side_effect=self._fake_get)
+        with patch("idtrack._ensembl_access._session", return_value=MagicMock(get=fake_get)):
             index = DatabaseManager._get_core_db_index_from_ftp(
                 organism="macaca_mulatta", genome_assembly=assembly, ports=[3306, 5306]
             )
@@ -468,7 +549,7 @@ class TestArchivePortCopies:
 
     def test_both_access_modes_give_the_same_releases(self, monkeypatch):
         """The MySQL listing (main ports) and the HTTPS listing give each rhesus assembly the same releases."""
-        monkeypatch.setattr(DatabaseManager, "_ensembl_latest_release_cache", 116)
+        monkeypatch.setattr(DatabaseManager, "_ensembl_latest_release_cache", (116, time.monotonic()))
         listing = {3306: list(RHESUS_CORE_DBS.values()), 5306: list(RHESUS_CORE_DBS.values())}
         listing[3337] = ARCHIVE_PORT_CORE_DBS["macaca_mulatta"]
         for assembly in (10, 801, 1):
@@ -482,7 +563,8 @@ class TestArchivePortCopies:
                     genome_assembly=assembly,
                     ports=DB.assembly_mysqlport_priority["macaca_mulatta"][assembly]["Ports"],
                 )
-            with patch("idtrack._database_manager.requests.get", side_effect=TestReleaseRangeOnHTTPSListing._fake_get):
+            session = MagicMock(get=MagicMock(side_effect=TestReleaseRangeOnHTTPSListing._fake_get))
+            with patch("idtrack._ensembl_access._session", return_value=session):
                 https_index = DatabaseManager._get_core_db_index_from_ftp(
                     organism="macaca_mulatta", genome_assembly=assembly, ports=[3306, 5306]
                 )
@@ -516,6 +598,50 @@ class TestIndexCacheFollowsTable:
             )
             DatabaseManager._get_core_db_index(organism="macaca_fascicularis", genome_assembly=6)
             assert len(built) == 2
+
+
+class TestFirstRelease:
+    """Decision 22: one default start of the release window, the organism's first release in the table."""
+
+    def test_first_release_is_over_all_assemblies_of_the_organism(self):
+        """The first release of an organism is that of its earliest assembly."""
+        assert DB.first_release("homo_sapiens") == 48
+        assert DB.first_release("mus_musculus") == 48
+        assert DB.first_release("sus_scrofa") == 56
+        assert DB.first_release("macaca_mulatta") == 48
+        assert DB.first_release("macaca_fascicularis") == 91
+        with pytest.raises(ValueError, match="not configured"):
+            DB.first_release("danio_rerio")
+
+    @pytest.mark.parametrize(
+        ("organism", "assembly", "first"),
+        [("sus_scrofa", 111, 56), ("macaca_fascicularis", 6, 91), ("homo_sapiens", 38, 48), ("homo_sapiens", 37, 48)],
+    )
+    def test_manager_and_api_start_at_the_first_release_of_the_organism(
+        self, tmp_path, monkeypatch, organism, assembly, first
+    ):
+        """`DatabaseManager` without `ignore_before`, and the manager the API makes, have the same window."""
+        from idtrack import API
+
+        def _index(cls, *, organism, genome_assembly, **_):
+            low, high = DB.release_range(organism, genome_assembly)
+            releases = list(range(low, (high or 116) + 1))
+            names = {r: f"{organism}_core_{r}_{DB.db_suffix(organism, genome_assembly)}" for r in releases}
+            return {
+                "ports": (3306,),
+                "releases": releases,
+                "port_for_release": {r: 3306 for r in releases},
+                "db_for_release": names,
+                "releases_on_mysql": [],
+            }
+
+        monkeypatch.setattr(DatabaseManager, "_get_core_db_index", classmethod(_index))
+        direct = DatabaseManager(
+            organism=organism, form="gene", local_repository=str(tmp_path), genome_assembly=assembly
+        )
+        through_api = API(str(tmp_path)).get_database_manager(organism, 115, genome_assembly=assembly)
+        assert direct.ignore_before == through_api.ignore_before == first
+        assert API(str(tmp_path)).get_database_manager(organism, 115, ignore_before=100).ignore_before == 100
 
 
 class TestDefaultAssemblyFollowsWindow:
@@ -575,13 +701,14 @@ class TestAvailableDatabasesInBothModes:
         """Both modes give every rhesus core database of the configured ranges, with patch letters."""
         monkeypatch.setattr(DB, "ensembl_access", mode)
         monkeypatch.setattr(DatabaseManager, "_core_db_index_cache", {})
-        monkeypatch.setattr(DatabaseManager, "_ensembl_latest_release_cache", 116)
+        monkeypatch.setattr(DatabaseManager, "_ensembl_latest_release_cache", (116, time.monotonic()))
         reachability.reset()
         monkeypatch.setattr(type(reachability), "_probe", staticmethod(lambda host, port, timeout_s: True))
         names = list(RHESUS_CORE_DBS.values())
         connect = MagicMock(side_effect=_fake_mysql_connect(names))
+        session = MagicMock(get=MagicMock(side_effect=TestReleaseRangeOnHTTPSListing._fake_get))
         with patch("idtrack._database_manager.pymysql.connect", connect), patch(
-            "idtrack._database_manager.requests.get", side_effect=TestReleaseRangeOnHTTPSListing._fake_get
+            "idtrack._ensembl_access._session", return_value=session
         ):
             dm = DatabaseManager.__new__(DatabaseManager)
             dm.organism = "macaca_mulatta"
