@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for idtrack._database_manager module.
+"""Unit tests for idtrack.build.database_manager module.
 
 These tests avoid heavy MySQL downloads by patching `DatabaseManager.download_table`
 to return tiny synthetic tables, while still exercising the real caching and
@@ -12,8 +12,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from idtrack._database_manager import DatabaseManager
-from idtrack._db import DB
+from idtrack import ids
+from idtrack.build.database_manager import DatabaseManager
+from idtrack.errors import InvalidArgumentError, UnknownOrganismError
 
 
 @dataclass(frozen=True)
@@ -133,12 +134,12 @@ def synthetic_dm(tmp_path, monkeypatch) -> DatabaseManager:
     """Create a DatabaseManager backed by tiny synthetic MySQL tables."""
     synthetic = _synthetic_mysql_tables()
 
-    def _fake_core_index(*, organism: str, genome_assembly: int, **_):  # noqa: ARG001
+    def _fake_core_index(*, organism: str, assembly: int, **_):  # noqa: ARG001
         releases = list(synthetic.available_releases)
-        db_for_release = {r: f"{organism}_core_{r}_{genome_assembly}" for r in releases}
+        db_for_release = {r: f"{organism}_core_{r}_{assembly}" for r in releases}
         return {
             "organism": organism,
-            "genome_assembly": genome_assembly,
+            "genome_assembly": assembly,
             "ports": (3306,),
             "releases_by_port": {3306: set(releases)},
             "db_by_port_release": {3306: db_for_release.copy()},
@@ -148,19 +149,19 @@ def synthetic_dm(tmp_path, monkeypatch) -> DatabaseManager:
             "releases_on_mysql": releases,
         }
 
-    def _available_releases_versions(self: DatabaseManager, **kwargs) -> list[int]:
+    def _available_releases(self: DatabaseManager, **kwargs) -> list[int]:
         return list(synthetic.available_releases)
 
     def _download_table(self: DatabaseManager, table_key: str, usecols: list[str] | None = None) -> pd.DataFrame:
         try:
-            df = synthetic.tables_by_release[int(self.ensembl_release)][table_key]
+            df = synthetic.tables_by_release[int(self.release)][table_key]
         except KeyError:
             return pd.DataFrame()
         if usecols is None:
             return df.copy(deep=True)
         return df.loc[:, usecols].copy(deep=True)
 
-    monkeypatch.setattr(DatabaseManager, "available_releases_versions", _available_releases_versions)
+    monkeypatch.setattr(DatabaseManager, "available_releases", property(_available_releases))
     monkeypatch.setattr(DatabaseManager, "download_table", _download_table)
     monkeypatch.setattr(DatabaseManager, "_get_core_db_index", classmethod(lambda cls, **kw: _fake_core_index(**kw)))
 
@@ -168,37 +169,37 @@ def synthetic_dm(tmp_path, monkeypatch) -> DatabaseManager:
         organism="homo_sapiens",
         form="gene",
         local_repository=str(tmp_path),
-        ensembl_release=100,
-        ignore_before=100,
-        ignore_after=101,
-        genome_assembly=38,
+        release=100,
+        first_release=100,
+        snapshot_release=101,
+        assembly=38,
         store_raw_always=True,
     )
 
 
 def test_init_rejects_unsupported_organism(tmp_path):
-    """Unsupported organisms should raise NotImplementedError."""
-    with pytest.raises(NotImplementedError):
+    """Unsupported organisms raise UnknownOrganismError, which names the way to register one."""
+    with pytest.raises(UnknownOrganismError, match="'drosophila_melanogaster' is not configured.*register_organism"):
         DatabaseManager(
             organism="drosophila_melanogaster",
             form="gene",
             local_repository=str(tmp_path),
-            ensembl_release=100,
-            ignore_before=100,
-            ignore_after=101,
-            genome_assembly=38,
+            release=100,
+            first_release=100,
+            snapshot_release=101,
+            assembly=38,
         )
 
 
-def test_init_defaults_release_respects_ignore_after(tmp_path, monkeypatch):
-    """When `ensembl_release=None`, the default release should not exceed `ignore_after`."""
+def test_init_defaults_release_respects_snapshot_release(tmp_path, monkeypatch):
+    """When `release=None`, the default release should not exceed `snapshot_release`."""
 
-    def _fake_core_index(*, organism: str, genome_assembly: int, **_):  # noqa: ARG001
+    def _fake_core_index(*, organism: str, assembly: int, **_):  # noqa: ARG001
         releases = [100, 101, 102]
-        db_for_release = {r: f"{organism}_core_{r}_{genome_assembly}" for r in releases}
+        db_for_release = {r: f"{organism}_core_{r}_{assembly}" for r in releases}
         return {
             "organism": organism,
-            "genome_assembly": genome_assembly,
+            "genome_assembly": assembly,
             "ports": (3306,),
             "releases_by_port": {3306: set(releases)},
             "db_by_port_release": {3306: db_for_release.copy()},
@@ -213,32 +214,32 @@ def test_init_defaults_release_respects_ignore_after(tmp_path, monkeypatch):
         organism="homo_sapiens",
         form="gene",
         local_repository=str(tmp_path),
-        ensembl_release=None,
-        ignore_before=100,
-        ignore_after=101,
-        genome_assembly=38,
+        release=None,
+        first_release=100,
+        snapshot_release=101,
+        assembly=38,
     )
-    assert dm.ensembl_release == 101
+    assert dm.release == 101
     assert dm.mysql_settings["port"] == 3306
     assert dm.mysql_database == "homo_sapiens_core_101_38"
 
 
 def test_init_infers_assembly_that_supports_requested_release(tmp_path, monkeypatch):
-    """When `genome_assembly=None`, prefer the highest-priority assembly that contains the requested release."""
+    """When `assembly=None`, prefer the highest-priority assembly that contains the requested release."""
 
-    def _fake_core_index(*, organism: str, genome_assembly: int, **_):
+    def _fake_core_index(*, organism: str, assembly: int, **_):
         if organism != "mus_musculus":
             raise ValueError("unexpected organism")
-        if genome_assembly == 39:
+        if assembly == 39:
             releases = list(range(103, 116))
-        elif genome_assembly == 38:
+        elif assembly == 38:
             releases = list(range(68, 103))
         else:
             releases = []
-        db_for_release = {r: f"{organism}_core_{r}_{genome_assembly}" for r in releases}
+        db_for_release = {r: f"{organism}_core_{r}_{assembly}" for r in releases}
         return {
             "organism": organism,
-            "genome_assembly": genome_assembly,
+            "genome_assembly": assembly,
             "ports": (3306,),
             "releases_by_port": {3306: set(releases)},
             "db_by_port_release": {3306: db_for_release.copy()},
@@ -253,12 +254,12 @@ def test_init_infers_assembly_that_supports_requested_release(tmp_path, monkeypa
         organism="mus_musculus",
         form="gene",
         local_repository=str(tmp_path),
-        ensembl_release=100,
-        ignore_before=68,
-        ignore_after=100,
-        genome_assembly=None,
+        release=100,
+        first_release=68,
+        snapshot_release=100,
+        assembly=None,
     )
-    assert dm.genome_assembly == 38
+    assert dm.assembly == 38
     assert dm.mysql_settings["port"] == 3306
     assert dm.mysql_database == "mus_musculus_core_100_38"
 
@@ -288,10 +289,10 @@ def test_create_ids_and_release_id(synthetic_dm):
     assert set(idsraw.columns) == {"gene_id", "gene_stable_id", "gene_version"}
     assert idsraw["gene_id"].dtype.kind in {"i", "u"}
 
-    ids = synthetic_dm.get_db("ids")
-    assert list(ids.columns) == ["gene_stable_id", "gene_version"]
-    assert ids["gene_stable_id"].is_unique
-    assert ids["gene_stable_id"].str.contains(DB.id_ver_delimiter, regex=False).sum() == 0
+    table = synthetic_dm.get_db("ids")
+    assert list(table.columns) == ["gene_stable_id", "gene_version"]
+    assert table["gene_stable_id"].is_unique
+    assert table["gene_stable_id"].str.contains(ids.ID_VERSION_DELIMITER, regex=False).sum() == 0
 
 
 def test_create_relation_current_builds_three_node_columns(synthetic_dm):
@@ -311,7 +312,7 @@ def test_create_id_history_narrow_and_full(synthetic_dm):
     assert {"old_stable_id", "new_stable_id", "old_release", "new_release"}.issubset(full.columns)
     assert {"mapping_session_id", "type"}.issubset(full.columns)
     assert {"mapping_session_id", "type"}.isdisjoint(narrow.columns)
-    assert (narrow["old_release"] >= synthetic_dm.ignore_before).all()
+    assert (narrow["old_release"] >= synthetic_dm.first_release).all()
 
 
 def test_external_db_all_and_filter_modes(synthetic_dm):
@@ -321,7 +322,7 @@ def test_external_db_all_and_filter_modes(synthetic_dm):
         (),
         {
             "give_list_for_case": staticmethod(
-                lambda give_type: ["UniProt", "EntrezGene", f"{DB.synonym_id_nodes_prefix}UniProt"]
+                lambda give_type: ["UniProt", "EntrezGene", f"{ids.SYNONYM_PREFIX}UniProt"]
             )
         },
     )()
@@ -332,17 +333,17 @@ def test_external_db_all_and_filter_modes(synthetic_dm):
     assert all_rows["graph_id"].str.startswith("ENSG").all()
 
     # Synonym rows should be prefixed both on the identifier and database name.
-    synonym_rows = all_rows[all_rows["id_db"].str.startswith(DB.synonym_id_nodes_prefix)]
+    synonym_rows = all_rows[all_rows["id_db"].str.startswith(ids.SYNONYM_PREFIX)]
     assert len(synonym_rows) > 0
-    assert synonym_rows["name_db"].str.startswith(DB.synonym_id_nodes_prefix).all()
+    assert synonym_rows["name_db"].str.startswith(ids.SYNONYM_PREFIX).all()
 
     relevant = synthetic_dm.create_external_db(filter_mode="relevant")
-    assert set(relevant["name_db"]).issubset({"UniProt", "EntrezGene", f"{DB.synonym_id_nodes_prefix}UniProt"})
+    assert set(relevant["name_db"]).issubset({"UniProt", "EntrezGene", f"{ids.SYNONYM_PREFIX}UniProt"})
 
     db_counts = synthetic_dm.create_external_db(filter_mode="database")
     assert set(db_counts.columns) == {"name_db", "count"}
 
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidArgumentError):
         synthetic_dm.create_external_db(filter_mode="not-a-mode")
 
 
@@ -384,15 +385,15 @@ def test_release_discovery_and_mysql_database_from_server_catalog(tmp_path, monk
     # releases, so they come from the (mocked) MySQL catalogue.
     import pymysql
 
-    from idtrack._ensembl_access import reachability
+    from idtrack.build.ensembl_access import reachability
 
     monkeypatch.setattr(reachability, "mysql_port_usable", lambda port: True)
     monkeypatch.setattr(DatabaseManager, "_core_db_index_cache", {})
 
-    def _no_https(cls, *, organism, genome_assembly, ports):
+    def _no_https(cls, *, organism, assembly, ports):
         return {
             "organism": organism,
-            "genome_assembly": genome_assembly,
+            "genome_assembly": assembly,
             "ports": tuple(ports),
             "releases_by_port": {int(p): set() for p in ports},
             "db_by_port_release": {int(p): {} for p in ports},
@@ -439,10 +440,10 @@ def test_release_discovery_and_mysql_database_from_server_catalog(tmp_path, monk
         organism="homo_sapiens",
         form="gene",
         local_repository=str(tmp_path),
-        ensembl_release=100,
-        ignore_before=100,
-        ignore_after=101,
-        genome_assembly=38,
+        release=100,
+        first_release=100,
+        snapshot_release=101,
+        assembly=38,
     )
 
     assert dm.available_releases == [100, 101]
@@ -453,7 +454,7 @@ def test_create_ids_does_not_hide_a_failure_behind_the_stable_id_table_fallback(
     """Only a schema answer leads to the `<form>_stable_id` fallback; any other error surfaces unchanged."""
     # Before, every `ValueError` (e.g. a cache write that failed under pandas 3) was taken to mean "old schema",
     # and the user saw `Table 'gene_stable_id' not found` instead of the real error.
-    import idtrack._utils_hdf5 as hs
+    import idtrack.build.tables as hs
 
     original_write = hs.write_table
 
@@ -469,7 +470,7 @@ def test_create_ids_does_not_hide_a_failure_behind_the_stable_id_table_fallback(
 
 def test_create_ids_falls_back_to_the_stable_id_table_on_an_old_schema(synthetic_dm, monkeypatch):
     """A release whose `gene` table has no stable_id/version columns is read from `gene_stable_id`."""
-    from idtrack._db import EnsemblSchemaError
+    from idtrack.errors import EnsemblSchemaError
 
     old_gene = pd.DataFrame({"gene_id": [1, 2]})
     old_stable = pd.DataFrame(
@@ -493,7 +494,7 @@ def test_create_ids_falls_back_to_the_stable_id_table_on_an_old_schema(synthetic
 
 def test_schema_error_is_not_a_value_error():
     """Broad `except ValueError` handlers must not catch the schema answer by accident (and vice versa)."""
-    from idtrack._db import EnsemblSchemaError
+    from idtrack.errors import EnsemblSchemaError
 
     err = EnsemblSchemaError("m", table="t", missing_columns=("a",))
     assert not isinstance(err, ValueError)
@@ -505,7 +506,7 @@ def test_schema_error_survives_pickle_and_copy():
     import copy
     import pickle  # noqa: S403
 
-    from idtrack._db import EnsemblSchemaError
+    from idtrack.errors import EnsemblSchemaError
 
     err = EnsemblSchemaError("Table 'gene' lacks columns", table="gene", missing_columns=("version",))
     for clone in (pickle.loads(pickle.dumps(err)), copy.copy(err)):  # noqa: S301
@@ -519,12 +520,12 @@ class TestSavedHttpsIndex:
 
     @staticmethod
     def _scan(calls):
-        def _fake_ftp(cls, *, organism, genome_assembly, ports):
-            calls.append((organism, genome_assembly))
+        def _fake_ftp(cls, *, organism, assembly, ports):
+            calls.append((organism, assembly))
             releases = [110, 111, 112]
             return {
                 "organism": organism,
-                "genome_assembly": int(genome_assembly),
+                "genome_assembly": int(assembly),
                 "ports": tuple(ports),
                 "releases_by_port": {int(ports[0]): set(releases)},
                 "db_by_port_release": {int(ports[0]): {r: f"{organism}_core_{r}_111" for r in releases}},
@@ -541,7 +542,7 @@ class TestSavedHttpsIndex:
     @pytest.fixture
     def scans(self, monkeypatch):
         """Record every faked HTTPS scan; the in-memory index starts empty and MySQL is unusable."""
-        from idtrack._ensembl_access import reachability
+        from idtrack.build.ensembl_access import reachability
 
         calls: list = []
         monkeypatch.setattr(DatabaseManager, "_get_core_db_index_from_ftp", self._scan(calls))
@@ -551,7 +552,7 @@ class TestSavedHttpsIndex:
 
     def _index(self, repo, needed_up_to):
         return DatabaseManager._get_core_db_index(
-            organism="sus_scrofa", genome_assembly=111, local_repository=str(repo), needed_up_to=needed_up_to
+            organism="sus_scrofa", assembly=111, local_repository=str(repo), needed_up_to=needed_up_to
         )
 
     def test_saved_index_answers_a_covered_window_in_a_new_process(self, tmp_path, scans, monkeypatch):
@@ -587,16 +588,16 @@ class TestSavedHttpsIndex:
 
     def test_manager_with_a_bounded_window_is_created_offline(self, tmp_path, scans, monkeypatch):
         """After one online run, a manager for the same window needs neither REST nor the dump scan."""
-        import idtrack._ensembl_access as ea
+        import idtrack.build.ensembl_access as ea
 
         monkeypatch.setenv("IDTRACK_ENSEMBL_ACCESS", "https")
         DatabaseManager(
             organism="sus_scrofa",
             form="gene",
             local_repository=str(tmp_path),
-            ignore_before=110,
-            ignore_after=112,
-            genome_assembly=111,
+            first_release=110,
+            snapshot_release=112,
+            assembly=111,
         )
         assert len(scans) == 1
 
@@ -610,8 +611,8 @@ class TestSavedHttpsIndex:
             organism="sus_scrofa",
             form="gene",
             local_repository=str(tmp_path),
-            ignore_before=110,
-            ignore_after=112,
-            genome_assembly=111,
+            first_release=110,
+            snapshot_release=112,
+            assembly=111,
         )
-        assert dm.ensembl_release == 112 and dm.available_releases == [110, 111, 112]
+        assert dm.release == 112 and dm.available_releases == [110, 111, 112]

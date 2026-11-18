@@ -2,6 +2,7 @@
 """Externals YAML files are checked against the organism table, read once, and written atomically."""
 
 import glob
+import importlib.resources
 import logging
 import os
 
@@ -9,18 +10,24 @@ import pandas as pd
 import pytest
 import yaml
 
-import idtrack._external_databases as ext
-from idtrack._db import DB
-from idtrack._external_databases import ExternalDatabases, load_externals_yaml, write_externals_yaml
+import idtrack.build.externals as ext
+from idtrack import organisms
+from idtrack.build.externals import ExternalDatabases, load_externals_yaml, write_externals_yaml
+from idtrack.errors import ExternalsError
 
-SHIPPED = sorted(glob.glob(os.path.join(os.path.dirname(ext.__file__), "default_config", "*_externals_*.yml")))
+SHIPPED = sorted(
+    glob.glob(os.path.join(str(importlib.resources.files("idtrack") / "default_config"), "*_externals_*.yml"))
+)
+
+
+def test_the_shipped_files_are_found():
+    """The check below runs over every organism's shipped files (an empty list would skip it silently)."""
+    assert {os.path.basename(p).split("_externals_")[0] for p in SHIPPED} == set(organisms.supported_organisms())
 
 
 def _entry(releases: str, include=True, assembly: str = "111") -> dict:
     return {
         "Assembly": {assembly: {"Ensembl release": releases, "Include": include}},
-        "Database Index": 0,
-        "Potential Synonymous": "",
     }
 
 
@@ -45,7 +52,7 @@ def test_a_shipped_file_outside_the_table_is_an_error(tmp_path):
     """organisms_externals-2: a shipped file with a release outside its assembly's window does not load."""
     path = tmp_path / "f.yml"
     _write(path, {"sus_scrofa": {"gene": {"EntrezGene": _entry("88,89,90", assembly="102")}}})
-    with pytest.raises(ValueError, match="outside its window"):
+    with pytest.raises(ExternalsError, match="outside its window"):
         load_externals_yaml(str(path), shipped=True)
 
 
@@ -63,7 +70,7 @@ def test_a_user_file_outside_the_table_is_warned_and_trimmed(tmp_path, caplog):
             }
         },
     )
-    with caplog.at_level(logging.WARNING, logger="idtrack._external_databases"):
+    with caplog.at_level(logging.WARNING, logger="idtrack.build.externals"):
         data = load_externals_yaml(str(path), shipped=False)
     message = " ".join(r.getMessage() for r in caplog.records)
     assert "[90]" in message and "'38'" in message
@@ -72,12 +79,30 @@ def test_a_user_file_outside_the_table_is_warned_and_trimmed(tmp_path, caplog):
     assert ExternalDatabases("sus_scrofa", 89, "gene", str(tmp_path), 102).give_list_for_case("assembly") == [102]
 
 
+def test_releases_before_the_first_release_of_ensembl_s_databases_are_left_out(tmp_path, caplog):
+    """An organism registered with a range from release 40 is read from release 48 on (Ensembl's first database)."""
+    from tests.unit.test_organism_table import restored_organism_table
+
+    with restored_organism_table():
+        organisms.register_organism(
+            "danio_rerio",
+            {9: {"Name": "Zv9", "Ports": [3306, 5306], "Priority": 1, "ReleaseRange": [40, None]}},
+            symbol_databases=["ZFIN"],
+        )
+        path = tmp_path / "danio_rerio_externals_modified.yml"
+        _write(path, {"danio_rerio": {"gene": {"ZFIN": _entry("45,47,48,50", assembly="9")}}})
+        with caplog.at_level(logging.WARNING, logger="idtrack.build.externals"):
+            data = load_externals_yaml(str(path), shipped=False)
+        assert data["danio_rerio"]["gene"]["ZFIN"]["Assembly"]["9"]["Ensembl release"] == "48,50"
+        assert "[45, 47] lie outside its window 48..None" in " ".join(r.getMessage() for r in caplog.records)
+
+
 @pytest.mark.parametrize("bad", ["false", "no", 0, None, 1])
 def test_include_must_be_a_boolean(tmp_path, bad):
     """organisms_externals-9: a quoted "false" (or a number) is an error naming the entry, never "enabled"."""
     path = tmp_path / "f.yml"
     _write(path, {"sus_scrofa": {"gene": {"EntrezGene": _entry("110", include=bad)}}})
-    with pytest.raises(ValueError, match="sus_scrofa/gene/EntrezGene assembly '111'"):
+    with pytest.raises(ExternalsError, match="sus_scrofa/gene/EntrezGene assembly '111'"):
         load_externals_yaml(str(path), shipped=False)
 
 
@@ -89,7 +114,7 @@ def test_the_file_is_parsed_once_and_the_fallback_announced_once(tmp_path, monke
     monkeypatch.setattr(ext, "_yaml_cache", {})
     monkeypatch.setattr(ext, "_fallback_announced", set())
     e = ExternalDatabases("sus_scrofa", 110, "gene", str(tmp_path), 111)
-    with caplog.at_level(logging.WARNING, logger="idtrack._external_databases"):
+    with caplog.at_level(logging.WARNING, logger="idtrack.build.externals"):
         for _ in range(100):
             e.give_list_for_case("db")
     assert len(parsed) == 1
@@ -164,4 +189,4 @@ def test_db_list_is_sorted(tmp_path):
     path = tmp_path / "sus_scrofa_externals_modified.yml"
     _write(path, {"sus_scrofa": {"gene": {n: _entry("110") for n in ["Z", "A", "M"]}}})
     assert ExternalDatabases("sus_scrofa", 110, "gene", str(tmp_path), 111).give_list_for_case("db") == ["A", "M", "Z"]
-    assert DB.assembly_mysqlport_priority["sus_scrofa"]  # the table is the one the checks use
+    assert organisms.ORGANISM_TABLE["sus_scrofa"]  # the table is the one the checks use

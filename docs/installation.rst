@@ -37,7 +37,7 @@ Before installing IDTrack, ensure your system meets these requirements:
         (47 MB to 345 MB).
     * - **Network**
       - HTTPS access to ``ftp.ensembl.org`` and ``rest.ensembl.org`` to build a graph (and for
-        :py:meth:`idtrack.API.resolve_organism` to learn the latest release); the Ensembl MySQL ports are optional
+        :py:meth:`idtrack.API.ensembl_organism` to learn the latest release); the Ensembl MySQL ports are optional
         (see :ref:`ensembl-access`). Loading a graph that is on disk needs no network.
 
 .. note::
@@ -49,13 +49,13 @@ Before installing IDTrack, ensure your system meets these requirements:
 Install with pip
 ----------------
 
-IDTrack is published on PyPI (it is not on conda-forge or bioconda). Install it into a fresh environment:
+Install IDTrack from GitHub into a fresh environment (it is not on conda-forge or bioconda):
 
 .. code-block:: console
 
     $ python -m venv idtrack-env
     $ source idtrack-env/bin/activate      # Windows: idtrack-env\Scripts\activate
-    $ pip install idtrack
+    $ pip install "git+https://github.com/theislab/idtrack.git"
 
 or into a conda/mamba environment, with pip:
 
@@ -63,19 +63,22 @@ or into a conda/mamba environment, with pip:
 
     $ mamba create -n idtrack-env -c conda-forge python=3.13
     $ conda activate idtrack-env
-    $ pip install idtrack
+    $ pip install "git+https://github.com/theislab/idtrack.git"
+
+To harmonize ``.h5ad`` datasets (:py:class:`idtrack.harmonize.HarmonizeFeatures`), install the ``harmonize`` extra,
+which brings anndata and scipy:
+
+.. code-block:: console
+
+    $ pip install "idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git"
 
 .. important::
 
-    The release on PyPI, 0.0.5, is older than the version these pages describe: the changes listed under
-    "Unreleased" in :doc:`changes` are not in it, and it reads neither the graphs nor the table cache of this version
-    (nor this version its). Until the next release, install this version from GitHub:
-
-    .. code-block:: console
-
-        $ pip install "git+https://github.com/theislab/idtrack.git@main"
-
-    ``idtrack.__version__`` does not tell the two apart before then (both say 0.0.5).
+    The release on PyPI (``pip install idtrack``), 0.0.5, is an older, different version with another API: the
+    changes listed in :doc:`changes` are not in it, and it reads neither the graphs nor the table cache of this version
+    (nor this version its). Install from GitHub until version 0.1.0 is published on PyPI.
+    ``idtrack.__version__`` tells them apart: this version reports 0.1.0 (``unknown`` when the code runs from a source
+    folder that is not installed).
 
 
 .. _apple-silicon:
@@ -106,7 +109,7 @@ Choose one of these methods:
 
 .. code-block:: console
 
-    $ pip install idtrack
+    $ pip install "git+https://github.com/theislab/idtrack.git"
 
 **Verification:**
 
@@ -137,8 +140,8 @@ Using Mamba or conda
     # Activate the environment
     $ conda activate idtrack-env
 
-    # Install IDTrack (from PyPI, with pip)
-    $ pip install idtrack
+    # Install IDTrack (from GitHub, with pip)
+    $ pip install "git+https://github.com/theislab/idtrack.git"
 
 Using venv + pip
 ~~~~~~~~~~~~~~~~
@@ -155,7 +158,7 @@ Using venv + pip
     $ idtrack-env\Scripts\activate
 
     # Install IDTrack
-    $ pip install idtrack
+    $ pip install "git+https://github.com/theislab/idtrack.git"
 
 
 Development Installation
@@ -221,22 +224,17 @@ script:
 
 .. code-block:: python
 
-    from pathlib import Path
     import idtrack
-
-    # Pick a stable, writable cache directory (reused across runs)
-    local_repo = Path("./idtrack_cache").resolve()
-    local_repo.mkdir(parents=True, exist_ok=True)
+    import idtrack.organisms
 
     # Print version information
     print(f"IDTrack version: {idtrack.__version__}")
 
-    # Test API initialization
-    api = idtrack.API(local_repository=str(local_repo))
-    print("API initialized successfully")
+    # Offline: the organisms of the table
+    print("Organisms:", ", ".join(idtrack.organisms.supported_organisms()))
 
-    # Test organism resolution
-    organism, release = api.resolve_organism("human")
+    # Online (Ensembl REST): organism resolution and Ensembl's latest release
+    organism, release = idtrack.API.ensembl_organism("human")
     print(f"Resolved organism: {organism}")
     print(f"Latest Ensembl release: {release}")
 
@@ -246,8 +244,8 @@ script:
 
 .. code-block:: text
 
-    IDTrack version: 0.0.x
-    API initialized successfully
+    IDTrack version: 0.1.0
+    Organisms: homo_sapiens, macaca_fascicularis, macaca_mulatta, mus_musculus, sus_scrofa
     Resolved organism: homo_sapiens
     Latest Ensembl release: 116
 
@@ -266,7 +264,7 @@ IDTrack reads Ensembl's core databases in one of two ways: from the public MySQL
 (``ensembldb.ensembl.org``, ports 3306, 5306 and 3337) or from the MySQL dumps on
 ``https://ftp.ensembl.org/pub/``. Many institutional networks and HPC clusters block the MySQL ports;
 HTTPS is enough. The access mode is chosen with the environment variable ``IDTRACK_ENSEMBL_ACCESS`` or
-the attribute ``idtrack.DB.ensembl_access`` (which wins when set):
+with :py:func:`idtrack.settings.configure_ensembl` (``access=``, which wins when set):
 
 .. list-table::
     :header-rows: 1
@@ -287,9 +285,9 @@ the attribute ``idtrack.DB.ensembl_access`` (which wins when set):
 
 .. code-block:: python
 
-    import idtrack
+    import idtrack.settings
 
-    idtrack.DB.ensembl_access = "https"  # or "auto"
+    idtrack.settings.configure_ensembl(access="https")  # or "auto"
 
 **What differs between the modes:** nothing in the tables: both read the same Ensembl tables, with the same rows,
 values and column types. The dump reader decodes MySQL's escaping (tabs, newlines and backslashes inside fields,
@@ -301,24 +299,21 @@ fails is not tried again for ten minutes (then after twice as long, up to a day;
 with a warning; this costs only speed). A query or data error of the MySQL server is raised, not answered over
 HTTPS.
 
-If you route IDTrack through an SSH tunnel with :py:class:`idtrack.ConnectionBridge`, starting and stopping
-the bridge forgets the probe results, so the ports are probed again through the new route.
-
 **Slow networks, timeouts and retries.** Every request to Ensembl REST (organism names and the latest release)
-waits ``idtrack.DB.connection_timeout`` seconds to connect (default 15) and ``idtrack.DB.reading_timeout``
-seconds for the answer (default 60; it also applies to the HTTPS dumps), and is tried
-``idtrack.DB.rest_attempts`` times (default 3) when it times out, the connection fails, or Ensembl answers 429
-or 5xx. When every attempt fails, :py:class:`idtrack.EnsemblRestError` (a :py:class:`ConnectionError`) names the
-URL, the timeouts and what to change; a download of the dumps that keeps failing raises
-:py:class:`idtrack.EnsemblDownloadError` (also a :py:class:`ConnectionError`), and a release that cannot be listed
+waits ``connection_timeout`` seconds to connect (default 15) and ``reading_timeout`` seconds for the answer
+(default 60; it also applies to the HTTPS dumps), and is tried ``rest_attempts`` times (default 3) when it times out,
+the connection fails, or Ensembl answers 429 or 5xx (the fields of :py:class:`idtrack.settings.EnsemblSettings`, set
+for the whole process with :py:func:`idtrack.settings.configure_ensembl`). When every attempt fails,
+:py:class:`idtrack.errors.EnsemblRestError` (an :py:class:`idtrack.errors.EnsemblAccessError`, also a
+:py:class:`ConnectionError`) names the URL, the timeouts and what to change; a download of the dumps that keeps
+failing raises :py:class:`idtrack.errors.EnsemblDownloadError` (likewise), and a release that cannot be listed
 is an error, never read as "Ensembl has no such release". On a network where Ensembl answers slowly, raise the timeouts before the first call:
 
 .. code-block:: python
 
-    import idtrack
+    import idtrack.settings
 
-    idtrack.DB.reading_timeout = 120
-    idtrack.DB.rest_attempts = 5
+    idtrack.settings.configure_ensembl(reading_timeout=120, rest_attempts=5)
 
 The network is needed only to download, and to learn which release is the latest: the formal name, the short name
 and the assembly names of a supported organism (``"homo_sapiens"``, ``"Homo sapiens"``, ``"human"``, ``"GRCh38"``)
@@ -331,51 +326,14 @@ proxy is honoured through ``HTTPS_PROXY``.
 Optional Dependencies
 ---------------------
 
-IDTrack has optional dependencies for advanced features:
-
-External Mapping Backends
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-For cross-database identifier mapping using external services:
+The ``harmonize`` extra brings anndata and scipy for :py:class:`idtrack.harmonize.HarmonizeFeatures` (harmonization
+of ``.h5ad`` datasets); conversions, graph building and the pure core of harmonization
+(:py:mod:`idtrack.harmonize`) do not need it. Without it, using ``HarmonizeFeatures`` raises an ImportError that names
+the extra.
 
 .. code-block:: console
 
-    # Install the optional backends via Python extras (recommended)
-    $ pip install "idtrack[external-mappers]"
-
-    # Or install only the libraries you need
-    $ pip install gget mygene pybiomart gprofiler-official
-
-Ortholog Analysis
-~~~~~~~~~~~~~~~~~
-
-For cross-species ortholog analysis with sequence alignment:
-
-.. code-block:: console
-
-    $ pip install "idtrack[ortholog]"
-
-Protein Embeddings
-~~~~~~~~~~~~~~~~~~
-
-:py:func:`idtrack._external_mappers._ortholog.align_ortholog_pair_with_features` can add protein-language-model embedding
-features to an ortholog alignment. They need ``torch`` and ``transformers``; with them installed, the model named by
-``embedding_model_name`` (``facebook/esm2_t12_35M_UR50D`` by default) is downloaded from Hugging Face on first use.
-Without them, or with ``embedding_model_name=None``, those features are left empty (with ``verbose=True`` a warning says why) and the
-other alignment features are computed.
-
-.. code-block:: console
-
-    $ pip install "idtrack[embeddings]"
-
-All Optional Dependencies
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Install all optional dependencies at once:
-
-.. code-block:: console
-
-    $ pip install "idtrack[all-external]"
+    $ pip install "idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git"
 
 
 Troubleshooting
@@ -393,7 +351,7 @@ then IDTrack with pip:
 
     $ mamba create -n idtrack-env -c conda-forge python=3.13 h5py
     $ conda activate idtrack-env
-    $ pip install idtrack
+    $ pip install "git+https://github.com/theislab/idtrack.git"
 
 **SSL Certificate errors during download**
 
@@ -412,12 +370,12 @@ If IDTrack encounters SSL errors when downloading external databases:
 .. code-block:: console
 
     # Option 1: Use --user flag with pip
-    $ pip install --user idtrack
+    $ pip install --user "git+https://github.com/theislab/idtrack.git"
 
     # Option 2: Use a virtual environment (recommended)
     $ python -m venv idtrack-env
     $ source idtrack-env/bin/activate
-    $ pip install idtrack
+    $ pip install "git+https://github.com/theislab/idtrack.git"
 
 
 Getting Help

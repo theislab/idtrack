@@ -23,8 +23,9 @@ from typing import Any
 
 import pandas as pd
 
-from idtrack._database_manager import DatabaseManager
-from idtrack._db import DB, EnsemblSchemaError
+from idtrack import ids, organisms, settings
+from idtrack.build.database_manager import DatabaseManager
+from idtrack.errors import EnsemblSchemaError
 
 DATA_DIRECTORY = Path(__file__).resolve().parent / "data" / "real"
 FORMAT = 1
@@ -193,7 +194,7 @@ class RealTables:
         """
         self.write_indices(repository)
         monkeypatch.setitem(_SERVED, os.path.realpath(str(repository)), self)
-        monkeypatch.setattr(DB, "ensembl_access", "https")
+        monkeypatch.setattr(settings.ENSEMBL, "access", "https")
         monkeypatch.setattr(DatabaseManager, "download_table", _replayed_download)
 
 
@@ -206,7 +207,7 @@ def _replayed_download(manager, table_key, usecols=None):
     tables = _SERVED.get(os.path.realpath(str(manager.local_repository)))
     if tables is None or manager.organism != tables.organism:
         raise AssertionError(f"Unexpected download of {table_key!r} by {manager.organism} outside the cut tables.")
-    return tables.table(manager.genome_assembly, manager.ensembl_release, table_key, usecols or None)
+    return tables.table(manager.assembly, manager.release, table_key, usecols or None)
 
 
 def fold(identifier: str) -> str:
@@ -410,7 +411,7 @@ class Ensembl:
                     if at not in self.releases(assembly):
                         continue
                     for _gene, name, value, kind, form in self.links(assembly, at):
-                        database = name if kind == "id" else f"{DB.synonym_id_nodes_prefix}{name}"
+                        database = name if kind == "id" else f"{ids.SYNONYM_PREFIX}{name}"
                         if self.selected(form, database, assembly, at):
                             found.setdefault((kind, fold(value)), set()).add((value, database))
             self._written[release] = found
@@ -426,7 +427,7 @@ class Ensembl:
             index: dict[tuple[str, str], dict[int, set[str]]] = {}
             for release, assembly in sorted(backbone.items()):
                 for _gene, name, value, the_kind, form in self.links(assembly, release):
-                    database = name if the_kind == "id" else f"{DB.synonym_id_nodes_prefix}{name}"
+                    database = name if the_kind == "id" else f"{ids.SYNONYM_PREFIX}{name}"
                     if self.selected(form, database, assembly, release):
                         index.setdefault((the_kind, value.lower()), {}).setdefault(release, set()).add(value)
             self._serving = (backbone, index)
@@ -516,21 +517,21 @@ def without_version(identifier: str) -> str:
     return head if dot and tail.isdigit() else identifier
 
 
-def answer_of(result: dict[str, Any], final_database: str | None) -> list[str]:
-    """Return the ids that a result of ``API.convert_identifier`` gives as its answer in the database asked for.
+def answer_of(result: Any, final_database: str | None, strategy: str = "best") -> list[str]:
+    """Return the ids that a result of ``API.convert`` gives as its answer (one view) in the database asked for.
 
     Nothing when the identifier was not found or has no counterpart, and, for a conversion into an external
     database, nothing when the genes reached have no id in it (the Ensembl ids returned then are not an answer in
     that database).
     """
-    if result["no_corresponding"] or result["no_conversion"]:
+    if result.graph_id is None or not result.candidates:
         return []
-    if final_database and (result["no_target"] or result["final_database"] != final_database):
+    if final_database and (result.no_target or result.final_database != final_database):
         return []
-    return list(result["target_id"])
+    return list(result.targets(strategy))
 
 
-def verdict(query: dict[str, Any], result: dict[str, Any]) -> str | None:
+def verdict(query: dict[str, Any], result: Any) -> str | None:
     """Compare a result with the expected answer of a query; return ``None`` when right, else what is wrong.
 
     The rules are those of the truth the queries come from. ``expect`` is the set of right targets. With
@@ -540,11 +541,11 @@ def verdict(query: dict[str, Any], result: dict[str, Any]) -> str | None:
     without it (``base``: the release has no versions in Ensembl's files), external ids as written (``exact``). The
     genes of ``apart`` (copies on patches and alternative loci) must be reported in ``alternative_locus_genes``.
     """
-    got = answer_of(result, query["final_database"])
+    got = answer_of(result, query["final_database"], query["strategy"])
     if len(set(got)) != len(got):
         return f"a target is returned twice: {got}"
     reported = set(got)
-    apart = set(result["alternative_locus_genes"])
+    apart = set(result.alternative_locus_genes)
     if query["cmp"] == "base":
         reported = {without_version(i) for i in reported}
         apart = {without_version(i) for i in apart}
@@ -576,8 +577,8 @@ class RealWorld:
         tables: The cut tables (:py:class:`RealTables`).
         ensembl: What Ensembl's tables say (:py:class:`Ensembl`).
         repository: The local repository the graph was built in; it holds the graph file.
-        built: The :py:class:`idtrack.API` whose ``build_graph`` built the graph from the tables.
-        api: A second :py:class:`idtrack.API`, whose ``build_graph`` loaded the saved file.
+        built: The :py:class:`idtrack.API` that :py:meth:`idtrack.API.build` built from the tables.
+        api: A second :py:class:`idtrack.API`, for which :py:meth:`idtrack.API.build` loaded the saved file.
         backbone: ``{release: assembly}``: the assembly that serves each release of the graph (the organism's
             preferred assembly among those that have the release), read from Ensembl's index.
     """
@@ -601,22 +602,20 @@ class RealWorld:
             monkeypatch.setattr(DatabaseManager, "_core_db_index_cache", {})
             monkeypatch.setattr(socket, "socket", refuse)
             self.tables.install(monkeypatch, self.repository)
-            self.built = idtrack.API(local_repository=self.repository)
-            self.built.build_graph(organism, SNAPSHOT)
+            self.built = idtrack.API.build(organism, SNAPSHOT, self.repository)
             self.tables_served = self.tables.served
 
             def no_manager(*args, **kwargs):
                 raise AssertionError("Loading a graph file needed a DatabaseManager.")
 
             monkeypatch.setattr(DatabaseManager, "__init__", no_manager)
-            self.api = idtrack.API(local_repository=self.repository)
-            self.api.build_graph(organism, SNAPSHOT)
+            self.api = idtrack.API.build(organism, SNAPSHOT, self.repository)
         releases_of = {int(a): set(payload["releases"]) for a, payload in self.tables.indices.items()}
         self.backbone = {}
         for release in sorted(set().union(*releases_of.values())):
             if release <= SNAPSHOT:
                 self.backbone[release] = next(
-                    int(a) for a in DB.assemblies_by_priority(organism) if release in releases_of.get(int(a), ())
+                    int(a) for a in organisms.assemblies_by_priority(organism) if release in releases_of.get(int(a), ())
                 )
         self.ensembl.serving = self.backbone
 

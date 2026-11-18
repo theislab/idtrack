@@ -15,9 +15,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from idtrack._database_manager import DatabaseManager
-from idtrack._db import DB
-from idtrack._ensembl_access import EnsemblDownloadError
+from idtrack import ids, organisms, settings
+from idtrack.build.database_manager import DatabaseManager
+from idtrack.errors import BuildError, EnsemblDownloadError, ExternalsError, InvalidArgumentError, TableFormatError
 
 RELEASES = [110, 111, 112, 113, 114, 115]
 
@@ -124,7 +124,7 @@ def _tables(release: int, versions: bool = True) -> dict[str, pd.DataFrame]:
 
 def _write_yaml(repo: str, databases: list[str], releases: list[int] = RELEASES) -> None:
     """Write a local externals YAML enabling *databases* for gene on assembly 38 at *releases*."""
-    from idtrack._external_databases import write_externals_yaml
+    from idtrack.build.externals import write_externals_yaml
 
     all_dbs = [
         "Uniprot/SWISSPROT",
@@ -141,10 +141,8 @@ def _write_yaml(repo: str, databases: list[str], releases: list[int] = RELEASES)
             "gene": {
                 db: {
                     "Assembly": {"38": {"Ensembl release": ",".join(map(str, releases)), "Include": db in databases}},
-                    "Database Index": i,
-                    "Potential Synonymous": "",
                 }
-                for i, db in enumerate(all_dbs)
+                for db in all_dbs
             }
         }
     }
@@ -164,12 +162,12 @@ class FakeEnsembl:
         self.downloads: list[tuple[int, str]] = []
         self.replaced: dict[str, pd.DataFrame] = {}  # tables served instead of the synthetic ones, by table name
 
-    def core_index(self, *, organism, genome_assembly, **_):  # noqa: D102
-        releases = self.releases if int(genome_assembly) == 38 else []
-        db = {r: f"{organism}_core_{r}_{genome_assembly}" for r in releases}
+    def core_index(self, *, organism, assembly, **_):  # noqa: D102
+        releases = self.releases if int(assembly) == 38 else []
+        db = {r: f"{organism}_core_{r}_{assembly}" for r in releases}
         return {
             "organism": organism,
-            "genome_assembly": int(genome_assembly),
+            "genome_assembly": int(assembly),
             "ports": (3306,),
             "releases_by_port": {3306: set(releases)},
             "db_by_port_release": {3306: dict(db)},
@@ -180,11 +178,11 @@ class FakeEnsembl:
         }
 
     def download(self, dm, table_key, usecols=None):  # noqa: D102
-        self.downloads.append((int(dm.ensembl_release), table_key))
+        self.downloads.append((int(dm.release), table_key))
         if table_key in self.replaced:
             df = self.replaced[table_key]
         else:
-            df = _tables(int(dm.ensembl_release), self.versions[int(dm.ensembl_release)])[table_key]
+            df = _tables(int(dm.release), self.versions[int(dm.release)])[table_key]
         return df.copy() if usecols is None else df.loc[:, list(usecols)].copy()
 
 
@@ -202,10 +200,10 @@ def _dm(repo, release=115, before=110, after=115, form="gene") -> DatabaseManage
         organism="homo_sapiens",
         form=form,
         local_repository=str(repo),
-        ensembl_release=release,
-        ignore_before=before,
-        ignore_after=after,
-        genome_assembly=38,
+        release=release,
+        first_release=before,
+        snapshot_release=after,
+        assembly=38,
     )
 
 
@@ -260,13 +258,13 @@ def test_release_without_id_versions_is_refused_and_no_table_is_made_up_for_it(t
     refused = _dm(tmp_path, release=112)
     for table in ("idsraw_gene", "ids", "relationcurrent", "external", "generegion"):
         with pytest.raises(
-            ValueError, match="Organisms whose Ensembl ids carry no versions are not supported"
+            BuildError, match="Organisms whose Ensembl ids carry no versions are not supported"
         ) as error:
             refused.get_db(table)
         assert "the gene ids of homo_sapiens have no version at Ensembl release 112 (genome assembly 38)" in str(
             error.value
         )
-    with pytest.raises(ValueError, match="the transcript ids of homo_sapiens have no version at Ensembl release 112"):
+    with pytest.raises(BuildError, match="the transcript ids of homo_sapiens have no version at Ensembl release 112"):
         _dm(tmp_path, release=112, form="transcript").get_db("ids")
     stored = os.listdir(refused.tables_directory)
     assert stored and all(name.startswith("ens112_mysql_") for name in stored)  # raw tables, nothing derived
@@ -288,7 +286,7 @@ def test_release_without_id_versions_is_refused_and_no_table_is_made_up_for_it(t
 def test_ids_of_which_only_some_carry_a_version_are_refused(tmp_path, fake):
     """A release in which some ids have a version and others have none is refused, with the count."""
     fake.replaced["gene"] = _gene(115).assign(version=[6.0, np.nan, 1.0])
-    with pytest.raises(ValueError, match="have no version for 1 of 3 ids at Ensembl release 115"):
+    with pytest.raises(BuildError, match="have no version for 1 of 3 ids at Ensembl release 115"):
         _dm(tmp_path).get_db("ids")
 
 
@@ -305,7 +303,7 @@ def test_id_history_refuses_an_event_of_an_id_without_version(tmp_path, fake):
     other = tmp_path / "other"
     other.mkdir()
     fake.replaced["stable_id_event"] = sie.assign(new_version=[np.nan] * len(sie))
-    with pytest.raises(ValueError, match="carry no versions are not supported"):
+    with pytest.raises(BuildError, match="carry no versions are not supported"):
         _dm(other).get_db("idhistory")
 
 
@@ -315,7 +313,7 @@ def test_id_history_refuses_an_event_of_an_id_without_version(tmp_path, fake):
 def test_ids_of_a_form_are_not_stored_per_asking_form(tmp_path, fake):
     """access-7: relationcurrent and the external tables of three forms store no per-form copies of the ids."""
     _write_yaml(str(tmp_path), ["EntrezGene"])
-    for form in DB.forms_in_order:
+    for form in ids.FORMS:
         _dm(tmp_path, form=form).get_db("relationcurrent")
         _dm(tmp_path, form=form).get_db("external")
     names = os.listdir(_dm(tmp_path).tables_directory)
@@ -373,7 +371,7 @@ def test_gene_region_refuses_a_gene_without_a_sequence_region(tmp_path, fake):
     """A gene of the id table that the `gene` table gives no region is an error, not a gene of the reference."""
     fake.replaced["gene"] = _gene(115).assign(seq_region_id=[7.0, np.nan, 8.0])
     with pytest.raises(
-        ValueError, match="1 genes of homo_sapiens release 115 have no sequence region.*ENSG00000000002"
+        TableFormatError, match="1 genes of homo_sapiens release 115 have no sequence region.*ENSG00000000002"
     ):
         _dm(tmp_path).get_db("generegion")
 
@@ -384,7 +382,7 @@ def test_gene_region_refuses_a_gene_without_a_sequence_region(tmp_path, fake):
 def test_id_ver_from_df_checks_the_columns_exactly(tmp_path, fake):
     """access-12: a frame with one wrong column is refused."""
     dm = _dm(tmp_path)
-    with pytest.raises(ValueError, match="not as expected"):
+    with pytest.raises(TableFormatError, match="not as expected"):
         dm.id_ver_from_df(pd.DataFrame({"gene_stable_id": ["A"], "transcript_version": [1]}))
 
 
@@ -398,14 +396,14 @@ def test_id_ver_from_df_keeps_version_zero_and_equals_the_row_wise_names(tmp_pat
         {"gene_stable_id": [f"G{i}" for i in range(500)], "gene_version": rng.integers(1, 30, 500).astype(float)}
     )
     big.loc[::7, "gene_version"] = np.nan
-    row_wise = [DatabaseManager.node_name_maker(DatabaseManager.node_dict_maker(i, v)) for i, v in big.values]
+    row_wise = [ids.join(i, v) for i, v in big.values]
     before = big.copy()
     assert dm.id_ver_from_df(big) == row_wise
     pd.testing.assert_frame_equal(big, before)  # the input frame is not changed
-    with pytest.raises(ValueError, match="floating"):
+    with pytest.raises(TableFormatError, match="floating"):
         dm.id_ver_from_df(pd.DataFrame({"gene_stable_id": ["A"], "gene_version": [1.5]}))
-    alt = pd.DataFrame({"gene_stable_id": ["A", "B"], "gene_version": pd.Series([DB.no_old_node_id, 2], dtype=object)})
-    assert dm.id_ver_from_df(alt) == [f"A.{DB.no_old_node_id}", "B.2"]
+    alt = pd.DataFrame({"gene_stable_id": ["A", "B"], "gene_version": pd.Series([ids.VOID, 2], dtype=object)})
+    assert dm.id_ver_from_df(alt) == [f"A.{ids.VOID}", "B.2"]
 
 
 # ---------------------------------------------------------------- external tables (access-8, access-18)
@@ -414,17 +412,17 @@ def test_id_ver_from_df_keeps_version_zero_and_equals_the_row_wise_names(tmp_pat
 def test_external_ids_and_synonyms_are_stripped(tmp_path, fake):
     """access-18: padded labels and synonyms become the bare id once; a blank-only label is dropped."""
     ext = _dm(tmp_path).get_db("external")
-    ids = set(ext["id_db"])
-    assert "TP53" in ids and "TP53 " not in ids
-    assert f"{DB.synonym_id_nodes_prefix}14-3-3" in ids
-    assert not any(i != i.strip() or i.strip() in ("", DB.synonym_id_nodes_prefix.strip()) for i in ids)
+    labels = set(ext["id_db"])
+    assert "TP53" in labels and "TP53 " not in labels
+    assert f"{ids.SYNONYM_PREFIX}14-3-3" in labels
+    assert not any(i != i.strip() or i.strip() in ("", ids.SYNONYM_PREFIX.strip()) for i in labels)
     tp53 = ext[(ext["id_db"] == "TP53") & (ext["graph_id"] == "ENSG00000000001.6")]
     assert sorted(tp53["name_db"]) == ["HGNC Symbol", "UniProtKB/Swiss-Prot"]  # once per database
 
 
 def test_relevant_rows_equal_the_filtered_full_join(tmp_path, fake):
     """access-8: restricting before the join gives the table the full join gives after filtering, row for row."""
-    selection = ["EntrezGene", "HGNC Symbol", f"{DB.synonym_id_nodes_prefix}UniProtKB/Swiss-Prot"]
+    selection = ["EntrezGene", "HGNC Symbol", f"{ids.SYNONYM_PREFIX}UniProtKB/Swiss-Prot"]
     _write_yaml(str(tmp_path), selection)
     dm = _dm(tmp_path)
     full = dm.create_external_db("all")
@@ -438,11 +436,11 @@ def test_relevant_rows_equal_the_filtered_full_join(tmp_path, fake):
 def test_create_external_db_checks_its_mode_first_and_names_missing_databases(tmp_path, fake):
     """access-8, access-16: a wrong mode raises before any download; a missing database is named."""
     dm = _dm(tmp_path)
-    with pytest.raises(ValueError, match="'relevant'"):
+    with pytest.raises(InvalidArgumentError, match="'relevant'"):
         dm.create_external_db("everything")
     assert fake.downloads == []
     _write_yaml(str(tmp_path), ["EntrezGene", "RefSeq_peptide"])
-    with pytest.raises(ValueError, match="RefSeq_peptide"):
+    with pytest.raises(ExternalsError, match="RefSeq_peptide"):
         _dm(tmp_path).create_external_db("relevant")
 
 
@@ -480,11 +478,11 @@ def test_tables_live_in_one_file_each(tmp_path, fake):
 @pytest.fixture
 def no_wait(monkeypatch):
     """No waits between retries, an empty index memory, a fresh latest release, the "https" mode."""
-    monkeypatch.setattr(DB, "rest_retry_wait", 0.0)
-    monkeypatch.setattr(DB, "rest_attempts", 3)
+    monkeypatch.setattr(settings.ENSEMBL, "rest_retry_wait", 0.0)
+    monkeypatch.setattr(settings.ENSEMBL, "rest_attempts", 3)
     monkeypatch.setattr(DatabaseManager, "_core_db_index_cache", {})
     monkeypatch.setattr(DatabaseManager, "_ensembl_latest_release_cache", (102, time.monotonic()))
-    monkeypatch.setattr(DB, "ensembl_access", "https")
+    monkeypatch.setattr(settings.ENSEMBL, "access", "https")
 
 
 class _Transport:
@@ -518,13 +516,13 @@ class _Transport:
 
 
 def _scan(transport, monkeypatch):
-    monkeypatch.setattr("idtrack._ensembl_access._session", lambda: transport)
-    return DatabaseManager._get_core_db_index_from_ftp(organism="sus_scrofa", genome_assembly=111, ports=[3306])
+    monkeypatch.setattr("idtrack.build.ensembl_access._session", lambda: transport)
+    return DatabaseManager._get_core_db_index_from_ftp(organism="sus_scrofa", assembly=111, ports=[3306])
 
 
 def test_one_failed_probe_is_retried_not_read_as_absent(monkeypatch, no_wait):
     """access-3 (a): a release whose probe fails once is still in the index."""
-    monkeypatch.setattr(DB, "assembly_mysqlport_priority", DB.assembly_mysqlport_priority)
+    monkeypatch.setattr(organisms, "ORGANISM_TABLE", organisms.ORGANISM_TABLE)
     t = _Transport()
     url = "https://ftp.ensembl.org/pub/release-101/mysql/sus_scrofa_core_101_111/"
     t.fail[url] = 1
@@ -555,14 +553,14 @@ def test_a_404_still_means_absent(monkeypatch, no_wait):
 def test_a_failed_index_never_selects_another_primary_assembly(tmp_path, monkeypatch):
     """access-3 (c): if GRCh38's index cannot be built, the manager raises instead of choosing GRCh37."""
 
-    def index(cls, *, organism, genome_assembly, **_):
-        if int(genome_assembly) == 38:
+    def index(cls, *, organism, assembly, **_):
+        if int(assembly) == 38:
             raise EnsemblDownloadError("Ensembl did not answer")
-        return FakeEnsembl([115]).core_index(organism=organism, genome_assembly=38) | {"genome_assembly": 37}
+        return FakeEnsembl([115]).core_index(organism=organism, assembly=38) | {"genome_assembly": 37}
 
     monkeypatch.setattr(DatabaseManager, "_get_core_db_index", classmethod(index))
     with pytest.raises(EnsemblDownloadError):
-        DatabaseManager(organism="homo_sapiens", form="gene", local_repository=str(tmp_path), ensembl_release=115)
+        DatabaseManager(organism="homo_sapiens", form="gene", local_repository=str(tmp_path), release=115)
 
 
 def test_all_assemblies_raise_when_one_index_fails(tmp_path, fake, monkeypatch):
@@ -570,10 +568,10 @@ def test_all_assemblies_raise_when_one_index_fails(tmp_path, fake, monkeypatch):
     dm = _dm(tmp_path)
     real = DatabaseManager._get_core_db_index
 
-    def index(cls, *, organism, genome_assembly, **kw):
-        if int(genome_assembly) == 37:
+    def index(cls, *, organism, assembly, **kw):
+        if int(assembly) == 37:
             raise EnsemblDownloadError("Ensembl did not answer")
-        return real(organism=organism, genome_assembly=genome_assembly, **kw)
+        return real(organism=organism, assembly=assembly, **kw)
 
     monkeypatch.setattr(DatabaseManager, "_get_core_db_index", classmethod(index))
     with pytest.raises(EnsemblDownloadError):
@@ -582,7 +580,7 @@ def test_all_assemblies_raise_when_one_index_fails(tmp_path, fake, monkeypatch):
 
 def test_create_external_all_skips_only_assemblies_without_the_release(tmp_path, fake, monkeypatch):
     """access-3 (b), organisms_externals-2: an assembly without the release is passed over; a failure raises."""
-    from idtrack._external_databases import ExternalDatabases
+    from idtrack.build.externals import ExternalDatabases
 
     _write_yaml(str(tmp_path), ["EntrezGene"])
     monkeypatch.setattr(
@@ -590,32 +588,32 @@ def test_create_external_all_skips_only_assemblies_without_the_release(tmp_path,
         "give_list_for_case",
         lambda self, give_type: [37, 38] if give_type == "assembly" else ["EntrezGene"],
     )
-    out = _dm(tmp_path).create_external_all(return_mode="all")
+    out = _dm(tmp_path).create_external_all()
     assert set(out["assembly"]) == {38}
     real = DatabaseManager._get_core_db_index
 
-    def index(cls, *, organism, genome_assembly, **kw):
-        if int(genome_assembly) == 37:
+    def index(cls, *, organism, assembly, **kw):
+        if int(assembly) == 37:
             raise EnsemblDownloadError("Ensembl did not answer")
-        return real(organism=organism, genome_assembly=genome_assembly, **kw)
+        return real(organism=organism, assembly=assembly, **kw)
 
     monkeypatch.setattr(DatabaseManager, "_get_core_db_index", classmethod(index))
     with pytest.raises(EnsemblDownloadError):
-        _dm(tmp_path).create_external_all(return_mode="all")
+        _dm(tmp_path).create_external_all()
 
 
 def test_latest_release_memory_expires(monkeypatch):
     """access-15: a long-running process asks for the latest release again once the answer is old."""
     asked = []
     monkeypatch.setattr(
-        "idtrack._database_manager.rest_get_json", lambda path, what: asked.append(path) or {"releases": [116]}
+        "idtrack.build.database_manager.rest_get_json", lambda path, what: asked.append(path) or {"releases": [116]}
     )
     monkeypatch.setattr(DatabaseManager, "_ensembl_latest_release_cache", (115, time.monotonic()))
     assert DatabaseManager._ensembl_latest_release() == 115
     monkeypatch.setattr(
         DatabaseManager,
         "_ensembl_latest_release_cache",
-        (115, time.monotonic() - 2 * float(DB.rest_species_cache_seconds)),
+        (115, time.monotonic() - 2 * float(settings.ENSEMBL.rest_species_cache_seconds)),
     )
     assert DatabaseManager._ensembl_latest_release() == 116
     assert asked == ["/info/data"]
@@ -624,7 +622,10 @@ def test_latest_release_memory_expires(monkeypatch):
 def test_open_ended_index_is_scanned_again_when_old(monkeypatch):
     """access-15: an index for "the latest release" is not kept for ever."""
     fresh = {"scanned_up_to": 115, "scanned_live_at": time.monotonic()}
-    old = {"scanned_up_to": 115, "scanned_live_at": time.monotonic() - 2 * float(DB.rest_species_cache_seconds)}
+    old = {
+        "scanned_up_to": 115,
+        "scanned_live_at": time.monotonic() - 2 * float(settings.ENSEMBL.rest_species_cache_seconds),
+    }
     assert DatabaseManager._index_covers(fresh, "sus_scrofa", 111, None)
     assert not DatabaseManager._index_covers(old, "sus_scrofa", 111, None)
     assert DatabaseManager._index_covers(old, "sus_scrofa", 111, 110)  # a closed window never changes
@@ -651,11 +652,11 @@ def test_schema_is_resolved_once_and_each_table_is_one_request(tmp_path, monkeyp
             r.content = gz.compress(schema.encode())
             return r
 
-    monkeypatch.setattr("idtrack._ensembl_access._session", lambda: _T())
+    monkeypatch.setattr("idtrack.build.ensembl_access._session", lambda: _T())
     monkeypatch.setattr(DatabaseManager, "_ftp_schema_url_cache", {})
     monkeypatch.setattr(DatabaseManager, "_ftp_schema_cache", {})
     dm = DatabaseManager.__new__(DatabaseManager)
-    dm.organism, dm.genome_assembly, dm.ensembl_release, dm.log = "sus_scrofa", 111, 115, logging.getLogger("t")
+    dm.organism, dm.assembly, dm.release, dm.log = "sus_scrofa", 111, 115, logging.getLogger("t")
     dm.__dict__["mysql_database"] = "sus_scrofa_core_115_111"
     monkeypatch.setattr(DatabaseManager, "_ftp_db_dir_url", lambda self: "https://x/db/")
 
@@ -686,7 +687,7 @@ def test_both_routes_give_the_same_types(tmp_path):
     import datetime
     import io
 
-    from idtrack._mysql_dump import read_mysql_dump
+    from idtrack.build.mysql_dump import read_mysql_dump
 
     typed = [
         ("mapping_session_id", "int(10) unsigned"),
@@ -711,14 +712,14 @@ def test_a_mysql_connection_failure_falls_back_with_a_warning(monkeypatch, caplo
     """access-9: only a connection failure moves to the dumps, and the warning names the cause."""
     import pymysql
 
-    from idtrack._ensembl_access import reachability
+    from idtrack.build.ensembl_access import reachability
 
-    reachability.reset()
+    reachability._known.clear()  # forget the process-wide answers
     monkeypatch.setattr(reachability, "mysql_port_usable", lambda port: True)
     monkeypatch.setattr(reachability, "mark_unreachable", lambda *a, **k: None)
     dm = DatabaseManager.__new__(DatabaseManager)
-    dm.organism, dm.genome_assembly, dm.ensembl_release, dm.log = "sus_scrofa", 111, 100, logging.getLogger("dm")
-    dm.mysql_settings = {"host": DB.mysql_host, "port": 3306}
+    dm.organism, dm.assembly, dm.release, dm.log = "sus_scrofa", 111, 100, logging.getLogger("dm")
+    dm.mysql_settings = {"host": settings.ENSEMBL.mysql_host, "port": 3306}
     dm.__dict__["mysql_database"] = "sus_scrofa_core_100_111"
     monkeypatch.setattr(
         DatabaseManager, "_get_core_db_index", classmethod(lambda cls, **kw: {"releases_on_mysql": [100]})
@@ -752,18 +753,18 @@ def test_a_failed_gene_download_names_gene_not_an_old_schema(tmp_path, monkeypat
     "bad", [True, 38.9, "38a", pytest.param(None.__class__, marks=pytest.mark.wrong_argument_type)]
 )
 def test_assembly_keys_that_only_look_like_one_are_refused(tmp_path, fake, bad):
-    """organisms_externals-N4: `genome_assembly=True` or `38.9` no longer names another assembly."""
-    with pytest.raises(ValueError, match="integer key"):
-        DatabaseManager(organism="homo_sapiens", form="gene", local_repository=str(tmp_path), genome_assembly=bad)
+    """organisms_externals-N4: `assembly=True` or `38.9` no longer names another assembly."""
+    with pytest.raises(InvalidArgumentError, match="integer key"):
+        DatabaseManager(organism="homo_sapiens", form="gene", local_repository=str(tmp_path), assembly=bad)
 
 
 @pytest.mark.parametrize("good", [38, "38", 38.0, np.int64(38)])
 def test_integral_assembly_keys_are_accepted(tmp_path, fake, good):
     """organisms_externals-N4: integers, integral floats and digit strings are assembly keys."""
     dm = DatabaseManager(
-        organism="homo_sapiens", form="gene", local_repository=str(tmp_path), genome_assembly=good, ignore_before=110
+        organism="homo_sapiens", form="gene", local_repository=str(tmp_path), assembly=good, first_release=110
     )
-    assert dm.genome_assembly == 38
+    assert dm.assembly == 38
 
 
 def test_class_docstring_names_existing_methods():

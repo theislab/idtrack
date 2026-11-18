@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for `idtrack._harmonize_features`.
+"""Unit tests for `idtrack.harmonize`.
 
 The real API and harmoniser run on tiny `.h5ad` files; only the engine (`Track.convert`) is replaced by the table of
 `tests/unit/_fake_engine.py`, so the conversions are known and no graph or network is needed.
@@ -9,17 +9,26 @@ import json
 import os
 import pathlib
 
-import anndata as ad
 import numpy as np
 import pandas as pd
 import pytest
-from scipy.sparse import csr_matrix, identity
 
-import idtrack
-from idtrack._db import DB
-from idtrack._harmonize_features import HarmonizeFeatures, _aggregate, feature_table, output_plan
-from idtrack._track import InactiveAtReleaseError, SearchBudgetExceededError
-from tests.unit._fake_engine import fake_api
+ad = pytest.importorskip("anndata")
+pytest.importorskip("scipy")
+from scipy.sparse import csr_matrix, identity  # noqa: E402
+
+import idtrack  # noqa: E402
+from idtrack import organisms  # noqa: E402
+from idtrack.errors import (  # noqa: E402
+    InactiveAtReleaseError,
+    InvalidArgumentError,
+    SearchBudgetExceededError,
+    UnknownDatabaseError,
+    UnknownReleaseError,
+)
+from idtrack.harmonize import HarmonizeFeatures, feature_table, output_plan  # noqa: E402
+from idtrack.harmonize.features import _aggregate  # noqa: E402
+from tests.unit._fake_engine import fake_api  # noqa: E402
 
 HGNC = "HGNC Symbol"
 
@@ -104,10 +113,10 @@ def _harmonizer(tmp_path, datasets, api=None, **kwargs) -> HarmonizeFeatures:
         data_h5ad_dict=paths,
         project_local_repository=str(tmp_path / "project"),
         idtrack_local_repository=str(tmp_path / "idtrack_repo"),
-        target_ensembl_release=kwargs.pop("target_ensembl_release", 101),
+        to_release=kwargs.pop("to_release", 101),
         final_database=kwargs.pop("final_database", HGNC),
         api=api if api is not None else _api(tmp_path),
-        verbose_level=0,
+        verbosity=0,
         **kwargs,
     )
 
@@ -240,8 +249,10 @@ def test_every_feature_is_converted_or_flagged_with_a_reason(tmp_path):
 def test_the_source_release_of_a_dataset_is_used(tmp_path):
     """api_harmonize-23: a declared release is passed as from_release; an id the graph lacks there is flagged."""
     api = _api(tmp_path, errors={("OLDNAME", 100): InactiveAtReleaseError("OLDNAME", 100, [[101, 101]])})
-    h = _harmonizer(tmp_path, {"d": ["GENEA", "OLDNAME"], "e": ["OLDNAME"]}, api=api, source_releases={"d": 100})
-    queries = {(c["from_id"], c["from_release"]) for c in api.track.calls}
+    h = _harmonizer(
+        tmp_path, {"d": ["GENEA", "OLDNAME"], "e": ["OLDNAME"]}, api=api, from_release_by_dataset={"d": 100}
+    )
+    queries = {(c["identifier"], c["from_release"]) for c in api.engine.calls}
     assert {("GENEA", 100), ("OLDNAME", 100), ("OLDNAME", None)} <= queries
     # the feature is converted from the release at which the graph holds it, and the row says so
     assert h.feature_table("d").loc["OLDNAME", "status"] == "converted"
@@ -249,42 +260,48 @@ def test_the_source_release_of_a_dataset_is_used(tmp_path):
     assert pd.isna(h.feature_table("d").loc["GENEA", "reason"])
     assert h.feature_table("e").loc["OLDNAME", "status"] == "converted"
     assert pd.isna(h.feature_table("e").loc["OLDNAME", "reason"])
-    with pytest.raises(ValueError, match="not in `data_h5ad_dict`"):
-        _harmonizer(tmp_path / "x", {"d": ["GENEA"]}, source_releases={"zz": 100})
+    with pytest.raises(InvalidArgumentError, match="not in `data_h5ad_dict`"):
+        _harmonizer(tmp_path / "x", {"d": ["GENEA"]}, from_release_by_dataset={"zz": 100})
 
 
 def test_the_source_database_of_a_dataset_is_used(tmp_path):
     """Decision 33: a declared database is passed as from_database for that dataset only; nothing is inferred."""
     api = _api(tmp_path)
-    h = _harmonizer(tmp_path, {"d": ["GENEA", "TP53"], "e": ["GENEA"]}, api=api, source_databases={"d": "hgnc symbol"})
-    asked = {(c["from_id"], c["from_database"]) for c in api.track.calls}
+    h = _harmonizer(
+        tmp_path, {"d": ["GENEA", "TP53"], "e": ["GENEA"]}, api=api, from_database_by_dataset={"d": "hgnc symbol"}
+    )
+    asked = {(c["identifier"], c["from_database"]) for c in api.engine.calls}
     assert asked == {("GENEA", HGNC), ("TP53", HGNC), ("GENEA", None)}  # the API's spelling of the database
-    assert h.source_databases == {"d": "hgnc symbol"}
+    assert h.from_database_by_dataset == {"d": "hgnc symbol"}
     assert h.feature_table("d")["status"].tolist() == ["converted", "converted"]
 
     # the declared database is part of what a stored result depends on
     again = _api(tmp_path)
-    _harmonizer(tmp_path, {"d": ["GENEA", "TP53"], "e": ["GENEA"]}, api=again, source_databases={"d": "hgnc symbol"})
-    assert again.track.calls == []
+    _harmonizer(
+        tmp_path, {"d": ["GENEA", "TP53"], "e": ["GENEA"]}, api=again, from_database_by_dataset={"d": "hgnc symbol"}
+    )
+    assert again.engine.calls == []
     other = _api(tmp_path)
     _harmonizer(tmp_path, {"d": ["GENEA", "TP53"], "e": ["GENEA"]}, api=other)
-    assert {(c["from_id"], c["from_database"]) for c in other.track.calls} == {("GENEA", None), ("TP53", None)}
+    assert {(c["identifier"], c["from_database"]) for c in other.engine.calls} == {("GENEA", None), ("TP53", None)}
 
-    with pytest.raises(ValueError, match="`source_databases` names datasets that are not in `data_h5ad_dict`"):
-        _harmonizer(tmp_path / "x", {"d": ["GENEA"]}, source_databases={"zz": HGNC})
-    with pytest.raises(ValueError, match="must name one external database per dataset"):
-        _harmonizer(tmp_path / "y", {"d": ["GENEA"]}, source_databases={"d": " "})
-    with pytest.raises(ValueError, match="`from_database`='No Such Database' is not an external database"):
-        _harmonizer(tmp_path / "z", {"d": ["GENEA"]}, source_databases={"d": "No Such Database"})
+    with pytest.raises(
+        InvalidArgumentError, match="`from_database_by_dataset` names datasets that are not in `data_h5ad_dict`"
+    ):
+        _harmonizer(tmp_path / "x", {"d": ["GENEA"]}, from_database_by_dataset={"zz": HGNC})
+    with pytest.raises(InvalidArgumentError, match="must name one external database per dataset"):
+        _harmonizer(tmp_path / "y", {"d": ["GENEA"]}, from_database_by_dataset={"d": " "})
+    with pytest.raises(UnknownDatabaseError, match="`from_database`='No Such Database' is not an external database"):
+        _harmonizer(tmp_path / "z", {"d": ["GENEA"]}, from_database_by_dataset={"d": "No Such Database"})
 
 
 @pytest.mark.wrong_argument_type
 def test_the_source_database_of_a_dataset_must_be_a_name(tmp_path):
     """A source database that is not a string is refused before any conversion."""
     api = _api(tmp_path)
-    with pytest.raises(ValueError, match="must name one external database per dataset"):
-        _harmonizer(tmp_path, {"d": ["GENEA"]}, api=api, source_databases={"d": 7})
-    assert api.track.calls == []
+    with pytest.raises(InvalidArgumentError, match="must name one external database per dataset"):
+        _harmonizer(tmp_path, {"d": ["GENEA"]}, api=api, from_database_by_dataset={"d": 7})
+    assert api.engine.calls == []
 
 
 def test_repeated_feature_names_fail_before_any_conversion(tmp_path):
@@ -294,29 +311,29 @@ def test_repeated_feature_names_fail_before_any_conversion(tmp_path):
     with pytest.warns(UserWarning, match="not unique"):
         adata = ad.AnnData(X=np.ones((1, 3), dtype=np.float32), var=pd.DataFrame(index=["G1", "G1", "G2"]))
     adata.write_h5ad(path)
-    with pytest.raises(ValueError, match=r"Dataset 'dup' has 1 repeated feature names.*\['G1'\]"):
-        HarmonizeFeatures("p", {"dup": str(path)}, str(tmp_path / "p"), str(tmp_path), 101, api=api, verbose_level=0)
-    assert api.track.calls == []
+    with pytest.raises(InvalidArgumentError, match=r"Dataset 'dup' has 1 repeated feature names.*\['G1'\]"):
+        HarmonizeFeatures("p", {"dup": str(path)}, str(tmp_path / "p"), str(tmp_path), 101, api=api, verbosity=0)
+    assert api.engine.calls == []
 
 
 def test_arguments_are_checked_before_any_conversion(tmp_path):
     """api_harmonize-4, -34: releases and the dataset dict are validated first."""
     api = _api(tmp_path)
-    with pytest.raises(ValueError, match="after the graph snapshot 101"):
-        _harmonizer(tmp_path, {"d": ["GENEA"]}, api=api, target_ensembl_release=102)
-    with pytest.raises(ValueError, match="valid releases are 100 to 101"):
-        _harmonizer(tmp_path, {"d": ["GENEA"]}, api=api, target_ensembl_release=50)
-    assert api.track.calls == []
-    with pytest.raises(ValueError, match="non-empty dict"):
+    with pytest.raises(InvalidArgumentError, match="after the graph snapshot 101"):
+        _harmonizer(tmp_path, {"d": ["GENEA"]}, api=api, to_release=102)
+    with pytest.raises(UnknownReleaseError, match="covers the Ensembl releases 100 to 101"):
+        _harmonizer(tmp_path, {"d": ["GENEA"]}, api=api, to_release=50)
+    assert api.engine.calls == []
+    with pytest.raises(InvalidArgumentError, match="non-empty dict"):
         HarmonizeFeatures("p", {}, str(tmp_path), str(tmp_path), 101, api=api)
-    with pytest.raises(ValueError, match="do not exist"):
+    with pytest.raises(InvalidArgumentError, match="do not exist"):
         HarmonizeFeatures("p", {"d": str(tmp_path / "none.h5ad")}, str(tmp_path), str(tmp_path), 101, api=api)
 
 
 @pytest.mark.wrong_argument_type
 def test_unknown_merge_mode_is_an_error_naming_the_argument(tmp_path):
     """api_harmonize-34: a merge mode other than "flag" and "sum" is refused."""
-    with pytest.raises(ValueError, match="`merge` must be"):
+    with pytest.raises(InvalidArgumentError, match="`merge` must be"):
         _harmonizer(tmp_path, {"d": ["GENEA"]}).unify_multiple_anndatas(merge="mean")
 
 
@@ -331,15 +348,15 @@ def test_result_cache_is_json_written_atomically_and_checked(tmp_path, monkeypat
     assert [m["query_id"] for m in stored["matchings"]] == ["GENEA", "TP53"]
     api = _api(tmp_path)
     again = _harmonizer(tmp_path, datasets, api=api)
-    assert api.track.calls == [] and again.matchings == first.matchings
+    assert api.engine.calls == [] and again.matchings == first.matchings
     pathlib.Path(path).write_text(pathlib.Path(path).read_text()[:20])  # an interrupted writer of the old code
     api = _api(tmp_path)
     repaired = _harmonizer(tmp_path, datasets, api=api)
-    assert len(api.track.calls) > 0 and repaired.matchings == first.matchings
+    assert len(api.engine.calls) > 0 and repaired.matchings == first.matchings
     api = _api(tmp_path)
-    api.track.graph.graph["confident_for_release"] = [99, 100, 101]  # another graph
+    api.graph.graph["confident_for_release"] = [99, 100, 101]  # another graph
     _harmonizer(tmp_path, datasets, api=api)
-    assert len(api.track.calls) > 0
+    assert len(api.engine.calls) > 0
     assert not [f for f in os.listdir(tmp_path / "project") if f.startswith(".tmp_")]
 
 
@@ -350,9 +367,9 @@ def test_a_given_api_is_used_and_no_graph_is_kept(tmp_path, monkeypatch):
     _harmonizer(tmp_path, {"d": ["GENEA"]})
 
     def _fail(*args, **kwargs):
-        raise AssertionError("build_graph must not be called")
+        raise AssertionError("API.build must not be called")
 
-    monkeypatch.setattr(idtrack.API, "build_graph", _fail)
+    monkeypatch.setattr(idtrack.API, "build", _fail)
     h = HarmonizeFeatures(
         "unit",
         {"d": str(tmp_path / "d.h5ad")},
@@ -360,9 +377,9 @@ def test_a_given_api_is_used_and_no_graph_is_kept(tmp_path, monkeypatch):
         str(tmp_path / "idtrack_repo"),
         101,
         final_database=HGNC,
-        organism_name="homo_sapiens",
-        graph_last_ensembl_release=101,
-        verbose_level=0,
+        organism="homo_sapiens",
+        snapshot_release=101,
+        verbosity=0,
     )
     assert h.feature_table("d").loc["GENEA", "ensembl_gene"] == "ENSGA.1" and h._api is None
 
@@ -386,7 +403,7 @@ def test_feature_names_are_read_without_loading_the_datasets(tmp_path, monkeypat
         raise AssertionError("read_h5ad must not be called by the constructor")
 
     monkeypatch.setattr(ad, "read_h5ad", _fail)
-    h = HarmonizeFeatures("p", paths, str(tmp_path / "p"), str(tmp_path), 101, api=_api(tmp_path), verbose_level=0)
+    h = HarmonizeFeatures("p", paths, str(tmp_path / "p"), str(tmp_path), 101, api=_api(tmp_path), verbosity=0)
     assert h.feature_names == {"d": ["GENEA", "TP53"]}
 
 
@@ -412,7 +429,7 @@ def test_pure_functions_classify_and_plan(tmp_path):
     """feature_table and output_plan are functions of one dataset's matchings only."""
     api = _api(tmp_path)
     names = ["ENSG_OLD_A", "ENSG_OLD_B", "AMB"]
-    matchings = api.convert_identifier_multiple(names, final_database=HGNC, verbose=False)
+    matchings = api.convert_many(names, final_database=HGNC)
     table = feature_table(names, matchings, {"ENSG_NEW.1": ["NEW"]})
     assert table["status"].tolist() == ["converted", "converted", "ambiguous"]
     plan = output_plan(table, "sum", keep_unconverted=False)
@@ -446,10 +463,10 @@ def harmonizer(tmp_path) -> HarmonizeFeatures:
         data_h5ad_dict=paths,
         project_local_repository=str(tmp_path / "project_repo"),
         idtrack_local_repository=str(tmp_path / "idtrack_repo"),
-        target_ensembl_release=101,
+        to_release=101,
         final_database=HGNC,
         api=api,
-        verbose_level=0,
+        verbosity=0,
     )
 
 
@@ -468,7 +485,10 @@ UNION = {
 def test_unify_union_keeps_every_feature_with_its_status(harmonizer):
     """Union mode keeps converted and (flagged) unconverted features; intersection is by presence."""
     adata = harmonizer.unify_multiple_anndatas(
-        mode="union", obs_columns_to_keep=["cell_type", "age"], numeric_obs_columns={"age"}, handle_anndata_key="handle"
+        features="union",
+        obs_columns_to_keep=["cell_type", "age"],
+        numeric_obs_columns={"age"},
+        handle_anndata_key="handle",
     )
     assert adata.n_obs == 4 and adata.obs["age"].dtype.kind == "f"
     assert adata.obs["handle"].dtype.name == "category"
@@ -494,32 +514,30 @@ def test_unify_union_keeps_every_feature_with_its_status(harmonizer):
 
 def test_unify_intersect_keeps_shared_features(harmonizer):
     """Intersect mode keeps only shared features."""
-    adata = harmonizer.unify_multiple_anndatas(mode="intersect")
+    adata = harmonizer.unify_multiple_anndatas(features="intersect")
     assert set(adata.var.index) == {"ENSG00000000001", "ENSG00000141510", "FAIL_ALL", "TP53_ALIAS"}
     assert "intersection" not in adata.var.columns
 
 
 @pytest.mark.parametrize(
     ("organism", "symbol_database"),
-    [(organism, db) for organism, databases in sorted(DB.symbol_databases.items()) for db in databases],
+    [(organism, db) for organism, databases in sorted(organisms.SYMBOL_DATABASES.items()) for db in databases],
 )
 def test_harmonizer_works_for_every_symbol_database(tmp_path, organism, symbol_database):
     """The harmonisation runs the same way for each organism's symbol databases."""
     answers = {"GENE": {"ENSX.1": {symbol_database: ["SYMB"]}}, "ENSX.1": {"ENSX.1": {symbol_database: ["SYMB"]}}}
     api = fake_api(tmp_path, answers, databases={symbol_database}, organism=organism)
     paths = {"d": _write(tmp_path, "d", ["GENE"])}
-    h = HarmonizeFeatures(
-        "p", paths, str(tmp_path / "p"), str(tmp_path), 101, symbol_database, api=api, verbose_level=0
-    )
-    assert h.organism_name == organism
-    adata = h.unify_multiple_anndatas(mode="intersect")
+    h = HarmonizeFeatures("p", paths, str(tmp_path / "p"), str(tmp_path), 101, symbol_database, api=api, verbosity=0)
+    assert h.organism == organism
+    adata = h.unify_multiple_anndatas(features="intersect")
     assert adata.var_names.tolist() == ["ENSX.1"] and adata.var["converted_id"].tolist() == ["SYMB"]
 
 
-@pytest.mark.parametrize("organism", sorted(DB.symbol_databases))
+@pytest.mark.parametrize("organism", sorted(organisms.SYMBOL_DATABASES))
 def test_default_final_database_is_the_first_symbol_database(organism):
     """Without `final_database`, the organism's first symbol database is used (no human default)."""
-    assert HarmonizeFeatures.default_final_database(organism) == DB.symbol_databases[organism][0]
+    assert HarmonizeFeatures.default_final_database(organism) == organisms.SYMBOL_DATABASES[organism][0]
     assert HarmonizeFeatures.default_final_database("macaca_mulatta") == "VGNC Symbol"
     assert HarmonizeFeatures.default_final_database("mus_musculus") == "MGI Symbol"
 
@@ -532,11 +550,11 @@ def _bare_harmonizer(idtrack_repo, project_repo=None) -> HarmonizeFeatures:
 
 
 def test_organism_and_snapshot_resolved_from_graph_files(tmp_path):
-    """Without `organism_name`/`graph_last_ensembl_release`, the graphs `API.build_graph` made are used."""
+    """Without `organism`/`snapshot_release`, the graphs `API.build` made are used."""
     for name in (
         "graph_macaca_mulatta_assembly10_min48_max114_narrow.npz",
         "graph_macaca_mulatta_assembly10_min48_max116_narrow.npz",
-        # not graphs `build_graph` would load: another window, the earlier assembly as primary, gene ids only,
+        # not graphs `API.build` would load: another window, the earlier assembly as primary, gene ids only,
         # every external database, the full history, a graph file of an earlier idtrack
         "graph_macaca_mulatta_assembly10_min100_max117_narrow.npz",
         "graph_macaca_mulatta_assembly801_min48_max118_narrow.npz",
@@ -547,25 +565,25 @@ def test_organism_and_snapshot_resolved_from_graph_files(tmp_path):
     ):
         (tmp_path / name).write_bytes(b"")
     h = _bare_harmonizer(tmp_path)
-    h.organism_name = h._resolve_organism_name(None)
-    assert h.organism_name == "macaca_mulatta"
-    assert h._default_graph_last_release() == 116
+    h.organism = h._resolve_organism(None)
+    assert h.organism == "macaca_mulatta"
+    assert h._default_snapshot_release() == 116
 
     (tmp_path / "graph_macaca_mulatta_assembly801_min48_max90_narrow.npz").write_bytes(b"")  # Mmul_8.0.1 at 90
     assert _bare_harmonizer(tmp_path)._graph_snapshots() == {"macaca_mulatta": [90, 114, 116]}
     (tmp_path / "graph_homo_sapiens_assembly38_min48_max115_narrow.npz").write_bytes(b"")
-    with pytest.raises(ValueError, match="Pass `organism_name`.*several organisms.*homo_sapiens, macaca_mulatta"):
-        _bare_harmonizer(tmp_path)._resolve_organism_name(None)
+    with pytest.raises(InvalidArgumentError, match="Pass `organism`.*several organisms.*homo_sapiens, macaca_mulatta"):
+        _bare_harmonizer(tmp_path)._resolve_organism(None)
 
     empty = tmp_path / "empty"
     empty.mkdir()
-    with pytest.raises(ValueError, match='Pass `organism_name`.*holds no graph.*organism_name="homo_sapiens"'):
-        _bare_harmonizer(empty)._resolve_organism_name(None)
+    with pytest.raises(InvalidArgumentError, match='Pass `organism`.*holds no graph.*organism="homo_sapiens"'):
+        _bare_harmonizer(empty)._resolve_organism(None)
 
 
 def test_organism_without_symbol_database_needs_final_database():
     """Organism without symbol database needs final database."""
-    with pytest.raises(ValueError, match="pass `final_database`"):
+    with pytest.raises(InvalidArgumentError, match="pass `final_database`"):
         HarmonizeFeatures.default_final_database("danio_rerio")
 
 
@@ -577,8 +595,8 @@ def test_result_cache_header_holds_organism_database_and_releases(tmp_path):
     assert header["target_ensembl_release"] == 101 and header["graph_snapshot"] == 101
     assert header["source_release"] is None
     api = _api(tmp_path)
-    _harmonizer(tmp_path, {"d1": ["GENEA"]}, api=api, target_ensembl_release=100)
-    assert len(api.track.calls) > 0
+    _harmonizer(tmp_path, {"d1": ["GENEA"]}, api=api, to_release=100)
+    assert len(api.engine.calls) > 0
 
 
 def _write_rich_datasets(tmp_path):
@@ -634,16 +652,16 @@ def rich_harmonizer(tmp_path) -> HarmonizeFeatures:
         data_h5ad_dict=paths,
         project_local_repository=str(tmp_path / "project_repo"),
         idtrack_local_repository=str(tmp_path / "idtrack_repo"),
-        target_ensembl_release=101,
+        to_release=101,
         final_database=HGNC,
         api=fake_api(tmp_path / "idtrack_repo", answers),
-        verbose_level=0,
+        verbosity=0,
     )
 
 
 def test_unify_keeps_every_obs_column_by_default(rich_harmonizer):
     """With the default `obs_join="outer"` no obs column is lost; absent ones are missing values of their kind."""
-    adata = rich_harmonizer.unify_multiple_anndatas(mode="union")
+    adata = rich_harmonizer.unify_multiple_anndatas(features="union")
     assert list(adata.obs.columns) == [
         "disease",
         "study",
@@ -667,7 +685,7 @@ def test_unify_keeps_every_obs_column_by_default(rich_harmonizer):
 
 def test_unify_obs_join_inner_and_selection(rich_harmonizer):
     """`obs_join="inner"` keeps the common columns; `obs_columns_to_keep` selects and names wrong names."""
-    adata = rich_harmonizer.unify_multiple_anndatas(mode="intersect", obs_join="inner")
+    adata = rich_harmonizer.unify_multiple_anndatas(features="intersect", obs_join="inner")
     assert list(adata.obs.columns) == ["disease", "study", "n_counts", "handle_anndata"]
     assert adata.obs["disease"].tolist() == ["normal"] * 3 + ["disease"] * 3
     assert adata.obs["n_counts"].dtype.kind == "f"
@@ -675,29 +693,29 @@ def test_unify_obs_join_inner_and_selection(rich_harmonizer):
     assert adata.obs["handle_anndata"].cat.categories.tolist() == ["d1", "d2"]
     assert adata.obs_names.tolist()[:2] == ["d1_cellD1_0", "d1_cellD1_1"]
 
-    adata = rich_harmonizer.unify_multiple_anndatas(mode="union", obs_columns_to_keep=["only_in_d1", "disease"])
+    adata = rich_harmonizer.unify_multiple_anndatas(features="union", obs_columns_to_keep=["only_in_d1", "disease"])
     assert list(adata.obs.columns) == ["only_in_d1", "disease", "handle_anndata"]
     assert adata.obs["only_in_d1"].isna().tolist() == [False] * 3 + [True] * 3
-    with pytest.raises(ValueError, match=r"no dataset has: \['nowhere'\]"):
+    with pytest.raises(InvalidArgumentError, match=r"no dataset has: \['nowhere'\]"):
         rich_harmonizer.unify_multiple_anndatas(obs_columns_to_keep=["nowhere"])
-    with pytest.raises(ValueError, match=r"not every dataset has: \['only_in_d1'\]"):
+    with pytest.raises(InvalidArgumentError, match=r"not every dataset has: \['only_in_d1'\]"):
         rich_harmonizer.unify_multiple_anndatas(obs_join="inner", obs_columns_to_keep=["only_in_d1"])
-    with pytest.raises(ValueError, match="already an obs column"):
+    with pytest.raises(InvalidArgumentError, match="already an obs column"):
         rich_harmonizer.unify_multiple_anndatas(handle_anndata_key="disease")
 
 
 @pytest.mark.wrong_argument_type
-def test_unify_names_an_unknown_join_or_mode(rich_harmonizer):
-    """A join other than "outer" and "inner", or a mode other than "union" and "intersect", is refused by name."""
-    with pytest.raises(ValueError, match="`obs_join` must be"):
+def test_unify_names_an_unknown_join_or_feature_set(rich_harmonizer):
+    """A join other than "outer" and "inner", or features other than "union" and "intersect", are refused by name."""
+    with pytest.raises(InvalidArgumentError, match="`obs_join` must be"):
         rich_harmonizer.unify_multiple_anndatas(obs_join="left")
-    with pytest.raises(ValueError, match="`mode` must be"):
-        rich_harmonizer.unify_multiple_anndatas(mode="inner")
+    with pytest.raises(InvalidArgumentError, match="`features` must be"):
+        rich_harmonizer.unify_multiple_anndatas(features="inner")
 
 
 def test_unify_keeps_layers_obsm_obsp_uns_and_var_columns(rich_harmonizer):
     """Everything aligned to cells is carried; var columns are merged; raw is dropped; X keeps its dtype."""
-    adata = rich_harmonizer.unify_multiple_anndatas(mode="union")
+    adata = rich_harmonizer.unify_multiple_anndatas(features="union")
     assert adata.X.dtype == np.float32
     assert [k for k in adata.layers if k is not None] == ["counts"]  # anndata 0.13 also lists X under None
     np.testing.assert_array_equal(adata.layers["counts"].toarray(), 2 * adata.X.toarray())
@@ -748,7 +766,7 @@ def test_feature_harmonizer_keeps_the_dataset_elements(rich_harmonizer):
 
 def test_unify_rejects_unknown_numeric_columns(rich_harmonizer):
     """A numeric column that the merged object does not have is named in the error."""
-    with pytest.raises(ValueError, match=r"numeric_obs_columns.*\['nowhere'\]"):
+    with pytest.raises(InvalidArgumentError, match=r"numeric_obs_columns.*\['nowhere'\]"):
         rich_harmonizer.unify_multiple_anndatas(numeric_obs_columns={"nowhere"})
     adata = rich_harmonizer.unify_multiple_anndatas(numeric_obs_columns={"n_counts"})
     assert adata.obs["n_counts"].dtype == float and adata.obs["n_counts"].isna().sum() == 2
@@ -761,9 +779,9 @@ def test_unify_var_conflicts_are_kept_per_dataset_and_clashes_raise(rich_harmoni
     d2.var["length"] = d2.var["length"] + 1
     d2.var["intersection"] = "x"
     d2.write_h5ad(path)
-    with pytest.raises(ValueError, match="'intersection' twice"):
-        rich_harmonizer.unify_multiple_anndatas(mode="union")
-    adata = rich_harmonizer.unify_multiple_anndatas(mode="intersect")
+    with pytest.raises(InvalidArgumentError, match="'intersection' twice"):
+        rich_harmonizer.unify_multiple_anndatas(features="union")
+    adata = rich_harmonizer.unify_multiple_anndatas(features="intersect")
     assert "length" not in adata.var.columns
     assert adata.var.loc["ENSG00000000001", "length_d1"] == 100
     assert adata.var.loc["ENSG00000000001", "length_d2"] == 101

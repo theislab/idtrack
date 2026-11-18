@@ -3,7 +3,7 @@
 
 These tests validate that (when the live service is reachable):
 
-1) `DB.assembly_mysqlport_priority` matches the real organism/assembly coverage on
+1) `organisms.ORGANISM_TABLE` matches the real organism/assembly coverage on
    `ensembldb.ensembl.org` across the configured ports **for the assemblies the live service exposes**.
 2) `DatabaseManager._get_core_db_index` correctly discovers releases across multiple ports and
    returns the *actual* schema name for each release (including patch-letter suffixes) **for MySQL-backed releases**.
@@ -25,9 +25,9 @@ from typing import Any
 import pymysql
 import pytest
 
-from idtrack._database_manager import DatabaseManager
-from idtrack._db import DB
-from idtrack._ensembl_access import reachability
+from idtrack import organisms, settings
+from idtrack.build.database_manager import DatabaseManager
+from idtrack.build.ensembl_access import reachability
 
 
 def _escape_like(value: str) -> str:
@@ -37,12 +37,12 @@ def _escape_like(value: str) -> str:
 def _can_connect(port: int) -> bool:
     try:
         with pymysql.connect(
-            host=DB.mysql_host,
-            user=DB.myqsl_user,
-            password=DB.mysql_togo,
+            host=settings.ENSEMBL.mysql_host,
+            user=settings.ENSEMBL.mysql_user,
+            password=settings.ENSEMBL.mysql_password,
             port=int(port),
-            connect_timeout=max(DB.connection_timeout, 10),
-            read_timeout=max(DB.reading_timeout, 10),
+            connect_timeout=max(settings.ENSEMBL.connection_timeout, 10),
+            read_timeout=max(settings.ENSEMBL.reading_timeout, 10),
         ) as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT 1")
@@ -59,12 +59,12 @@ def _fetch_core_schemas(*, organism: str, port: int) -> list[str]:
     for _attempt in range(2):
         try:
             with pymysql.connect(
-                host=DB.mysql_host,
-                user=DB.myqsl_user,
-                password=DB.mysql_togo,
+                host=settings.ENSEMBL.mysql_host,
+                user=settings.ENSEMBL.mysql_user,
+                password=settings.ENSEMBL.mysql_password,
                 port=int(port),
-                connect_timeout=max(DB.connection_timeout, 30),
-                read_timeout=max(DB.reading_timeout, 60),
+                connect_timeout=max(settings.ENSEMBL.connection_timeout, 30),
+                read_timeout=max(settings.ENSEMBL.reading_timeout, 60),
             ) as conn:
                 with conn.cursor() as cur:
                     cur.execute(
@@ -112,12 +112,12 @@ def _fetch_assembly_names(*, port: int, schemas: list[str]) -> dict[str, str]:
 
     try:
         with pymysql.connect(
-            host=DB.mysql_host,
-            user=DB.myqsl_user,
-            password=DB.mysql_togo,
+            host=settings.ENSEMBL.mysql_host,
+            user=settings.ENSEMBL.mysql_user,
+            password=settings.ENSEMBL.mysql_password,
             port=int(port),
-            connect_timeout=max(DB.connection_timeout, 30),
-            read_timeout=max(DB.reading_timeout, 120),
+            connect_timeout=max(settings.ENSEMBL.connection_timeout, 30),
+            read_timeout=max(settings.ENSEMBL.reading_timeout, 120),
         ) as conn:
             with conn.cursor() as cur:
                 for start in range(0, len(schemas), 50):
@@ -147,6 +147,15 @@ def _fail(title: str, problems: Any) -> None:
     pytest.fail(f"{title}\n{pprint.pformat(problems, width=120)}", pytrace=False)
 
 
+def _assembly_of_core_db(organism: str, suffix: str, release: int) -> int | None:
+    """The assembly key whose ``DbSuffix`` and ``ReleaseRange`` match a core database, else ``None``."""
+    for key in organisms.ORGANISM_TABLE.get(organism, {}):
+        first, last = organisms.release_range(organism, key)
+        if organisms.db_suffix(organism, key) == str(suffix) and first <= release and (last is None or release <= last):
+            return int(key)
+    return None
+
+
 @pytest.fixture(scope="session")
 def live_mysql_core_catalog() -> dict[str, dict[int, dict[str, Any]]]:
     """Return live core schema metadata from Ensembl public MySQL.
@@ -162,11 +171,12 @@ def live_mysql_core_catalog() -> dict[str, dict[int, dict[str, Any]]]:
         }
 
     Schema names carry the core-database suffix, not the assembly key; a name is assigned to the assembly whose
-    ``DbSuffix`` and ``ReleaseRange`` match (:py:meth:`idtrack.DB.assembly_for_core_db`), so rhesus
-    ``macaca_mulatta_core_<r>_10`` is MMUL_1 (key 1) up to release 85 and Mmul_10 (key 10) from release 98.
-    On a port that :py:attr:`idtrack.DB.mysql_port_assembly` reserves for one assembly (3337: human GRCh37), every
-    other core database is an archive copy (an older assembly carried forward under a later release number): it
-    is listed under ``archive_copies`` and attributed to no assembly, as idtrack's discovery does.
+    ``DbSuffix`` and ``ReleaseRange`` match (the rule of :py:func:`idtrack.organisms.core_db_name_pattern` with the
+    release range), so rhesus ``macaca_mulatta_core_<r>_10`` is MMUL_1 (key 1) up to release 85 and Mmul_10 (key 10)
+    from release 98. On a port that :py:attr:`idtrack.settings.ENSEMBL.mysql_port_assembly` reserves for one assembly
+    (3337: human GRCh37), every other core database is an archive copy (an older assembly carried forward under a
+    later release number): it is listed under ``archive_copies`` and attributed to no assembly, as idtrack's
+    discovery does.
 
     Returns:
         Nested dictionary mapping organism -> port -> schema metadata.
@@ -177,8 +187,8 @@ def live_mysql_core_catalog() -> dict[str, dict[int, dict[str, Any]]]:
     ports = sorted(
         {
             int(p)
-            for org in DB.supported_organisms
-            for cfg in DB.assembly_mysqlport_priority[org].values()
+            for org in organisms.supported_organisms()
+            for cfg in organisms.ORGANISM_TABLE[org].values()
             for p in cfg["Ports"]
         }
     )
@@ -188,11 +198,11 @@ def live_mysql_core_catalog() -> dict[str, dict[int, dict[str, Any]]]:
         pytest.skip(f"Ensembl public MySQL not reachable on ports {unreachable}.")
 
     catalog: dict[str, dict[int, dict[str, Any]]] = {}
-    for organism in DB.supported_organisms:
+    for organism in organisms.supported_organisms():
         catalog[organism] = {}
         for port in ports:
             schemas = _fetch_core_schemas(organism=organism, port=port)
-            owner = DB.mysql_port_assembly.get(port)
+            owner = settings.ENSEMBL.mysql_port_assembly.get(port)
             pattern = re.compile(
                 rf"^{re.escape(organism)}_core_(?P<release>[0-9]+)_(?P<suffix>[0-9]+)(?P<patch>[a-z]*)$"
             )
@@ -208,7 +218,7 @@ def live_mysql_core_catalog() -> dict[str, dict[int, dict[str, Any]]]:
                     mismatched.append(schema)
                     continue
                 rel = int(m.group("release"))
-                asm = DB.assembly_for_core_db(organism, m.group("suffix"), rel)
+                asm = _assembly_of_core_db(organism, m.group("suffix"), rel)
                 if owner is not None and (asm is None or owner != (organism, asm)):
                     archive_copies.append(schema)
                     continue
@@ -246,7 +256,7 @@ def test_live_mysql_config_covers_all_discovered_assemblies(live_mysql_core_cata
     # All organisms are checked before the test fails; the failure names, per organism and port, each unassigned
     # core database with the assembly name its `meta` table declares.
     problems: dict[str, dict[int, list[tuple[str, str]]]] = {}
-    for organism in DB.supported_organisms:
+    for organism in organisms.supported_organisms():
         unconfigured = {
             int(port): list(port_info["unconfigured"])
             for port, port_info in live_mysql_core_catalog[organism].items()
@@ -270,8 +280,8 @@ def test_live_mysql_config_ports_match_discovered_ports(live_mysql_core_catalog)
     # configured ports and, for every port that is discovered but not configured, the core databases found there
     # with the assembly name their `meta` table declares.
     problems: list[dict[str, Any]] = []
-    for organism in DB.supported_organisms:
-        for assembly, cfg in DB.assembly_mysqlport_priority[organism].items():
+    for organism in organisms.supported_organisms():
+        for assembly, cfg in organisms.ORGANISM_TABLE[organism].items():
             discovered_ports = {
                 int(port)
                 for port, port_info in live_mysql_core_catalog[organism].items()
@@ -311,13 +321,13 @@ def test_live_mysql_config_ports_match_discovered_ports(live_mysql_core_catalog)
 @pytest.mark.database
 def test_live_core_databases_hold_the_assembly_the_table_names(live_mysql_core_catalog):
     """Ensure every core database the table attributes to an assembly declares that assembly in its `meta` table."""
-    # The suffix-and-release rule (`DB.assembly_for_core_db`) is checked against the truth, `assembly.default`, for
+    # The suffix-and-release rule (`_assembly_of_core_db`) is checked against the truth, `assembly.default`, for
     # every database on every port idtrack may read for the organism.
     problems: list[tuple[str, int, int, str, str, str | None]] = []
-    for organism in DB.supported_organisms:
+    for organism in organisms.supported_organisms():
         for port, port_info in sorted(live_mysql_core_catalog[organism].items()):
             for assembly, by_release in sorted(port_info["by_assembly"].items()):
-                expected = DB.assembly_name(organism, int(assembly))
+                expected = organisms.assembly_name(organism, int(assembly))
                 for release, schema in sorted(by_release.items()):
                     declared = port_info["assembly_names"].get(schema, "?")
                     if declared != expected:
@@ -337,10 +347,10 @@ def test_live_archive_copies_are_older_assemblies_carried_forward(live_mysql_cor
     # to no assembly; anything else on a reserved port fails, with the whole listing.
     listing: dict[str, dict[int, list[tuple[str, str]]]] = {}
     problems: list[tuple[str, int, str, str]] = []
-    for organism in DB.supported_organisms:
+    for organism in organisms.supported_organisms():
         first_release_by_name = {
-            DB.assembly_name(organism, key): DB.release_range(organism, key)[0]
-            for key in DB.assembly_mysqlport_priority[organism]
+            organisms.assembly_name(organism, key): organisms.release_range(organism, key)[0]
+            for key in organisms.ORGANISM_TABLE[organism]
         }
         for port, port_info in sorted(live_mysql_core_catalog[organism].items()):
             for schema in sorted(port_info["archive_copies"]):
@@ -366,8 +376,8 @@ def test_live_mysql_releases_are_releases_of_the_https_dumps(live_mysql_core_cat
     # so the two modes give the same releases exactly when nothing is on MySQL that the dumps lack. The dumps have no
     # archive copies, which is why those are attributed to no assembly.
     problems: list[tuple[str, int, list[int]]] = []
-    for organism in DB.supported_organisms:
-        for assembly, cfg in DB.assembly_mysqlport_priority[organism].items():
+    for organism in organisms.supported_organisms():
+        for assembly, cfg in organisms.ORGANISM_TABLE[organism].items():
             on_mysql = {
                 int(rel)
                 for port_info in live_mysql_core_catalog[organism].values()
@@ -376,7 +386,7 @@ def test_live_mysql_releases_are_releases_of_the_https_dumps(live_mysql_core_cat
             if not on_mysql:
                 continue
             https = DatabaseManager._get_core_db_index_from_ftp(
-                organism=organism, genome_assembly=int(assembly), ports=[int(p) for p in cfg["Ports"]]
+                organism=organism, assembly=int(assembly), ports=[int(p) for p in cfg["Ports"]]
             )
             missing = sorted(on_mysql - {int(r) for r in https["releases"]})
             if missing:
@@ -390,9 +400,9 @@ def test_live_mysql_releases_are_releases_of_the_https_dumps(live_mysql_core_cat
 @pytest.mark.database
 def test_core_index_matches_live_catalog(live_mysql_core_catalog):
     """Cross-check DatabaseManager discovery against an independent live enumeration."""
-    for organism in DB.supported_organisms:
-        for assembly, cfg in DB.assembly_mysqlport_priority[organism].items():
-            core_index = DatabaseManager._get_core_db_index(organism=organism, genome_assembly=int(assembly))
+    for organism in organisms.supported_organisms():
+        for assembly, cfg in organisms.ORGANISM_TABLE[organism].items():
+            core_index = DatabaseManager._get_core_db_index(organism=organism, assembly=int(assembly))
 
             assert tuple(core_index["ports"]) == tuple(int(p) for p in cfg["Ports"])
 
@@ -443,9 +453,9 @@ def test_core_index_matches_live_catalog(live_mysql_core_catalog):
 @pytest.mark.database
 def test_database_manager_resolves_every_release_for_each_configured_assembly(live_mysql_core_catalog):
     """Ensure DatabaseManager picks the correct port and schema for every discovered release."""
-    for organism in DB.supported_organisms:
-        for assembly in DB.assembly_mysqlport_priority[organism]:
-            core_index = DatabaseManager._get_core_db_index(organism=organism, genome_assembly=int(assembly))
+    for organism in organisms.supported_organisms():
+        for assembly in organisms.ORGANISM_TABLE[organism]:
+            core_index = DatabaseManager._get_core_db_index(organism=organism, assembly=int(assembly))
             mysql_releases = sorted(set(core_index.get("releases_on_mysql", []) or []))
             if not mysql_releases:
                 continue
@@ -456,12 +466,12 @@ def test_database_manager_resolves_every_release_for_each_configured_assembly(li
                         organism=organism,
                         form="gene",
                         local_repository=tmpdir,
-                        ensembl_release=int(rel),
-                        genome_assembly=int(assembly),
+                        release=int(rel),
+                        assembly=int(assembly),
                     )
                     assert int(dm.mysql_settings["port"]) == int(core_index["port_for_release"][int(rel)])
                     assert str(dm.mysql_database) == str(core_index["db_for_release"][int(rel)])
-                    match = DB.core_db_name_pattern(organism, int(assembly)).match(str(dm.mysql_database))
+                    match = organisms.core_db_name_pattern(organism, int(assembly)).match(str(dm.mysql_database))
                     assert match is not None and int(match.group("release")) == int(rel), (
                         organism,
                         int(assembly),
@@ -474,9 +484,9 @@ def test_database_manager_resolves_every_release_for_each_configured_assembly(li
 @pytest.mark.network
 @pytest.mark.database
 def test_database_manager_infers_best_assembly_per_release_from_live_availability(live_mysql_core_catalog):
-    """Ensure `genome_assembly=None` selects the highest-priority assembly that contains the requested release."""
-    for organism in DB.supported_organisms:
-        priorities = {int(asm): int(cfg["Priority"]) for asm, cfg in DB.assembly_mysqlport_priority[organism].items()}
+    """Ensure `assembly=None` selects the highest-priority assembly that contains the requested release."""
+    for organism in organisms.supported_organisms():
+        priorities = {int(asm): int(cfg["Priority"]) for asm, cfg in organisms.ORGANISM_TABLE[organism].items()}
 
         # Union of releases across all assemblies (from the live catalog).
         releases_all: set[int] = set()
@@ -498,12 +508,12 @@ def test_database_manager_infers_best_assembly_per_release_from_live_availabilit
                     organism=organism,
                     form="gene",
                     local_repository=tmpdir,
-                    ensembl_release=int(rel),
-                    genome_assembly=None,
+                    release=int(rel),
+                    assembly=None,
                 )
-                assert int(dm.genome_assembly) == int(expected_asm), (
+                assert int(dm.assembly) == int(expected_asm), (
                     organism,
                     int(rel),
                     expected_asm,
-                    dm.genome_assembly,
+                    dm.assembly,
                 )

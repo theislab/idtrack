@@ -6,7 +6,7 @@ Usage in notebooks:
 
     # Then use the collapse magic on any cell:
     %%collapse Click to show download logs
-    df = dm.create_database_content(just_download=False)
+    df = dm.create_database_content()
 
     # Optional flags:
     #   --no-live or --static: don't update the block while running (live is default)

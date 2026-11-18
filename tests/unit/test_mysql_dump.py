@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for `idtrack._mysql_dump.read_mysql_dump`: MySQL dump escapes are decoded as `LOAD DATA` would."""
+"""Unit tests for `idtrack.build.mysql_dump.read_mysql_dump`: MySQL dump escapes are decoded as `LOAD DATA` would."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import io
 
 import pandas as pd
 
-from idtrack._mysql_dump import read_mysql_dump
+from idtrack.build.mysql_dump import read_mysql_dump
 
 COLUMNS = ["id", "name", "description"]
 

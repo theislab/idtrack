@@ -24,15 +24,15 @@ from collections.abc import Iterable
 import pytest
 import requests
 
-from idtrack._database_manager import DatabaseManager
-from idtrack._db import DB
+from idtrack import organisms, settings
+from idtrack.build.database_manager import DatabaseManager
 
 
 def _can_reach_ensembl_ftp() -> bool:
     try:
         r = requests.get(
-            f"https://{DB.ensembl_ftp_base}/pub/",
-            timeout=(DB.connection_timeout, DB.reading_timeout),
+            f"https://{settings.ENSEMBL.https_host}/pub/",
+            timeout=(settings.ENSEMBL.connection_timeout, settings.ENSEMBL.reading_timeout),
         )
         return bool(r.ok)
     except Exception:
@@ -43,7 +43,7 @@ def _can_reach_ensembl_ftp() -> bool:
 def ensembl_latest_release() -> int:
     """Return the latest Ensembl release number."""
     if not _can_reach_ensembl_ftp():
-        pytest.skip(f"Unable to reach https://{DB.ensembl_ftp_base}/pub/ from the test environment.")
+        pytest.skip(f"Unable to reach https://{settings.ENSEMBL.https_host}/pub/ from the test environment.")
     return int(DatabaseManager._ensembl_latest_release())
 
 
@@ -89,8 +89,8 @@ REQUIRED_CORE_TABLES: set[str] = {
 
 
 def _iter_supported_pairs() -> Iterable[tuple[str, int]]:
-    for organism in DB.supported_organisms:
-        for assembly in sorted(DB.assembly_mysqlport_priority[organism]):
+    for organism in organisms.supported_organisms():
+        for assembly in sorted(organisms.ORGANISM_TABLE[organism]):
             yield organism, int(assembly)
 
 
@@ -101,7 +101,7 @@ def _iter_supported_pairs() -> Iterable[tuple[str, int]]:
 def test_ftp_core_index_release_ranges(ensembl_latest_release: int, organism: str, assembly: int) -> None:
     """Validate that expected release ranges are discoverable via FTP dumps."""
     expected = EXPECTED_RANGES[(organism, int(assembly))]
-    core_index = DatabaseManager._get_core_db_index(organism=organism, genome_assembly=int(assembly))
+    core_index = DatabaseManager._get_core_db_index(organism=organism, assembly=int(assembly))
 
     # This integration module validates the HTTPS/FTP MySQL-dump availability.
     # `core_index["releases"]` can include MySQL-only archive releases that do not have published dumps,
@@ -126,7 +126,7 @@ def test_ftp_core_index_release_ranges(ensembl_latest_release: int, organism: st
 @pytest.mark.slow
 def test_grch37_ftp_archive_path_for_release_78(ensembl_latest_release: int) -> None:  # noqa: ARG001
     """Ensure GRCh37 release 78 uses the dedicated FTP archive path."""
-    core_index = DatabaseManager._get_core_db_index(organism="homo_sapiens", genome_assembly=37)
+    core_index = DatabaseManager._get_core_db_index(organism="homo_sapiens", assembly=37)
     url = core_index.get("db_dir_url_by_release", {}).get(78)
     assert isinstance(url, str) and url
     assert "/pub/grch37/release-78/mysql/" in url
@@ -157,8 +157,8 @@ def test_download_table_via_ftp_fallback_for_each_pair(
             organism=organism,
             form="gene",
             local_repository=tmpdir,
-            ensembl_release=int(release),
-            genome_assembly=int(assembly),
+            release=int(release),
+            assembly=int(assembly),
             store_raw_always=False,
         )
 
@@ -174,15 +174,15 @@ def test_download_table_via_ftp_fallback_for_each_pair(
 def test_download_table_supports_nested_bz2_gzip_dumps() -> None:
     """Exercise the `.txt.gz.bz2` dump path used by some species/releases (notably pig archives)."""
     if not _can_reach_ensembl_ftp():
-        pytest.skip(f"Unable to reach https://{DB.ensembl_ftp_base}/pub/ from the test environment.")
+        pytest.skip(f"Unable to reach https://{settings.ENSEMBL.https_host}/pub/ from the test environment.")
 
     with tempfile.TemporaryDirectory(prefix="idtrack_ftp_nested_dump_test_") as tmpdir:
         dm = DatabaseManager(
             organism="sus_scrofa",
             form="gene",
             local_repository=tmpdir,
-            ensembl_release=89,
-            genome_assembly=102,
+            release=89,
+            assembly=102,
             store_raw_always=False,
         )
         # `external_db` is shipped as `external_db.txt.gz.bz2` for this archive release.
@@ -207,8 +207,8 @@ def test_ftp_schema_contains_required_tables(ensembl_latest_release: int, organi
                 organism=organism,
                 form="gene",
                 local_repository=tmpdir,
-                ensembl_release=int(rel),
-                genome_assembly=int(assembly),
+                release=int(rel),
+                assembly=int(assembly),
                 store_raw_always=False,
             )
 
@@ -243,15 +243,15 @@ def test_ftp_schema_contains_required_tables(ensembl_latest_release: int, organi
 def test_dump_escapes_are_decoded_like_mysql() -> None:
     """Rows whose text holds escaped newlines (rhesus 90 `external_db`) stay single rows, as MySQL returns them."""
     if not _can_reach_ensembl_ftp():
-        pytest.skip(f"Unable to reach https://{DB.ensembl_ftp_base}/pub/ from the test environment.")
+        pytest.skip(f"Unable to reach https://{settings.ENSEMBL.https_host}/pub/ from the test environment.")
 
     with tempfile.TemporaryDirectory(prefix="idtrack_ftp_escape_test_") as tmpdir:
         dm = DatabaseManager(
             organism="macaca_mulatta",
             form="gene",
             local_repository=tmpdir,
-            ensembl_release=90,
-            genome_assembly=801,
+            release=90,
+            assembly=801,
             store_raw_always=False,
         )
         df = dm._download_table_from_ftp("external_db")

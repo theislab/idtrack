@@ -18,8 +18,9 @@ import pandas as pd
 import pytest
 import requests
 
-from idtrack._database_manager import DatabaseManager
-from idtrack._db import DB, EnsemblSchemaError
+from idtrack import ids, settings
+from idtrack.build.database_manager import DatabaseManager
+from idtrack.errors import EnsemblSchemaError
 from tests._real_tables import ORGANISMS, RealTables, tables_path
 
 BUILD_SCRIPT = Path(__file__).resolve().parents[1] / "data" / "real" / "build_real_tables.py"
@@ -37,7 +38,9 @@ def build_script():
 def ensembl_dumps_reachable() -> bool:
     """Tell whether Ensembl's HTTPS dumps answer (the one accepted reason to skip)."""
     try:
-        return bool(requests.head(f"https://{DB.ensembl_ftp_base}/pub/", timeout=(10, 30), allow_redirects=True).ok)
+        return bool(
+            requests.head(f"https://{settings.ENSEMBL.https_host}/pub/", timeout=(10, 30), allow_redirects=True).ok
+        )
     except requests.RequestException:
         return False
 
@@ -62,11 +65,11 @@ def test_cut_tables_of_the_first_release_equal_ensembls_dumps_cut_again(organism
     cutter.install(monkeypatch)
     manager = DatabaseManager(
         organism=organism,
-        form=DB.backbone_form,
+        form=ids.BACKBONE_FORM,
         local_repository=str(scratch),
-        ensembl_release=release,
-        ignore_after=stored.snapshot,
-        genome_assembly=assembly,
+        release=release,
+        snapshot_release=stored.snapshot,
+        assembly=assembly,
     )
     compared = 0
     for (a, r, name), entry in sorted(stored.tables.items()):

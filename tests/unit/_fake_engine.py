@@ -1,18 +1,22 @@
-"""A small stand-in for :py:class:`idtrack.Track` and its graph, for tests of the API and the harmonizer.
+"""A small stand-in for the engine (:py:class:`idtrack.engine.Track`) and its graph.
 
-The fake answers :py:meth:`idtrack.Track.convert` from a table, in the engine's result shape and with the engine's
-errors, so that the real :py:class:`idtrack.API` and :py:class:`idtrack.HarmonizeFeatures` code runs on it without a
-graph or a network.
+It serves the tests of the API and the harmonizer.
+
+The fake answers :py:meth:`idtrack.engine.Track.convert` from a table, as the engine's
+:py:class:`idtrack.engine.Conversion` and with the engine's errors, so that the real :py:class:`idtrack.API` and
+:py:class:`idtrack.harmonize.HarmonizeFeatures` code runs on it without a graph or a network.
 """
 
 from __future__ import annotations
 
+import logging
 from collections import Counter
 from typing import Any
 
-from idtrack import API, Track
-
-GENE_DATABASES = ("ensembl_gene", "base_ensembl_gene")
+from idtrack import API
+from idtrack.engine import Conversion, Track
+from idtrack.results import Candidate, ExplainedPath, PathStep
+from idtrack.settings import SearchSettings
 
 
 class FakeGraph:
@@ -31,14 +35,19 @@ class FakeGraph:
         }
         self.available_external_databases_assembly = {38: set(databases), 37: {"Old DB"}}
         self.available_external_databases = set(databases) | {"Old DB"}
-        self.available_genome_assemblies = {37, 38}
+        self.available_assemblies = {37, 38}
         self.external_database_connection_form = {d: "gene" for d in sorted(databases)}
         self.lookups: Counter = Counter()
 
     @property
-    def last_release(self) -> int:
+    def snapshot_release(self) -> int:
         """The last release of the fake."""
         return max(self.releases)
+
+    @property
+    def serving_assembly(self) -> dict[int, int]:
+        """Every release of the fake is served by assembly 38."""
+        return {r: 38 for r in self.releases}
 
     def resolve_name(
         self, identifier: str, release: int | None = None, database: str | None = None, target: int | None = None
@@ -65,22 +74,20 @@ class FakeGraph:
         """Return the ``(database, assembly, release)`` triples of a node: database ``db`` at every release."""
         return frozenset(("db", 38, r) for r in self.releases)
 
-    def calculate_caches(self, for_test: bool = False) -> None:
-        """Do nothing (the fake has no graph-wide tables to compute)."""
-        pass
-
 
 class FakeTrack(Track):
     """Answers ``convert`` from ``answers``: ``{node: {gene: {database: [targets]}}}``.
 
-    It is a :py:class:`idtrack.Track` by type only (so that it can stand where the API expects one); every method the
-    API calls is replaced, and the constructor of ``Track`` is not run.
+    It is an :py:class:`idtrack.engine.Track` (so that it can stand where the API expects one) whose search is
+    replaced: the engine's argument checks run as they are (on the fake graph), and the conversion of checked
+    arguments (``_convert``) and the counting of origins (``_identify_source``) answer from the table. The
+    constructor of ``Track`` is not run.
 
     As the engine does: the genes are returned in the given order (the engine's ranking, best first); with a final
     database only the genes that have an id in it are returned, and if none has one all genes are returned as
-    themselves with ``no_target``; with ``prioritize_to_one_filter`` every pair is kept and the answer is a tie
-    when there are several (the fake has no evidence to choose by). ``errors`` maps a node (or
-    ``(node, from_release)``) to an exception raised by ``convert``.
+    themselves with ``no_target``; every pair is best and the answer is a tie when there are several (the fake has
+    no evidence to choose by). ``errors`` maps a node (or ``(node, from_release)``) to an exception raised by
+    ``convert``.
     """
 
     def __init__(
@@ -97,51 +104,67 @@ class FakeTrack(Track):
         self.calls: list[dict[str, Any]] = []
         self.name_lookups: list[tuple[str, str, int | None]] = []
         nodes = set(answers)
-        self.db_manager = None
+        self.search = SearchSettings()
         self.graph = FakeGraph(sorted(nodes), list(releases), set(databases), organism=organism)  # type: ignore[assignment]
-
-    def final_databases(self, to_release: int | None = None) -> list[str]:
-        """Return the accepted final databases: those of assembly 38 and the two gene namespaces."""
-        return sorted(self.graph.available_external_databases_assembly[38] | set(GENE_DATABASES))
 
     def gene_to_database(self, gene: str, final_database: str, release: int | None = None) -> tuple[list[str], int]:
         """Return the ids of a gene in a database: what the table says under the gene itself."""
         self.name_lookups.append((gene, final_database, release))
         return sorted(self.answers.get(gene, {}).get(gene, {}).get(final_database, [])), 0
 
-    def convert(
+    def _convert(
         self,
-        from_id: str,
-        from_release: int | None = None,
-        to_release: int | None = None,
-        final_database: str | None = None,
-        prioritize_to_one_filter: bool = False,
-        return_path: bool = False,
-        from_database: str | None = None,
-    ) -> dict[str, Any] | None:
-        """Answer like :py:meth:`idtrack.Track.convert` from the table (``None`` when there is no gene).
+        identifier: str,
+        *,
+        from_release: int | None,
+        to_release: int,
+        final_database: str,
+        from_database: str | None,
+        allow_bridges: bool,
+        return_ensembl_alternative: bool,
+        explain: bool,
+        search: SearchSettings,
+    ) -> Conversion:
+        """Answer like :py:meth:`idtrack.engine.Track.convert` from the table (arguments checked by the engine).
 
         As the engine does, the string is read as the node the graph says it means at ``from_release``; ``calls``
         records the string as given.
         """
-        given = from_id
-        resolved, _ = self.graph.resolve_name(from_id, from_release, from_database)
-        from_id = given if resolved is None else resolved
+        given = identifier
+        resolved, _ = self.graph.resolve_name(identifier, from_release, from_database)
+        node = given if resolved is None else resolved
         self.calls.append(
             {
-                "from_id": given,
+                "identifier": given,
                 "from_release": from_release,
                 "to_release": to_release,
                 "final_database": final_database,
                 "from_database": from_database,
+                "search": search,
             }
         )
-        for key in ((from_id, from_release), from_id):
+        for key in ((node, from_release), node):
             if key in self.errors:
                 raise self.errors[key]
-        genes = self.answers.get(from_id, {})
+        genes = self.answers.get(node, {})
+        nothing = Conversion(
+            graph_id=node,
+            from_release=None,
+            from_release_inferred=from_release is None,
+            from_databases=(),
+            to_release=to_release,
+            final_database=None,
+            candidates=(),
+            tie=False,
+            decided_by=None,
+            alternative_locus_genes=(),
+            no_target=False,
+            no_target_genes=(),
+            reason="no_path_to_target",
+            path=ExplainedPath(nodes=(), steps=()) if explain else None,
+        )
         if not genes:
-            return None
+            return nothing
         as_gene = final_database is None or final_database == "ensembl_gene"
         with_target: dict[str, list[str]] = (
             {}
@@ -149,57 +172,73 @@ class FakeTrack(Track):
             else {g: by_db.get(final_database, []) for g, by_db in genes.items()}
         )
         no_target = not as_gene and not any(with_target.values())
-        out: dict[str, dict[str, Any]] = {}
+        steps: list[PathStep] = []
+
+        def step(kind: str, source: str, target: str) -> int:
+            steps.append(PathStep(kind=kind, source=source, target=target, release=to_release))
+            return len(steps) - 1
+
+        candidates: list[Candidate] = []
         for gene in genes:
             targets = [gene] if as_gene or no_target else with_target[gene]
-            if not targets:
-                continue
-            out[gene] = {
-                "from_id": from_id,
-                "from_release": from_release if from_release is not None else to_release,
-                "from_release_inferred": from_release is None,
-                "from_databases": [] if from_database is None else [from_database],
-                "entry_gene": gene,
-                "entry_support": 1,
-                "to_release": to_release,
-                "external_jump": 0,
-                "external_gap": 0,
-                "external_step": 0,
-                "ensembl_step": 0,
-                "score": 1.0,
-                "tie": False,
-                "alternative_locus_genes": [],
-                **({"the_path": ((from_id, gene, 0, to_release),)} if return_path else {}),
-                "final_conversion": {
-                    "final_conversion_confidence": None if no_target else 0,
-                    "final_database": "ensembl_gene" if as_gene or no_target else final_database,
-                    "no_target": no_target,
-                    "genes_without_target": (
-                        [] if as_gene or no_target else sorted(g for g, t in with_target.items() if not t)
-                    ),
-                    "final_elements": {
-                        t: ({"the_path": ((gene, t, 0, to_release),)} if return_path and t != gene else {})
-                        for t in targets
-                    },
-                },
-            }
-        pairs = sum(len(value["final_conversion"]["final_elements"]) for value in out.values())
-        tie = prioritize_to_one_filter and pairs > 1
-        for value in out.values():
-            value["tie"] = tie
-        return out
+            for t in targets:
+                path = (step("entry", node, gene),) if explain else ()
+                final_path = (step("final", gene, t),) if explain and t != gene else ()
+                candidates.append(
+                    Candidate(
+                        gene=gene,
+                        target=t,
+                        best=True,
+                        entry_gene=gene,
+                        entry_support=1,
+                        own_version=False,
+                        final_confidence=None if no_target else 0,
+                        bridges=0,
+                        bridge_gap=0,
+                        score=1.0,
+                        same_as_query=t == node,
+                        external_steps=0,
+                        history_steps=0,
+                        annotation=None,
+                        path=path,
+                        final_path=final_path,
+                    )
+                )
+        return Conversion(
+            graph_id=node,
+            from_release=from_release if from_release is not None else to_release,
+            from_release_inferred=from_release is None,
+            from_databases=() if from_database is None else (from_database,),
+            to_release=to_release,
+            final_database="ensembl_gene" if as_gene or no_target else final_database,
+            candidates=tuple(candidates),
+            tie=len(candidates) > 1,
+            decided_by=None,
+            alternative_locus_genes=(),
+            no_target=no_target,
+            no_target_genes=() if as_gene or no_target else tuple(sorted(g for g, t in with_target.items() if not t)),
+            reason=None,
+            path=ExplainedPath(nodes=(), steps=tuple(steps)) if explain else None,
+        )
 
-    def identify_source(self, dataset_ids: list[str], mode: str) -> list[tuple[Any, int]]:
-        """Count the origins of the ids like :py:meth:`idtrack.Track.identify_source`."""
+    def _identify_source(self, nodes: list[str], mode: str) -> list[tuple[Any, int]]:
+        """Count the origins of the nodes like :py:meth:`idtrack.engine.Track.identify_source`."""
         counts: Counter = Counter()
-        for i in dataset_ids:
+        for i in nodes:
             for db, asm, rel in self.graph.trios(i):
-                counts[{"complete": (db, asm, rel), "ensembl_release": rel, "assembly": asm}.get(mode, (asm, rel))] += 1
+                counts[{"complete": (db, asm, rel), "release": rel, "assembly": asm}.get(mode, (asm, rel))] += 1
         return list(counts.most_common())
 
 
 def fake_api(tmp_path, answers, **kwargs) -> API:
-    """Return an :py:class:`idtrack.API` whose tracker is a :py:class:`FakeTrack` on *answers*."""
-    api = API(str(tmp_path))
-    api.track = FakeTrack(answers, **kwargs)  # type: ignore[assignment]
+    """Return an :py:class:`idtrack.API` whose graph and engine are a :py:class:`FakeGraph` and a :py:class:`FakeTrack`.
+
+    The API's constructor accepts graphs only (:py:class:`idtrack.graph.TheGraph`), so the fake is put in place of
+    what the constructor sets; every method of the API then runs as it does on a real graph.
+    """
+    engine = FakeTrack(answers, **kwargs)
+    api = API.__new__(API)
+    api.log = logging.getLogger("idtrack.api")
+    api.graph = engine.graph  # type: ignore[assignment]
+    api.engine = engine
     return api

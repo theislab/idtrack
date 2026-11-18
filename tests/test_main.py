@@ -6,10 +6,20 @@ import idtrack
 import idtrack.__main__ as idtrack_main
 
 
-@pytest.fixture
-def runner() -> None:
-    """Fixture for invoking command-line interfaces."""
-    _ = idtrack.DB
+def test_package_exports_resolve() -> None:
+    """Every exported name resolves, and the version comes from the installed metadata (or says it is unknown)."""
+    import importlib.util
+
+    extra = importlib.util.find_spec("anndata") is not None and importlib.util.find_spec("scipy") is not None
+    for name in idtrack.__all__:
+        assert getattr(idtrack, name) is not None, name
+    assert "HarmonizeFeatures" not in idtrack.__all__  # it needs the extra: by name only
+    if extra:
+        assert idtrack.HarmonizeFeatures is not None
+    else:
+        with pytest.raises(ImportError, match="idtrack\\[harmonize\\]"):
+            idtrack.HarmonizeFeatures
+    assert idtrack.__version__ == "unknown" or idtrack.__version__[0].isdigit()
 
 
 def test_cli_main_returns_zero_on_empty_args(monkeypatch, capsys) -> None:

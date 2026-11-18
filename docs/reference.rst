@@ -1,10 +1,9 @@
 Reference
 =========
 
-The public names are importable from ``idtrack`` (``idtrack.API``, ``idtrack.HarmonizeFeatures``, ...) and are
-documented here under those names. The modules ``idtrack._<name>`` hold them; what is documented under a module path
-below (helper functions, constants, the graph's value types) is used by the public classes and may change between
-versions.
+The public API of IDTrack, module by module. The most used names are also importable from ``idtrack`` itself
+(``idtrack.API``, ``idtrack.ConversionResult``, the errors, ...); they are documented here under the module that
+holds them. Modules and names without a leading underscore are public.
 
 .. contents::
     :local:
@@ -12,176 +11,133 @@ versions.
     :backlinks: none
 
 
-Conversion and harmonization
-----------------------------
+The API
+-------
 
-.. autoclass:: idtrack.API
+.. automodule:: idtrack.api
     :members:
-    :private-members:
     :show-inheritance:
 
-.. autoclass:: idtrack.HarmonizeFeatures
+
+Results
+-------
+
+.. automodule:: idtrack.results
     :members:
-    :private-members:
     :show-inheritance:
-
-.. automodule:: idtrack._harmonize_features
-    :members:
-    :exclude-members: HarmonizeFeatures
-
-.. automodule:: idtrack._api
-    :members:
-    :private-members:
-    :exclude-members: API
-
-
-The conversion engine and the graph
------------------------------------
-
-.. autoclass:: idtrack.Track
-    :members:
-    :private-members:
-    :show-inheritance:
-
-.. autoclass:: idtrack.TheGraph
-    :members:
-    :private-members:
-    :show-inheritance:
-
-.. autoclass:: idtrack.GraphMaker
-    :members:
-    :private-members:
-    :show-inheritance:
-
-.. automodule:: idtrack._track
-    :members:
-    :private-members:
-    :exclude-members: Track, InactiveAtReleaseError, UnknownVersionError, SearchBudgetExceededError
-
-.. automodule:: idtrack._the_graph
-    :members:
-    :private-members:
-    :ignore-module-all:
-    :exclude-members: TheGraph, GraphMismatchError
-
-.. automodule:: idtrack._graph_maker
-    :members:
-    :private-members:
-    :exclude-members: GraphMaker, HistoryValidationError, GraphMismatchError
 
 
 Errors
 ------
 
-.. autoexception:: idtrack.InactiveAtReleaseError
-    :members:
-    :show-inheritance:
-
-.. autoexception:: idtrack.UnknownVersionError
-    :members:
-    :show-inheritance:
-
-.. autoexception:: idtrack.SearchBudgetExceededError
-    :members:
-    :show-inheritance:
-
-.. autoexception:: idtrack.GraphMismatchError
-    :members:
-    :show-inheritance:
-
-.. autoexception:: idtrack.HistoryValidationError
-    :members:
-    :show-inheritance:
-
-.. autoexception:: idtrack.EnsemblRestError
-    :members:
-    :show-inheritance:
-
-.. autoexception:: idtrack.EnsemblDownloadError
+.. automodule:: idtrack.errors
     :members:
     :show-inheritance:
 
 
-Ensembl tables, organisms and external databases
-------------------------------------------------
+Settings
+--------
 
-.. autoclass:: idtrack.DB
+.. automodule:: idtrack.settings
     :members:
-    :private-members:
     :show-inheritance:
 
-.. autoclass:: idtrack.DatabaseManager
+
+Organisms
+---------
+
+.. automodule:: idtrack.organisms
     :members:
-    :private-members:
+
+
+The graph's vocabulary
+----------------------
+
+.. automodule:: idtrack.ids
+    :members:
+
+
+The graph and its file
+----------------------
+
+.. automodule:: idtrack.graph
+    :members:
+    :inherited-members: MultiDiGraph, DiGraph, Graph
     :show-inheritance:
 
-.. autoclass:: idtrack.ExternalDatabases
+.. automodule:: idtrack.graph.files
     :members:
-    :private-members:
+
+
+The conversion engine
+---------------------
+
+.. automodule:: idtrack.engine
+    :members:
     :show-inheritance:
 
-.. autoclass:: idtrack.VerifyOrganism
+.. automodule:: idtrack.engine.ranking
     :members:
-    :private-members:
+
+.. automodule:: idtrack.engine.explain
+    :members:
+
+
+Self-tests of a graph
+---------------------
+
+.. automodule:: idtrack.checks
+    :members:
     :show-inheritance:
 
-.. autoclass:: idtrack.ConnectionBridge
-    :members:
-    :private-members:
-    :exclude-members: _BridgeState
-    :show-inheritance:
 
-.. automodule:: idtrack._db
-    :members:
-    :private-members:
-    :exclude-members: DB, EnsemblRestError
+Harmonization
+-------------
 
-.. automodule:: idtrack._database_manager
+.. automodule:: idtrack.harmonize
     :members:
-    :private-members:
-    :exclude-members: DatabaseManager
 
-.. automodule:: idtrack._external_databases
+.. autoclass:: idtrack.harmonize.HarmonizeFeatures
     :members:
-    :private-members:
+
+
+Building graphs
+---------------
+
+.. automodule:: idtrack.build
+
+.. autoclass:: idtrack.build.GraphMaker
+    :members:
+
+.. autoclass:: idtrack.build.DatabaseManager
+    :members:
+
+.. autoclass:: idtrack.build.ExternalDatabases
+    :members:
+
+.. autoclass:: idtrack.build.VerifyOrganism
+    :members:
+
+.. automodule:: idtrack.build.externals
+    :members:
     :exclude-members: ExternalDatabases
 
-.. automodule:: idtrack._verify_organism
+.. automodule:: idtrack.build.default_externals
     :members:
-    :private-members:
+
+.. automodule:: idtrack.build.tables
+    :members:
+
+.. automodule:: idtrack.build.ensembl_access
+    :members:
+
+.. automodule:: idtrack.build.mysql_dump
+    :members:
+
+.. automodule:: idtrack.build.species
+    :members:
     :exclude-members: VerifyOrganism
 
-.. automodule:: idtrack._ensembl_access
+.. automodule:: idtrack.build.database_manager
     :members:
-    :private-members:
-    :exclude-members: EnsemblDownloadError
-
-.. automodule:: idtrack._mysql_dump
-    :members:
-    :private-members:
-
-.. automodule:: idtrack._default_externals
-    :members:
-    :private-members:
-
-.. automodule:: idtrack._utils_hdf5
-    :members:
-
-
-Self-tests
-----------
-
-.. autoclass:: idtrack.TrackTests
-    :members:
-    :private-members:
-    :show-inheritance:
-
-.. autoclass:: idtrack._track_tests.CheckResult
-    :members:
-
-
-.. toctree::
-    :maxdepth: 1
-    :hidden:
-
-    reference/external_mappers
+    :exclude-members: DatabaseManager

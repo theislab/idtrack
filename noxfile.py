@@ -10,13 +10,11 @@ from pathlib import Path
 from textwrap import dedent
 
 import nox
-from rich import print
 
 try:
     from nox_poetry import Session, session
 except ImportError:
-    print("[bold red]Did not find nox-poetry installed in your current environment!")
-    print("[bold blue]Try installing it using [bold green]pip install nox-poetry [bold blue]! ")
+    print("nox-poetry was not found in the environment of nox; install it next to nox: pip install nox-poetry")
     sys.exit(1)
 
 
@@ -32,7 +30,7 @@ def _ensure_poetry_export_available() -> None:
     poetry = shutil.which("poetry")
     if poetry is None:
         print(
-            "[bold red]Poetry was not found on PATH.[/bold red]\n"
+            "Poetry was not found on PATH.\n"
             "Install Poetry and the export plugin, e.g.\n"
             "  - pip:   pip install poetry poetry-plugin-export\n"
             "  - pipx:  pipx install poetry && pipx inject poetry poetry-plugin-export\n"
@@ -52,7 +50,7 @@ def _ensure_poetry_export_available() -> None:
     out = (proc.stdout or "").strip()
     if "command export does not exist" in out.lower():
         print(
-            "[bold red]Your Poetry installation does not provide `poetry export`.[/bold red]\n"
+            "Your Poetry installation does not provide `poetry export`.\n"
             "Install the export plugin into the same Poetry environment:\n"
             "  - pipx:  pipx inject poetry poetry-plugin-export\n"
             "  - poetry: poetry self add poetry-plugin-export\n"
@@ -60,7 +58,7 @@ def _ensure_poetry_export_available() -> None:
         )
         raise SystemExit(1)
 
-    print("[bold red]Poetry failed to run `poetry export --help`.[/bold red]")
+    print("Poetry failed to run `poetry export --help`.")
     if out:
         print(out)
     raise SystemExit(1)
@@ -75,7 +73,7 @@ python_versions = ["3.12", "3.13", "3.14", "3.15"]
 default_python = python_versions[0]
 nox.options.sessions = (
     "pre-commit",
-    "safety",
+    "pip-audit",
     "mypy",
     "tests",
     "xdoctest",
@@ -178,23 +176,20 @@ def precommit(session: Session) -> None:
         activate_virtualenv_in_precommit_hooks(session)
 
 
-@nox.session(python=python_versions)
-def safety(session: Session) -> None:
-    """Scan dependencies for insecure packages."""
-    # Create a temporary file for exported requirements
+@session(name="pip-audit", python=default_python)
+def pip_audit(session: Session) -> None:
+    """Scan the locked dependencies of the package and its extras for known vulnerabilities."""
+    # The lock is exported with hashes, so every requirement is pinned and pip-audit needs no resolver (--disable-pip).
     with tempfile.NamedTemporaryFile(mode="w+", delete=False, suffix=".txt") as reqs_file:
         reqs_path = Path(reqs_file.name)
 
     try:
-        # Export the requirements from poetry
-        session.run("poetry", "export", "--format=requirements.txt", "--without-hashes", "--output", str(reqs_path))
-
-        session.install("safety>=2,<4")
-
-        # Run safety check
-        session.run("safety", "check", "--full-report", f"--file={reqs_path}")
+        session.run(
+            "poetry", "export", "--format=requirements.txt", "--all-extras", "--output", str(reqs_path), external=True
+        )
+        session.install("pip-audit")
+        session.run("pip-audit", "--requirement", str(reqs_path), "--disable-pip", "--progress-spinner", "off")
     finally:
-        # Clean up the temp file
         if reqs_path.exists():
             reqs_path.unlink()
 
@@ -203,15 +198,11 @@ def safety(session: Session) -> None:
 def mypy(session: Session) -> None:
     """Type-check using mypy."""
     args = session.posargs or ["idtrack", "tests", "docs/conf.py"]
-    session.install(".")
+    session.install(".[harmonize]")
     session.install(
-        # types-pkg-resources, which was unceremoniously disappeared from the
-        # Python supply chain. instead `types-setuptools`
         "mypy",
         "pytest",
-        "types-setuptools",
         "types-requests",
-        "types-attrs",
         "types-PyMySQL",
         "types-PyYAML",
     )
@@ -221,59 +212,34 @@ def mypy(session: Session) -> None:
 @session(python=python_versions)
 def tests(session: Session) -> None:
     """Run the test suite."""
-    session.install(".")
+    session.install(".[harmonize]")
     session.install("coverage[toml]", "pytest", "pygments")
     try:
         session.run("coverage", "run", "--parallel", "-m", "pytest", *session.posargs)
     finally:
         if session.interactive:
-            session.notify("coverage")
-
-
-@session(name="tests-external-mappers", python=[default_python])
-def tests_external_mappers(session: Session) -> None:
-    """Run tests with external mapper dependencies installed.
-
-    This session installs the optional external-mappers extras (gget, mygene,
-    pybiomart, gprofiler-official) and runs the external_mappers tests including
-    any tests marked as slow/integration that require these dependencies (pass
-    `--runslow` to enable slow-marked tests).
-
-    Args:
-        session: The nox session.
-    """
-    # Install package with external-mappers extras
-    session.install(".[external-mappers]")
-    session.install("coverage[toml]", "pytest", "pygments")
-
-    # Run external_mappers tests (slow-marked tests are skipped unless --runslow)
-    try:
-        session.run("coverage", "run", "--parallel", "-m", "pytest", "tests/test_external_mappers.py", *session.posargs)
-    finally:
-        if session.interactive:
-            session.notify("coverage")
+            # Without the posargs of this session, which are pytest's.
+            session.notify("coverage", posargs=[])
 
 
 @session(python=default_python)
 def coverage(session: Session) -> None:
-    """Produce the coverage report."""
-    # Do not use session.posargs unless this is the only session.
-    nsessions = len(session._runner.manifest)  # type: ignore[attr-defined]
-    has_args = session.posargs and nsessions == 1
-    args = session.posargs if has_args else ["report", "-i"]
-
+    """Produce the coverage report: combine the data files and report, or run `coverage <posargs>` if given."""
     session.install("coverage[toml]")
 
-    if not has_args and any(Path().glob(".coverage.*")):
-        session.run("coverage", "combine")
+    if session.posargs:
+        session.run("coverage", *session.posargs)
+        return
 
-    session.run("coverage", *args)
+    if any(Path().glob(".coverage.*")):
+        session.run("coverage", "combine")
+    session.run("coverage", "report", "-i")
 
 
 @session(python=python_versions)
 def typeguard(session: Session) -> None:
     """Runtime type checking using Typeguard."""
-    session.install(".")
+    session.install(".[harmonize]")
     session.install("pytest", "typeguard", "pygments")
     session.run("pytest", f"--typeguard-packages={package}", *session.posargs)
 
@@ -282,7 +248,7 @@ def typeguard(session: Session) -> None:
 def xdoctest(session: Session) -> None:
     """Run examples with xdoctest."""
     args = session.posargs or ["all"]
-    session.install(".")
+    session.install(".[harmonize]")
     session.install("xdoctest[colors]")
     session.run("python", "-m", "xdoctest", package, *args)
 
@@ -291,13 +257,11 @@ def xdoctest(session: Session) -> None:
 def docs_build(session: Session) -> None:
     """Build the documentation."""
     args = session.posargs or ["docs", "docs/_build"]
-    session.install(".")
+    session.install(".[harmonize]")
     session.install(
         "sphinx",
         "sphinx-design",
-        "sphinx-click",
         "sphinx-rtd-theme",
-        "sphinx-rtd-dark-mode",
         "nbsphinx",
         "IPython",
     )
@@ -313,14 +277,12 @@ def docs_build(session: Session) -> None:
 def docs(session: Session) -> None:
     """Build and serve the documentation with live reloading on file changes."""
     args = session.posargs or ["--open-browser", "docs", "docs/_build"]
-    session.install(".")
+    session.install(".[harmonize]")
     session.install(
         "sphinx",
         "sphinx-autobuild",
         "sphinx-design",
-        "sphinx-click",
         "sphinx-rtd-theme",
-        "sphinx-rtd-dark-mode",
         "nbsphinx",
         "IPython",
     )

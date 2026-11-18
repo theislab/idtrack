@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Functional tests for idtrack._the_graph module.
+"""Functional tests for idtrack.graph.graph module.
 
 These tests actually execute code paths to increase coverage.
 """
@@ -9,8 +9,8 @@ from __future__ import annotations
 import networkx as nx
 import pytest
 
-from idtrack._db import DB
-from idtrack._the_graph import TheGraph
+from idtrack import ids
+from idtrack.graph import TheGraph
 
 
 class TestTheGraphCachedPropertiesFunctional:
@@ -32,34 +32,40 @@ class TestTheGraphCachedPropertiesFunctional:
         gene_nodes = [
             (
                 "ENSG00000141510.Void",
-                {DB.node_type_str: DB.nts_ensembl["gene"], "ID": "ENSG00000141510", "Version": DB.no_old_node_id},
+                {ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"], "ID": "ENSG00000141510", "Version": ids.VOID},
             ),
-            ("ENSG00000141510.1", {DB.node_type_str: DB.nts_ensembl["gene"], "ID": "ENSG00000141510", "Version": 1}),
-            ("ENSG00000141510.2", {DB.node_type_str: DB.nts_ensembl["gene"], "ID": "ENSG00000141510", "Version": 2}),
-            ("ENSG00000141510.15", {DB.node_type_str: DB.nts_ensembl["gene"], "ID": "ENSG00000141510", "Version": 15}),
+            ("ENSG00000141510.1", {ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"], "ID": "ENSG00000141510", "Version": 1}),
+            ("ENSG00000141510.2", {ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"], "ID": "ENSG00000141510", "Version": 2}),
+            (
+                "ENSG00000141510.15",
+                {ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"], "ID": "ENSG00000141510", "Version": 15},
+            ),
             (
                 "ENSG00000012048.Void",
-                {DB.node_type_str: DB.nts_ensembl["gene"], "ID": "ENSG00000012048", "Version": DB.no_old_node_id},
+                {ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"], "ID": "ENSG00000012048", "Version": ids.VOID},
             ),
-            ("ENSG00000012048.1", {DB.node_type_str: DB.nts_ensembl["gene"], "ID": "ENSG00000012048", "Version": 1}),
-            ("ENSG00000012048.11", {DB.node_type_str: DB.nts_ensembl["gene"], "ID": "ENSG00000012048", "Version": 11}),
+            ("ENSG00000012048.1", {ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"], "ID": "ENSG00000012048", "Version": 1}),
+            (
+                "ENSG00000012048.11",
+                {ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"], "ID": "ENSG00000012048", "Version": 11},
+            ),
         ]
         graph.add_nodes_from(gene_nodes)
 
         # Add base ID nodes (base_ensembl_gene type)
         base_nodes = [
-            ("ENSG00000141510", {DB.node_type_str: DB.nts_base_ensembl["gene"], "Version": None}),
-            ("ENSG00000012048", {DB.node_type_str: DB.nts_base_ensembl["gene"], "Version": None}),
+            ("ENSG00000141510", {ids.NODE_TYPE_KEY: ids.BASE_ENSEMBL_TYPE["gene"], "Version": None}),
+            ("ENSG00000012048", {ids.NODE_TYPE_KEY: ids.BASE_ENSEMBL_TYPE["gene"], "Version": None}),
         ]
         graph.add_nodes_from(base_nodes)
 
         # Add external nodes (external type)
         external_nodes = [
-            ("TP53", {DB.node_type_str: DB.nts_external, "database": "HGNC Symbol"}),
-            ("P04637", {DB.node_type_str: DB.nts_external, "database": "UniProtKB"}),
-            ("7157", {DB.node_type_str: DB.nts_external, "database": "EntrezGene"}),
-            ("BRCA1", {DB.node_type_str: DB.nts_external, "database": "HGNC Symbol"}),
-            ("P38398", {DB.node_type_str: DB.nts_external, "database": "UniProtKB"}),
+            ("TP53", {ids.NODE_TYPE_KEY: ids.EXTERNAL, "database": "HGNC Symbol"}),
+            ("P04637", {ids.NODE_TYPE_KEY: ids.EXTERNAL, "database": "UniProtKB"}),
+            ("7157", {ids.NODE_TYPE_KEY: ids.EXTERNAL, "database": "EntrezGene"}),
+            ("BRCA1", {ids.NODE_TYPE_KEY: ids.EXTERNAL, "database": "HGNC Symbol"}),
+            ("P38398", {ids.NODE_TYPE_KEY: ids.EXTERNAL, "database": "UniProtKB"}),
         ]
         graph.add_nodes_from(external_nodes)
 
@@ -75,30 +81,34 @@ class TestTheGraphCachedPropertiesFunctional:
 
         # Add edges from base to versioned genes
         graph.add_edge(
-            "ENSG00000141510", "ENSG00000141510.1", **{DB.connection_dict: {DB.nts_base_ensembl["gene"]: {38: {100}}}}
+            "ENSG00000141510", "ENSG00000141510.1", **{ids.CONNECTION_KEY: {ids.BASE_ENSEMBL_TYPE["gene"]: {38: {100}}}}
         )
         graph.add_edge(
-            "ENSG00000141510", "ENSG00000141510.2", **{DB.connection_dict: {DB.nts_base_ensembl["gene"]: {38: {105}}}}
+            "ENSG00000141510", "ENSG00000141510.2", **{ids.CONNECTION_KEY: {ids.BASE_ENSEMBL_TYPE["gene"]: {38: {105}}}}
         )
         graph.add_edge(
-            "ENSG00000141510", "ENSG00000141510.15", **{DB.connection_dict: {DB.nts_base_ensembl["gene"]: {38: {110}}}}
+            "ENSG00000141510",
+            "ENSG00000141510.15",
+            **{ids.CONNECTION_KEY: {ids.BASE_ENSEMBL_TYPE["gene"]: {38: {110}}}},
         )
         graph.add_edge(
-            "ENSG00000012048", "ENSG00000012048.1", **{DB.connection_dict: {DB.nts_base_ensembl["gene"]: {38: {100}}}}
+            "ENSG00000012048", "ENSG00000012048.1", **{ids.CONNECTION_KEY: {ids.BASE_ENSEMBL_TYPE["gene"]: {38: {100}}}}
         )
         graph.add_edge(
-            "ENSG00000012048", "ENSG00000012048.11", **{DB.connection_dict: {DB.nts_base_ensembl["gene"]: {38: {110}}}}
+            "ENSG00000012048",
+            "ENSG00000012048.11",
+            **{ids.CONNECTION_KEY: {ids.BASE_ENSEMBL_TYPE["gene"]: {38: {110}}}},
         )
 
         # Add edges from external to versioned genes
-        graph.add_edge("TP53", "ENSG00000141510.15", **{DB.connection_dict: {"HGNC Symbol": {38: {110}}}})
-        graph.add_edge("P04637", "ENSG00000141510.15", **{DB.connection_dict: {"UniProtKB": {38: {105, 110}}}})
-        graph.add_edge("7157", "ENSG00000141510.15", **{DB.connection_dict: {"EntrezGene": {38: {110}}}})
-        graph.add_edge("BRCA1", "ENSG00000012048.11", **{DB.connection_dict: {"HGNC Symbol": {38: {110}}}})
-        graph.add_edge("P38398", "ENSG00000012048.11", **{DB.connection_dict: {"UniProtKB": {38: {110}}}})
+        graph.add_edge("TP53", "ENSG00000141510.15", **{ids.CONNECTION_KEY: {"HGNC Symbol": {38: {110}}}})
+        graph.add_edge("P04637", "ENSG00000141510.15", **{ids.CONNECTION_KEY: {"UniProtKB": {38: {105, 110}}}})
+        graph.add_edge("7157", "ENSG00000141510.15", **{ids.CONNECTION_KEY: {"EntrezGene": {38: {110}}}})
+        graph.add_edge("BRCA1", "ENSG00000012048.11", **{ids.CONNECTION_KEY: {"HGNC Symbol": {38: {110}}}})
+        graph.add_edge("P38398", "ENSG00000012048.11", **{ids.CONNECTION_KEY: {"UniProtKB": {38: {110}}}})
 
         # Attach included forms
-        graph._attach_included_forms(["gene"])
+        graph.available_forms = ["gene"]
 
         return graph
 
@@ -128,7 +138,7 @@ class TestTheGraphCachedPropertiesFunctional:
         assert isinstance(hyperconn, dict)
 
         # No external id of the small test graph is linked to more genes at once than
-        # `TheGraph.genes_at_once_threshold`.
+        # the hyper-connectivity threshold (`GraphSettings.hyperconnective_threshold`).
         assert len(hyperconn) == 0
 
     def test_rev_property(self, populated_graph):
@@ -146,16 +156,17 @@ class TestTheGraphCachedPropertiesFunctional:
 
     def test_calculate_caches_runs(self, populated_graph):
         """calculate_caches freezes the graph; no table over all nodes is kept."""
-        populated_graph.calculate_caches(for_test=False)
-        assert populated_graph.is_frozen
+        populated_graph.calculate_caches()
+        with pytest.raises(nx.NetworkXError, match="frozen"):
+            populated_graph.add_node("LATE", **{ids.NODE_TYPE_KEY: ids.EXTERNAL})
         tables = [
             k for k, v in populated_graph.__dict__.items() if isinstance(v, dict) and len(v) >= len(populated_graph)
         ]
         assert [k for k in tables if k not in ("graph",)] == []
 
-    def test_calculate_caches_with_test_flag(self, populated_graph):
-        """calculate_caches with for_test=True also computes the table of the integrity tests."""
-        populated_graph.calculate_caches(for_test=True)
+    def test_releases_per_database_and_assembly(self, populated_graph):
+        """The table of the integrity tests is computed when it is read, keyed by (database, assembly)."""
+        populated_graph.calculate_caches()
         table = populated_graph.available_releases_given_database_assembly
         assert all(isinstance(key, tuple) and len(key) == 2 for key in table)
 
@@ -163,7 +174,7 @@ class TestTheGraphCachedPropertiesFunctional:
         """After the first derived value nothing can be changed, so nothing derived can be stale."""
         _ = populated_graph.combined("TP53")
         with pytest.raises(nx.NetworkXError, match="frozen"):
-            populated_graph.add_node("LATE", **{DB.node_type_str: DB.nts_external})
+            populated_graph.add_node("LATE", **{ids.NODE_TYPE_KEY: ids.EXTERNAL})
         with pytest.raises(nx.NetworkXError, match="frozen"):
             populated_graph.add_edge("TP53", "ENSG00000141510.1")
 
@@ -179,10 +190,10 @@ class TestResolveNameFunctional:
         graph.graph["confident_for_release"] = [100, 110]
 
         # Add nodes
-        graph.add_node("TP53", **{DB.node_type_str: DB.nts_external})
-        graph.add_node("ENSG00000141510.15", **{DB.node_type_str: DB.nts_ensembl["gene"]})
-        graph.add_node("ENSG00000141510", **{DB.node_type_str: DB.nts_base_ensembl["gene"]})
-        graph.add_node("P04637", **{DB.node_type_str: DB.nts_external})
+        graph.add_node("TP53", **{ids.NODE_TYPE_KEY: ids.EXTERNAL})
+        graph.add_node("ENSG00000141510.15", **{ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"]})
+        graph.add_node("ENSG00000141510", **{ids.NODE_TYPE_KEY: ids.BASE_ENSEMBL_TYPE["gene"]})
+        graph.add_node("P04637", **{ids.NODE_TYPE_KEY: ids.EXTERNAL})
 
         return graph
 
@@ -220,11 +231,9 @@ class TestActiveRanges:
         graph.graph["confident_for_release"] = [100, 105, 110]
 
         # Add backbone nodes with a valid birth edge and a "still active" self-loop.
-        graph.add_node(
-            "GENE.Void", **{DB.node_type_str: DB.nts_ensembl["gene"], "ID": "GENE", "Version": DB.no_old_node_id}
-        )
-        graph.add_node("GENE.1", **{DB.node_type_str: DB.nts_ensembl["gene"], "ID": "GENE", "Version": 1})
-        graph.add_node("GENE.2", **{DB.node_type_str: DB.nts_ensembl["gene"], "ID": "GENE", "Version": 2})
+        graph.add_node("GENE.Void", **{ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"], "ID": "GENE", "Version": ids.VOID})
+        graph.add_node("GENE.1", **{ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"], "ID": "GENE", "Version": 1})
+        graph.add_node("GENE.2", **{ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"], "ID": "GENE", "Version": 2})
 
         graph.add_edge("GENE.Void", "GENE.1", weight=np.nan, old_release=100, new_release=100)
         graph.add_edge("GENE.1", "GENE.2", weight=1.0, old_release=100, new_release=105)
@@ -250,17 +259,17 @@ class TestAvailableExternalDatabases:
         graph.graph["confident_for_release"] = [110]
 
         # Add external nodes
-        graph.add_node("TP53", **{DB.node_type_str: DB.nts_external, "database": "HGNC Symbol"})
-        graph.add_node("P04637", **{DB.node_type_str: DB.nts_external, "database": "UniProtKB"})
+        graph.add_node("TP53", **{ids.NODE_TYPE_KEY: ids.EXTERNAL, "database": "HGNC Symbol"})
+        graph.add_node("P04637", **{ids.NODE_TYPE_KEY: ids.EXTERNAL, "database": "UniProtKB"})
 
         # Add gene node
-        graph.add_node("ENSG.1", **{DB.node_type_str: DB.nts_ensembl["gene"]})
+        graph.add_node("ENSG.1", **{ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"]})
 
         # Add connections
-        graph.add_edge("TP53", "ENSG.1", **{DB.connection_dict: {"HGNC Symbol": {38: {110}}}})
-        graph.add_edge("P04637", "ENSG.1", **{DB.connection_dict: {"UniProtKB": {38: {110}}}})
+        graph.add_edge("TP53", "ENSG.1", **{ids.CONNECTION_KEY: {"HGNC Symbol": {38: {110}}}})
+        graph.add_edge("P04637", "ENSG.1", **{ids.CONNECTION_KEY: {"UniProtKB": {38: {110}}}})
 
-        graph._attach_included_forms(["gene"])
+        graph.available_forms = ["gene"]
         return graph
 
     def test_available_external_databases(self, graph_with_externals):
@@ -273,7 +282,7 @@ class TestAvailableExternalDatabases:
 
 
 class TestAvailableGenomeAssemblies:
-    """Test available_genome_assemblies cached property."""
+    """Test available_assemblies cached property."""
 
     @pytest.fixture
     def graph_with_assembly(self):
@@ -282,17 +291,17 @@ class TestAvailableGenomeAssemblies:
         graph.graph["genome_assembly"] = 38
         graph.graph["confident_for_release"] = [110]
 
-        graph.add_node("GENE.1", **{DB.node_type_str: DB.nts_ensembl["gene"]})
-        graph.add_node("EXT.1", **{DB.node_type_str: DB.nts_external})
+        graph.add_node("GENE.1", **{ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"]})
+        graph.add_node("EXT.1", **{ids.NODE_TYPE_KEY: ids.EXTERNAL})
 
-        graph.add_edge("EXT.1", "GENE.1", **{DB.connection_dict: {"DB": {38: {110}}}})
+        graph.add_edge("EXT.1", "GENE.1", **{ids.CONNECTION_KEY: {"DB": {38: {110}}}})
 
-        graph._attach_included_forms(["gene"])
+        graph.available_forms = ["gene"]
         return graph
 
     def test_available_genome_assemblies(self, graph_with_assembly):
-        """Test available_genome_assemblies returns correct assemblies."""
-        assemblies = graph_with_assembly.available_genome_assemblies
+        """Test available_assemblies returns correct assemblies."""
+        assemblies = graph_with_assembly.available_assemblies
 
         assert isinstance(assemblies, set)
         assert 38 in assemblies
@@ -311,20 +320,18 @@ class TestNodeTrios:
         graph.graph["confident_for_release"] = [100, 110]
 
         # Add nodes
-        graph.add_node("EXT1", **{DB.node_type_str: DB.nts_external})
-        graph.add_node(
-            "GENE.Void", **{DB.node_type_str: DB.nts_ensembl["gene"], "ID": "GENE", "Version": DB.no_old_node_id}
-        )
-        graph.add_node("GENE.1", **{DB.node_type_str: DB.nts_ensembl["gene"], "ID": "GENE", "Version": 1})
+        graph.add_node("EXT1", **{ids.NODE_TYPE_KEY: ids.EXTERNAL})
+        graph.add_node("GENE.Void", **{ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"], "ID": "GENE", "Version": ids.VOID})
+        graph.add_node("GENE.1", **{ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"], "ID": "GENE", "Version": 1})
 
         # Temporal edges to make the backbone valid
         graph.add_edge("GENE.Void", "GENE.1", weight=np.nan, old_release=100, new_release=100)
         graph.add_edge("GENE.1", "GENE.1", weight=1.0, old_release=100, new_release=np.inf)
 
         # Add connection (external → gene)
-        graph.add_edge("EXT1", "GENE.1", **{DB.connection_dict: {"DB1": {38: {100, 110}}}})
+        graph.add_edge("EXT1", "GENE.1", **{ids.CONNECTION_KEY: {"DB1": {38: {100, 110}}}})
 
-        graph._attach_included_forms(["gene"])
+        graph.available_forms = ["gene"]
         return graph
 
     def test_trios_computed(self, graph_for_trios):
@@ -334,48 +341,28 @@ class TestNodeTrios:
         assert ("DB1", 38, 110) in trios
 
 
-class TestAttachIncludedForms:
-    """Test _attach_included_forms method."""
-
-    def test_attach_forms(self):
-        """Test _attach_included_forms sets available_forms."""
-        graph = TheGraph()
-        assert graph.available_forms is None
-
-        graph._attach_included_forms(["gene", "transcript"])
-
-        assert graph.available_forms == ["gene", "transcript"]
-
-    def test_attach_empty_forms(self):
-        """Test _attach_included_forms with empty list."""
-        graph = TheGraph()
-        graph._attach_included_forms([])
-
-        assert graph.available_forms == []
-
-
 class TestCombined:
     """Test the per-node summary of cross-reference edges."""
 
     def test_external_node_is_summed_per_database(self):
         """The edges that leave an external node are summed per database and assembly."""
-        graph = TheGraph(genome_assembly=38, confident_for_release=[100, 105, 110])
-        graph.add_node("EXT", **{DB.node_type_str: DB.nts_external})
-        graph.add_node("GENE.1", **{DB.node_type_str: DB.nts_ensembl["gene"]})
-        graph.add_node("GENE.2", **{DB.node_type_str: DB.nts_ensembl["gene"]})
-        graph.add_edge("EXT", "GENE.1", **{DB.connection_dict: {"DB": {38: {100}}}})
-        graph.add_edge("EXT", "GENE.2", **{DB.connection_dict: {"DB": {38: {105, 110}}, "DB2": {37: {105}}}})
+        graph = TheGraph(assembly=38, confident_for_release=[100, 105, 110])
+        graph.add_node("EXT", **{ids.NODE_TYPE_KEY: ids.EXTERNAL})
+        graph.add_node("GENE.1", **{ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"]})
+        graph.add_node("GENE.2", **{ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"]})
+        graph.add_edge("EXT", "GENE.1", **{ids.CONNECTION_KEY: {"DB": {38: {100}}}})
+        graph.add_edge("EXT", "GENE.2", **{ids.CONNECTION_KEY: {"DB": {38: {105, 110}}, "DB2": {37: {105}}}})
 
         assert graph.combined("EXT") == {"DB": {38: {100, 105, 110}}, "DB2": {37: {105}}}
 
     def test_gene_is_summed_per_assembly(self):
         """The edges that enter a gene are reported under the gene type of each assembly."""
-        graph = TheGraph(genome_assembly=38, confident_for_release=[100, 105, 110])
-        graph.add_node("EXT", **{DB.node_type_str: DB.nts_external})
-        graph.add_node("GENE", **{DB.node_type_str: DB.nts_base_ensembl["gene"]})
-        graph.add_node("GENE.1", **{DB.node_type_str: DB.nts_ensembl["gene"]})
-        graph.add_edge("EXT", "GENE.1", **{DB.connection_dict: {"DB": {38: {100}, 37: {100, 105}}}})
-        graph.add_edge("GENE", "GENE.1", **{DB.connection_dict: {"base_ensembl_gene": {38: {100, 105}}}})
+        graph = TheGraph(assembly=38, confident_for_release=[100, 105, 110])
+        graph.add_node("EXT", **{ids.NODE_TYPE_KEY: ids.EXTERNAL})
+        graph.add_node("GENE", **{ids.NODE_TYPE_KEY: ids.BASE_ENSEMBL_TYPE["gene"]})
+        graph.add_node("GENE.1", **{ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"]})
+        graph.add_edge("EXT", "GENE.1", **{ids.CONNECTION_KEY: {"DB": {38: {100}, 37: {100, 105}}}})
+        graph.add_edge("GENE", "GENE.1", **{ids.CONNECTION_KEY: {"base_ensembl_gene": {38: {100, 105}}}})
 
         expected = {"assembly_38_ensembl_gene": {38: {100, 105}}, "assembly_37_ensembl_gene": {37: {100, 105}}}
         assert graph.combined("GENE.1") == expected
@@ -383,9 +370,9 @@ class TestCombined:
 
     def test_edges_between_nodes_of_one_type_are_not_summed(self):
         """History edges are not cross-references."""
-        graph = TheGraph(genome_assembly=38, confident_for_release=[100, 101])
-        graph.add_node("GENE1.1", **{DB.node_type_str: DB.nts_ensembl["gene"]})
-        graph.add_node("GENE2.1", **{DB.node_type_str: DB.nts_ensembl["gene"]})
+        graph = TheGraph(assembly=38, confident_for_release=[100, 101])
+        graph.add_node("GENE1.1", **{ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"]})
+        graph.add_node("GENE2.1", **{ids.NODE_TYPE_KEY: ids.ENSEMBL_TYPE["gene"]})
         graph.add_edge("GENE1.1", "GENE2.1", weight=1.0, old_release=100, new_release=101)
 
         with pytest.raises(KeyError):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The graph built from real Ensembl tables says what the tables say.
 
-The graphs of pig and human are built by ``API.build_graph`` from the cut tables of ``tests/data/real``
+The graphs of pig and human are built by ``API.build`` from the cut tables of ``tests/data/real``
 (``tests/_real_tables.py``). Here the content of each graph is compared with the tables themselves, read by
 ``tests._real_tables.Ensembl``, which shares no code with the package: which gene ids exist at which release, which
 external identifiers each database has at each release, which genes lie outside the reference sequence. The tests
@@ -15,12 +15,13 @@ import lzma
 
 import pytest
 
-from idtrack._db import DB, EnsemblSchemaError
+from idtrack import ids
+from idtrack.errors import EnsemblSchemaError
 from tests._real_tables import ORGANISMS, SNAPSHOT, RealTables, read_genes, read_truth, tables_path, truth_path
 
 pytestmark = pytest.mark.parametrize("organism", [o for o in ORGANISMS if tables_path(o).is_file()])
 SIZE_LIMIT = 500 * 1024  # bytes per table file, as tests/data/real/build_real_tables.py enforces
-SYNONYM = DB.synonym_id_nodes_prefix
+SYNONYM = ids.SYNONYM_PREFIX
 
 
 def test_cut_tables_hold_every_gene_of_the_list_and_stay_small(organism, real_world):
@@ -93,24 +94,18 @@ def test_replay_answers_as_ensembl_does_and_never_makes_a_table_up(organism):
 def test_build_reads_only_the_cut_tables_and_the_file_gives_the_same_graph(organism, real_world):
     """The graph was built without the network, and loading its file gives the graph that was built."""
     world = real_world(organism)
-    built, loaded = world.built.track.graph, world.api.track.graph
+    built, loaded = world.built.graph, world.api.graph
 
     assert world.tables_served > 500
-    assert world.built.track.db_manager is not None and world.api.track.db_manager is None
+    assert built is not loaded
     assert loaded.manifest == built.manifest
     assert loaded.manifest["organism"] == organism and loaded.manifest["releases"] == sorted(world.backbone)
     assert {int(r): a for r, a in loaded.manifest["backbone_assembly"].items()} == world.backbone
     assert list(loaded.nodes) == list(built.nodes)
     if truth_path(organism).is_file():
         for query in read_truth(organism):
-            arguments = (
-                query["id"],
-                query["from_release"],
-                query["to_release"],
-                query["final_database"],
-                query["strategy"],
-            )
-            assert world.built.convert_identifier(*arguments) == world.api.convert_identifier(*arguments)
+            arguments = (query["id"], query["from_release"], query["to_release"], query["final_database"])
+            assert world.built.convert(*arguments, explain=True) == world.api.convert(*arguments, explain=True)
     for node in list(built.nodes)[:: max(1, len(built.nodes) // 400)]:
         assert loaded.history_edges(node) == built.history_edges(node) or all(
             a[:3] == b[:3] for a, b in zip(loaded.history_edges(node), built.history_edges(node), strict=True)
@@ -125,10 +120,10 @@ def test_gene_ids_of_every_release_are_those_of_ensembls_tables(organism, real_w
     recorded as 106 to 104, human 114 to 115 as 114 to 114) must not make an id active where it does not exist.
     """
     world = real_world(organism)
-    graph = world.api.track.graph
+    graph = world.api.graph
     active: dict[int, set[str]] = {release: set() for release in world.backbone}
     for node in graph.nodes:
-        if graph.node_type(node) == "ensembl_gene" and graph.version(node) not in DB.alternative_versions:
+        if graph.node_type(node) == "ensembl_gene" and graph.version(node) not in ids.SENTINEL_VERSIONS:
             for release in graph.active_releases(node):
                 active[release].add(node)
 
@@ -154,10 +149,10 @@ def test_external_ids_of_every_release_are_those_of_ensembls_tables(organism, re
     identifier that is itself an Ensembl id of the graph stays that Ensembl id and is no external identifier.
     """
     world = real_world(organism)
-    graph = world.api.track.graph
+    graph = world.api.graph
     in_graph: dict[tuple[str, int, int], set[str]] = collections.defaultdict(set)
     for node in graph.nodes:
-        if graph.node_type(node) == DB.nts_external:
+        if graph.node_type(node) == ids.EXTERNAL:
             for database, assembly, release in graph.trios(node):
                 in_graph[(database, assembly, release)].add(node.lower())
     misplaced = {name.lower() for name in graph.graph["misplaced_external_entry"]}
@@ -179,7 +174,7 @@ def test_external_ids_of_every_release_are_those_of_ensembls_tables(organism, re
 def test_genes_outside_the_reference_sequence_are_those_ensembl_marks(organism, real_world):
     """The graph's mark of a gene on a patch, a haplotype or an LRG record is Ensembl's ``non_ref`` attribute."""
     world = real_world(organism)
-    graph = world.api.track.graph
+    graph = world.api.graph
     marked_somewhere = 0
     for release in sorted(world.backbone):
         expected = world.ensembl.non_reference_genes(world.backbone[release], release)
@@ -200,12 +195,12 @@ def test_genes_outside_the_reference_sequence_are_those_ensembl_marks(organism, 
 
 
 def test_ids_of_a_database_and_the_releases_two_ids_share_are_those_of_the_tables(organism, real_world):
-    """``get_external_database_nodes`` and ``get_two_nodes_coinciding_releases`` against the tables.
+    """The identifiers a database has at any release, and the releases at which two gene versions exist together.
 
-    The identifiers a database has at any release, and the releases at which two versions of genes exist together.
+    Both read from the graph's public accessors (cross-reference edges, active ranges) and compared with the tables.
     """
     world = real_world(organism)
-    graph = world.api.track.graph
+    graph = world.api.graph
     misplaced = {name.lower() for name in graph.graph["misplaced_external_entry"]}
     ids: dict[str, set[str]] = collections.defaultdict(set)
     for assembly in sorted({int(a) for a in world.tables.indices}):
@@ -214,8 +209,17 @@ def test_ids_of_a_database_and_the_releases_two_ids_share_are_those_of_the_table
                 if kind == "id" and world.ensembl.selected(form, name, assembly, release):
                     ids[name].add(value.lower())
     assert len(ids) >= 10
+    externals = [node for node in graph.nodes if graph.node_type(node) == "external"]
+
+    def nodes_of(database: str) -> set[str]:
+        return {
+            node
+            for node in externals
+            if any(database in connection.databases for _, connection in graph.xref_edges(node))
+        }
+
     for database, expected in sorted(ids.items()):
-        assert {node.lower() for node in graph.get_external_database_nodes(database)} == expected - misplaced, database
+        assert {node.lower() for node in nodes_of(database)} == expected - misplaced, database
 
     releases_of: dict[str, list[int]] = collections.defaultdict(list)
     for release in sorted(world.backbone):
@@ -225,7 +229,7 @@ def test_ids_of_a_database_and_the_releases_two_ids_share_are_those_of_the_table
     shared = 0
     for first, second in zip(nodes, nodes[1:]):
         together = sorted(set(releases_of[first]) & set(releases_of[second]))
-        ranges = graph.get_two_nodes_coinciding_releases(first, second)
+        ranges = graph.get_intersecting_ranges(graph.active_ranges(first), graph.active_ranges(second))
         covered = [r for low, high in ranges for r in range(int(low), int(min(high, SNAPSHOT)) + 1)]
         assert covered == together, (first, second)
         shared += bool(together)

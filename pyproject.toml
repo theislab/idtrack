@@ -1,79 +1,77 @@
-[tool.poetry]
+[project]
 name = "idtrack"
-version = "0.0.5"
+version = "0.1.0"
 description = "Cross-Temporal and Cross-Database Biological Identifier Mapping."
-authors = ["Kemal Inecik <k.inecik@gmail.com>"]
-license = "BSD-3-Clause"
 readme = "README.rst"
-homepage = "https://github.com/theislab/idtrack"
-repository = "https://github.com/theislab/idtrack"
-documentation = "https://idtrack.readthedocs.io"
-packages = [
-    { include = "idtrack" },
-]
+requires-python = ">=3.12"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+authors = [{ name = "Kemal Inecik", email = "k.inecik@gmail.com" }]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Natural Language :: English",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: BSD License",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    # Poetry adds one classifier per Python version from the `python` constraint below.
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
 ]
-
-
-[tool.poetry.dependencies]
-python = ">=3.12,<3.16"
 # Floors: the oldest release that has Python 3.12 wheels, is at most about three years old (November 2026) and
 # passes the test suite together with the other floors (the "oldest stack" of the dependency-compatibility
 # workflow), unless a reason is given. No floor may name a release that cannot be installed on Python 3.12.
-pandas = ">=2.3"  # supported from 2.3 and on 3.x; anndata 0.13 requires pandas>=2.3
-anndata = ">=0.13"  # July 2026; the first anndata that writes .h5ad files with pandas 3
-numpy = ">=2.1"  # August 2024; anndata 0.13 requires numpy>=2.1
-scipy = ">=1.14"  # June 2024; anndata 0.13 requires scipy>=1.14 (and not 1.17.0)
-h5py = ">=3.11"  # April 2024; anndata 0.13 requires h5py>=3.11
-networkx = ">=3.2"  # October 2023
-PyYAML = ">=6.0.2,<7"  # August 2024; 6.0.1 (July 2023) is older than three years
-requests = ">=2.33.0"  # fixes CVE-2024-47081 and CVE-2026-25645
-urllib3 = ">=2.8.0"  # fixes CVE-2025-50181/50182 and CVE-2026-44431/44432/97687/97688/97689 (add this line explicitly)
-PyMySQL = ">=1.1.1"  # May 2024; fixes CVE-2024-36039
-PySocks = ">=1.7.1"  # the last release (2019), pure Python; no newer release exists
-tqdm = ">=4.66.3"  # May 2024; fixes CVE-2024-34062
+dependencies = [
+    "pandas>=2.3",  # supported from 2.3 and on 3.x; anndata 0.13 requires pandas>=2.3
+    "numpy>=2.1",  # August 2024; anndata 0.13 requires numpy>=2.1
+    "h5py>=3.11",  # April 2024; anndata 0.13 requires h5py>=3.11
+    "networkx>=3.2",  # October 2023
+    "PyYAML>=6.0.2,<7",  # August 2024; 6.0.1 (July 2023) is older than three years
+    "requests>=2.33.0",  # fixes CVE-2024-47081 and CVE-2026-25645
+    "urllib3>=2.8.0",  # fixes CVE-2025-50181/50182 and CVE-2026-44431/44432/97687/97688/97689 (add this line explicitly)
+    "PyMySQL>=1.1.1",  # May 2024; fixes CVE-2024-36039
+    "tqdm>=4.66.3",  # May 2024; fixes CVE-2024-34062
+]
 
-# Optional dependencies for _external_mappers package
-gget = {version = ">=0.28", optional = true}
-pybiomart = {version = ">=0.2", optional = true}
-gprofiler-official = {version = ">=1.0", optional = true}
-mygene = {version = ">=3.2", optional = true}
-biopython = {version = ">=1.81", optional = true}  # the oldest with Python 3.12 wheels
-torch = {version = ">=2.2", optional = true}  # the oldest with Python 3.12 wheels
-transformers = {version = ">=4.36", optional = true}  # the oldest checked that installs on Python 3.12
+[project.optional-dependencies]
+# Harmonization of AnnData objects (`pip install "idtrack[harmonize]"`); nothing else in the package needs these.
+harmonize = [
+    "anndata>=0.13",  # July 2026; the first anndata that writes .h5ad files with pandas 3
+    "scipy>=1.14",  # June 2024; anndata 0.13 requires scipy>=1.14 (and not 1.17.0)
+]
 
-[tool.poetry.extras]
-# External ID mapping backends (gget, pybiomart, gprofiler, mygene)
-external-mappers = ["gget", "pybiomart", "gprofiler-official", "mygene"]
-# Ortholog utilities (requires gget and biopython)
-ortholog = ["gget", "biopython"]
-# Protein embeddings for ortholog features (requires torch and transformers)
-embeddings = ["torch", "transformers"]
-# All external mapper features
-all-external = ["gget", "pybiomart", "gprofiler-official", "mygene", "biopython", "torch", "transformers"]
+[project.urls]
+Homepage = "https://github.com/theislab/idtrack"
+Repository = "https://github.com/theislab/idtrack"
+Documentation = "https://idtrack.readthedocs.io"
+
+[project.scripts]
+idtrack = "idtrack.__main__:main"
+
+[tool.poetry]
+packages = [
+    { include = "idtrack" },
+]
+
+[tool.poetry.dependencies]
+# For Poetry's lock file only (the published metadata is `requires-python` above, without an upper bound): the lock
+# is resolved for the Python versions CI tests, since some development tools declare `<4.0`.
+python = ">=3.12,<3.16"
 
 [tool.poetry.group.dev.dependencies]
-click = ">=8.0.0"
-rich = ">=10.3.0"
+# The `harmonize` extra (its floors are in [project.optional-dependencies]), so that `poetry install` and the
+# constraints nox-poetry exports from the lock include it: the harmonize tests need it.
+anndata = "*"
+scipy = "*"
 pytest = ">=6.2.3"
-pytest-xdist = ">=2.5.0"  # Parallel test execution
-pytest-mock = ">=3.6.0"  # Better mocking utilities
 pytest-cov = ">=3.0.0"  # Coverage integration with pytest
-pytest-timeout = ">=2.1.0"  # Test timeouts
 coverage = {extras = ["toml"], version = ">=5.3"}
-safety = ">=2,<4"
+pip-audit = ">=2.10"
 typeguard = ">=2.12.0"
 xdoctest = {extras = ["colors"], version = ">=0.15.0"}
 sphinx = ">=4.0.2"
@@ -86,17 +84,10 @@ flake8-bugbear = ">=21.4.3"
 flake8-docstrings = ">=1.5.0"
 flake8-rst-docstrings = ">=0.2.3"
 pep8-naming = ">=0.11.1"
-darglint = ">=1.5.8"
 pre-commit-hooks = ">=4.0.1"
 sphinx-rtd-theme = ">=0.5.0"
-sphinx-click = ">=3.0.0"
 Pygments = ">=2.8.1"
-# types-pkg-resources, which was unceremoniously disappeared from the Python supply chain. instead `types-setuptools`
-types-setuptools = ">=71.1.0"
 types-requests = ">=2.25.2"
-types-attrs = ">=19.1.0"
-sphinx-rtd-dark-mode = ">=1.2.3"
-Jinja2 = ">=3.0.1"
 mypy = ">=0.910"
 nox = ">=2022.1.0"
 nox-poetry = ">=1.0.0"
@@ -112,15 +103,16 @@ ipython = ">=8.4.0"
 isort = ">=5.12.0"
 poetry-plugin-export = ">=1.8"
 
-[tool.poetry.scripts]
-idtrack = "idtrack.__main__:main"
-
 [tool.black]
 line-length = 120
 
 [tool.isort]
 profile = "black"
 line_length = 120
+multi_line_output = 3
+include_trailing_comma = true
+balanced_wrapping = true
+known_third_party = ["IPython", "anndata", "h5py", "networkx", "nox", "numpy", "pandas", "pymysql", "pytest", "requests", "scipy", "tqdm", "yaml"]
 skip = ["docs/_logo"]
 
 [tool.mypy]
@@ -174,11 +166,16 @@ markers = [
     "database: marks tests requiring database connection",
     "wrong_argument_type: the test passes an argument of a type the signature excludes, to assert the package's own error (skipped under --typeguard-packages, where typeguard rejects the argument first)",
 ]
+# idtrack's own deprecations fail the suite; those of other packages are shown in the summary. The module pattern is
+# anchored at both ends: Python 3.14+ also matches it against every tail of a warning's file path, and a folder named
+# like `idtrack_*` above an installed package must not turn that package's warnings into errors.
 filterwarnings = [
-    "ignore::DeprecationWarning",
-    "ignore::PendingDeprecationWarning",
+    'error::DeprecationWarning:idtrack(\.\w+)*$',
+    'error::PendingDeprecationWarning:idtrack(\.\w+)*$',
 ]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+# poetry-core 2.2 is the first that writes the license as a License-Expression (PEP 639); 2.0 and 2.1 write the
+# deprecated License field from the same table.
+requires = ["poetry-core>=2.2,<3"]
 build-backend = "poetry.core.masonry.api"

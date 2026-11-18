@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for idtrack._verify_organism module.
+"""Unit tests for idtrack.build.species module.
 
 Tests the VerifyOrganism class for organism name resolution.
 """
@@ -8,6 +8,8 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
+
+from idtrack.errors import EnsemblRestError, InvalidArgumentError, UnknownOrganismError
 
 
 class TestVerifyOrganismInitialization:
@@ -26,10 +28,10 @@ class TestVerifyOrganismInitialization:
             session_instance.get.return_value.__enter__ = MagicMock(return_value=response)
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
-            from idtrack._verify_organism import VerifyOrganism
+            from idtrack.build.species import VerifyOrganism
 
             resolver = VerifyOrganism("HOMO_SAPIENS")
-            assert resolver.organism_query == "homo_sapiens"
+            assert resolver.name == "homo_sapiens"
 
     def test_creates_dataframes(self, mock_requests_session, mock_ensembl_rest_response):
         """Test initialization creates required dataframes."""
@@ -44,7 +46,7 @@ class TestVerifyOrganismInitialization:
             session_instance.get.return_value.__enter__ = MagicMock(return_value=response)
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
-            from idtrack._verify_organism import VerifyOrganism
+            from idtrack.build.species import VerifyOrganism
 
             resolver = VerifyOrganism("homo_sapiens")
 
@@ -68,7 +70,7 @@ class TestGetFormalName:
             session_instance.get.return_value.__enter__ = MagicMock(return_value=response)
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
-            from idtrack._verify_organism import VerifyOrganism
+            from idtrack.build.species import VerifyOrganism
 
             resolver = VerifyOrganism("homo_sapiens")
 
@@ -88,7 +90,7 @@ class TestGetFormalName:
             session_instance.get.return_value.__enter__ = MagicMock(return_value=response)
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
-            from idtrack._verify_organism import VerifyOrganism
+            from idtrack.build.species import VerifyOrganism
 
             resolver = VerifyOrganism("human")
 
@@ -108,11 +110,11 @@ class TestGetFormalName:
             session_instance.get.return_value.__enter__ = MagicMock(return_value=response)
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
-            from idtrack._verify_organism import VerifyOrganism
+            from idtrack.build.species import VerifyOrganism
 
             resolver = VerifyOrganism("unknown_organism")
 
-            with pytest.raises(KeyError):
+            with pytest.raises(UnknownOrganismError, match="`name`='unknown_organism' names no species of Ensembl"):
                 resolver.get_formal_name()
 
 
@@ -132,7 +134,7 @@ class TestGetLatestRelease:
             session_instance.get.return_value.__enter__ = MagicMock(return_value=response)
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
-            from idtrack._verify_organism import VerifyOrganism
+            from idtrack.build.species import VerifyOrganism
 
             resolver = VerifyOrganism("homo_sapiens")
 
@@ -155,13 +157,14 @@ class TestFetchOrganismAndLatestRelease:
 
             session_instance.get.return_value.__enter__.side_effect = requests.exceptions.ConnectTimeout()
 
-            from idtrack._db import DB, EnsemblRestError
-            from idtrack._verify_organism import VerifyOrganism
+            from idtrack import settings
+            from idtrack.build.species import VerifyOrganism
+            from idtrack.errors import EnsemblRestError
 
             # Every attempt is made, and the message says what to change.
             with pytest.raises(EnsemblRestError, match="reading_timeout"):
                 VerifyOrganism("homo_sapiens").ensembl_release_dataframe
-            assert session_instance.get.call_count == DB.rest_attempts
+            assert session_instance.get.call_count == settings.ENSEMBL.rest_attempts
 
     def test_validates_core_group(self, mock_requests_session):
         """A configured organism without a 'core' group is an error; another such species is left out (OE-6)."""
@@ -192,9 +195,9 @@ class TestFetchOrganismAndLatestRelease:
             session_instance.get.return_value.__enter__ = MagicMock(return_value=response)
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
-            from idtrack._verify_organism import VerifyOrganism
+            from idtrack.build.species import VerifyOrganism
 
-            with pytest.raises(ValueError, match="core"):
+            with pytest.raises(EnsemblRestError, match="core"):
                 VerifyOrganism("sus_scrofa").ensembl_release_dataframe
             VerifyOrganism._species_cache.clear()
             invalid_response["species"][0]["name"] = "test_organism"
@@ -254,9 +257,9 @@ class TestFetchOrganismAndLatestRelease:
             session_instance.get.return_value.__enter__ = MagicMock(return_value=response)
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
-            from idtrack._verify_organism import VerifyOrganism
+            from idtrack.build.species import VerifyOrganism
 
-            with pytest.raises(ValueError, match="more than one"):
+            with pytest.raises(EnsemblRestError, match="more than one"):
                 VerifyOrganism("homo_sapiens").ensembl_release_dataframe
 
 
@@ -276,7 +279,7 @@ class TestSynonymDataframe:
             session_instance.get.return_value.__enter__ = MagicMock(return_value=response)
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
-            from idtrack._verify_organism import VerifyOrganism
+            from idtrack.build.species import VerifyOrganism
 
             resolver = VerifyOrganism("homo_sapiens")
 
@@ -298,7 +301,7 @@ class TestSynonymDataframe:
             session_instance.get.return_value.__enter__ = MagicMock(return_value=response)
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
-            from idtrack._verify_organism import VerifyOrganism
+            from idtrack.build.species import VerifyOrganism
 
             resolver = VerifyOrganism("homo_sapiens")
 
@@ -325,7 +328,7 @@ class TestReleaseDataframe:
             session_instance.get.return_value.__enter__ = MagicMock(return_value=response)
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
-            from idtrack._verify_organism import VerifyOrganism
+            from idtrack.build.species import VerifyOrganism
 
             resolver = VerifyOrganism("homo_sapiens")
 
@@ -346,7 +349,7 @@ class TestReleaseDataframe:
             session_instance.get.return_value.__enter__ = MagicMock(return_value=response)
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
-            from idtrack._verify_organism import VerifyOrganism
+            from idtrack.build.species import VerifyOrganism
 
             resolver = VerifyOrganism("homo_sapiens")
 
@@ -398,7 +401,7 @@ class TestAmbiguousSynonyms:
             session_instance.get.return_value.__enter__ = MagicMock(return_value=response)
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
-            from idtrack._verify_organism import VerifyOrganism
+            from idtrack.build.species import VerifyOrganism
 
             resolver = VerifyOrganism("species_one")
 
@@ -448,11 +451,11 @@ class TestAmbiguousSynonyms:
             session_instance.get.return_value.__enter__ = MagicMock(return_value=response)
             session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
-            from idtrack._verify_organism import VerifyOrganism
+            from idtrack.build.species import VerifyOrganism
 
             resolver = VerifyOrganism("shared_name")
 
-            with pytest.raises(ValueError, match="ambiguous"):
+            with pytest.raises(InvalidArgumentError, match="ambiguous"):
                 resolver.get_formal_name()
 
 
@@ -468,7 +471,7 @@ def _resolver_for(species: list[dict], query):
         session_instance.get.return_value.__enter__ = MagicMock(return_value=response)
         session_instance.get.return_value.__exit__ = MagicMock(return_value=False)
 
-        from idtrack._verify_organism import VerifyOrganism
+        from idtrack.build.species import VerifyOrganism
 
         resolver = VerifyOrganism(query)
         resolver.ensembl_release_dataframe  # fetch while the REST service is mocked
@@ -535,24 +538,24 @@ class TestResolution:
     def test_ambiguous_common_name_lists_candidates(self):
         """Ambiguous common name lists candidates."""
         resolver = _resolver_for(SPECIES, "house mouse")
-        with pytest.raises(ValueError, match="ambiguous") as info:
+        with pytest.raises(InvalidArgumentError, match="ambiguous") as info:
             resolver.get_formal_name()
         assert "mus_musculus_aj" in str(info.value) and "mus_musculus_balbcj" in str(info.value)
 
     def test_taxon_without_species_level_entry_is_ambiguous(self):
         """Taxon without species level entry is ambiguous."""
-        with pytest.raises(ValueError, match="mus_musculus_aj, mus_musculus_balbcj"):
+        with pytest.raises(InvalidArgumentError, match="mus_musculus_aj, mus_musculus_balbcj"):
             _resolver_for(SPECIES, 10090).get_formal_name()
 
     def test_unknown_query(self):
         """Unknown query."""
-        with pytest.raises(KeyError):
+        with pytest.raises(UnknownOrganismError, match="`name`='zebrafish' names no species of Ensembl"):
             _resolver_for(SPECIES, "zebrafish").get_formal_name()
 
     def test_integer_query_is_normalised(self):
         """Integer query is normalised."""
         resolver = _resolver_for(SPECIES, 9544)
-        assert resolver.organism_query == "9544"
+        assert resolver.name == "9544"
         assert resolver.get_latest_release() == 116
 
 
@@ -561,7 +564,7 @@ class TestNetworkUse:
 
     def test_configured_formal_name_needs_no_network(self, monkeypatch):
         """A configured organism's formal name (also with spaces) resolves without any request."""
-        import idtrack._verify_organism as vo
+        import idtrack.build.species as vo
 
         def _no_network(*args, **kwargs):
             raise AssertionError("the network was used")
@@ -573,7 +576,7 @@ class TestNetworkUse:
 
     def test_species_list_is_fetched_once(self, monkeypatch):
         """Several resolvers in one process share one request."""
-        import idtrack._verify_organism as vo
+        import idtrack.build.species as vo
 
         calls = []
 
@@ -586,17 +589,17 @@ class TestNetworkUse:
         assert vo.VerifyOrganism("9606").get_latest_release() == 116
         assert len(calls) == 1
 
-        from idtrack._db import DB
+        from idtrack import settings
 
-        # A list older than `DB.rest_species_cache_seconds` is fetched again (once).
+        # A list older than `settings.ENSEMBL.rest_species_cache_seconds` is fetched again (once).
         for url, (fetched, tables) in list(vo.VerifyOrganism._species_cache.items()):
-            vo.VerifyOrganism._species_cache[url] = (fetched - 2 * DB.rest_species_cache_seconds, tables)
+            vo.VerifyOrganism._species_cache[url] = (fetched - 2 * settings.ENSEMBL.rest_species_cache_seconds, tables)
         vo.VerifyOrganism("9606").get_formal_name()
         assert len(calls) == 2
 
     def test_declared_aliases_resolve_without_the_network_and_win_over_ensembl(self, monkeypatch):
         """Decision 22: `pig` is sus_scrofa although Ensembl lists it as the common name of every pig breed."""
-        import idtrack._verify_organism as vo
+        import idtrack.build.species as vo
 
         calls = []
 
@@ -625,7 +628,7 @@ class TestNetworkUse:
             assert vo.VerifyOrganism(query).get_formal_name() == organism, query
         assert calls == []
         # a common name that idtrack does not declare is still ambiguous when Ensembl gives it to several species
-        with pytest.raises(ValueError, match="ambiguous"):
+        with pytest.raises(InvalidArgumentError, match="ambiguous"):
             vo.VerifyOrganism("cow").get_formal_name()
         assert vo.VerifyOrganism("cattle").get_formal_name() == "bos_taurus"
 
@@ -636,7 +639,7 @@ class TestRestGetJson:
     def _session(self, monkeypatch, outcomes):
         import requests
 
-        import idtrack._ensembl_access as ea
+        import idtrack.build.ensembl_access as ea
 
         calls = []
 
@@ -681,28 +684,34 @@ class TestRestGetJson:
         assert len(calls) == 3
 
     def test_uses_the_configured_timeouts(self, monkeypatch):
-        """`DB.connection_timeout` and `DB.reading_timeout` are what each request uses (set them to wait longer)."""
-        from idtrack._db import DB
+        """`settings.ENSEMBL.connection_timeout` and `settings.ENSEMBL.reading_timeout` are what each request uses.
 
-        monkeypatch.setattr(DB, "reading_timeout", 120)
+        Set them to wait longer.
+        """
+        from idtrack import settings
+
+        monkeypatch.setattr(settings.ENSEMBL, "reading_timeout", 120)
         ea, calls, _ = self._session(monkeypatch, [(200, {})])
         ea.rest_get_json("/info/ping", what="a ping")
-        assert calls == [(DB.connection_timeout, 120)]
+        assert calls == [(settings.ENSEMBL.connection_timeout, 120)]
 
     def test_connection_and_ssl_errors_become_one_clear_error(self, monkeypatch):
         """Connection and SSL errors are retried and end in `EnsemblRestError` naming the URL."""
         import requests
 
-        from idtrack._db import DB, EnsemblRestError
+        from idtrack import settings
+        from idtrack.errors import EnsemblRestError
 
-        ea, calls, _ = self._session(monkeypatch, [requests.exceptions.SSLError("cert")] * DB.rest_attempts)
+        ea, calls, _ = self._session(
+            monkeypatch, [requests.exceptions.SSLError("cert")] * settings.ENSEMBL.rest_attempts
+        )
         with pytest.raises(EnsemblRestError, match="rest.ensembl.org/info/ping.*SSLError"):
             ea.rest_get_json("/info/ping", what="a ping")
-        assert len(calls) == DB.rest_attempts
+        assert len(calls) == settings.ENSEMBL.rest_attempts
 
     def test_client_errors_are_not_retried(self, monkeypatch):
         """A 400 is an answer: no retry."""
-        from idtrack._db import EnsemblRestError
+        from idtrack.errors import EnsemblRestError
 
         ea, calls, _ = self._session(monkeypatch, [(400, None), (200, {})])
         with pytest.raises(EnsemblRestError, match="HTTP 400"):
@@ -721,7 +730,7 @@ class TestRestGetJson:
 )
 def test_assembly_names_of_the_table_resolve_without_the_network(query, organism, monkeypatch):
     """organisms_externals-6/-7: every assembly name of the organism table names its organism, offline."""
-    from idtrack._verify_organism import VerifyOrganism
+    from idtrack.build.species import VerifyOrganism
 
     monkeypatch.setattr(
         VerifyOrganism,

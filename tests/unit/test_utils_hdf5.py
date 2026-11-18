@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for idtrack._utils_hdf5: one immutable, atomically written HDF5 file per cached table."""
+"""Unit tests for idtrack.build.tables: one immutable, atomically written HDF5 file per cached table."""
 
 import multiprocessing
 import os
@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import idtrack._utils_hdf5 as hs
-from idtrack._utils_hdf5 import TableFormatError, load_table, read_table, read_table_params, write_table
+import idtrack.build.tables as hs
+from idtrack.build.tables import TableFormatError, load_table, read_table, write_table
 
 
 def _default_text_dtype():
@@ -180,7 +180,10 @@ def test_load_table_requires_the_same_parameters(tmp_path):
     assert load_table(path, {"window": [48, 115], "dbs": ["A", "B"]}) is not None
     assert load_table(path, {"window": [76, 115], "dbs": ["A", "B"]}) is None
     assert load_table(path, {"window": [48, 115], "dbs": ["A"]}) is None
-    assert read_table_params(path) == {"dbs": ["A", "B"], "window": [48, 115]}
+    import json
+
+    with h5py.File(path, "r", locking=False) as f:  # the parameters recorded in the file, as written
+        assert json.loads(f.attrs["params"]) == {"dbs": ["A", "B"], "window": [48, 115]}
 
 
 def test_damaged_or_foreign_files_are_reported_absent(tmp_path):
@@ -267,7 +270,7 @@ def test_readers_never_see_a_partial_table_while_a_writer_replaces_it(tmp_path):
 
 def test_content_digest_identifies_the_table(tmp_path):
     """Equal tables have equal digests whoever wrote them; a changed value changes it (decision 5, for graph files)."""
-    from idtrack._utils_hdf5 import read_table_digest
+    from idtrack.build.tables import read_table_digest
 
     df = _mixed_frame()
     write_table(str(tmp_path / "a.h5"), df, {"x": 1})

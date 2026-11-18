@@ -135,17 +135,8 @@ If you use IDTrack in your research, please cite:
       year = {2025}
     }
 
-For academic publications, you may also cite the specific version you used:
-
-.. code-block:: bibtex
-
-    @software{idtrack_version,
-      author = {Inecik, Kemal},
-      title = {IDTrack},
-      version = {0.0.5},
-      url = {https://github.com/theislab/idtrack},
-      year = {2025}
-    }
+For academic publications, also cite the version you used: add a ``version`` field with the value of
+``idtrack.__version__`` (or ``pip show idtrack``) to the entry above.
 
 
 License

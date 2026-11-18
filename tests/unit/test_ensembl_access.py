@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for `idtrack._ensembl_access`: access mode and the per-process port reachability memory (no network)."""
+"""Unit tests for `idtrack.build.ensembl_access`: access mode and the per-process port reachability memory (no network)."""
 
 from __future__ import annotations
 
@@ -10,9 +10,10 @@ import pandas as pd
 import pymysql
 import pytest
 
-from idtrack._database_manager import DatabaseManager
-from idtrack._db import DB
-from idtrack._ensembl_access import PortReachability, ensembl_access_mode, reachability
+from idtrack import settings
+from idtrack.build.database_manager import DatabaseManager
+from idtrack.build.ensembl_access import PortReachability, ensembl_access_mode, reachability
+from idtrack.errors import InvalidArgumentError
 
 
 @pytest.fixture
@@ -25,10 +26,10 @@ def fresh_reachability(monkeypatch):
         probes.append((host, int(port)))
         return answers.get((host, int(port)), False)
 
-    reachability.reset()
+    reachability._known.clear()  # forget the process-wide answers
     monkeypatch.setattr(PortReachability, "_probe", staticmethod(_probe))
     yield probes, answers
-    reachability.reset()
+    reachability._known.clear()  # forget the process-wide answers
 
 
 class TestAccessMode:
@@ -36,26 +37,26 @@ class TestAccessMode:
 
     def test_default_is_auto(self, monkeypatch):
         """Default is auto."""
-        monkeypatch.setattr(DB, "ensembl_access", None)
-        monkeypatch.delenv(DB.ensembl_access_env_var, raising=False)
+        monkeypatch.setattr(settings.ENSEMBL, "access", None)
+        monkeypatch.delenv(settings.ENSEMBL.access_env_var, raising=False)
         assert ensembl_access_mode() == "auto"
 
     def test_environment_variable(self, monkeypatch):
         """Environment variable."""
-        monkeypatch.setattr(DB, "ensembl_access", None)
-        monkeypatch.setenv(DB.ensembl_access_env_var, " HTTPS ")
+        monkeypatch.setattr(settings.ENSEMBL, "access", None)
+        monkeypatch.setenv(settings.ENSEMBL.access_env_var, " HTTPS ")
         assert ensembl_access_mode() == "https"
 
     def test_attribute_wins_over_environment(self, monkeypatch):
         """Attribute wins over environment."""
-        monkeypatch.setenv(DB.ensembl_access_env_var, "https")
-        monkeypatch.setattr(DB, "ensembl_access", "auto")
+        monkeypatch.setenv(settings.ENSEMBL.access_env_var, "https")
+        monkeypatch.setattr(settings.ENSEMBL, "access", "auto")
         assert ensembl_access_mode() == "auto"
 
     def test_invalid_value(self, monkeypatch):
         """Invalid value."""
-        monkeypatch.setattr(DB, "ensembl_access", "mysql-only")
-        with pytest.raises(ValueError, match="not a valid Ensembl access mode"):
+        monkeypatch.setattr(settings.ENSEMBL, "access", "mysql-only")
+        with pytest.raises(InvalidArgumentError, match="not a valid Ensembl access mode"):
             ensembl_access_mode()
 
 
@@ -65,39 +66,30 @@ class TestReachabilityMemory:
     def test_one_probe_per_port_per_process(self, fresh_reachability, monkeypatch):
         """One probe per port per process."""
         probes, answers = fresh_reachability
-        monkeypatch.setattr(DB, "ensembl_access", "auto")
-        answers[(DB.mysql_host, 3306)] = True
+        monkeypatch.setattr(settings.ENSEMBL, "access", "auto")
+        answers[(settings.ENSEMBL.mysql_host, 3306)] = True
         for _ in range(5):
             assert reachability.mysql_port_usable(3306) is True
             assert reachability.mysql_port_usable(5306) is False
-        assert probes == [(DB.mysql_host, 3306), (DB.mysql_host, 5306)]
+        assert probes == [(settings.ENSEMBL.mysql_host, 3306), (settings.ENSEMBL.mysql_host, 5306)]
 
     def test_https_mode_never_probes(self, fresh_reachability, monkeypatch):
         """Https mode never probes."""
         probes, answers = fresh_reachability
-        answers[(DB.mysql_host, 3306)] = True
-        monkeypatch.setattr(DB, "ensembl_access", "https")
+        answers[(settings.ENSEMBL.mysql_host, 3306)] = True
+        monkeypatch.setattr(settings.ENSEMBL, "access", "https")
         assert reachability.mysql_port_usable(3306) is False
         assert probes == []
 
     def test_failure_after_success_marks_unreachable(self, fresh_reachability, monkeypatch):
         """Failure after success marks unreachable."""
         probes, answers = fresh_reachability
-        monkeypatch.setattr(DB, "ensembl_access", "auto")
-        answers[(DB.mysql_host, 3306)] = True
+        monkeypatch.setattr(settings.ENSEMBL, "access", "auto")
+        answers[(settings.ENSEMBL.mysql_host, 3306)] = True
         assert reachability.mysql_port_usable(3306)
-        reachability.mark_unreachable(DB.mysql_host, 3306, "lost connection")
+        reachability.mark_unreachable(settings.ENSEMBL.mysql_host, 3306, "lost connection")
         assert not reachability.mysql_port_usable(3306)
-        assert probes == [(DB.mysql_host, 3306)]
-
-    def test_reset_probes_again(self, fresh_reachability, monkeypatch):
-        """Reset probes again."""
-        probes, _answers = fresh_reachability
-        monkeypatch.setattr(DB, "ensembl_access", "auto")
-        reachability.mysql_port_usable(3337)
-        reachability.reset()
-        reachability.mysql_port_usable(3337)
-        assert probes == [(DB.mysql_host, 3337), (DB.mysql_host, 3337)]
+        assert probes == [(settings.ENSEMBL.mysql_host, 3306)]
 
 
 class TestDatabaseManagerUsesTheMemory:
@@ -106,13 +98,13 @@ class TestDatabaseManagerUsesTheMemory:
     def test_index_built_once_and_cached_lookups_do_not_probe(self, fresh_reachability, monkeypatch):
         """Index built once and cached lookups do not probe."""
         probes, _answers = fresh_reachability
-        monkeypatch.setattr(DB, "ensembl_access", "auto")
+        monkeypatch.setattr(settings.ENSEMBL, "access", "auto")
         monkeypatch.setattr(DatabaseManager, "_core_db_index_cache", {})
         monkeypatch.setattr(
             DatabaseManager,
             "_get_core_db_index_from_ftp",
             classmethod(
-                lambda cls, *, organism, genome_assembly, ports: {
+                lambda cls, *, organism, assembly, ports: {
                     "releases": [100],
                     "db_for_release": {100: "sus_scrofa_core_100_111"},
                     "port_for_release": {100: 3306},
@@ -120,17 +112,17 @@ class TestDatabaseManagerUsesTheMemory:
             ),
         )
         for _ in range(10):
-            index = DatabaseManager._get_core_db_index(organism="sus_scrofa", genome_assembly=111)
+            index = DatabaseManager._get_core_db_index(organism="sus_scrofa", assembly=111)
         assert index["releases"] == [100]
-        assert sorted(probes) == [(DB.mysql_host, 3306), (DB.mysql_host, 5306)]
+        assert sorted(probes) == [(settings.ENSEMBL.mysql_host, 3306), (settings.ENSEMBL.mysql_host, 5306)]
 
     def test_https_mode_download_never_touches_mysql(self, fresh_reachability, monkeypatch):
         """Https mode download never touches mysql."""
         probes, _answers = fresh_reachability
-        monkeypatch.setattr(DB, "ensembl_access", "https")
+        monkeypatch.setattr(settings.ENSEMBL, "access", "https")
         dm = DatabaseManager.__new__(DatabaseManager)
-        dm.organism, dm.genome_assembly, dm.ensembl_release = "sus_scrofa", 111, 100
-        dm.mysql_settings = {"host": DB.mysql_host, "port": 3306}
+        dm.organism, dm.assembly, dm.release = "sus_scrofa", 111, 100
+        dm.mysql_settings = {"host": settings.ENSEMBL.mysql_host, "port": 3306}
         monkeypatch.setattr(
             DatabaseManager,
             "_get_core_db_index",
@@ -149,11 +141,11 @@ class TestDatabaseManagerUsesTheMemory:
     def test_connection_failure_during_query_marks_port(self, fresh_reachability, monkeypatch):
         """Connection failure during query marks port."""
         probes, answers = fresh_reachability
-        monkeypatch.setattr(DB, "ensembl_access", "auto")
-        answers[(DB.mysql_host, 3306)] = True
+        monkeypatch.setattr(settings.ENSEMBL, "access", "auto")
+        answers[(settings.ENSEMBL.mysql_host, 3306)] = True
         dm = DatabaseManager.__new__(DatabaseManager)
-        dm.organism, dm.genome_assembly, dm.ensembl_release = "sus_scrofa", 111, 100
-        dm.mysql_settings = {"host": DB.mysql_host, "port": 3306}
+        dm.organism, dm.assembly, dm.release = "sus_scrofa", 111, 100
+        dm.mysql_settings = {"host": settings.ENSEMBL.mysql_host, "port": 3306}
         dm.__dict__["mysql_database"] = "sus_scrofa_core_100_111"
         monkeypatch.setattr(
             DatabaseManager, "_get_core_db_index", classmethod(lambda cls, **kw: {"releases_on_mysql": [100]})
@@ -166,18 +158,18 @@ class TestDatabaseManagerUsesTheMemory:
             DatabaseManager, "_download_table_from_ftp", lambda self, table_key, usecols=None: pd.DataFrame({"a": [1]})
         )
         dm.download_table("gene")
-        assert reachability.known()[(DB.mysql_host, 3306)] is False
+        assert reachability._known[(settings.ENSEMBL.mysql_host, 3306)][0] is False
         dm.download_table("gene")
-        assert probes == [(DB.mysql_host, 3306)]
+        assert probes == [(settings.ENSEMBL.mysql_host, 3306)]
 
     def test_query_error_does_not_mark_port(self, fresh_reachability, monkeypatch):
         """A query error is raised as it is: no silent HTTPS fallback, and the port stays usable (access-9)."""
         _probes, answers = fresh_reachability
-        monkeypatch.setattr(DB, "ensembl_access", "auto")
-        answers[(DB.mysql_host, 3306)] = True
+        monkeypatch.setattr(settings.ENSEMBL, "access", "auto")
+        answers[(settings.ENSEMBL.mysql_host, 3306)] = True
         dm = DatabaseManager.__new__(DatabaseManager)
-        dm.organism, dm.genome_assembly, dm.ensembl_release = "sus_scrofa", 111, 100
-        dm.mysql_settings = {"host": DB.mysql_host, "port": 3306}
+        dm.organism, dm.assembly, dm.release = "sus_scrofa", 111, 100
+        dm.mysql_settings = {"host": settings.ENSEMBL.mysql_host, "port": 3306}
         dm.__dict__["mysql_database"] = "sus_scrofa_core_100_111"
         monkeypatch.setattr(
             DatabaseManager, "_get_core_db_index", classmethod(lambda cls, **kw: {"releases_on_mysql": [100]})
@@ -190,13 +182,13 @@ class TestDatabaseManagerUsesTheMemory:
         with pytest.raises(pymysql.err.ProgrammingError):
             dm.download_table("gene")
         https.assert_not_called()
-        assert reachability.known()[(DB.mysql_host, 3306)] is True
+        assert reachability._known[(settings.ENSEMBL.mysql_host, 3306)][0] is True
 
 
 def test_dump_reader_is_used_for_https_tables(monkeypatch):
     """`_download_table_from_ftp` decodes escapes through `read_mysql_dump` (an escaped newline stays one row)."""
     dm = DatabaseManager.__new__(DatabaseManager)
-    dm.organism, dm.genome_assembly, dm.ensembl_release = "sus_scrofa", 111, 100
+    dm.organism, dm.assembly, dm.release = "sus_scrofa", 111, 100
     dm.log = MagicMock()
     monkeypatch.setattr(DatabaseManager, "_ftp_db_dir_url", lambda self: "https://x/db/")
     monkeypatch.setattr(DatabaseManager, "_ftp_schema_url", lambda self: "https://x/db/db.sql.gz")
@@ -226,14 +218,16 @@ class TestInvalidAccessMode:
 
     def test_database_manager_raises_the_mode_error(self, tmp_path, monkeypatch):
         """`DatabaseManager(...)` reports the bad value itself, not a failed assembly inference."""
-        monkeypatch.setattr(DB, "ensembl_access", None)
-        monkeypatch.setenv(DB.ensembl_access_env_var, "htps")
+        monkeypatch.setattr(settings.ENSEMBL, "access", None)
+        monkeypatch.setenv(settings.ENSEMBL.access_env_var, "htps")
         monkeypatch.setattr(
             DatabaseManager,
             "_get_core_db_index",
             classmethod(lambda cls, **kw: (_ for _ in ()).throw(AssertionError("must not be reached"))),
         )
-        with pytest.raises(ValueError, match="IDTRACK_ENSEMBL_ACCESS='htps' is not a valid Ensembl access mode"):
+        with pytest.raises(
+            InvalidArgumentError, match="IDTRACK_ENSEMBL_ACCESS='htps' is not a valid Ensembl access mode"
+        ):
             DatabaseManager(organism="sus_scrofa", form="gene", local_repository=str(tmp_path))
 
     def test_create_available_databases_does_not_swallow_it(self, monkeypatch):
@@ -241,14 +235,14 @@ class TestInvalidAccessMode:
         dm = DatabaseManager.__new__(DatabaseManager)
         dm.organism = "sus_scrofa"
         dm.log = MagicMock()
-        monkeypatch.setattr(DB, "ensembl_access", "mysql-only")
-        with pytest.raises(ValueError, match="not a valid Ensembl access mode"):
+        monkeypatch.setattr(settings.ENSEMBL, "access", "mysql-only")
+        with pytest.raises(InvalidArgumentError, match="not a valid Ensembl access mode"):
             dm.create_available_databases()
 
 
 def test_an_unreachable_port_is_probed_again_after_a_while(monkeypatch):
     """storage_net-16: a failed port is retried after `retry_after_seconds`, and the wait doubles per failure."""
-    import idtrack._ensembl_access as ea
+    import idtrack.build.ensembl_access as ea
 
     clock = [1000.0]
     monkeypatch.setattr(ea.time, "monotonic", lambda: clock[0])
@@ -273,10 +267,10 @@ def test_https_get_tells_absent_from_unknown(monkeypatch):
     """access-3: 404 is "absent" (None); time-outs and 5xx are retried and then raised."""
     import requests
 
-    import idtrack._ensembl_access as ea
+    import idtrack.build.ensembl_access as ea
 
-    monkeypatch.setattr(DB, "rest_retry_wait", 0.0)
-    monkeypatch.setattr(DB, "rest_attempts", 3)
+    monkeypatch.setattr(settings.ENSEMBL, "rest_retry_wait", 0.0)
+    monkeypatch.setattr(settings.ENSEMBL, "rest_attempts", 3)
     calls = []
 
     def resp(status):

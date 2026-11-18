@@ -4,6 +4,8 @@
 # - Uses a matrix so each (os, python) pair is a separate job => parallelism.
 # - Uses `python -m build` (PEP 517) instead of installing Poetry in CI to reduce toolchain fragility.
 # - Installs the wheel with `--no-deps` to avoid downloading heavy scientific stacks on all platforms.
+# - `test-wheel` then installs the wheel built on Linux with its dependencies, on every supported Python, with and
+#   without the `harmonize` extra, and runs the unit suite against the installed package (.github/scripts/test_wheel.sh).
 name: Build idtrack Package
 
 on:
@@ -45,11 +47,11 @@ jobs:
 
         steps:
             - name: Check out source-code repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
 
             # Install the Python interpreter for this matrix element.
             - name: Set up Python ${{ matrix.python-version }}
-              uses: actions/setup-python@v5
+              uses: actions/setup-python@v7
               with:
                   python-version: ${{ matrix.python-version }}
                   allow-prereleases: true
@@ -78,3 +80,63 @@ jobs:
               run: |
                   python -m pip install --no-deps dist/*.whl
                   python -c "import importlib.metadata as m; print(m.version('idtrack'))"
+
+            # The wheel is pure Python (py3-none-any): the one built on Linux with the oldest Python is the one tested.
+            - name: Upload wheel
+              if: matrix.os == 'ubuntu-22.04' && matrix.python-version == '3.12'
+              uses: actions/upload-artifact@v7
+              with:
+                  name: wheel
+                  path: dist/*.whl
+
+    test-wheel:
+        name: Test the installed wheel (py${{ matrix.python-version }}${{ matrix.extra && format(' / {0}', matrix.extra) || '' }})
+        needs: build
+        runs-on: ubuntu-22.04
+        timeout-minutes: 45
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: ["3.12", "3.13", "3.14", "3.15"]
+                # "" is the plain install; the tests that need the extra's packages skip themselves there.
+                extra: ["", "harmonize"]
+
+        steps:
+            # The tests, pyproject.toml (pytest's settings), poetry.lock (pytest's version) and the scripts.
+            - name: Check out the repository
+              uses: actions/checkout@v7
+
+            - name: Set up Python ${{ matrix.python-version }}
+              uses: actions/setup-python@v7
+              with:
+                  python-version: ${{ matrix.python-version }}
+                  allow-prereleases: true
+                  cache: pip
+                  cache-dependency-path: |
+                      pyproject.toml
+                      poetry.lock
+
+            # h5py has no wheels for Python 3.15 yet (h5py 3.16.0, November 2026), so pip builds it from source, against
+            # the HDF5 that the h5py wheels of the other Python versions bundle (see run_tests.yml; update together).
+            - name: Restore the HDF5 build (Python 3.15 only)
+              if: matrix.python-version == '3.15'
+              uses: actions/cache@v6
+              with:
+                  path: ~/hdf5-2.0.0
+                  key: hdf5-2.0.0-${{ runner.os }}-ubuntu-22.04-${{ hashFiles('.github/scripts/build_hdf5.sh') }}
+
+            - name: Build HDF5 2.0.0 (Python 3.15 only)
+              if: matrix.python-version == '3.15'
+              run: bash .github/scripts/build_hdf5.sh 2.0.0 "$HOME/hdf5-2.0.0"
+
+            - name: Download wheel
+              uses: actions/download-artifact@v8
+              with:
+                  name: wheel
+                  path: dist
+
+            - name: Install the wheel in a fresh virtual environment and run the unit suite against it
+              env:
+                  PYTHON: python
+                  WORK_DIR: ${{ runner.temp }}/test-wheel
+              run: bash .github/scripts/test_wheel.sh dist/*.whl "${{ matrix.extra }}"

@@ -20,16 +20,16 @@ import pymysql
 import pytest
 import requests
 
-from idtrack._database_manager import DatabaseManager
-from idtrack._db import DB
-from idtrack._ensembl_access import reachability
+from idtrack import organisms, settings
+from idtrack.build.database_manager import DatabaseManager
+from idtrack.build.ensembl_access import reachability
 
 
 def _can_reach_ensembl_ftp() -> bool:
     try:
         r = requests.get(
-            f"https://{DB.ensembl_ftp_base}/pub/",
-            timeout=(DB.connection_timeout, DB.reading_timeout),
+            f"https://{settings.ENSEMBL.https_host}/pub/",
+            timeout=(settings.ENSEMBL.connection_timeout, settings.ENSEMBL.reading_timeout),
         )
         return bool(r.ok)
     except Exception:
@@ -39,12 +39,12 @@ def _can_reach_ensembl_ftp() -> bool:
 def _can_connect_mysql_port(port: int) -> bool:
     try:
         with pymysql.connect(
-            host=DB.mysql_host,
-            user=DB.myqsl_user,
-            password=DB.mysql_togo,
+            host=settings.ENSEMBL.mysql_host,
+            user=settings.ENSEMBL.mysql_user,
+            password=settings.ENSEMBL.mysql_password,
             port=int(port),
-            connect_timeout=max(DB.connection_timeout, 10),
-            read_timeout=max(DB.reading_timeout, 10),
+            connect_timeout=max(settings.ENSEMBL.connection_timeout, 10),
+            read_timeout=max(settings.ENSEMBL.reading_timeout, 10),
         ) as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT 1")
@@ -58,13 +58,13 @@ def _can_connect_mysql_port(port: int) -> bool:
 def human38_mysql_release() -> int:
     """Return a human GRCh38 Ensembl release reachable via both FTP and MySQL."""
     if not _can_reach_ensembl_ftp():
-        pytest.skip(f"Unable to reach https://{DB.ensembl_ftp_base}/pub/ from the test environment.")
+        pytest.skip(f"Unable to reach https://{settings.ENSEMBL.https_host}/pub/ from the test environment.")
 
-    ports = [int(p) for p in DB.assembly_mysqlport_priority["homo_sapiens"][38]["Ports"]]
+    ports = [int(p) for p in organisms.ORGANISM_TABLE["homo_sapiens"][38]["Ports"]]
     if not any(reachability.mysql_port_usable(p) and _can_connect_mysql_port(p) for p in ports):
         pytest.skip(f"Ensembl public MySQL not reachable on any of the human GRCh38 ports: {ports}.")
 
-    core_index = DatabaseManager._get_core_db_index(organism="homo_sapiens", genome_assembly=38)
+    core_index = DatabaseManager._get_core_db_index(organism="homo_sapiens", assembly=38)
     mysql_releases = sorted(set(core_index.get("releases_on_mysql", []) or []))
     if not mysql_releases:
         pytest.skip("No MySQL-backed human GRCh38 releases were discovered in this environment.")
@@ -84,8 +84,8 @@ def test_download_table_mysql_matches_ftp_for_coord_system(human38_mysql_release
             organism="homo_sapiens",
             form="gene",
             local_repository=tmpdir,
-            ensembl_release=int(human38_mysql_release),
-            genome_assembly=38,
+            release=int(human38_mysql_release),
+            assembly=38,
             store_raw_always=False,
         )
 
@@ -133,13 +133,13 @@ def test_get_table_cache_overwrite_is_source_independent(human38_mysql_release: 
             organism="homo_sapiens",
             form="gene",
             local_repository=tmpdir,
-            ensembl_release=int(human38_mysql_release),
-            genome_assembly=38,
+            release=int(human38_mysql_release),
+            assembly=38,
             store_raw_always=False,
         )
 
         # 1) Force FTP for the first materialisation (access mode "https": MySQL is not touched).
-        monkeypatch.setattr(DB, "ensembl_access", "https")
+        monkeypatch.setattr(settings.ENSEMBL, "access", "https")
         df_ftp_cached = dm.get_table(
             "coord_system",
             usecols=usecols,
@@ -148,7 +148,7 @@ def test_get_table_cache_overwrite_is_source_independent(human38_mysql_release: 
         )
 
         # 2) Force MySQL and overwrite the same cached key.
-        monkeypatch.setattr(DB, "ensembl_access", "auto")
+        monkeypatch.setattr(settings.ENSEMBL, "access", "auto")
 
         def _forbid_ftp(*_args, **_kwargs):
             raise AssertionError("Unexpected FTP fallback while forcing MySQL overwrite of the cached table.")

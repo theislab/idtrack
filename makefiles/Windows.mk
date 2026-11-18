@@ -58,6 +58,18 @@ lint: ## check style with flake8
 test: ## run tests quickly with the default Python
 	pytest
 
+test-slow: ## run slow tests (network/integration tests)
+	pytest --runslow -m slow
+
+test-integration: ## run all integration tests (including slow ones)
+	pytest --runslow -m integration
+
+test-all-with-slow: ## run all tests including slow tests
+	pytest --runslow -m '' tests/
+
+test-coverage: ## run tests with coverage report
+	pytest --cov=idtrack --cov-report=term --cov-report=html
+
 test-all: ## run tests on every Python version with nox
 	nox
 
@@ -68,18 +80,12 @@ coverage: ## check code coverage quickly with the default Python
 	$(BROWSER) htmlcov\index.html
 
 docs: ## generate Sphinx HTML documentation, including API docs
-	del /f /q docs\idtrack.rst
-	del /f /q docs\modules.rst
-	sphinx-apidoc -o docs idtrack
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 	$(BROWSER) docs\_build\html\index.html
 
-servedocs: docs ## compile the docs watching for changes
-	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
-
-release: dist ## package and upload a release
-	poetry publish --build
+servedocs: ## serve the documentation and rebuild it when a file changes
+	sphinx-autobuild docs docs\_build\html
 
 dist: clean-build clean-pyc ## builds source and wheel package
 	poetry build

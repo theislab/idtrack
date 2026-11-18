@@ -1,54 +1,94 @@
-#!/usr/bin/env python3
+"""idtrack: tracks gene identifiers through Ensembl releases, genome assemblies and external databases.
 
-# Kemal Inecik
-# k.inecik@gmail.com
+The names below are imported on first access (``idtrack.API`` imports the query side only: the graph, the engine
+and the results; building a graph imports the build stack; ``idtrack.HarmonizeFeatures`` needs the ``harmonize``
+extra), so that ``import idtrack`` itself is cheap. ``__all__``, and so ``from idtrack import *``, holds the names
+that every install has; ``HarmonizeFeatures`` is imported by its name only.
 
-"""Top-level package of **idtrack**: the public classes, the errors a caller may want to catch, and the metadata.
-
-The names are imported on first access (``idtrack.API`` imports the conversion core only; ``idtrack.HarmonizeFeatures``
-also imports anndata and scipy), so that ``import idtrack`` itself is cheap.
+Modules: :py:mod:`idtrack.api` (the API), :py:mod:`idtrack.results` (typed results), :py:mod:`idtrack.errors`
+(the error hierarchy), :py:mod:`idtrack.settings`, :py:mod:`idtrack.organisms` (the organism table),
+:py:mod:`idtrack.ids` (the graph's vocabulary), :py:mod:`idtrack.graph` (the graph and its file),
+:py:mod:`idtrack.engine` (the search and its ranking), :py:mod:`idtrack.checks` (the self-tests of a graph),
+:py:mod:`idtrack.build` (Ensembl access, tables and the graph builder) and :py:mod:`idtrack.harmonize`.
 """
 
 import importlib
-from importlib import metadata as _metadata
 from typing import Any
 
-__author__: str = "Kemal Inecik"
-__email__: str = "k.inecik@gmail.com"
+from idtrack._version import package_version
 
-# Prefer the installed package version, but fall back to the source value.
-try:  # pragma: no cover
-    __version__: str = _metadata.version(__name__)
-except _metadata.PackageNotFoundError:  # Local/editable install
-    __version__ = "0.0.5"
+__version__: str = package_version()
 
 _EXPORTS: dict[str, str] = {
-    "API": "idtrack._api",
-    "ConnectionBridge": "idtrack._connection_bridge",
-    "DatabaseManager": "idtrack._database_manager",
-    "DB": "idtrack._db",
-    "EnsemblDownloadError": "idtrack._ensembl_access",
-    "EnsemblRestError": "idtrack._db",
-    "ExternalDatabases": "idtrack._external_databases",
-    "GraphMaker": "idtrack._graph_maker",
-    "GraphMismatchError": "idtrack._the_graph",
-    "HarmonizeFeatures": "idtrack._harmonize_features",
-    "HistoryValidationError": "idtrack._graph_maker",
-    "InactiveAtReleaseError": "idtrack._track",
-    "SearchBudgetExceededError": "idtrack._track",
-    "TheGraph": "idtrack._the_graph",
-    "Track": "idtrack._track",
-    "TrackTests": "idtrack._track_tests",
-    "UnknownVersionError": "idtrack._track",
-    "VerifyOrganism": "idtrack._verify_organism",
+    "API": "idtrack.api",
+    # results
+    "AssemblyDescription": "idtrack.results",
+    "Candidate": "idtrack.results",
+    "ConversionResult": "idtrack.results",
+    "ErrorInfo": "idtrack.results",
+    "ExplainedPath": "idtrack.results",
+    "GraphDescription": "idtrack.results",
+    "NameMatch": "idtrack.results",
+    "PathNode": "idtrack.results",
+    "PathStep": "idtrack.results",
+    # settings
+    "GraphSettings": "idtrack.settings",
+    "SearchSettings": "idtrack.settings",
+    # the graph, the self-tests, building
+    "TheGraph": "idtrack.graph",
+    "CheckResult": "idtrack.checks",
+    "GraphChecks": "idtrack.checks",
+    "DatabaseManager": "idtrack.build",
+    "ExternalDatabases": "idtrack.build",
+    "GraphMaker": "idtrack.build",
+    # errors
+    "ArgumentTypeError": "idtrack.errors",
+    "BuildError": "idtrack.errors",
+    "EnsemblAccessError": "idtrack.errors",
+    "EnsemblDownloadError": "idtrack.errors",
+    "EnsemblRestError": "idtrack.errors",
+    "EnsemblSchemaError": "idtrack.errors",
+    "ExternalsError": "idtrack.errors",
+    "ExternalsReleaseNotCoveredError": "idtrack.errors",
+    "GraphFileError": "idtrack.errors",
+    "GraphMismatchError": "idtrack.errors",
+    "HistoryValidationError": "idtrack.errors",
+    "IdtrackError": "idtrack.errors",
+    "InactiveAtReleaseError": "idtrack.errors",
+    "InputError": "idtrack.errors",
+    "IntegrityError": "idtrack.errors",
+    "InvalidArgumentError": "idtrack.errors",
+    "MissingValueError": "idtrack.errors",
+    "SearchBudgetExceededError": "idtrack.errors",
+    "TableFormatError": "idtrack.errors",
+    "UnknownAssemblyError": "idtrack.errors",
+    "UnknownDatabaseError": "idtrack.errors",
+    "UnknownIdentifierError": "idtrack.errors",
+    "UnknownOrganismError": "idtrack.errors",
+    "UnknownReleaseError": "idtrack.errors",
+    "UnknownVersionError": "idtrack.errors",
 }
+
+# Names that need the `harmonize` extra: reachable by name, left out of `__all__` so that a star import works on the
+# plain install (decision 48: the extra is optional).
+_EXTRA_EXPORTS: dict[str, str] = {"HarmonizeFeatures": "idtrack.harmonize"}
 
 __all__: list[str] = sorted(_EXPORTS)
 
 
 def __getattr__(name: str) -> Any:
-    """Import a public name on first access (PEP 562)."""
-    module = _EXPORTS.get(name)
+    """Import a public name on first access (PEP 562).
+
+    Args:
+        name: The name.
+
+    Returns:
+        Any: The object.
+
+    Raises:
+        AttributeError: For a name the package does not export.
+    """
+    module = _EXPORTS.get(name) or _EXTRA_EXPORTS.get(name)
     if module is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     value = getattr(importlib.import_module(module), name)
@@ -57,5 +97,9 @@ def __getattr__(name: str) -> Any:
 
 
 def __dir__() -> list[str]:
-    """List the module's names, including the public names not imported yet."""
-    return sorted(set(globals()) | set(_EXPORTS))
+    """List the module's names, including the public names not imported yet.
+
+    Returns:
+        list[str]: The names.
+    """
+    return sorted(set(globals()) | set(_EXPORTS) | set(_EXTRA_EXPORTS))

@@ -12,7 +12,7 @@ session that maps an id onto itself continues that id alone; otherwise all its s
 from the BioMart archive of the release. ``source`` identifies a line in the larger sets of such queries it was drawn
 from (they are kept outside the repository; every line here is complete in itself).
 
-Every query is asked through ``API.convert_identifier``; the ids returned and the flags of the result are asserted.
+Every query is asked through ``API.convert``; the ids returned and the flags of the result are asserted.
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ import json
 
 import pytest
 
+from idtrack.results import ConversionResult
 from tests._real_tables import ORGANISMS, SNAPSHOT, answer_of, read_truth, truth_path, verdict, without_version
 
 TRUTH = [
@@ -48,12 +49,11 @@ GENE_ID_KINDS = (
 
 def ask(world, query, **more):
     """Ask a query of the truth file through the public API."""
-    return world.api.convert_identifier(
+    return world.api.convert(
         query["id"],
         from_release=query["from_release"],
         to_release=query["to_release"],
         final_database=query["final_database"],
-        strategy=query["strategy"],
         from_database=query.get("from_database"),
         **more,
     )
@@ -66,48 +66,63 @@ def test_conversion_returns_the_ids_that_ensembl_gives(real_world, organism, que
     result = ask(world, query)
 
     assert verdict(query, result) is None
-    assert json.loads(json.dumps(result, allow_nan=False)) == result
-    assert result["error"] is None
-    assert (result["query_id"], result["to_release"], result["strategy"]) == (
-        query["id"],
-        query["to_release"],
-        query["strategy"],
-    )
-    assert result["from_release_given"] == query["from_release"]
-    targets = result["target_id"]
-    assert result["ambiguous"] is (len(targets) > 1)
-    assert [pair[1] for pair in result["last_node"]] == targets or len(result["last_node"]) > len(targets)
+    assert ConversionResult.from_dict(json.loads(json.dumps(result.to_dict(), allow_nan=False))) == result
+    assert result.error is None
+    assert (result.query_id, result.to_release) == (query["id"], query["to_release"])
+    assert result.from_release_given == query["from_release"]
+    targets = list(result.targets(query["strategy"]))
+    assert (len(result.targets(query["strategy"])) > 1) is (len(targets) > 1)
+    assert [pair[1] for pair in [[c.gene, c.target] for c in result.view(query["strategy"])]] == targets or len(
+        [[c.gene, c.target] for c in result.view(query["strategy"])]
+    ) > len(targets)
     # every gene of the answer is a gene of the target release in Ensembl's table, with that version
     there = world.genes_at(query["to_release"])
-    assert all(there.get(without_version(gene)) == int(gene.rpartition(".")[2]) for gene, _ in result["last_node"])
+    assert all(
+        there.get(without_version(gene)) == int(gene.rpartition(".")[2])
+        for gene, _ in [[c.gene, c.target] for c in result.view(query["strategy"])]
+    )
 
     if query["expect"]:
         # an answer in the database asked for: none of the three "nothing" flags
-        assert not (result["no_corresponding"] or result["no_conversion"] or result["no_target"])
-        assert result["final_database"] == (query["final_database"] or "ensembl_gene")
-        assert result["graph_id"] is not None and result["match"] is not None
-        assert result["from_release_inferred"] is (query["from_release"] is None or result["from_release_fallback"])
-        if not result["from_release_fallback"] and query["from_release"] is not None:
-            assert result["from_release"] == query["from_release"]
-        if query["strategy"] == "best" and len(result["last_node"]) > 1:
+        assert not (
+            (result.status in ("not_found", "unknown_version"))
+            or (result.status == "no_conversion")
+            or result.no_target
+        )
+        assert result.final_database == (query["final_database"] or "ensembl_gene")
+        assert result.graph_id is not None and result.match is not None
+        assert result.from_release_inferred is (query["from_release"] is None or result.from_release_fallback)
+        if not result.from_release_fallback and query["from_release"] is not None:
+            assert result.from_release == query["from_release"]
+        if query["strategy"] == "best" and len([[c.gene, c.target] for c in result.view(query["strategy"])]) > 1:
             # several targets as the best answer are a tie; read and answered at one release, nothing but the ids
             # tells them apart, and they come in ascending order of gene and target
-            assert result["tie"] is True
-            if result["from_release"] == query["to_release"]:
-                assert result["last_node"] == sorted(result["last_node"])
+            assert result.tie is True
+            if result.from_release == query["to_release"]:
+                assert [[c.gene, c.target] for c in result.view(query["strategy"])] == sorted(
+                    [[c.gene, c.target] for c in result.view(query["strategy"])]
+                )
     elif query["kind"] in NOT_AN_ID:
-        assert result["no_corresponding"] is True and result["graph_id"] is None and result["match"] is None
-        assert (result["no_conversion"], result["no_target"], targets) == (False, False, [])
-        assert result["final_database"] is None
+        assert (
+            (result.status in ("not_found", "unknown_version")) is True
+            and result.graph_id is None
+            and result.match is None
+        )
+        assert ((result.status == "no_conversion"), result.no_target, targets) == (False, False, [])
+        assert result.final_database is None
     else:
         # the identifier is known, and Ensembl gives it no counterpart (in the database asked for)
-        assert result["no_corresponding"] is False and result["graph_id"] is not None
-        assert result["no_conversion"] is not result["no_target"]
-        if result["no_conversion"]:
-            assert (targets, result["last_node"], result["final_database"]) == ([], [], None)
+        assert (result.status in ("not_found", "unknown_version")) is False and result.graph_id is not None
+        assert (result.status == "no_conversion") is not result.no_target
+        if result.status == "no_conversion":
+            assert (targets, [[c.gene, c.target] for c in result.view(query["strategy"])], result.final_database) == (
+                [],
+                [],
+                None,
+            )
         else:
             # genes were reached, none with an id in the database: the genes are named instead, flagged
-            assert query["final_database"] and result["final_database"] == "ensembl_gene" and targets
+            assert query["final_database"] and result.final_database == "ensembl_gene" and targets
 
 
 @pytest.mark.parametrize("organism, query", queries(*GENE_ID_KINDS))
@@ -121,21 +136,21 @@ def test_gene_id_is_read_at_the_release_the_rule_says(real_world, organism, quer
     releases = world.releases_of_gene(query["id"])
     assert releases, "the cut tables must hold the queried gene"
 
-    if not answer_of(result, None) and result["no_conversion"]:
-        assert result["from_release"] is None or result["from_release"] in releases
+    if not answer_of(result, None, query["strategy"]) and (result.status == "no_conversion"):
+        assert result.from_release is None or result.from_release in releases
         return
     if query["from_release"] is None:
         expected = query["to_release"] if query["to_release"] in releases else releases[-1]
-        assert (result["from_release"], result["from_release_inferred"]) == (expected, True)
+        assert (result.from_release, result.from_release_inferred) == (expected, True)
     else:
         assert query["from_release"] in releases
-        assert (result["from_release"], result["from_release_inferred"], result["from_release_fallback"]) == (
+        assert (result.from_release, result.from_release_inferred, result.from_release_fallback) == (
             query["from_release"],
             False,
             False,
         )
     # a gene id is a node of the graph as it is written, with its version or without
-    assert (result["graph_id"], result["match"]) == (query["id"], "exact")
+    assert (result.graph_id, result.match) == (query["id"], "exact")
 
 
 EXTERNAL_ID_KINDS = (
@@ -158,24 +173,24 @@ def test_external_id_is_matched_and_read_as_ensembls_tables_say(real_world, orga
     asked = SNAPSHOT if query["from_release"] is None else query["from_release"]
     match, here, databases = world.ensembl.meaning(query["id"], asked)
 
-    assert result["from_release_fallback"] is (query["from_release"] is not None and not here)
-    if result["from_release_fallback"]:
-        assert result["from_release"] != query["from_release"] and result["from_release_inferred"] is True
+    assert result.from_release_fallback is (query["from_release"] is not None and not here)
+    if result.from_release_fallback:
+        assert result.from_release != query["from_release"] and result.from_release_inferred is True
         match, here, _ = world.ensembl.meaning(query["id"], SNAPSHOT)
-        databases = world.ensembl.meaning(query["id"], result["from_release"])[2]
+        databases = world.ensembl.meaning(query["id"], result.from_release)[2]
     elif query["from_release"] is None and not here:
         # not an identifier of the last release: read at the latest release that has it
-        databases = world.ensembl.meaning(query["id"], result["from_release"])[2]
+        databases = world.ensembl.meaning(query["id"], result.from_release)[2]
     if match is not None:
-        assert result["match"] == match
-    if result["no_conversion"]:
-        assert result["from_databases"] == []  # read, but it leads to no gene at the target: nothing to report
+        assert result.match == match
+    if result.status == "no_conversion":
+        assert list(result.from_databases) == []  # read, but it leads to no gene at the target: nothing to report
     elif databases is not None:
-        assert sorted(result["from_databases"]) == sorted(databases)
+        assert sorted(result.from_databases) == sorted(databases)
 
     # The node read and the release it is read at, for a string matched as it is written or up to letter case.
-    kind = "synonym" if str(result["match"]).startswith("synonym:") else "id"
-    if match is None or result["match"].rpartition(":")[2] not in ("exact", "case"):
+    kind = "synonym" if str(result.match).startswith("synonym:") else "id"
+    if match is None or result.match.rpartition(":")[2] not in ("exact", "case"):
         return
     spellings = world.ensembl.spellings_on(world.backbone, query["id"], kind)
     if not spellings:
@@ -183,13 +198,13 @@ def test_external_id_is_matched_and_read_as_ensembls_tables_say(real_world, orga
     latest = spellings[max(spellings)]
     if len(latest) == 1:
         # one node per identifier, named as Ensembl writes it at the last release that has it
-        assert result["graph_id"] == ("synonym_id::" if kind == "synonym" else "") + next(iter(latest))
+        assert result.graph_id == ("synonym_id::" if kind == "synonym" else "") + next(iter(latest))
     if query["from_release"] is None:
         # read at the target release if it exists there, else at the last release that has it
         expected = query["to_release"] if query["to_release"] in spellings else max(spellings)
-        assert (result["from_release"], result["from_release_inferred"]) == (expected, True)
-    elif not result["from_release_fallback"]:
-        assert query["from_release"] in spellings and result["from_release"] == query["from_release"]
+        assert (result.from_release, result.from_release_inferred) == (expected, True)
+    elif not result.from_release_fallback:
+        assert query["from_release"] in spellings and result.from_release == query["from_release"]
 
 
 @pytest.mark.parametrize("organism", [o for o in ORGANISMS if o == "homo_sapiens" and truth_path(o).is_file()])
@@ -210,8 +225,8 @@ def test_string_that_only_the_frozen_assembly_lists_as_a_name_is_read_on_the_ser
             continue
         match, here, _databases = world.ensembl.meaning(query["id"], asked)
         result = ask(world, query)
-        if here and (result["match"], result["from_release"], result["from_release_fallback"]) != (match, asked, False):
-            wrong.append((query["source"], result["match"], result["from_release"], result["from_release_fallback"]))
+        if here and (result.match, result.from_release, result.from_release_fallback) != (match, asked, False):
+            wrong.append((query["source"], result.match, result.from_release, result.from_release_fallback))
     assert not wrong, wrong
 
 
@@ -237,9 +252,9 @@ def test_unknown_version_names_the_versions_that_ensembl_had(real_world, organis
     base = without_version(query["id"])
     held = sorted({world.genes_at(r)[base] for r in world.backbone if base in world.genes_at(r)})
 
-    assert result["known_versions"] == [f"{base}.{version}" for version in held]
+    assert list(result.known_versions) == [f"{base}.{version}" for version in held]
     assert int(query["id"].rpartition(".")[2]) not in held
-    assert (result["target_id"], result["no_corresponding"]) == ([], True)
+    assert (list(result.targets(query["strategy"])), (result.status in ("not_found", "unknown_version"))) == ([], True)
 
 
 @pytest.mark.parametrize("organism, query", queries("version_newer_than_graph"))
@@ -251,12 +266,12 @@ def test_version_newer_than_the_graph_is_flagged(real_world, organism, query):
     current = world.genes_at(SNAPSHOT)[base]
 
     assert int(query["id"].rpartition(".")[2]) > max(world.genes_at(r).get(base, 0) for r in world.backbone)
-    assert (result["match"], result["graph_id"], result["target_id"]) == (
+    assert (result.match, result.graph_id, list(result.targets(query["strategy"]))) == (
         "version_newer_than_graph",
         f"{base}.{current}",
         [f"{base}.{current}"],
     )
-    assert result["known_versions"] == []
+    assert list(result.known_versions) == []
 
 
 @pytest.mark.parametrize("organism", [o for o in ORGANISMS if truth_path(o).is_file()])

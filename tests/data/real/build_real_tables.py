@@ -62,9 +62,10 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT))
 
-from idtrack._database_manager import DatabaseManager  # noqa: E402
-from idtrack._db import DB, EnsemblSchemaError  # noqa: E402
-from idtrack._graph_maker import GraphMaker  # noqa: E402
+from idtrack import ids, organisms, settings  # noqa: E402
+from idtrack.build.builder import GraphMaker  # noqa: E402
+from idtrack.build.database_manager import NON_REFERENCE_ATTRIBUTE, DatabaseManager  # noqa: E402
+from idtrack.errors import EnsemblSchemaError  # noqa: E402
 from tests._real_tables import RealTables, read_genes, tables_path  # noqa: E402
 
 SIZE_LIMIT = 500 * 1024  # bytes per table file: the limit of the pre-commit hook check-added-large-files
@@ -76,7 +77,7 @@ OBJECT_TABLES = {
     "translation": "translation",
     "translation_stable_id": "translation",
 }
-REGION_CODES = ("toplevel", DB.non_reference_attribute)
+REGION_CODES = ("toplevel", NON_REFERENCE_ATTRIBUTE)
 FORMS = ["gene", "transcript", "translation"]
 ROW_ORDER = {
     "object_xref": ["object_xref_id"],
@@ -116,10 +117,10 @@ class Cutter:
             organism=manager.organism,
             form=form or manager.form,
             local_repository=self.source_repository,
-            ensembl_release=manager.ensembl_release,
-            ignore_before=manager.ignore_before,
-            ignore_after=manager.ignore_after,
-            genome_assembly=manager.genome_assembly,
+            release=manager.release,
+            first_release=manager.first_release,
+            snapshot_release=manager.snapshot_release,
+            assembly=manager.assembly,
         )
 
     def relevant_databases(self, manager: DatabaseManager) -> set[str]:
@@ -132,13 +133,13 @@ class Cutter:
                 for database, entry in per_form.items()
                 if any(per_assembly.get("Include") for per_assembly in entry["Assembly"].values())
             }
-            prefix = DB.synonym_id_nodes_prefix
+            prefix = ids.SYNONYM_PREFIX
             self._relevant = {name[len(prefix) :] if name.startswith(prefix) else name for name in names}
         return self._relevant
 
     def keys_of(self, manager: DatabaseManager) -> dict:
         """Return which rows of one core database are kept, and the new number of every surrogate key."""
-        where = (int(manager.genome_assembly), int(manager.ensembl_release))
+        where = (int(manager.assembly), int(manager.release))
         if where in self.keys:
             return self.keys[where]
         source = self.source(manager)
@@ -232,7 +233,7 @@ class Cutter:
                 sessions = self.source(manager).get_table("mapping_session", usecols=None)
                 first = dict(zip(sessions["mapping_session_id"], sessions["old_release"]))
                 in_window = [
-                    manager.ignore_before <= float(first[s]) <= manager.ignore_after
+                    manager.first_release <= float(first[s]) <= manager.snapshot_release
                     for s in window["mapping_session_id"]
                 ]
                 window = window[in_window]
@@ -289,7 +290,7 @@ class Cutter:
         """Answer a download: the complete table for the source repository, the cut one (recorded) otherwise."""
         if os.path.realpath(manager.local_repository) == self.source_repository:
             return self.original_download(manager, table_key, usecols)
-        where = (int(manager.genome_assembly), int(manager.ensembl_release), table_key)
+        where = (int(manager.assembly), int(manager.release), table_key)
         entry = self.record.setdefault(where, {"columns": [], "data": [], "absent": []})
         try:
             complete = self.source(manager).get_table(table_key, usecols=usecols or None)
@@ -321,7 +322,7 @@ class Cutter:
     def install(self, monkeypatch) -> None:
         """Route every download of ``DatabaseManager`` through this cutter."""
         cutter = self
-        monkeypatch.setattr(DB, "ensembl_access", "https")
+        monkeypatch.setattr(settings.ENSEMBL, "access", "https")
         monkeypatch.setattr(DatabaseManager, "_core_db_index_cache", {})
         monkeypatch.setattr(
             DatabaseManager,
@@ -340,9 +341,9 @@ def _plain(value, numeric: bool):
 
 
 def build_graph(organism: str, repository: str, snapshot: int):
-    """Build the organism's graph in ``repository`` as ``API.build_graph`` does, without saving it."""
+    """Build the organism's graph in ``repository`` as ``API.build`` does, without saving it."""
     manager = DatabaseManager(
-        organism=organism, form=DB.backbone_form, local_repository=repository, ignore_after=snapshot
+        organism=organism, form=ids.BACKBONE_FORM, local_repository=repository, snapshot_release=snapshot
     )
     return GraphMaker(manager).construct_graph()
 
@@ -352,7 +353,7 @@ def indices_of(organism: str, repository: str) -> dict[str, dict]:
     import json
 
     indices = {}
-    for assembly in DB.assemblies_by_priority(organism):
+    for assembly in organisms.assemblies_by_priority(organism):
         path = DatabaseManager._https_index_path(repository, organism, int(assembly))
         if os.path.isfile(path):
             with open(path, encoding="utf-8") as handle:
@@ -401,9 +402,9 @@ def main() -> int:
                 # the index of every assembly: read from (or scanned into) the source repository, then copied
                 DatabaseManager(
                     organism=organism,
-                    form=DB.backbone_form,
+                    form=ids.BACKBONE_FORM,
                     local_repository=arguments.repository,
-                    ignore_after=snapshot,
+                    snapshot_release=snapshot,
                 ).available_releases_all_assemblies
                 for assembly in indices_of(organism, arguments.repository):
                     shutil.copy(

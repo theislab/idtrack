@@ -1,5 +1,13 @@
 .. include:: readme.rst
 
+Start here
+----------
+
+* :doc:`tutorials` — the full tutorial suite (Part 0 → Part 7); primary learning resource
+* :doc:`usage` — a minimal quickstart
+* :doc:`installation` — installation, Ensembl access (MySQL or HTTPS), troubleshooting
+* :doc:`changes` — what changed, and what a user of an earlier version must do
+
 .. toctree::
    :maxdepth: 3
    :caption: Contents:

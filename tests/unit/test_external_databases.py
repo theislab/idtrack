@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""Unit tests for idtrack._external_databases module.
+"""Unit tests for idtrack.build.externals module.
 
 Tests the ExternalDatabases class for YAML configuration management.
 """
 
 from __future__ import annotations
 
+import importlib.resources
 import os
 
 import pandas as pd
 import pytest
 import yaml
+
+from idtrack.errors import ExternalsError, ExternalsReleaseNotCoveredError, InvalidArgumentError
 
 
 class TestExternalDatabasesInitialization:
@@ -18,32 +21,32 @@ class TestExternalDatabasesInitialization:
 
     def test_init_sets_attributes(self, temp_dir):
         """Test initialization sets all attributes."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
         assert edb.organism == "homo_sapiens"
-        assert edb.ensembl_release == 110
+        assert edb.release == 110
         assert edb.form == "gene"
         assert edb.local_repository == temp_dir
-        assert edb.genome_assembly == 38
+        assert edb.assembly == 38
 
     def test_has_logger(self, temp_dir):
         """Test instance has logger."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
         assert hasattr(edb, "log")
@@ -55,14 +58,14 @@ class TestFileNameMethods:
 
     def test_file_name_template_yaml(self, temp_dir):
         """Test template YAML filename generation."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
         expected = os.path.join(temp_dir, "homo_sapiens_externals_template.yml")
@@ -70,49 +73,49 @@ class TestFileNameMethods:
 
     def test_file_name_modified_yaml_configured(self, temp_dir):
         """Test configured modified YAML filename."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
         expected = os.path.join(temp_dir, "homo_sapiens_externals_modified.yml")
-        assert edb.file_name_modified_yaml(mode="configured") == expected
+        assert edb.file_name_modified_yaml(location="configured") == expected
 
     def test_file_name_modified_yaml_default(self, temp_dir):
         """Test default modified YAML filename."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
-        result = edb.file_name_modified_yaml(mode="default")
+        result = edb.file_name_modified_yaml(location="default")
         assert "default_config" in result
         assert "homo_sapiens_externals_modified.yml" in result
 
-    def test_file_name_modified_yaml_invalid_mode(self, temp_dir):
-        """Test invalid mode raises ValueError."""
-        from idtrack._external_databases import ExternalDatabases
+    def test_file_name_modified_yaml_invalid_location(self, temp_dir):
+        """An unknown location raises an error."""
+        from idtrack.build.externals import ExternalDatabases
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
-        with pytest.raises(ValueError, match="Unknown value"):
-            edb.file_name_modified_yaml(mode="invalid")
+        with pytest.raises(InvalidArgumentError, match="Unknown value for `location`"):
+            edb.file_name_modified_yaml(location="invalid")
 
 
 class TestCreateTemplateYaml:
@@ -120,14 +123,14 @@ class TestCreateTemplateYaml:
 
     def test_creates_yaml_file(self, temp_dir):
         """Test YAML file is created."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
         # Create sample DataFrame
@@ -148,14 +151,14 @@ class TestCreateTemplateYaml:
 
     def test_yaml_structure(self, temp_dir):
         """Test created YAML has correct structure."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
         df = pd.DataFrame(
@@ -180,14 +183,14 @@ class TestCreateTemplateYaml:
 
     def test_include_defaults_to_false(self, temp_dir):
         """Test Include defaults to False in template."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
         df = pd.DataFrame(
@@ -213,7 +216,7 @@ class TestLoadModifiedYaml:
 
     def test_loads_configured_yaml(self, temp_dir, sample_external_db_yaml):
         """Test loading configured YAML file."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         # Write the sample YAML
         yaml_path = os.path.join(temp_dir, "homo_sapiens_externals_modified.yml")
@@ -222,10 +225,10 @@ class TestLoadModifiedYaml:
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
         data = edb.load_modified_yaml()
@@ -235,39 +238,34 @@ class TestLoadModifiedYaml:
 
     def test_falls_back_to_default(self, temp_dir):
         """Test fallback to default YAML when configured doesn't exist."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         # Don't create any YAML in temp_dir
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
-        # This should try to load default config
-        # May raise FileNotFoundError if no default exists
-        try:
-            data = edb.load_modified_yaml()
-            assert "homo_sapiens" in data
-        except FileNotFoundError:
-            # Expected if no default config for homo_sapiens
-            pass
+        # the package ships a default file for homo_sapiens
+        data = edb.load_modified_yaml()
+        assert "homo_sapiens" in data
 
-    def test_raises_file_not_found(self, temp_dir):
-        """Test FileNotFoundError when no YAML exists."""
-        from idtrack._external_databases import ExternalDatabases
+    def test_raises_externals_error(self, temp_dir):
+        """Test ExternalsError when no YAML exists."""
+        from idtrack.build.externals import ExternalDatabases
 
         edb = ExternalDatabases(
             organism="nonexistent_organism",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(ExternalsError, match="No externals YAML file for organism 'nonexistent_organism'"):
             edb.load_modified_yaml()
 
 
@@ -276,14 +274,14 @@ class TestValidateYamlFileUpToDate:
 
     def test_valid_release_passes(self, temp_dir):
         """Test validation passes for valid release."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
         yaml_data = {
@@ -306,14 +304,14 @@ class TestValidateYamlFileUpToDate:
 
     def test_invalid_release_raises(self, temp_dir):
         """Test validation fails for missing release."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=115,  # Not in YAML
+            release=115,  # Not in YAML
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
         yaml_data = {
@@ -331,7 +329,7 @@ class TestValidateYamlFileUpToDate:
             }
         }
 
-        with pytest.raises(ValueError, match="115 is not included"):
+        with pytest.raises(ExternalsReleaseNotCoveredError, match="115 is not included"):
             edb.validate_yaml_file_up_to_date(yaml_data)
 
 
@@ -340,7 +338,7 @@ class TestGiveListForCase:
 
     def test_returns_included_databases(self, temp_dir, sample_external_db_yaml):
         """Test returns databases with Include=True."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         yaml_path = os.path.join(temp_dir, "homo_sapiens_externals_modified.yml")
         with open(yaml_path, "w") as f:
@@ -348,10 +346,10 @@ class TestGiveListForCase:
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
         dbs = edb.give_list_for_case("db")
@@ -361,7 +359,7 @@ class TestGiveListForCase:
 
     def test_returns_assemblies(self, temp_dir, sample_external_db_yaml):
         """Test returns assemblies with included databases."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         yaml_path = os.path.join(temp_dir, "homo_sapiens_externals_modified.yml")
         with open(yaml_path, "w") as f:
@@ -369,10 +367,10 @@ class TestGiveListForCase:
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
         assemblies = edb.give_list_for_case("assembly")
@@ -381,7 +379,7 @@ class TestGiveListForCase:
 
     def test_invalid_give_type_raises(self, temp_dir, sample_external_db_yaml):
         """Test invalid give_type raises ValueError."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         yaml_path = os.path.join(temp_dir, "homo_sapiens_externals_modified.yml")
         with open(yaml_path, "w") as f:
@@ -389,18 +387,18 @@ class TestGiveListForCase:
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
-        with pytest.raises(ValueError):
+        with pytest.raises(InvalidArgumentError):
             edb.give_list_for_case("invalid")
 
     def test_excludes_not_included_databases(self, temp_dir):
         """Test databases with Include=False are excluded."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         yaml_data = {
             "homo_sapiens": {
@@ -431,10 +429,10 @@ class TestGiveListForCase:
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
         dbs = edb.give_list_for_case("db")
@@ -448,7 +446,7 @@ class TestMultipleAssemblies:
 
     def test_filters_by_assembly(self, temp_dir):
         """Test filtering databases by assembly."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         yaml_data = {
             "homo_sapiens": {
@@ -476,10 +474,10 @@ class TestMultipleAssemblies:
         # Test assembly 38
         edb38 = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
         dbs38 = edb38.give_list_for_case("db")
         assert "HGNC Symbol" in dbs38
@@ -487,28 +485,28 @@ class TestMultipleAssemblies:
         # Test assembly 37 (different release)
         edb37 = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=86,
+            release=86,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=37,
+            assembly=37,
         )
         dbs37 = edb37.give_list_for_case("db")
         assert "HGNC Symbol" in dbs37
 
 
-class TestDatabaseIndex:
-    """Test database index assignment."""
+class TestTemplateEntries:
+    """The entries of a template YAML."""
 
-    def test_database_index_unique(self, temp_dir):
-        """Test database indices are unique."""
-        from idtrack._external_databases import ExternalDatabases
+    def test_template_entries_hold_the_assemblies_only(self, temp_dir):
+        """Every database of a template has one entry, with its assemblies and nothing the package does not read."""
+        from idtrack.build.externals import ExternalDatabases
 
         edb = ExternalDatabases(
             organism="homo_sapiens",
-            ensembl_release=110,
+            release=110,
             form="gene",
             local_repository=temp_dir,
-            genome_assembly=38,
+            assembly=38,
         )
 
         df = pd.DataFrame(
@@ -526,14 +524,13 @@ class TestDatabaseIndex:
         with open(edb.file_name_template_yaml()) as f:
             data = yaml.safe_load(f)
 
-        indices = set()
-        for db in data["homo_sapiens"]["gene"]:
-            idx = data["homo_sapiens"]["gene"][db]["Database Index"]
-            assert idx not in indices
-            indices.add(idx)
+        assert sorted(data["homo_sapiens"]["gene"]) == ["DB_A", "DB_B", "DB_C"]
+        for entry in data["homo_sapiens"]["gene"].values():
+            assert entry == {"Assembly": {"38": {"Ensembl release": "110", "Include": False}}}
 
 
-DEFAULT_CONFIG_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "idtrack", "default_config")
+# The shipped files, found through the package (also when the tests run against an installed wheel).
+DEFAULT_CONFIG_DIR = str(importlib.resources.files("idtrack") / "default_config")
 
 
 class TestMissingYaml:
@@ -541,12 +538,12 @@ class TestMissingYaml:
 
     def test_message_names_file_and_recipe(self, temp_dir):
         """Message names file and recipe."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         edb = ExternalDatabases(
-            organism="danio_rerio", ensembl_release=110, form="gene", local_repository=temp_dir, genome_assembly=11
+            organism="danio_rerio", release=110, form="gene", local_repository=temp_dir, assembly=11
         )
-        with pytest.raises(FileNotFoundError) as info:
+        with pytest.raises(ExternalsError, match="No externals YAML file for organism 'danio_rerio'") as info:
             edb.load_modified_yaml()
         message = str(info.value)
         assert os.path.join(temp_dir, "danio_rerio_externals_modified.yml") in message
@@ -554,12 +551,12 @@ class TestMissingYaml:
 
     def test_file_without_the_organism_means_no_externals(self, temp_dir):
         """File without the organism means no externals."""
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         with open(os.path.join(temp_dir, "danio_rerio_externals_modified.yml"), "w") as handle:
             yaml.safe_dump({"other_organism": {}}, handle)
         edb = ExternalDatabases(
-            organism="danio_rerio", ensembl_release=110, form="gene", local_repository=temp_dir, genome_assembly=11
+            organism="danio_rerio", release=110, form="gene", local_repository=temp_dir, assembly=11
         )
         assert edb.give_list_for_case("db") == []
         assert edb.give_list_for_case("assembly") == []
@@ -572,7 +569,7 @@ class TestShippedFiles:
     @pytest.mark.parametrize("name", sorted(f for f in os.listdir(DEFAULT_CONFIG_DIR) if f.endswith(".yml")))
     def test_writer_reproduces_shipped_file(self, temp_dir, name):
         """Writer reproduces shipped file."""
-        from idtrack._external_databases import write_externals_yaml
+        from idtrack.build.externals import write_externals_yaml
 
         source = os.path.join(DEFAULT_CONFIG_DIR, name)
         with open(source) as handle:
@@ -592,7 +589,7 @@ class TestShippedFiles:
     )
     def test_modified_file_is_template_plus_allowlist(self, organism):
         """Modified file is template plus allowlist."""
-        from idtrack._default_externals import DEFAULT_EXTERNALS, apply_allowlist
+        from idtrack.build.default_externals import DEFAULT_EXTERNALS, apply_allowlist
 
         with open(os.path.join(DEFAULT_CONFIG_DIR, f"{organism}_externals_template.yml")) as handle:
             template = yaml.safe_load(handle)
@@ -604,8 +601,8 @@ class TestShippedFiles:
 
     def test_every_shipped_modified_file_has_a_template_and_allowlist(self):
         """Every shipped modified file has a template and allowlist."""
-        from idtrack._db import DB
-        from idtrack._default_externals import DEFAULT_EXTERNALS
+        from idtrack import organisms
+        from idtrack.build.default_externals import DEFAULT_EXTERNALS
 
         modified = {
             f.removesuffix("_externals_modified.yml")
@@ -618,15 +615,15 @@ class TestShippedFiles:
             if f.endswith("_externals_template.yml")
         }
         assert modified == templates
-        assert modified <= set(DEFAULT_EXTERNALS) == set(DB.supported_organisms)
+        assert modified <= set(DEFAULT_EXTERNALS) == set(organisms.supported_organisms())
 
     def test_allowlists_use_configured_assemblies(self):
         """Allowlists use configured assemblies."""
-        from idtrack._db import DB
-        from idtrack._default_externals import DEFAULT_EXTERNALS
+        from idtrack import organisms
+        from idtrack.build.default_externals import DEFAULT_EXTERNALS
 
         for organism, allowlist in DEFAULT_EXTERNALS.items():
-            configured = set(DB.assembly_mysqlport_priority[organism])
+            configured = set(organisms.ORGANISM_TABLE[organism])
             for databases in allowlist.values():
                 for assemblies in databases.values():
                     assert set(assemblies) == configured, organism
@@ -637,11 +634,13 @@ class TestShippedFiles:
         import json
         import re
 
-        from idtrack._default_externals import DEFAULT_EXTERNALS
+        from idtrack.build.default_externals import DEFAULT_EXTERNALS
 
         notebook = os.path.join(
             os.path.dirname(__file__), "..", "..", "docs", "_notebooks", "02_prepare_new_external_yaml.ipynb"
         )
+        if not os.path.isfile(notebook):
+            pytest.skip("the docs are not beside the tests (the suite runs against an installed package)")
         with open(notebook, encoding="utf-8") as handle:
             cells = json.load(handle)["cells"]
         names = {
@@ -703,10 +702,10 @@ class TestExtendModifiedYaml:
         return path
 
     def _edb(self, temp_dir, release=116):
-        from idtrack._external_databases import ExternalDatabases
+        from idtrack.build.externals import ExternalDatabases
 
         return ExternalDatabases(
-            organism="homo_sapiens", ensembl_release=release, form="gene", local_repository=temp_dir, genome_assembly=38
+            organism="homo_sapiens", release=release, form="gene", local_repository=temp_dir, assembly=38
         )
 
     def test_adds_release_keeps_flags_lists_new(self, temp_dir, base_yaml):
@@ -742,7 +741,8 @@ class TestExtendModifiedYaml:
         assert y["gene"]["HGNC Symbol"]["Assembly"]["37"]["Ensembl release"] == "114,115,116"
         assert y["gene"]["WikiGene"]["Assembly"]["38"] == {"Ensembl release": "114,115,116", "Include": False}
         assert y["gene"]["Brand-new DB"]["Assembly"]["38"] == {"Ensembl release": "116", "Include": False}
-        assert y["gene"]["Brand-new DB"]["Database Index"] == 8
+        assert set(y["gene"]["Brand-new DB"]) == {"Assembly"}  # a new entry holds its assemblies only
+        assert y["gene"]["HGNC Symbol"]["Database Index"] == 3  # what a user's file holds besides is kept
         assert y["transcript"]["RefSeq_mRNA"]["Assembly"]["39"]["Include"] is True
         assert list(y["gene"]) == sorted(y["gene"])
 
@@ -759,14 +759,14 @@ class TestExtendModifiedYaml:
         assert os.path.exists(out)
         with open(base_yaml) as handle:
             assert "116" not in handle.read()
-        with pytest.raises(ValueError, match="no row for organism"):
+        with pytest.raises(InvalidArgumentError, match="no row for organism"):
             edb.extend_modified_yaml(_content([("mus_musculus", "gene", "MGI Symbol", 39, 116, 1)]))
-        with pytest.raises(ValueError, match="lacks the columns"):
+        with pytest.raises(InvalidArgumentError, match="lacks the columns"):
             edb.extend_modified_yaml(pd.DataFrame({"organism": ["homo_sapiens"]}))
 
     def test_missing_release_error_mentions_extension(self, temp_dir, base_yaml):
         """Missing release error mentions extension."""
-        from idtrack._external_databases import ExternalsReleaseNotCoveredError
+        from idtrack.build.externals import ExternalsReleaseNotCoveredError
 
         with pytest.raises(ExternalsReleaseNotCoveredError, match="extend_modified_yaml"):
             self._edb(temp_dir, release=116).load_modified_yaml()

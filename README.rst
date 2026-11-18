@@ -70,25 +70,32 @@ Common use cases
 Installation and a first conversion
 -----------------------------------
 
-IDTrack runs on Python 3.12 to 3.15 and supports human, mouse, pig, rhesus macaque and cynomolgus macaque.
+IDTrack runs on Python 3.12 to 3.15 and supports human, mouse, pig, rhesus macaque and cynomolgus macaque. Install it
+from GitHub (with the ``harmonize`` extra for harmonizing ``.h5ad`` datasets, which brings anndata and scipy):
 
 .. code-block:: console
 
-    $ pip install idtrack
-    $ pip install "git+https://github.com/theislab/idtrack.git@main"   # or: the code of the main branch
+    $ pip install "git+https://github.com/theislab/idtrack.git"
+    $ pip install "idtrack[harmonize] @ git+https://github.com/theislab/idtrack.git"
+
+The release on PyPI (``pip install idtrack``, version 0.0.5) is an older, different version with another API; use
+GitHub until version 0.1.0 is published on PyPI.
 
 .. code-block:: python
 
-    import idtrack
+    import os
 
-    api = idtrack.API(local_repository="./idtrack_cache")
+    from idtrack import API
+
+    os.makedirs("./idtrack_cache", exist_ok=True)  # the local repository: downloaded tables and graph files
     # Built from Ensembl's tables the first time (about 2 hours for human), loaded from disk in seconds afterwards.
-    api.build_graph(organism_name="homo_sapiens", snapshot_release=115)
+    api = API.build("homo_sapiens", 115, "./idtrack_cache")
+    # A graph file on disk loads without any network: api = API.load(API.graph_path("homo_sapiens", 115, "./idtrack_cache"))
 
-    result = api.convert_identifier("TP53")  # to the snapshot release
-    print(result["target_id"])                # ['ENSG00000141510.20']
-    result = api.convert_identifier("ENSG00000141510", from_release=100, final_database="HGNC Symbol")
-    print(result["target_id"])                # ['TP53']
+    result = api.convert("TP53")  # to the snapshot release
+    print(result.targets())       # ('ENSG00000141510.20',)
+    result = api.convert("ENSG00000141510", from_release=100, final_database="HGNC Symbol")
+    print(result.targets())       # ('TP53',)
 
 Documentation and tutorials
 ---------------------------

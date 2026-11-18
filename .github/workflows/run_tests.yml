@@ -37,7 +37,7 @@ jobs:
                     # Keep "tooling" sessions on a single Python for speed: the oldest supported one, so that type
                     # checks and doctests catch any use of a newer Python's features (keep in sync with noxfile.py).
                     - { python-version: "3.12", session: "pre-commit" }
-                    - { python-version: "3.12", session: "safety" }
+                    - { python-version: "3.12", session: "pip-audit" }
                     - { python-version: "3.12", session: "mypy" }
                     # Run the full test suite across the supported Python versions.
                     - { python-version: "3.12", session: "tests" }
@@ -48,22 +48,17 @@ jobs:
                     - { python-version: "3.12", session: "xdoctest" }
                     # Documentation build (kept as a separate session for clear failures).
                     - { python-version: "3.12", session: "docs-build" }
-                    # Test with optional external-mappers dependencies
-                    - {
-                          python-version: "3.12",
-                          session: "tests-external-mappers",
-                      }
 
         steps:
             # Checkout is required for Nox to install the local package and for
             # tools like pre-commit and mypy to see the repo content.
             - name: Check out the repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
 
             # Install the Python interpreter for this matrix element.
             # We also enable pip caching to speed up dependency downloads.
             - name: Set up Python ${{ matrix.python-version }}
-              uses: actions/setup-python@v5
+              uses: actions/setup-python@v7
               with:
                   python-version: ${{ matrix.python-version }}
                   allow-prereleases: true
@@ -87,7 +82,7 @@ jobs:
             # these steps once h5py publishes cp315 wheels.
             - name: Restore the HDF5 build (Python 3.15 only)
               if: matrix.python-version == '3.15'
-              uses: actions/cache@v4
+              uses: actions/cache@v6
               with:
                   path: ~/hdf5-2.0.0
                   key: hdf5-2.0.0-${{ runner.os }}-ubuntu-22.04-${{ hashFiles('.github/scripts/build_hdf5.sh') }}
@@ -96,19 +91,32 @@ jobs:
               if: matrix.python-version == '3.15'
               run: bash .github/scripts/build_hdf5.sh 2.0.0 "$HOME/hdf5-2.0.0"
 
-            # Install Poetry (used by the nox-poetry plugin and the safety session).
+            # Poetry, its export plugin, nox and nox-poetry are installed at the versions of poetry.lock.
+            - name: Read the tool versions from poetry.lock
+              shell: python
+              run: |
+                  import os
+                  import tomllib
+
+                  with open("poetry.lock", "rb") as fh:
+                      versions = {package["name"]: package["version"] for package in tomllib.load(fh)["package"]}
+                  with open(os.environ["GITHUB_ENV"], "a") as env:
+                      for name in ("poetry", "poetry-plugin-export", "nox", "nox-poetry"):
+                          env.write(f"{name.upper().replace('-', '_')}_VERSION={versions[name]}\n")
+                          print(name, versions[name])
+
+            # Install Poetry (used by the nox-poetry plugin and the pip-audit session).
             - name: Install Poetry
               run: |
-                  pipx install poetry
-                  pipx inject poetry poetry-plugin-export
+                  pipx install "poetry==$POETRY_VERSION"
+                  pipx inject poetry "poetry-plugin-export==$POETRY_PLUGIN_EXPORT_VERSION"
                   poetry --version
 
             # Install Nox + its Poetry integration.
-            - name: Install nox nox-poetry rich
+            - name: Install nox and nox-poetry
               run: |
-                  pipx install nox
-                  pipx inject nox nox-poetry
-                  pipx inject nox rich
+                  pipx install "nox==$NOX_VERSION"
+                  pipx inject nox "nox-poetry==$NOX_POETRY_VERSION"
                   nox --version
 
             # pre-commit downloads hooks into ~/.cache/pre-commit.
@@ -134,7 +142,7 @@ jobs:
                       fh.write(f"result={result}\n")
 
             - name: Restore pre-commit cache
-              uses: actions/cache@v4
+              uses: actions/cache@v6
               if: matrix.session == 'pre-commit'
               with:
                   path: ~/.cache/pre-commit
@@ -154,7 +162,7 @@ jobs:
 
             - name: Upload coverage data
               if: always() && matrix.session == 'tests' && matrix.python-version == '3.12'
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: coverage-data
                   path: .coverage*
@@ -162,24 +170,24 @@ jobs:
 
             - name: Upload documentation
               if: matrix.session == 'docs-build'
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: docs
                   path: docs/_build
 
     coverage:
-        # Always attempt to process coverage if the artifact exists.
-        # This allows coverage upload even if *some* matrix entries failed.
+        # Runs after the tests even when other entries of the matrix failed, so that the coverage of the default
+        # Python is reported; it fails when that entry left no coverage data.
         if: ${{ always() }}
         runs-on: ubuntu-22.04
         needs: tests
         timeout-minutes: 30
         steps:
             - name: Check out the repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
 
             - name: Set up Python 3.12
-              uses: actions/setup-python@v5
+              uses: actions/setup-python@v7
               with:
                   python-version: "3.12"
                   cache: pip
@@ -187,48 +195,47 @@ jobs:
                       pyproject.toml
                       poetry.lock
 
+            # Poetry, its export plugin, nox and nox-poetry are installed at the versions of poetry.lock.
+            - name: Read the tool versions from poetry.lock
+              shell: python
+              run: |
+                  import os
+                  import tomllib
+
+                  with open("poetry.lock", "rb") as fh:
+                      versions = {package["name"]: package["version"] for package in tomllib.load(fh)["package"]}
+                  with open(os.environ["GITHUB_ENV"], "a") as env:
+                      for name in ("poetry", "poetry-plugin-export", "nox", "nox-poetry"):
+                          env.write(f"{name.upper().replace('-', '_')}_VERSION={versions[name]}\n")
+                          print(name, versions[name])
+
             - name: Install Poetry
               run: |
-                  pipx install poetry
-                  pipx inject poetry poetry-plugin-export
+                  pipx install "poetry==$POETRY_VERSION"
+                  pipx inject poetry "poetry-plugin-export==$POETRY_PLUGIN_EXPORT_VERSION"
                   poetry --version
 
-            - name: Install nox nox-poetry rich
+            - name: Install nox and nox-poetry
               run: |
-                  pipx install nox
-                  pipx inject nox nox-poetry
-                  pipx inject nox rich
+                  pipx install "nox==$NOX_VERSION"
+                  pipx inject nox "nox-poetry==$NOX_POETRY_VERSION"
                   nox --version
 
+            # The coverage data of the tests on the default Python. A missing artifact (that entry failed or was
+            # cancelled before its upload) fails this job: the coverage gate is never passed without data.
             - name: Download coverage data
-              id: download-coverage
-              continue-on-error: true
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v8
               with:
                   name: coverage-data
 
-            # Guard downstream steps so the job stays green when coverage-data was not produced
-            # (e.g. if the py3.12 tests matrix entry was cancelled/failed before uploading).
-            - name: Check for coverage inputs
-              id: coverage-inputs
-              run: |
-                  if ls -1 .coverage* >/dev/null 2>&1; then
-                      echo "present=true" >> "$GITHUB_OUTPUT"
-                  else
-                      echo "present=false" >> "$GITHUB_OUTPUT"
-                  fi
-
             - name: Combine coverage data and display human readable report
-              if: steps.coverage-inputs.outputs.present == 'true'
               run: nox --force-color --session=coverage
 
             - name: Create coverage report
-              if: steps.coverage-inputs.outputs.present == 'true'
               run: nox --force-color --session=coverage -- xml -i
 
             - name: Upload coverage report
-              if: steps.coverage-inputs.outputs.present == 'true'
-              uses: codecov/codecov-action@v5
+              uses: codecov/codecov-action@v7
               with:
                   token: ${{ secrets.CODECOV_TOKEN }}
                   files: coverage.xml

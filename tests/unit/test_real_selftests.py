@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""The package's own self-tests (``TrackTests``) on the graphs of real organisms.
+"""The package's own self-tests (``GraphChecks``) on the graphs of real organisms.
 
-``API.build_graph(..., return_test=True)`` attaches a ``TrackTests``: checks that compare the graph with Ensembl's
+``GraphChecks(graph, manager)`` holds the self-tests: checks that compare the graph with Ensembl's
 tables, for developers and for the end of a graph build. Here they run on the graphs built from the cut tables of
 ``tests/data/real`` (three genome assemblies per organism), with the tables replayed to the manager. What each
 check must find is known: the graph was compared with the tables by independent code in ``test_real_graph.py``.
@@ -15,9 +15,10 @@ import collections
 import pytest
 
 import idtrack
-from idtrack._database_manager import DatabaseManager
-from idtrack._db import DB
-from idtrack._track_tests import CheckResult, TrackTests
+from idtrack import ids, organisms
+from idtrack.build.database_manager import DatabaseManager
+from idtrack.checks import CheckResult, GraphChecks
+from idtrack.errors import UnknownDatabaseError
 from tests._real_tables import ORGANISMS, SNAPSHOT, tables_path
 
 AVAILABLE = [organism for organism in ORGANISMS if tables_path(organism).is_file()]
@@ -28,17 +29,15 @@ pytestmark = pytest.mark.parametrize("organism", AVAILABLE)
 def self_tests(real_world):
     """Return ``get(organism)``: the self-tests of an organism's graph, their manager reading the cut tables."""
     patches = pytest.MonkeyPatch()
-    made: dict[str, TrackTests] = {}
+    made: dict[str, GraphChecks] = {}
 
-    def get(organism: str) -> TrackTests:
+    def get(organism: str) -> GraphChecks:
         if organism not in made:
             world = real_world(organism)
             world.tables.install(patches, world.repository)
             patches.setattr(DatabaseManager, "_core_db_index_cache", {})
-            api = idtrack.API(local_repository=world.repository)
-            api.build_graph(organism, SNAPSHOT, return_test=True)
-            assert isinstance(api.track, TrackTests)
-            made[organism] = api.track
+            api = idtrack.API.build(organism, SNAPSHOT, world.repository)
+            made[organism] = GraphChecks(api.graph, idtrack.API.database_manager(organism, SNAPSHOT, world.repository))
         return made[organism]
 
     yield get
@@ -48,13 +47,13 @@ def self_tests(real_world):
 def test_invariants_of_a_built_graph_hold(self_tests, organism):
     """Node types, edge summaries, the ranges of versions and of ids without version are consistent."""
     tests = self_tests(organism)
-    assert tests.db_manager.organism == organism and int(tests.db_manager.ensembl_release) == SNAPSHOT
+    assert tests.database_manager.organism == organism and int(tests.database_manager.release) == SNAPSHOT
     for result in (
-        tests.is_node_consistency_robust(verbose=False),
+        tests.is_node_consistency_robust(progress=False),
         tests.is_combined_summary_complete(),
         tests.is_edge_with_same_nts_only_at_backbone_nodes(),
-        tests.is_range_functions_robust(verbose=False),
-        tests.is_base_is_range_correct(verbose=False),
+        tests.is_range_functions_robust(progress=False),
+        tests.is_base_is_range_correct(progress=False),
     ):
         assert isinstance(result, CheckResult) and result.holds is True, (result.check, result.details)
         assert result.details["compared"] >= 400
@@ -68,14 +67,14 @@ def test_final_conversions_of_the_last_release_equal_the_tables(self_tests, real
     """
     tests, world = self_tests(organism), real_world(organism)
     assembly = world.backbone[SNAPSHOT]
-    database = next(d for d in DB.symbol_databases[organism] if d in world.api.valid_final_databases(SNAPSHOT))
+    database = next(d for d in organisms.SYMBOL_DATABASES[organism] if d in world.api.final_databases(SNAPSHOT))
     symbols: dict[str, set[str]] = collections.defaultdict(set)
     for gene, name, value, kind, form in world.ensembl.links(assembly, SNAPSHOT):
         if kind == "id" and name == database and world.ensembl.selected(form, name, assembly, SNAPSHOT):
             symbols[f"{gene}.{world.genes_at(SNAPSHOT)[gene]}"].add(value)
 
     result = tests.is_final_external_conversion_robust(
-        database=database, ens_rel=SNAPSHOT, verbose=False, convert_using_release=True
+        final_database=database, to_release=SNAPSHOT, progress=False, convert_using_release=True
     )
     details = result.details
     assert result.holds is True, {key: value for key, value in details.items() if key != "run"}
@@ -97,11 +96,11 @@ def test_final_conversions_are_checked_at_a_release_of_an_earlier_assembly(self_
             view[name].add(_gene)
     assert len(view) >= 3
     checked = 0
-    for database in sorted(world.api.valid_final_databases(release)):
+    for database in sorted(world.api.final_databases(release)):
         if tests.graph.external_database_connection_form.get(database) != "gene" or database.startswith("synonym"):
             continue
         result = tests.is_final_external_conversion_robust(
-            database=database, ens_rel=release, verbose=False, convert_using_release=True
+            final_database=database, to_release=release, progress=False, convert_using_release=True
         )
         if database in view:
             assert result.holds is True, {key: value for key, value in result.details.items() if key != "run"}
@@ -110,7 +109,9 @@ def test_final_conversions_are_checked_at_a_release_of_an_earlier_assembly(self_
             checked += 1
         else:
             # a database of the assembly that has no id at this release: nothing to check, and the result says so
-            assert result.holds is False and result.details["error"].startswith("ValueError: No external database")
+            assert result.holds is False and result.details["error"].startswith(
+                "UnknownDatabaseError: No external database"
+            )
     assert checked == len(view)
 
 
@@ -120,48 +121,50 @@ def test_database_that_the_graph_does_not_hold_is_refused_with_what_is_valid(sel
     release = max(r for r, assembly in world.backbone.items() if assembly != world.backbone[SNAPSHOT])
     assembly = world.backbone[release]  # an earlier assembly, at the last release it served
 
-    def run(from_database, to_database):
+    def run(from_database, final_database):
         return tests.history_travel_testing(
             from_release=release, from_assembly=assembly, from_database=from_database, to_release=SNAPSHOT,
-            to_database=to_database, go_external=False, prioritize_to_one_filter=True, convert_using_release=True,
-            from_fraction=0.01, verbose=False,
+            final_database=final_database, allow_bridges=False, strategy="best", convert_using_release=True,
+            from_fraction=0.01, progress=False,
         )  # fmt: skip
 
-    own_genes = DB.nts_assembly[assembly][DB.backbone_form]
-    targets = world.api.valid_final_databases(SNAPSHOT)
-    for target in ("No Such Database", "gene", own_genes, DB.nts_ensembl["transcript"], targets[0].swapcase()):
-        with pytest.raises(ValueError) as refused:
+    own_genes = organisms.ASSEMBLY_NODE_TYPES[assembly][ids.BACKBONE_FORM]
+    targets = world.api.final_databases(SNAPSHOT)
+    # (the engine's rule, as every conversion: a name that differs in letter case only is that database)
+    for target in ("No Such Database", "gene", own_genes, ids.ENSEMBL_TYPE["transcript"]):
+        with pytest.raises(UnknownDatabaseError) as refused:
             run(own_genes, target)
         assert str(refused.value) == (
-            f"`to_database`={target!r} is not a database of the loaded graph at Ensembl release {SNAPSHOT}; "
-            f"valid: {targets}."
+            f"`final_database`={target!r} is not a database of this graph at Ensembl release {SNAPSHOT} (genome "
+            f"assembly {world.backbone[SNAPSHOT]}); valid: {targets}."
         )
-    sources = set(world.api.list_external_databases_by_assembly()[assembly])
-    sources |= {DB.nts_ensembl[form] for form in DB.forms_in_order}
-    sources |= {DB.nts_assembly[assembly][form] for form in DB.forms_in_order} | {DB.nts_base_ensembl["gene"]}
-    other_genes = DB.nts_assembly[world.backbone[SNAPSHOT]][DB.backbone_form]  # the gene ids of another assembly
+    sources = set(world.api.databases_by_assembly()[str(assembly)])
+    sources |= {ids.ENSEMBL_TYPE[form] for form in ids.FORMS}
+    sources |= {organisms.ASSEMBLY_NODE_TYPES[assembly][form] for form in ids.FORMS} | {ids.BASE_ENSEMBL_TYPE["gene"]}
+    # the gene ids of another assembly
+    other_genes = organisms.ASSEMBLY_NODE_TYPES[world.backbone[SNAPSHOT]][ids.BACKBONE_FORM]
     for source in ("No Such Database", "gene", other_genes):
-        with pytest.raises(ValueError) as refused:
-            run(source, DB.nts_ensembl["gene"])
+        with pytest.raises(UnknownDatabaseError) as refused:
+            run(source, ids.ENSEMBL_TYPE["gene"])
         assert str(refused.value).startswith(
             f"`from_database`={source!r} is not a database of the loaded graph on genome assembly {assembly} "
         )
         assert str(refused.value).endswith(f"valid: {sorted(sources)}.")
     # what is valid still runs: every id drawn gets one outcome (which ids convert depends on the draw: not asserted)
-    report = run(own_genes, DB.nts_ensembl["gene"])
+    report = run(own_genes, ids.ENSEMBL_TYPE["gene"])
     stopped = [the_id for the_id, _ in report["history_voyage_failed_gracefully"]]
     outcomes = [*report["conversion"], *report["lost_item"], *stopped]
     assert report["ids"]["from"] and sorted(outcomes) == report["ids"]["from"]
-    assert not report["query_not_in_the_graph"] and not report["history_voyage_failed_unknown"]
+    assert not report["history_voyage_failed_unknown"]
 
     forms = tests.graph.external_database_connection_form
-    checkable = sorted(d for d in world.api.list_external_databases() if forms[d] == "gene" and "::" not in d)
-    not_of_genes = next(d for d in world.api.list_external_databases() if forms[d] != "gene")
-    for database in ("No Such Database", DB.nts_ensembl["gene"], not_of_genes):
-        with pytest.raises(ValueError) as refused:
-            tests.is_final_external_conversion_robust(database=database, ens_rel=SNAPSHOT, verbose=False)
+    checkable = sorted(d for d in world.api.external_databases() if forms[d] == "gene" and "::" not in d)
+    not_of_genes = next(d for d in world.api.external_databases() if forms[d] != "gene")
+    for database in ("No Such Database", ids.ENSEMBL_TYPE["gene"], not_of_genes):
+        with pytest.raises(UnknownDatabaseError) as refused:
+            tests.is_final_external_conversion_robust(final_database=database, to_release=SNAPSHOT, progress=False)
         assert str(refused.value) == (
-            f"`database`={database!r} is not an external database of the loaded graph that attaches its ids to "
+            f"`final_database`={database!r} is not an external database of the loaded graph that attaches its ids to "
             f"genes; valid: {checkable}."
         )
 
@@ -173,7 +176,7 @@ def test_gene_id_lists_are_checked_at_every_release(self_tests, real_world, orga
     releases of the earlier assemblies too.
     """
     tests, world = self_tests(organism), real_world(organism)
-    result = tests.is_id_functions_consistent_ensembl(verbose=False)
+    result = tests.is_id_functions_consistent_ensembl(progress=False)
     assert result.holds is True, result.details
     pairs = {(a, r) for a in (int(key) for key in world.tables.indices) for r in world.ensembl.releases(a)}
     assert result.details["compared"] == len(pairs) >= len(world.backbone)
@@ -183,13 +186,13 @@ def test_gene_id_lists_are_checked_at_every_release(self_tests, real_world, orga
 
 def test_ranges_of_versions_agree_with_their_edges(self_tests, organism):
     """The releases of a gene version's edges are the releases of its history, on whatever assembly it lived."""
-    result = self_tests(organism).is_id_functions_consistent_ensembl_2(verbose=False)
+    result = self_tests(organism).is_id_functions_consistent_ensembl_2(progress=False)
     assert result.holds is True, result.details
     assert result.details["compared"] >= 500
 
 
 def test_external_id_lists_are_checked_at_every_release(self_tests, organism):
     """The external ids of the graph equal the tables (asserted independently in test_real_graph)."""
-    result = self_tests(organism).is_id_functions_consistent_external(verbose=False)
+    result = self_tests(organism).is_id_functions_consistent_external(progress=False)
     assert result.holds is True, result.details
     assert result.details["compared"] > 500

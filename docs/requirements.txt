@@ -1,25 +1,8 @@
+# The documentation's own tools. The package itself is installed beside them, with its `harmonize` extra (autodoc
+# imports every module): `pip install ".[harmonize]" -r docs/requirements.txt` (.readthedocs.yml, publish_docs.yml).
 Sphinx>=4.0.1
 sphinx_rtd_theme>=0.5.2
-sphinx-rtd-dark-mode>=1.2.1
-sphinx-automodapi>=0.13
-sphinx_click>=3.0.0
 sphinx-design>=0.6.0
-click>=8.0.1
 nbsphinx>=0.9.8
 # Note: pandoc binary must be installed via apt/brew/choco; pip package does not provide the CLI
 IPython>=8.4.0
-
-# Below are from pyproject.toml (the same floors). Needed for auto-doc
-rich>=10.3.0
-PyYAML>=6.0.2,<7
-h5py>=3.11
-pandas>=2.3
-numpy>=2.1
-networkx>=3.2
-requests>=2.33.0
-urllib3>=2.8.0
-PyMySQL>=1.1.1
-PySocks>=1.7.1
-tqdm>=4.66.3
-anndata>=0.13
-scipy>=1.14

@@ -11,6 +11,7 @@ and the harmonization of a dataset.
 from __future__ import annotations
 
 import collections
+import dataclasses
 import json
 
 import numpy as np
@@ -18,12 +19,14 @@ import pandas as pd
 import pytest
 
 import idtrack
-from idtrack._db import DB
+from idtrack import errors, ids, organisms
+from idtrack.results import ConversionResult
 from tests._real_tables import ORGANISMS, SNAPSHOT, read_truth, tables_path, truth_path, verdict, without_version
+from tests.unit._paths import raw_steps
 
 AVAILABLE = [organism for organism in ORGANISMS if tables_path(organism).is_file() and truth_path(organism).is_file()]
 pytestmark = pytest.mark.parametrize("organism", AVAILABLE)
-SYNONYM = DB.synonym_id_nodes_prefix
+SYNONYM = ids.SYNONYM_PREFIX
 
 
 def selected_links(world):
@@ -49,18 +52,39 @@ def test_listings_of_the_graph_are_those_of_ensembls_tables(real_world, organism
         databases[assembly].add(database)
         forms[database][form] += 1
 
-    assert api.list_ensembl_releases() == api.graph_releases() == sorted(world.backbone)
-    assert api.list_genome_assemblies() == sorted(databases)
-    assert api.list_external_databases_by_assembly() == {a: sorted(names) for a, names in sorted(databases.items())}
-    assert api.list_external_databases() == sorted(set().union(*databases.values()))
-    reported = api.external_database_forms()
+    assert api.releases() == sorted(world.backbone)
+    assert sorted(a.assembly for a in api.describe().assemblies) == sorted(databases)
+    assert api.databases_by_assembly() == {str(a): sorted(names) for a, names in sorted(databases.items())}
+    assert api.external_databases() == sorted(set().union(*databases.values()))
+    reported = api.database_forms()
     for database, counts in forms.items():
         assert reported[database] in counts, database
         if len(counts) == 1:
             assert reported[database] == next(iter(counts)), database
     # the lists are copies: changing one changes nothing in the graph
-    api.list_external_databases().clear()
-    assert api.list_external_databases()
+    api.external_databases().clear()
+    assert api.external_databases()
+
+    # the description of the graph says the same, without the network
+    described = api.describe()
+    assert described.organism == organism and described.snapshot_release == SNAPSHOT
+    assert list(described.releases) == sorted(world.backbone)
+    assert {str(r): a for r, a in world.backbone.items()} == described.serving_assembly
+    assert [a.assembly for a in described.assemblies] == [
+        a for a in organisms.assemblies_by_priority(organism) if a in databases
+    ]
+    for assembly in described.assemblies:
+        held = databases[assembly.assembly]
+        assert list(assembly.external_databases) == sorted(held)  # as the graph names them, synonyms' with the prefix
+        assert list(assembly.synonym_databases) == sorted(d for d in held if d.startswith(SYNONYM))
+        assert assembly.name == organisms.assembly_name(organism, assembly.assembly)
+        assert list(assembly.serves) == sorted(r for r, a in world.backbone.items() if a == assembly.assembly)
+    every = set().union(*databases.values())
+    assert list(described.external_databases) == sorted(every) == api.external_databases()
+    assert list(described.synonym_databases) == sorted(d for d in every if d.startswith(SYNONYM))
+    assert list(described.final_databases) == api.final_databases(SNAPSHOT)
+    assert described.content_digest and described.format_version == idtrack.graph.GRAPH_FORMAT_VERSION
+    assert type(described).from_dict(json.loads(json.dumps(described.to_dict(), allow_nan=False))) == described
 
 
 def test_source_of_a_list_of_identifiers_is_inferred_from_where_they_exist(real_world, organism):
@@ -84,15 +108,15 @@ def test_source_of_a_list_of_identifiers_is_inferred_from_where_they_exist(real_
             )
         best = [r for r in releases if counts[r] == max(counts.values())]
         assert release in best
-        assert api.infer_identifier_source(ids, mode="ensembl_release") == best
-        ranking = api.infer_identifier_source(ids, mode="ensembl_release", report_only_winner=False)
+        assert api.infer_source(ids, mode="release") == best
+        ranking = api.infer_source(ids, mode="release", report_only_winner=False)
         assert [pair for pair in ranking if pair[1]] == sorted(
             ([r, c] for r, c in counts.items() if c), key=lambda pair: (-pair[1], pair[0])
         )
-    with pytest.raises(ValueError, match="None of the 2 identifiers"):
-        api.infer_identifier_source(["no such id", "nor this"])
-    with pytest.raises(ValueError, match="Unknown mode"):
-        api.infer_identifier_source(["x"], mode="somewhere")
+    with pytest.raises(errors.UnknownIdentifierError, match="None of the 2 identifiers"):
+        api.infer_source(["no such id", "nor this"])
+    with pytest.raises(errors.InvalidArgumentError, match="is not a mode"):
+        api.infer_source(["x"], mode="somewhere")
 
 
 # --------------------------------------------------------------------------- batches
@@ -112,33 +136,31 @@ def test_batch_gives_the_answers_of_single_conversions_in_the_order_asked(real_w
             continue
         ids = [query["id"] for query in queries]
         ids = ids + ids[:2] + ["  " + ids[0] + " "]
-        arguments = dict(
-            from_release=from_release, to_release=to_release, final_database=final_database, strategy=strategy
-        )
-        batch = api.convert_identifier_multiple(ids, verbose=False, **arguments)
-        single = [api.convert_identifier(identifier, **arguments) for identifier in ids]
+        arguments = dict(from_release=from_release, to_release=to_release, final_database=final_database)
+        batch = api.convert_many(ids, **arguments)
+        single = [api.convert(identifier, **arguments) for identifier in ids]
         assert batch == single
-        assert [result["query_id"] for result in batch] == ids
+        assert [result.query_id for result in batch] == ids
         for query, result in zip(queries, batch):
             assert verdict(query, result) is None, query["source"]
-        batch[-3]["target_id"].append("changed by the caller")
-        assert batch[0]["target_id"] == single[0]["target_id"]  # a repeated identifier has a result of its own
+        with pytest.raises(AttributeError):
+            batch[-3].query_id = "changed by the caller"  # results are frozen: a repeated identifier is safe
 
-        bins = api.classify_multiple_conversion(batch)
+        bins = api.classify(batch, strategy)
         assert bins["input_identifiers"] == batch
-        nothing = [r for r in batch if r["no_corresponding"] or r["no_conversion"]]
-        stand_in = [r for r in batch if r["no_target"]]
-        answered = [r for r in batch if r not in nothing and not r["no_target"]]
+        nothing = [r for r in batch if r.status in ("not_found", "unknown_version", "no_conversion")]
+        stand_in = [r for r in batch if r.no_target]
+        answered = [r for r in batch if r not in nothing and not r.no_target]
         assert bins["matching_1_to_0"] == nothing
         assert bins["alternative_target_1_to_1"] + bins["alternative_target_1_to_n"] == [
-            r for n in (1, 2) for r in stand_in if (len(r["target_id"]) == 1) is (n == 1)
+            r for n in (1, 2) for r in stand_in if (len(r.targets(strategy)) == 1) is (n == 1)
         ]
-        assert bins["matching_1_to_1"] == [r for r in answered if len(r["target_id"]) == 1]
-        assert bins["matching_1_to_n"] == [r for r in answered if len(r["target_id"]) > 1]
+        assert bins["matching_1_to_1"] == [r for r in answered if len(r.targets(strategy)) == 1]
+        assert bins["matching_1_to_n"] == [r for r in answered if len(r.targets(strategy)) > 1]
         for result in bins["matching_1_to_1"]:
-            same = without_version(result["target_id"][0]).lower() == without_version(result["graph_id"]).lower()
+            same = without_version(result.targets(strategy)[0]).lower() == without_version(result.graph_id).lower()
             assert (result in bins["changed_only_1_to_1"]) is not same
-        summary = api.binned_conversion_summary(bins)
+        summary = api.classification_summary(bins)
         assert f"Total processed: {len(batch)}" in summary and f"1→0: {len(nothing)} " in summary
         asked += len(batch)
     assert asked >= 100
@@ -155,28 +177,33 @@ def test_explanation_leads_from_the_gene_read_to_the_target_through_real_edges(r
     it is an edge of the graph.
     """
     world = real_world(organism)
-    api, graph = world.api, world.api.track.graph
+    api, graph = world.api, world.api.graph
     asked = 0
     for query in read_truth(organism):
         if query["kind"] not in ("retired_renamed", "retired_merged", "retired_split") or query["final_database"]:
             continue
-        plain = api.convert_identifier(
-            query["id"], query["from_release"], query["to_release"], strategy=query["strategy"]
+        plain = api.convert(query["id"], query["from_release"], query["to_release"])
+        result = api.convert(query["id"], query["from_release"], query["to_release"], explain=True)
+        stripped = dataclasses.replace(
+            result,
+            path=None,
+            candidates=tuple(dataclasses.replace(c, path=(), final_path=()) for c in result.candidates),
         )
-        result = api.convert_identifier(
-            query["id"], query["from_release"], query["to_release"], strategy=query["strategy"], explain=True
-        )
-        assert {k: v for k, v in result.items() if k != "the_path"} == plain and "the_path" not in plain
-        assert json.loads(json.dumps(result, allow_nan=False)) == result
-        assert [[p["ensembl_gene"], p["target_id"]] for p in result["the_path"]] == result["last_node"]
-        for path in result["the_path"]:
-            edges = path["edges"]
-            assert (path["external_jump"], path["external_gap"]) == (0, 0), query["source"]
-            assert 0.0 < path["score"] <= 1.0
-            assert without_version(path["entry_gene"]) == without_version(query["id"])
-            assert graph.is_active(path["entry_gene"], result["from_release"])
-            assert edges and edges[-1][1] == path["ensembl_gene"]
-            assert edges[0][0] in (path["entry_gene"], result["graph_id"])
+        assert stripped == plain and plain.path is None
+        assert ConversionResult.from_dict(json.loads(json.dumps(result.to_dict(), allow_nan=False))) == result
+        for candidate in result.view(query["strategy"]):
+            edges = raw_steps(result.path, candidate.path + candidate.final_path)
+            assert (candidate.bridges, candidate.bridge_gap) == (0, 0), query["source"]
+            assert 0.0 < candidate.score <= 1.0
+            assert without_version(candidate.entry_gene) == without_version(query["id"])
+            assert graph.is_active(candidate.entry_gene, result.from_release)
+            assert edges and edges[-1][1] == candidate.gene
+            assert edges[0][0] in (candidate.entry_gene, result.graph_id)
+            steps = [result.path.steps[i] for i in candidate.path]
+            assert {s.kind for s in steps} <= {"entry", "history", "self_loop", "identity"}, query["source"]
+            for step in steps:
+                if step.kind == "history":
+                    assert step.old_release < step.new_release and step.reason
             for source, target, *_rest in edges:
                 assert target in graph[source], (source, target)
             for (_a, joint, *_x), (following, *_y) in zip(edges, edges[1:]):
@@ -195,53 +222,56 @@ def test_wrong_arguments_are_refused_before_any_search_and_say_what_is_valid(rea
     gene = sorted(world.genes_at(SNAPSHOT))[0]
     first = min(world.backbone)
 
-    with pytest.raises(ValueError, match=rf"`to_release`={SNAPSHOT + 1} .* valid releases are {first} to {SNAPSHOT}"):
-        api.convert_identifier(gene, to_release=SNAPSHOT + 1)
-    with pytest.raises(ValueError, match=rf"`from_release`={first - 1} "):
-        api.convert_identifier(gene, from_release=first - 1)
-    with pytest.raises(ValueError, match="`final_database`='No Such Database' is not a database"):
-        api.convert_identifier(gene, final_database="No Such Database")
-    with pytest.raises(ValueError, match="`from_database`='No Such Database' is not an external database"):
-        api.convert_identifier(gene, from_database="No Such Database")
-    with pytest.raises(ValueError, match="`identifier` is empty"):
-        api.convert_identifier("   ")
-    with pytest.raises(ValueError, match=r"1 empty strings, at positions \[1\]"):
-        api.convert_identifier_multiple([gene, " "], verbose=False)
+    with pytest.raises(
+        errors.UnknownReleaseError,
+        match=rf"`to_release`={SNAPSHOT + 1} .* covers the Ensembl releases {first} to {SNAPSHOT}",
+    ):
+        api.convert(gene, to_release=SNAPSHOT + 1)
+    with pytest.raises(errors.UnknownReleaseError, match=rf"`from_release`={first - 1} "):
+        api.convert(gene, from_release=first - 1)
+    with pytest.raises(errors.UnknownDatabaseError, match="`final_database`='No Such Database' is not a database"):
+        api.convert(gene, final_database="No Such Database")
+    with pytest.raises(errors.UnknownDatabaseError, match="`from_database`='No Such Database' is not an external"):
+        api.convert(gene, from_database="No Such Database")
+    with pytest.raises(errors.MissingValueError, match="`identifier` is empty"):
+        api.convert("   ")
+    with pytest.raises(errors.MissingValueError, match=r"1 empty strings, at positions \[1\]"):
+        api.convert_many([gene, " "])
     # the same refusals for an identifier that is not in the graph: nothing is searched first
-    with pytest.raises(ValueError, match="`to_release`"):
-        api.convert_identifier("not an identifier of anything", to_release=SNAPSHOT + 1)
-
-    with pytest.raises(RuntimeError, match="Call `API.build_graph"):
-        idtrack.API(local_repository=world.repository).convert_identifier(gene)
+    with pytest.raises(errors.UnknownReleaseError, match="`to_release`"):
+        api.convert("not an identifier of anything", to_release=SNAPSHOT + 1)
 
     # a database of the earlier assembly is no target at a release of the last one, and the other way round
-    by_assembly = api.list_external_databases_by_assembly()
-    last, earliest = world.backbone[SNAPSHOT], world.backbone[first]
+    by_assembly = api.databases_by_assembly()
+    last, earliest = str(world.backbone[SNAPSHOT]), str(world.backbone[first])
     only_earlier = sorted(set(by_assembly[earliest]) - set(by_assembly[last]))
     only_last = sorted(set(by_assembly[last]) - set(by_assembly[earliest]))
     for database, release in [(d, SNAPSHOT) for d in only_earlier[:1]] + [(d, first) for d in only_last[:1]]:
-        with pytest.raises(ValueError, match="`final_database`"):
-            api.convert_identifier(gene, to_release=release, final_database=database)
+        with pytest.raises(errors.UnknownDatabaseError, match="`final_database`"):
+            api.convert(gene, to_release=release, final_database=database)
     assert only_last
 
 
 @pytest.mark.wrong_argument_type
 def test_arguments_of_the_wrong_type_are_type_errors(real_world, organism):
-    """A release that is no integer, an identifier that is no string, a strategy that is none of the two."""
+    """An API of no graph, a release that is no integer, an identifier that is no string, a strategy that is none."""
     world = real_world(organism)
     api = world.api
     gene = sorted(world.genes_at(SNAPSHOT))[0]
 
+    with pytest.raises(errors.ArgumentTypeError, match="API.load"):
+        idtrack.API(world.repository)  # type: ignore[arg-type]
+
     for release in (True, 100.0, "100", None.__class__):
-        with pytest.raises(TypeError, match="`to_release` must be an integer"):
-            api.convert_identifier(gene, to_release=release)
-    with pytest.raises(TypeError, match="`identifier` must be a string"):
-        api.convert_identifier(12345)
-    with pytest.raises(ValueError, match="Invalid strategy='first'"):
-        api.convert_identifier(gene, strategy="first")
-    with pytest.raises(TypeError, match=r"non-string items, at positions \[1\]"):
-        api.convert_identifier_multiple([gene, None], verbose=False)
-    assert api.convert_identifier(gene, to_release=np.int64(SNAPSHOT))["to_release"] == SNAPSHOT
+        with pytest.raises(errors.ArgumentTypeError, match="`to_release` must be an integer"):
+            api.convert(gene, to_release=release)
+    with pytest.raises(errors.ArgumentTypeError, match="`identifier` must be a string"):
+        api.convert(12345)
+    with pytest.raises(errors.InvalidArgumentError, match="`strategy`='first' is not a strategy"):
+        api.convert(gene).view("first")
+    with pytest.raises(errors.ArgumentTypeError, match=r"non-string items, at positions \[1\]"):
+        api.convert_many([gene, None])
+    assert api.convert(gene, to_release=np.int64(SNAPSHOT)).to_release == SNAPSHOT
 
 
 # --------------------------------------------------------------------------- a dataset
@@ -255,7 +285,8 @@ def test_dataset_of_an_old_release_keeps_every_count_and_sums_what_ensembl_merge
     own feature there (with the symbol the symbol database gives it), an id of the truth file that was merged into
     another gene is part of that gene's feature, and no count is lost.
     """
-    import anndata as ad
+    ad = pytest.importorskip("anndata")
+    pytest.importorskip("scipy")
 
     from idtrack import HarmonizeFeatures
 
@@ -271,11 +302,11 @@ def test_dataset_of_an_old_release_keeps_every_count_and_sums_what_ensembl_merge
     counts = np.arange(1, 2 * len(names) + 1, dtype=np.float32).reshape(2, len(names))
     path = tmp_path / "old.h5ad"
     ad.AnnData(X=counts, var=pd.DataFrame(index=names)).write_h5ad(path)
-    symbol_database = next(d for d in DB.symbol_databases[organism] if d in world.api.valid_final_databases(SNAPSHOT))
+    symbol_database = next(d for d in organisms.SYMBOL_DATABASES[organism] if d in world.api.final_databases(SNAPSHOT))
 
     harmonizer = HarmonizeFeatures(
         "real", {"old": str(path)}, str(tmp_path / "project"), world.repository, SNAPSHOT,
-        source_releases={"old": release}, api=world.api, verbose_level=0,
+        from_release_by_dataset={"old": release}, api=world.api, verbosity=0,
     )  # fmt: skip
     data, n_in, n_out = harmonizer.feature_harmonizer("old", merge="sum")
     column = {name: i for i, name in enumerate(names)}
@@ -324,28 +355,20 @@ def test_default_target_is_the_snapshot_release_and_best_is_part_of_all(real_wor
     world = real_world(organism)
     api = world.api
     gene, version = sorted(world.genes_at(SNAPSHOT).items())[0]
-    assert api.convert_identifier(gene)["to_release"] == SNAPSHOT
-    assert api.convert_identifier(gene)["target_id"] == [f"{gene}.{version}"]
-    assert list(api.track.convert(gene)) == [f"{gene}.{version}"]
+    assert api.convert(gene).to_release == SNAPSHOT
+    assert api.convert(gene).targets() == (f"{gene}.{version}",)
+    assert [c.gene for c in api.engine.convert(gene).candidates] == [f"{gene}.{version}"]
 
     asked = 0
     for query in read_truth(organism):
         arguments = dict(
             from_release=query["from_release"], to_release=query["to_release"], final_database=query["final_database"]
         )
-        best = api.convert_identifier(query["id"], strategy="best", **arguments)
-        everyone = api.convert_identifier(query["id"], strategy="all", **arguments)
-        assert set(map(tuple, best["last_node"])) <= set(map(tuple, everyone["last_node"])), query["source"]
-        for key in (
-            "graph_id",
-            "match",
-            "from_release",
-            "alternative_locus_genes",
-            "no_corresponding",
-            "no_conversion",
-            "tie",
-        ):
-            assert best[key] == everyone[key], (query["source"], key)
+        result = api.convert(query["id"], **arguments)
+        best = {(c.gene, c.target) for c in result.view("best")}
+        everyone = {(c.gene, c.target) for c in result.view("all")}
+        assert best <= everyone, query["source"]
+        assert bool(best) == bool(everyone), query["source"]
         asked += 1
     assert asked >= 100
 
@@ -366,41 +389,40 @@ def test_every_answer_comes_best_first(real_world, organism):
         arguments = dict(
             from_release=query["from_release"], to_release=query["to_release"], final_database=query["final_database"]
         )
-        best = api.convert_identifier(query["id"], strategy="best", **arguments)
-        everyone = api.convert_identifier(query["id"], strategy="all", **arguments)
-        best_genes = list(dict.fromkeys(gene for gene, _target in best["last_node"]))
-        all_genes = list(dict.fromkeys(gene for gene, _target in everyone["last_node"]))
+        result = api.convert(query["id"], **arguments)
+        best = [(c.gene, c.target) for c in result.view("best")]
+        everyone = [(c.gene, c.target) for c in result.view("all")]
+        best_genes = list(dict.fromkeys(gene for gene, _target in best))
+        all_genes = list(dict.fromkeys(gene for gene, _target in everyone))
         with_more += len(all_genes) > len(best_genes) > 0
-        if best["last_node"] and not (
-            everyone["last_node"][0] == best["last_node"][0]
+        if best and not (
+            everyone[0] == best[0]
             and all_genes[: len(best_genes)] == best_genes
-            and everyone["target_id"][0] == best["target_id"][0]
+            and result.targets("all")[0] == result.targets("best")[0]
         ):
-            wrong.append((query["source"], best["last_node"], everyone["last_node"]))
+            wrong.append((query["source"], best, everyone))
     assert not wrong, wrong[:5]
     assert with_more >= 5  # queries with more genes among all answers than in the best one
 
     if organism == "sus_scrofa":
         split = dict(from_release=106, to_release=115)
-        best = api.convert_identifier("ENSSSCG00000042716", strategy="best", **split)
-        everyone = api.convert_identifier("ENSSSCG00000042716", strategy="all", explain=True, **split)
-        assert (best["target_id"], best["tie"]) == (["ENSSSCG00000062505.1"], False)
-        assert everyone["target_id"] == ["ENSSSCG00000062505.1", "ENSSSCG00000058225.1"]
-        scores = {path["ensembl_gene"]: path["score"] for path in everyone["the_path"]}
-        assert scores["ENSSSCG00000062505.1"] == scores["ENSSSCG00000058225.1"]  # the annotation decided
+        result = api.convert("ENSSSCG00000042716", explain=True, **split)
+        assert (result.targets("best"), result.tie) == (("ENSSSCG00000062505.1",), False)
+        assert result.targets("all") == ("ENSSSCG00000062505.1", "ENSSSCG00000058225.1")
+        scores = {c.gene: c.score for c in result.candidates}
+        assert scores["ENSSSCG00000062505.1"] == scores["ENSSSCG00000058225.1"]
+        assert result.decided_by == "annotation"  # the annotation decided
 
 
 SEEDED = r"""
 import json, sys
 import idtrack
-api = idtrack.API(local_repository=sys.argv[1])
-api.build_graph(sys.argv[2], int(sys.argv[3]))
+api = idtrack.API.build(sys.argv[2], int(sys.argv[3]), sys.argv[1])
 answers = []
 for line in open(sys.argv[4], encoding="utf-8"):
     q = json.loads(line)
-    for strategy in ("best", "all"):
-        arguments = (q["id"], q["from_release"], q["to_release"], q["final_database"], strategy)
-        answers.append(api.convert_identifier(*arguments, explain=True))
+    arguments = (q["id"], q["from_release"], q["to_release"], q["final_database"])
+    answers.append(api.convert(*arguments, explain=True).to_dict())
 print(json.dumps(answers))
 """
 
@@ -430,10 +452,7 @@ def test_answers_do_not_depend_on_the_hash_seed_of_the_process(real_world, organ
         outputs.append(completed.stdout)
     assert len(set(outputs)) == 1
     here = [
-        world.api.convert_identifier(
-            q["id"], q["from_release"], q["to_release"], q["final_database"], strategy, explain=True
-        )
+        world.api.convert(q["id"], q["from_release"], q["to_release"], q["final_database"], explain=True).to_dict()
         for q in read_truth(organism)
-        for strategy in ("best", "all")
     ]
     assert json.loads(outputs[0]) == here  # and the process that built the graph answers as the ones that loaded it

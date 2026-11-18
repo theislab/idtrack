@@ -27,12 +27,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from idtrack._db import DB
-from idtrack._the_graph import TheGraph
-from idtrack._track import InactiveAtReleaseError, UnknownVersionError
+from idtrack import ids, organisms
+from idtrack.errors import InactiveAtReleaseError, UnknownVersionError
+from idtrack.settings import GraphSettings, SearchSettings
 from tests._real_tables import ORGANISMS, SNAPSHOT, RealTables, read_truth, tables_path, truth_path, verdict
 
-SYNONYM = DB.synonym_id_nodes_prefix
+SYNONYM = ids.SYNONYM_PREFIX
 AVAILABLE = [organism for organism in ORGANISMS if tables_path(organism).is_file()]
 
 
@@ -44,7 +44,9 @@ def spread_of_releases(organism: str) -> tuple[int, ...]:
     serving = {}
     for release in sorted(set().union(*releases_of.values())):
         if release <= SNAPSHOT:
-            serving[release] = next(a for a in DB.assemblies_by_priority(organism) if release in releases_of.get(a, ()))
+            serving[release] = next(
+                a for a in organisms.assemblies_by_priority(organism) if release in releases_of.get(a, ())
+            )
     releases = sorted(serving)
     edges = {
         r
@@ -144,7 +146,7 @@ def test_gene_gets_the_ids_a_database_has_for_it_at_the_target_release(real_worl
     view = at(world, release)
     api = world.api
     own = ("ensembl_gene", "base_ensembl_gene")
-    finals = [d for d in api.valid_final_databases(release) if not d.startswith(SYNONYM) and d not in own]
+    finals = [d for d in api.final_databases(release) if not d.startswith(SYNONYM) and d not in own]
     # every database of the assembly may be asked for; one that has nothing at this release answers for no gene
     assert set(view.databases) <= set(finals)
     elsewhere = sorted(set(finals) - set(view.databases))[:1]
@@ -157,23 +159,23 @@ def test_gene_gets_the_ids_a_database_has_for_it_at_the_target_release(real_worl
         for gene in sample(having, 6) + lacking[:1]:
             expected = view.ids_of_gene.get((gene, database), set())
             node = view.node(gene)
-            result = api.convert_identifier(
-                node, from_release=release, to_release=release, final_database=database, strategy="all"
-            )
+            result = api.convert(node, from_release=release, to_release=release, final_database=database)
             asked += 1
-            got = result["target_id"]
+            got = list(result.targets("all"))
             if expected:
                 right = (
                     set(got) <= expected
                     and {i.lower() for i in got} == {i.lower() for i in expected}
                     and len({i.lower() for i in got}) == len(got)
-                    and (result["final_database"], result["no_target"]) == (database, False)
-                    and all(gene_node == node for gene_node, _target in result["last_node"])
+                    and (result.final_database, result.no_target) == (database, False)
+                    and all(
+                        gene_node == node for gene_node, _target in [[c.gene, c.target] for c in result.view("all")]
+                    )
                 )
             else:
-                right = (got, result["final_database"], result["no_target"]) == ([node], "ensembl_gene", True)
+                right = (got, result.final_database, result.no_target) == ([node], "ensembl_gene", True)
             if not right:
-                wrong.append((database, node, sorted(expected), got, result["final_database"], result["no_target"]))
+                wrong.append((database, node, sorted(expected), got, result.final_database, result.no_target))
     assert not wrong, wrong[:10]
     assert asked >= 20
 
@@ -191,29 +193,36 @@ def test_id_of_a_named_database_stands_for_the_genes_of_that_database(real_world
     api = world.api
     wrong = []
     asked = ties = 0
-    for database in [d for d in api.list_external_databases() if not d.startswith(SYNONYM)]:
+    for database in [d for d in api.external_databases() if not d.startswith(SYNONYM)]:
         ids = sorted(value for value, name in view.genes_of_id if name == database)
         shared = [value for value in ids if len(view.genes_of_id[(value, database)]) > 1]
         for value in sample(ids, 5) + shared[:4]:
             everyone, best, apart = view.answer(view.genes_of_id[(value, database)], value)
             arguments = dict(from_release=release, to_release=release, from_database=database)
-            all_of_them = api.convert_identifier(value, strategy="all", **arguments)
-            the_best = api.convert_identifier(value, strategy="best", **arguments)
+            all_of_them = api.convert(value, **arguments)
+            the_best = api.convert(value, **arguments)
             asked += 1
             ties += len(best) > 1
             right = (
-                set(all_of_them["target_id"]) == everyone
-                and set(all_of_them["alternative_locus_genes"]) == apart
-                and set(the_best["target_id"]) == best
-                and the_best["tie"] is (len(best) > 1)
-                and the_best["target_id"] == sorted(the_best["target_id"])
-                and the_best["from_databases"] == [database]
-                and (the_best["from_release"], the_best["from_release_fallback"]) == (release, False)
-                and the_best["graph_id"].lower() == value.lower()
+                set(list(all_of_them.targets("all"))) == everyone
+                and set(list(all_of_them.alternative_locus_genes)) == apart
+                and set(list(the_best.targets("best"))) == best
+                and the_best.tie is (len(best) > 1)
+                and list(the_best.targets("best")) == sorted(list(the_best.targets("best")))
+                and list(the_best.from_databases) == [database]
+                and (the_best.from_release, the_best.from_release_fallback) == (release, False)
+                and the_best.graph_id.lower() == value.lower()
             )
             if not right:
                 wrong.append(
-                    (database, value, sorted(best), the_best["target_id"], the_best["tie"], all_of_them["target_id"])
+                    (
+                        database,
+                        value,
+                        sorted(best),
+                        list(the_best.targets("best")),
+                        the_best.tie,
+                        list(all_of_them.targets("all")),
+                    )
                 )
     assert not wrong, wrong[:10]
     assert asked >= 20
@@ -240,19 +249,27 @@ def test_id_without_a_named_database_stands_for_the_genes_of_every_database(real
             if match != "exact" or not here:
                 continue
             everyone, best, apart = view.answer(set(view.databases_of[value.lower()]), value)
-            all_of_them = api.convert_identifier(value, from_release=release, to_release=release, strategy="all")
-            the_best = api.convert_identifier(value, from_release=release, to_release=release, strategy="best")
+            all_of_them = api.convert(value, from_release=release, to_release=release)
+            the_best = api.convert(value, from_release=release, to_release=release)
             asked += 1
             right = (
-                set(all_of_them["target_id"]) == everyone
-                and set(all_of_them["alternative_locus_genes"]) == apart
-                and the_best["target_id"] == sorted(best)
-                and the_best["tie"] is (len(best) > 1)
-                and (the_best["match"], the_best["graph_id"]) == ("exact", value)
-                and sorted(the_best["from_databases"]) == sorted(databases or ())
+                set(list(all_of_them.targets("all"))) == everyone
+                and set(list(all_of_them.alternative_locus_genes)) == apart
+                and list(the_best.targets("best")) == sorted(best)
+                and the_best.tie is (len(best) > 1)
+                and (the_best.match, the_best.graph_id) == ("exact", value)
+                and sorted(list(the_best.from_databases)) == sorted(databases or ())
             )
             if not right:
-                wrong.append((value, sorted(best), the_best["target_id"], the_best["tie"], all_of_them["target_id"]))
+                wrong.append(
+                    (
+                        value,
+                        sorted(best),
+                        list(the_best.targets("best")),
+                        the_best.tie,
+                        list(all_of_them.targets("all")),
+                    )
+                )
     assert not wrong, wrong[:10]
     assert asked >= 20
 
@@ -272,19 +289,19 @@ def test_every_gene_id_of_a_release_is_itself_at_that_release(real_world, organi
     for gene, version in genes.items():
         node = f"{gene}.{version}"
         for identifier in (node, gene):
-            free = api.convert_identifier(identifier, to_release=release)
-            given = api.convert_identifier(identifier, from_release=release, to_release=release, strategy="all")
-            for result, inferred in ((free, True), (given, False)):
+            free = api.convert(identifier, to_release=release)
+            given = api.convert(identifier, from_release=release, to_release=release)
+            for result, inferred, strategy in ((free, True, "best"), (given, False, "all")):
                 right = (
-                    result["target_id"] == [node]
-                    and result["last_node"] == [[node, node]]
-                    and (result["graph_id"], result["match"]) == (identifier, "exact")
-                    and (result["from_release"], result["from_release_inferred"]) == (release, inferred)
-                    and not (result["tie"] or result["ambiguous"] or result["from_release_fallback"])
-                    and result["final_database"] == "ensembl_gene"
+                    list(result.targets(strategy)) == [node]
+                    and [[c.gene, c.target] for c in result.view(strategy)] == [[node, node]]
+                    and (result.graph_id, result.match) == (identifier, "exact")
+                    and (result.from_release, result.from_release_inferred) == (release, inferred)
+                    and not (result.tie or len(result.targets(strategy)) > 1 or result.from_release_fallback)
+                    and result.final_database == "ensembl_gene"
                 )
                 if not right:
-                    wrong.append((identifier, inferred, result["target_id"], result["from_release"]))
+                    wrong.append((identifier, inferred, list(result.targets(strategy)), result.from_release))
     assert not wrong, wrong[:10]
 
 
@@ -311,23 +328,23 @@ def test_gene_id_that_exists_at_the_target_release_is_its_own_answer(real_world,
                 continue
             node = f"{gene}.{world.genes_at(target)[gene]}"
             versions_changed += world.genes_at(source)[gene] != world.genes_at(target)[gene]
-            best = api.convert_identifier(gene, from_release=source, to_release=target)
-            everyone = api.convert_identifier(gene, from_release=source, to_release=target, strategy="all")
+            best = api.convert(gene, from_release=source, to_release=target)
+            everyone = api.convert(gene, from_release=source, to_release=target)
             asked += 1
             there = world.genes_at(target)
             if not (
-                best["target_id"] == [node]
-                and best["tie"] is False
-                and everyone["target_id"][:1] == [node]
-                and best["from_release"] == source
-                and node not in best["alternative_locus_genes"]
+                list(best.targets("best")) == [node]
+                and best.tie is False
+                and list(everyone.targets("all"))[:1] == [node]
+                and best.from_release == source
+                and node not in list(best.alternative_locus_genes)
                 # whatever else the history reaches is a gene of the target release
                 and all(
                     there.get(other.rpartition(".")[0]) == int(other.rpartition(".")[2])
-                    for other in everyone["target_id"]
+                    for other in list(everyone.targets("all"))
                 )
             ):
-                wrong.append((gene, source, target, best["target_id"], everyone["target_id"][:3]))
+                wrong.append((gene, source, target, list(best.targets("best")), list(everyone.targets("all"))[:3]))
     assert not wrong, wrong[:10]
     assert asked >= 500 and versions_changed >= 100
 
@@ -394,8 +411,8 @@ def test_split_or_merged_id_goes_to_every_counterpart_and_best_to_the_highest_sc
     wrong = []
     decided_by_score = 0
     for here, identifier, counterparts, there in cases:
-        everyone = api.convert_identifier(identifier, from_release=here, to_release=there, strategy="all", explain=True)
-        best = api.convert_identifier(identifier, from_release=here, to_release=there, strategy="best")
+        everyone = api.convert(identifier, from_release=here, to_release=there, explain=True)
+        best = api.convert(identifier, from_release=here, to_release=there)
         # counterparts outside the reference sequence leave an answer that holds a gene of the reference sequence
         outside = world.ensembl.non_reference_genes(world.backbone[there], there)
         copies = {p for p in counterparts if p.rpartition(".")[0] in outside}
@@ -404,17 +421,27 @@ def test_split_or_merged_id_goes_to_every_counterpart_and_best_to_the_highest_sc
         top = max(partners.values())
         highest = sorted(p for p, score in partners.items() if score == top)
         decided_by_score += len(highest) == 1 and len(set(partners.values())) > 1
-        scores = {path["ensembl_gene"]: path["score"] for path in everyone["the_path"]}
+        scores = {c.gene: c.score for c in everyone.view("all")}
         if not (
-            set(everyone["target_id"]) == set(partners)
-            and set(everyone["alternative_locus_genes"]) == apart
+            set(list(everyone.targets("all"))) == set(partners)
+            and set(list(everyone.alternative_locus_genes)) == apart
             and all(abs(scores[p] - partners[p]) < 1e-9 for p in partners)
-            and everyone["target_id"][0] in highest
-            and set(best["target_id"]) <= set(highest)
-            and (len(highest) > 1 or (best["target_id"] == highest and best["tie"] is False))
-            and all(path["external_jump"] == 0 for path in everyone["the_path"])
+            and list(everyone.targets("all"))[0] in highest
+            and set(list(best.targets("best"))) <= set(highest)
+            and (len(highest) > 1 or (list(best.targets("best")) == highest and best.tie is False))
+            and all(c.bridges == 0 for c in everyone.view("all"))
         ):
-            wrong.append((here, there, identifier, counterparts, best["target_id"], everyone["target_id"], scores))
+            wrong.append(
+                (
+                    here,
+                    there,
+                    identifier,
+                    counterparts,
+                    list(best.targets("best")),
+                    list(everyone.targets("all")),
+                    scores,
+                )
+            )
     assert not wrong, wrong[:5]
     assert decided_by_score >= 5
 
@@ -433,15 +460,15 @@ def test_transcripts_and_translations_stand_for_their_gene_of_the_release(real_w
             version, gene = products[form][identifier]
             node = f"{gene}.{genes[gene]}"
             for typed in (f"{identifier}.{version}", identifier):
-                result = api.convert_identifier(typed, from_release=release, to_release=release, strategy="all")
+                result = api.convert(typed, from_release=release, to_release=release)
                 asked += 1
                 if not (
-                    result["target_id"] == [node]
-                    and result["graph_id"] == f"{identifier}.{version}"
-                    and result["from_release"] == release
-                    and not result["no_corresponding"]
+                    list(result.targets("all")) == [node]
+                    and result.graph_id == f"{identifier}.{version}"
+                    and result.from_release == release
+                    and not (result.status in ("not_found", "unknown_version"))
                 ):
-                    wrong.append((typed, node, result["target_id"], result["graph_id"]))
+                    wrong.append((typed, node, list(result.targets("all")), result.graph_id))
     assert not wrong, wrong[:10]
     assert asked >= 40
 
@@ -479,17 +506,17 @@ def test_databases_of_an_id_attached_on_several_forms_are_all_reported(real_worl
     world = real_world(organism)
     wrong = []
     for release, value, databases in ids_attached_on_several_forms(world):
-        result = world.api.convert_identifier(value, from_release=release, to_release=release)
-        engine = world.api.track.convert(value, from_release=release, to_release=release)
+        result = world.api.convert(value, from_release=release, to_release=release)
+        engine = world.api.engine.convert(value, from_release=release, to_release=release)
         view = at(world, release)
         support = {
             view.node(gene): len({database for owner, _form, database in view.attached[value.lower()] if owner == gene})
             for gene in {owner for owner, _form, _database in view.attached[value.lower()]}
         }
-        if sorted(result["from_databases"]) != databases or any(
-            entry["entry_support"] != support[entry["entry_gene"]] for entry in engine.values()
+        if sorted(list(result.from_databases)) != databases or any(
+            entry.entry_support != support[entry.entry_gene] for entry in engine.candidates
         ):
-            wrong.append((release, value, result["from_databases"], databases, support))
+            wrong.append((release, value, list(result.from_databases), databases, support))
     assert not wrong, wrong[:10]
 
 
@@ -502,7 +529,7 @@ def symbols_of(world) -> tuple[str, dict[str, tuple[set[str], set[str]]]]:
     Only symbols that the tables write in one spelling and that are matched exactly are taken.
     """
     view = at(world, SNAPSHOT)
-    database = next(d for d in DB.symbol_databases[world.organism] if d in view.databases)
+    database = next(d for d in organisms.SYMBOL_DATABASES[world.organism] if d in view.databases)
     found = {}
     for value, name in sorted(view.genes_of_id):
         if name != database or world.ensembl.meaning(value, SNAPSHOT)[0] != "exact":
@@ -526,11 +553,11 @@ def test_naming_the_database_removes_the_ties_it_should_and_makes_none(real_worl
     database, symbols = symbols_of(world)
     cases = collections.Counter()
     for symbol, (named, unnamed) in symbols.items():
-        with_database = world.api.convert_identifier(symbol, to_release=SNAPSHOT, from_database=database)
-        without = world.api.convert_identifier(symbol, to_release=SNAPSHOT)
-        assert (with_database["target_id"], with_database["tie"]) == (sorted(named), len(named) > 1), symbol
-        assert (without["target_id"], without["tie"]) == (sorted(unnamed), len(unnamed) > 1), symbol
-        assert with_database["from_databases"] == [database]
+        with_database = world.api.convert(symbol, to_release=SNAPSHOT, from_database=database)
+        without = world.api.convert(symbol, to_release=SNAPSHOT)
+        assert (list(with_database.targets("best")), with_database.tie) == (sorted(named), len(named) > 1), symbol
+        assert (list(without.targets("best")), without.tie) == (sorted(unnamed), len(unnamed) > 1), symbol
+        assert list(with_database.from_databases) == [database]
         cases["tie without the database, one gene with it"] += len(unnamed) > 1 and len(named) == 1
         cases["another gene with the database than without"] += (
             len(unnamed) == 1 and len(named) == 1 and named != unnamed
@@ -550,7 +577,7 @@ def view_owners(world, symbol: str, database: str) -> set[str]:
 
 @pytest.mark.parametrize("organism", AVAILABLE)
 def test_harmonizer_reads_a_dataset_in_the_database_it_is_told(real_world, organism, tmp_path):
-    """``HarmonizeFeatures(source_databases=...)``: the symbols of a dataset are read as ids of that database.
+    """``HarmonizeFeatures(from_database_by_dataset=...)``: the symbols of a dataset are read as ids of that database.
 
     A dataset of symbols of the snapshot release, among them every symbol on which naming the database matters,
     converted to the same symbol database. Each feature's gene is compared with the tables: with the database
@@ -558,7 +585,8 @@ def test_harmonizer_reads_a_dataset_in_the_database_it_is_told(real_world, organ
     without, the best supported of all genes that carry the string and have a symbol in the target database, and
     ``ambiguous`` when two are equal.
     """
-    import anndata as ad
+    ad = pytest.importorskip("anndata")
+    pytest.importorskip("scipy")
 
     from idtrack import HarmonizeFeatures
 
@@ -574,7 +602,7 @@ def test_harmonizer_reads_a_dataset_in_the_database_it_is_told(real_world, organ
     def harmonized(folder, **more):
         harmonizer = HarmonizeFeatures(
             "real", {"study": str(path)}, str(tmp_path / folder), world.repository, SNAPSHOT,
-            final_database=database, api=world.api, verbose_level=0, **more,
+            final_database=database, api=world.api, verbosity=0, **more,
         )  # fmt: skip
         table = harmonizer.feature_table("study")
         return {name: (row["status"], row["ensembl_gene"]) for name, row in table.iterrows()}
@@ -586,7 +614,7 @@ def test_harmonizer_reads_a_dataset_in_the_database_it_is_told(real_world, organ
         return ("converted", next(iter(best))) if len(best) == 1 else ("ambiguous", None)
 
     without = harmonized("unnamed")
-    named = harmonized("named", source_databases={"study": database})
+    named = harmonized("named", from_database_by_dataset={"study": database})
     statuses = collections.Counter()
     for symbol in names:
         pairs = (
@@ -617,15 +645,15 @@ def lines(shows: str | None = None, kind: str | None = None):
 
 
 def ask(api, query, **more):
-    """Ask a query of the truth file."""
-    return api.convert_identifier(
+    """Ask a query of the truth file (its strategy is the view :py:func:`tests._real_tables.verdict` reads)."""
+    return api.convert(
         query["id"], from_release=query["from_release"], to_release=query["to_release"],
-        final_database=query["final_database"], strategy=query["strategy"], **more,
+        final_database=query["final_database"], **more,
     )  # fmt: skip
 
 
 @pytest.mark.parametrize("organism, query", lines(shows="threshold"))
-def test_id_shared_by_more_than_five_genes_at_once_is_no_bridge(real_world, organism, query, monkeypatch):
+def test_id_shared_by_more_than_five_genes_at_once_is_no_bridge(real_world, organism, query):
     """A retired id that Ensembl gives no successor is not bridged through a family name to another gene.
 
     With the threshold of the graph (more than 5 genes at once) the answer is Ensembl's: nothing. The same graph
@@ -633,58 +661,61 @@ def test_id_shared_by_more_than_five_genes_at_once_is_no_bridge(real_world, orga
     which is what the threshold is for.
     """
     world = real_world(organism)
-    assert TheGraph.genes_at_once_threshold == 5
+    assert world.api.graph.graph_settings.hyperconnective_threshold == 5
     assert verdict(query, ask(world.api, query)) is None
 
-    monkeypatch.setattr(TheGraph, "genes_at_once_threshold", 20)
     import idtrack
 
-    lenient = idtrack.API(local_repository=world.repository)
-    lenient.build_graph(organism, SNAPSHOT)
+    lenient = idtrack.API.load(
+        world.api.graph_path(organism, SNAPSHOT, world.repository),
+        graph_settings=GraphSettings(hyperconnective_threshold=20),
+    )
     assert verdict(query, ask(lenient, query)) is not None
+    assert verdict(query, ask(world.api, query)) is None  # the setting is the loaded graph's, not the process's
 
 
 @pytest.mark.parametrize("organism, query", lines(shows="clone"))
-def test_clone_based_name_is_no_bridge_between_two_genes(real_world, organism, query, monkeypatch):
+def test_clone_based_name_is_no_bridge_between_two_genes(real_world, organism, query):
     """A retired id is not carried to another gene by a clone-based name that both once had.
 
     Clone-based names (``AC012345.1``) name a stretch of sequence, not a gene. With them excluded from bridging
     the answer is Ensembl's; the same graph asked with these names allowed as bridges returns genes that
     Ensembl's history does not give.
     """
-    from idtrack._track import Track
+    import idtrack
 
     world = real_world(organism)
-    assert any(name.startswith("Clone_based") for name in Track.non_bridging_databases)
+    assert any(name.startswith("Clone_based") for name in world.api.search.non_bridging_databases)
     assert verdict(query, ask(world.api, query)) is None
 
-    monkeypatch.setattr(Track, "non_bridging_databases", frozenset())
-    assert verdict(query, ask(world.api, query)) is not None
+    allowed = idtrack.API(world.api.graph, search=SearchSettings(non_bridging_databases=frozenset()))
+    assert verdict(query, ask(allowed, query)) is not None
+    assert verdict(query, ask(world.api, query)) is None  # the setting is the API's, not the process's
 
 
 @pytest.mark.parametrize("organism, query", lines(shows="fallback"))
 def test_engine_is_strict_about_the_release_and_the_api_falls_back_with_a_flag(real_world, organism, query):
     """An identifier that the graph does not hold at ``from_release``: the engine raises, the API says what it did."""
     world = real_world(organism)
-    track = world.api.track
+    track = world.api.engine
 
     with pytest.raises(InactiveAtReleaseError) as error:
         track.convert(query["id"], from_release=query["from_release"], to_release=query["to_release"])
     assert str(query["from_release"]) in str(error.value)
 
     result = ask(world.api, query)
-    read_at = result["from_release"]
+    read_at = result.from_release
     assert verdict(query, result) is None
-    assert (result["from_release_fallback"], result["from_release_given"]) == (True, query["from_release"])
-    assert read_at != query["from_release"] and result["from_release_inferred"] is True
+    assert (result.from_release_fallback, result.from_release_given) == (True, query["from_release"])
+    assert read_at != query["from_release"] and result.from_release_inferred is True
     # the fall-back is the reading without a release: the same node, the same release, the same answer
-    free = world.api.convert_identifier(query["id"], to_release=query["to_release"], strategy=query["strategy"])
-    assert (free["from_release"], free["graph_id"], free["target_id"]) == (
+    free = world.api.convert(query["id"], to_release=query["to_release"])
+    assert (free.from_release, free.graph_id, list(free.targets(query["strategy"]))) == (
         read_at,
-        result["graph_id"],
-        result["target_id"],
+        result.graph_id,
+        list(result.targets(query["strategy"])),
     )
-    assert free["from_release_fallback"] is False
+    assert free.from_release_fallback is False
 
 
 @pytest.mark.parametrize("organism, query", lines(kind="version_unknown"))
@@ -692,8 +723,8 @@ def test_engine_raises_for_a_version_that_never_existed(real_world, organism, qu
     """The engine names the versions that exist; the API reports the same facts as data (tested with the truth)."""
     world = real_world(organism)
     with pytest.raises(UnknownVersionError) as error:
-        world.api.track.convert(query["id"], to_release=query["to_release"])
-    assert list(error.value.versions) == world.api.convert_identifier(query["id"])["known_versions"]
+        world.api.engine.convert(query["id"], to_release=query["to_release"])
+    assert error.value.versions == world.api.convert(query["id"]).known_versions
     assert error.value.versions
 
 
@@ -703,22 +734,22 @@ def test_version_suffix_is_cut_off_an_accession_and_never_off_a_symbol(real_worl
     world = real_world(organism)
     view = at(world, SNAPSHOT)
     written = world.ensembl.written(None)
-    accessions = [d for d in view.databases if d.startswith(DB.accession_database_prefixes)]
-    symbol_databases = [d for d in DB.symbol_databases[organism] if d in view.databases]
+    accessions = [d for d in view.databases if d.startswith(ids.ACCESSION_DATABASE_PREFIXES)]
+    symbol_databases = [d for d in organisms.SYMBOL_DATABASES[organism] if d in view.databases]
     assert accessions and symbol_databases
 
     asked = 0
     for database in accessions:
-        ids = sorted(value for value, name in view.genes_of_id if name == database)
-        for value in sample(ids, 8):
+        values = sorted(value for value, name in view.genes_of_id if name == database)
+        for value in sample(values, 8):
             if "." in value or world.ensembl.meaning(value, SNAPSHOT)[0] != "exact":
                 continue
             if any(name in symbol_databases for names in view.databases_of[value.lower()].values() for name in names):
                 continue
             everyone, _best, _apart = view.answer(set(view.databases_of[value.lower()]), value)
-            result = world.api.convert_identifier(f"{value}.7", to_release=SNAPSHOT, strategy="all")
-            assert (result["match"], result["graph_id"]) == ("version", value), value
-            assert set(result["target_id"]) == everyone
+            result = world.api.convert(f"{value}.7", to_release=SNAPSHOT)
+            assert (result.match, result.graph_id) == ("version", value), value
+            assert set(list(result.targets("all"))) == everyone
             asked += 1
     assert asked >= 8
 
@@ -728,8 +759,12 @@ def test_version_suffix_is_cut_off_an_accession_and_never_off_a_symbol(real_worl
             typed = f"{value}.7"
             if any((kind, typed.lower().replace("_", "-").replace(".", "-")) in written for kind in ("id", "synonym")):
                 continue  # really an identifier in another spelling
-            result = world.api.convert_identifier(typed, to_release=SNAPSHOT)
-            assert (result["no_corresponding"], result["target_id"], result["match"]) == (True, [], None), typed
+            result = world.api.convert(typed, to_release=SNAPSHOT)
+            assert (
+                (result.status in ("not_found", "unknown_version")),
+                list(result.targets("best")),
+                result.match,
+            ) == (True, [], None), typed
             asked += 1
     assert asked >= 20
 
@@ -756,11 +791,15 @@ def test_spelling_returned_is_that_of_the_target_release(real_world, organism):
             continue
         release = earlier[-1]
         node = f"{gene}.{world.genes_at(release)[gene]}"
-        result = world.api.convert_identifier(
-            node, from_release=release, to_release=release, final_database=database, strategy="all"
-        )
+        result = world.api.convert(node, from_release=release, to_release=release, final_database=database)
         (then,), (now,) = spellings[release], latest
-        assert then in result["target_id"] and now not in result["target_id"], (gene, database, release, then, now)
+        assert then in list(result.targets("all")) and now not in list(result.targets("all")), (
+            gene,
+            database,
+            release,
+            then,
+            now,
+        )
         asked += 1
     assert asked >= 3
 
@@ -784,7 +823,7 @@ def names_that_are_also_synonyms(world) -> list[tuple[int, str, set[str], bool]]
     for release in sorted(views):
         now: dict[str, set[str]] = collections.defaultdict(set)
         for value, _database in views[release].genes_of_id:
-            now[value.lower()].add(value)
+            now[value.lower()].add(value)  # noqa: B909 - adds to `now`, not to the iterated `genes_of_id`
         last_spellings.update(now)
     found = []
     for release, view in views.items():
@@ -805,9 +844,9 @@ def read_as_names(world, cases) -> list[tuple]:
     wrong = []
     for release, value, owners, _same in cases:
         expected = at(world, release).answer(owners, value)[0]
-        result = world.api.convert_identifier(value, from_release=release, to_release=release, strategy="all")
-        if set(result["target_id"]) != expected or str(result["match"]).startswith("synonym"):
-            wrong.append((release, value, sorted(expected), result["target_id"], result["match"]))
+        result = world.api.convert(value, from_release=release, to_release=release)
+        if set(list(result.targets("all"))) != expected or str(result.match).startswith("synonym"):
+            wrong.append((release, value, sorted(expected), list(result.targets("all")), result.match))
     return wrong
 
 
@@ -873,17 +912,15 @@ def test_copies_outside_the_reference_sequence_are_reported_apart(real_world, or
                 continue
             everyone, best, apart = view.answer(owners, value)
             for strategy, expected in (("all", everyone), ("best", best)):
-                result = api.convert_identifier(
-                    value, from_release=release, to_release=release, from_database=database, strategy=strategy
-                )
-                assert set(result["target_id"]) == expected, (release, value, strategy)
-                assert result["alternative_locus_genes"] == sorted(apart), (release, value, strategy)
-                assert not set(result["alternative_locus_genes"]) & set(result["target_id"])
+                result = api.convert(value, from_release=release, to_release=release, from_database=database)
+                assert set(list(result.targets(strategy))) == expected, (release, value, strategy)
+                assert list(result.alternative_locus_genes) == sorted(apart), (release, value, strategy)
+                assert not set(list(result.alternative_locus_genes)) & set(list(result.targets(strategy)))
             # the ids of a copy in the target database are no answer for the gene: the symbol comes back once
-            named = api.convert_identifier(
+            named = api.convert(
                 value, from_release=release, to_release=release, from_database=database, final_database=database
             )
-            assert named["target_id"] == [value] and named["alternative_locus_genes"] == sorted(apart)
+            assert list(named.targets("best")) == [value] and list(named.alternative_locus_genes) == sorted(apart)
             if owners - copies:
                 cases[(release, "reference gene and a copy on a patch or haplotype")] += any(
                     not gene.startswith("LRG_") for gene in copies
@@ -906,8 +943,8 @@ def test_copy_asked_by_its_own_id_is_the_answer(real_world, organism):
     for gene in sorted(view.outside):
         node = view.node(gene)
         for identifier in (node, gene, gene.lower()):
-            result = world.api.convert_identifier(identifier, to_release=SNAPSHOT, strategy="all")
-            assert (result["target_id"], result["alternative_locus_genes"]) == ([node], []), identifier
+            result = world.api.convert(identifier, to_release=SNAPSHOT)
+            assert (list(result.targets("all")), list(result.alternative_locus_genes)) == ([node], []), identifier
         asked["LRG record" if gene.startswith("LRG_") else "gene on a patch or haplotype"] += 1
     assert asked["LRG record"] >= 3 and asked["gene on a patch or haplotype"] >= 5
 
@@ -933,10 +970,10 @@ def test_id_that_lay_outside_the_reference_sequence_at_the_target_release_is_sti
             if gene.startswith("LRG_"):
                 continue
             node = f"{gene}.{genes[gene]}"
-            best = api.convert_identifier(gene, from_release=SNAPSHOT, to_release=release)
-            everyone = api.convert_identifier(gene, from_release=SNAPSHOT, to_release=release, strategy="all")
-            assert (best["target_id"], best["tie"]) == ([node], False), (gene, release)
-            assert everyone["target_id"][0] == node and node not in everyone["alternative_locus_genes"]
+            best = api.convert(gene, from_release=SNAPSHOT, to_release=release)
+            everyone = api.convert(gene, from_release=SNAPSHOT, to_release=release)
+            assert (list(best.targets("best")), best.tie) == ([node], False), (gene, release)
+            assert list(everyone.targets("all"))[0] == node and node not in list(everyone.alternative_locus_genes)
             asked += 1
     assert asked >= 5
 
@@ -969,10 +1006,8 @@ def test_frozen_parallel_assembly_supplies_nothing_at_a_release_the_primary_asse
                 here = {written.lower() for written in view.ids_of_gene.get((gene, name), ())}
                 if value.lower() in here or taken >= 25:
                     continue
-                result = api.convert_identifier(
-                    view.node(gene), from_release=release, to_release=release, final_database=name, strategy="all"
-                )
-                found = {target.lower() for target in result["target_id"]} if not result["no_target"] else set()
+                result = api.convert(view.node(gene), from_release=release, to_release=release, final_database=name)
+                found = {target.lower() for target in list(result.targets("all"))} if not result.no_target else set()
                 assert found == here, (release, gene, name, value)
                 taken += 1
             asked += taken

@@ -1,9 +1,4 @@
-exclude: "^reproducibility/experiments"
 repos:
-    - repo: https://github.com/asottile/seed-isort-config
-      rev: v2.2.0
-      hooks:
-          - id: seed-isort-config
     - repo: local
       hooks:
           - id: black
@@ -17,11 +12,6 @@ repos:
             entry: isort
             language: system
             types: [python]
-          # - id: isort
-          #   name: isort (cython)
-          #   types: [cython]
-          #   entry: isort
-          #   language: system
           - id: isort
             name: isort (pyi)
             types: [pyi]
@@ -67,7 +57,10 @@ repos:
             language: system
             types: [text]
             stages: [pre-commit, pre-push, manual]
-    - repo: https://github.com/pre-commit/mirrors-prettier
-      rev: v2.5.1
+    # The maintained mirror of prettier (pre-commit/mirrors-prettier is archived and stopped at prettier 2.x).
+    - repo: https://github.com/rbubley/mirrors-prettier
+      rev: v3.10.1
       hooks:
           - id: prettier
+            # Test data are written by scripts, not by hand (tests/data/real/*: expected answers).
+            exclude: ^tests/data/

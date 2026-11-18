@@ -1,8 +1,8 @@
 # Release: Build and publish to PyPI when a GitHub Release is published.
 #
-# This workflow expects a `PYPI_TOKEN` secret (API token with upload permissions).
-# If you want to harden further, consider switching to PyPI "Trusted Publishing"
-# (OIDC) so no long-lived token is required.
+# Publishing uses PyPI's trusted publishing (OpenID Connect): no token is stored in the repository. PyPI must list this
+# repository and this workflow file (publish_package.yml), with the environment `pypi`, as a trusted publisher of the
+# project idtrack (PyPI: project settings, "Publishing"). A release whose version exists on PyPI already fails.
 name: Publish idtrack to PyPI
 
 on:
@@ -18,15 +18,22 @@ jobs:
         name: Build & publish
         runs-on: ubuntu-22.04
         timeout-minutes: 20
+        environment:
+            name: pypi
+            url: https://pypi.org/p/idtrack
+        # The OpenID Connect token that trusted publishing exchanges for a short-lived upload token.
+        permissions:
+            contents: read
+            id-token: write
         steps:
             - name: Check out the repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
               with:
                   # Fetch tags/history so version checks can be done reliably.
                   fetch-depth: 0
 
             - name: Set up Python
-              uses: actions/setup-python@v5
+              uses: actions/setup-python@v7
               with:
                   python-version: "3.12"
                   cache: pip
@@ -53,7 +60,7 @@ jobs:
 
                   tag_version = match.group(1)
                   pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
-                  project_version = pyproject["tool"]["poetry"]["version"]
+                  project_version = pyproject["project"]["version"]
 
                   if project_version != tag_version:
                       raise SystemExit(
@@ -76,12 +83,9 @@ jobs:
             - name: Check package metadata (twine)
               run: python -m twine check --strict dist/*
 
-            # Upload dist/* to PyPI.
+            # Upload dist/* to PyPI (trusted publishing; the action also uploads attestations of the files).
             - name: Publish package on PyPI
               uses: pypa/gh-action-pypi-publish@release/v1
               with:
-                  user: __token__
-                  password: ${{ secrets.PYPI_TOKEN }}
                   packages-dir: dist
-                  skip-existing: true
                   verbose: true

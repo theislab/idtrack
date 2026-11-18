@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""High-value unit tests for `idtrack._track_tests.TrackTests`.
+"""High-value unit tests for `idtrack.checks.GraphChecks`.
 
 The goal is to exercise the developer-facing test harness on a tiny synthetic
 graph (2 releases) without requiring large MySQL downloads.
@@ -12,9 +12,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from idtrack._database_manager import DatabaseManager
-from idtrack._the_graph import ReleaseSet
-from idtrack._track_tests import CheckResult, TrackTests
+from idtrack.build.builder import GraphMaker
+from idtrack.build.database_manager import DatabaseManager
+from idtrack.checks import CheckResult, GraphChecks
+from idtrack.engine import Conversion
+from idtrack.errors import ArgumentTypeError, InvalidArgumentError, UnknownDatabaseError
+from idtrack.graph import ReleaseSet
 
 
 @dataclass(frozen=True)
@@ -77,17 +80,37 @@ def _synthetic_graph_mysql() -> _SyntheticGraphMySQL:
     return _SyntheticGraphMySQL(tables_by_release=tables_by_release, available_releases=[100, 101])
 
 
+def _nothing_found(**arguments) -> Conversion:
+    """A converter that finds nothing for any identifier (the engine's answer without candidates)."""
+    return Conversion(
+        graph_id=arguments["identifier"],
+        from_release=None,
+        from_release_inferred=arguments.get("from_release") is None,
+        from_databases=(),
+        to_release=arguments["to_release"],
+        final_database=None,
+        candidates=(),
+        tie=False,
+        decided_by=None,
+        alternative_locus_genes=(),
+        no_target=False,
+        no_target_genes=(),
+        reason="no_path_to_target",
+        path=None,
+    )
+
+
 @pytest.fixture
-def synthetic_track_tests(tmp_path, monkeypatch) -> TrackTests:
-    """Create a TrackTests instance backed by a tiny synthetic 2-release graph."""
+def synthetic_track_tests(tmp_path, monkeypatch) -> GraphChecks:
+    """Create the self-tests of a tiny synthetic 2-release graph."""
     synthetic = _synthetic_graph_mysql()
 
-    def _fake_core_index(*, organism: str, genome_assembly: int, **_):  # noqa: ARG001
+    def _fake_core_index(*, organism: str, assembly: int, **_):  # noqa: ARG001
         releases = list(synthetic.available_releases)
-        db_for_release = {r: f"{organism}_core_{r}_{genome_assembly}" for r in releases}
+        db_for_release = {r: f"{organism}_core_{r}_{assembly}" for r in releases}
         return {
             "organism": organism,
-            "genome_assembly": genome_assembly,
+            "genome_assembly": assembly,
             "ports": (3306,),
             "releases_by_port": {3306: set(releases)},
             "db_by_port_release": {3306: db_for_release.copy()},
@@ -97,11 +120,11 @@ def synthetic_track_tests(tmp_path, monkeypatch) -> TrackTests:
             "releases_on_mysql": releases,
         }
 
-    def _available_releases_versions(self: DatabaseManager, **kwargs) -> list[int]:
+    def _available_releases(self: DatabaseManager, **kwargs) -> list[int]:
         return list(synthetic.available_releases)
 
     def _download_table(self: DatabaseManager, table_key: str, usecols: list[str] | None = None) -> pd.DataFrame:
-        df = synthetic.tables_by_release[int(self.ensembl_release)].get(table_key)
+        df = synthetic.tables_by_release[int(self.release)].get(table_key)
         if df is None:
             return pd.DataFrame()
         if usecols is None:
@@ -109,9 +132,9 @@ def synthetic_track_tests(tmp_path, monkeypatch) -> TrackTests:
         return df.loc[:, usecols].copy(deep=True)
 
     def _create_external_all(
-        self: DatabaseManager, return_mode: str, narrow_external: bool = True, **kwargs  # noqa: ARG002
+        self: DatabaseManager, narrow_external: bool = True, **kwargs  # noqa: ARG002
     ) -> pd.DataFrame:
-        release = int(self.ensembl_release)
+        release = int(self.release)
         graph_id = "ENSG00000000001.1" if release == 100 else "ENSG00000000001.2"
         return pd.DataFrame(
             [
@@ -127,7 +150,7 @@ def synthetic_track_tests(tmp_path, monkeypatch) -> TrackTests:
             ]
         )
 
-    monkeypatch.setattr(DatabaseManager, "available_releases_versions", _available_releases_versions)
+    monkeypatch.setattr(DatabaseManager, "available_releases", property(_available_releases))
     monkeypatch.setattr(DatabaseManager, "download_table", _download_table)
     monkeypatch.setattr(DatabaseManager, "create_external_all", _create_external_all)
     monkeypatch.setattr(DatabaseManager, "_get_core_db_index", classmethod(lambda cls, **kw: _fake_core_index(**kw)))
@@ -136,28 +159,29 @@ def synthetic_track_tests(tmp_path, monkeypatch) -> TrackTests:
         organism="homo_sapiens",
         form="gene",
         local_repository=str(tmp_path),
-        ensembl_release=101,
-        ignore_before=100,
-        ignore_after=101,
-        genome_assembly=38,
+        release=101,
+        first_release=100,
+        snapshot_release=101,
+        assembly=38,
         store_raw_always=True,
     )
 
     # the harness is made as a user makes it: by its constructor, which builds the graph through the manager
-    return TrackTests(dm, narrow=True, save_after_calculation=False, form_list=["gene"])
+    graph = GraphMaker(dm).get_graph(narrow=True, save_after_calculation=False, forms=["gene"])
+    return GraphChecks(graph, dm)
 
 
 def test_track_tests_basic_invariants(synthetic_track_tests):
     """The invariants of a built graph hold for the synthetic graph, and each result says what was compared."""
     tests = synthetic_track_tests
     results = [
-        tests.is_node_consistency_robust(verbose=False),
-        tests.is_range_functions_robust(verbose=False),
-        tests.is_base_is_range_correct(verbose=False),
+        tests.is_node_consistency_robust(progress=False),
+        tests.is_range_functions_robust(progress=False),
+        tests.is_base_is_range_correct(progress=False),
         tests.is_combined_summary_complete(),
         tests.is_edge_with_same_nts_only_at_backbone_nodes(),
-        tests.is_id_functions_consistent_ensembl(verbose=False),
-        tests.is_id_functions_consistent_ensembl_2(verbose=False),
+        tests.is_id_functions_consistent_ensembl(progress=False),
+        tests.is_id_functions_consistent_ensembl_2(progress=False),
     ]
     for result in results:
         assert isinstance(result, CheckResult) and result.holds is True and bool(result) is True, result
@@ -200,22 +224,25 @@ def test_check_that_cannot_be_completed_is_a_result_that_does_not_hold(synthetic
             synthetic_track_tests.is_id_functions_consistent_ensembl,
             synthetic_track_tests.is_id_functions_consistent_external,
         ):
-            result = check(verbose=False)
+            result = check(progress=False)
             assert result.holds is False and not result
             assert result.details["error"] == "OSError: the tables cannot be read"
             assert "no_tables" in result.details["traceback"]
         conversions = synthetic_track_tests.is_final_external_conversion_robust(
-            database="HGNC", ens_rel=101, verbose=False
+            final_database="HGNC", to_release=101, progress=False
         )
         assert conversions.holds is False and conversions.details["error"].startswith("OSError")
     # a release or a fraction that cannot be used is reported the same way
     serve_external_table(monkeypatch, TP53_ROWS)
-    for arguments in (
-        {"database": "HGNC", "ens_rel": 99},
-        {"database": "HGNC", "ens_rel": 101, "from_fraction": 2.0},
+    for arguments, error in (
+        (
+            {"final_database": "HGNC", "to_release": 99},
+            "UnknownDatabaseError: No external database that attaches ids to genes",
+        ),
+        ({"final_database": "HGNC", "to_release": 101, "from_fraction": 2.0}, "InvalidArgumentError"),
     ):
-        result = synthetic_track_tests.is_final_external_conversion_robust(verbose=False, **arguments)
-        assert result.holds is False and result.details["error"].startswith("ValueError"), arguments
+        result = synthetic_track_tests.is_final_external_conversion_robust(progress=False, **arguments)
+        assert result.holds is False and result.details["error"].startswith(error), arguments
     # a check of the graph alone is not touched by the tables
     assert synthetic_track_tests.is_combined_summary_complete().holds is True
 
@@ -227,11 +254,11 @@ def test_history_travel_testing_reports_the_conversions_of_the_synthetic_history
     and gene 2 became gene 3 (Ensembl's event, score 0.9).
     """
 
-    def run(from_release, from_database, to_release, to_database):
+    def run(from_release, from_database, to_release, final_database):
         return synthetic_track_tests.history_travel_testing(
             from_release=from_release, from_assembly=38, from_database=from_database, to_release=to_release,
-            to_database=to_database, go_external=False, prioritize_to_one_filter=True, convert_using_release=True,
-            from_fraction=1.0, verbose=False,
+            final_database=final_database, allow_bridges=False, strategy="best", convert_using_release=True,
+            from_fraction=1.0, progress=False,
         )  # fmt: skip
 
     genes = run(100, "ensembl_gene", 101, "ensembl_gene")
@@ -261,40 +288,48 @@ def test_database_that_the_graph_does_not_hold_is_refused_before_anything_is_con
     """A database that cannot work raises and says what is valid; it never gives a report of lost identifiers."""
     tests = synthetic_track_tests
     asked = []
-    monkeypatch.setattr(tests, "convert", lambda **arguments: asked.append(arguments), raising=False)
+    monkeypatch.setattr(tests.track, "convert", lambda **arguments: asked.append(arguments))
     monkeypatch.setattr(tests.graph, "get_id_list", lambda *arguments: asked.append(arguments) or [], raising=False)
 
-    def run(from_database, to_database, from_assembly=38):
+    def run(from_database, final_database, from_assembly=38):
         return tests.history_travel_testing(
             from_release=100, from_assembly=from_assembly, from_database=from_database, to_release=101,
-            to_database=to_database, go_external=False, prioritize_to_one_filter=True, convert_using_release=True,
-            verbose=False,
+            final_database=final_database, allow_bridges=False, strategy="best", convert_using_release=True,
+            progress=False,
         )  # fmt: skip
 
     sources = "valid: ['HGNC', 'assembly_38_ensembl_gene', 'base_ensembl_gene', 'ensembl_gene']"
     targets = "valid: ['HGNC', 'base_ensembl_gene', 'ensembl_gene']"
     for source in ("No Such Database", "hgnc", "gene", "ensembl_transcript", "assembly_37_ensembl_gene"):
-        with pytest.raises(ValueError) as refused:  # the graph was built with genes only, and 37 is another assembly
+        with pytest.raises(
+            UnknownDatabaseError
+        ) as refused:  # the graph was built with genes only, and 37 is another assembly
             run(source, "ensembl_gene")
         assert f"`from_database`={source!r} is not a database of the loaded graph on genome assembly 38" in str(
             refused.value
         )
         assert str(refused.value).endswith(f"{sources}.")
     # a target is a database that a conversion can end in: the ids of one assembly and of other forms are none
-    for target in ("No Such Database", "hgnc", "gene", "assembly_38_ensembl_gene", "ensembl_transcript"):
-        with pytest.raises(ValueError) as refused:
+    # (checked by the engine's rule, as every conversion: a name that differs in letter case only is that database)
+    for target in ("No Such Database", "gene", "assembly_38_ensembl_gene", "ensembl_transcript"):
+        with pytest.raises(UnknownDatabaseError) as refused:
             run("ensembl_gene", target)
         assert str(refused.value) == (
-            f"`to_database`={target!r} is not a database of the loaded graph at Ensembl release 101; {targets}."
+            f"`final_database`={target!r} is not a database of this graph at Ensembl release 101 (genome assembly "
+            f"38); {targets}."
         )
     with pytest.raises(
-        ValueError, match=r"`from_database`='HGNC' is not a database .* genome assembly 12 .*valid: \[\]"
+        UnknownDatabaseError, match=r"`from_database`='HGNC' is not a database .* genome assembly 12 .*valid: \[\]"
     ):
         run("HGNC", "ensembl_gene", from_assembly=12)  # an assembly the graph does not have holds nothing
-    with pytest.raises(ValueError, match="`database`='No Such Database' is not an external database .*valid: "):
-        tests.is_final_external_conversion_robust(database="No Such Database", ens_rel=101, verbose=False)
-    with pytest.raises(ValueError, match=r"`database`='ensembl_gene' is not an external database .*valid: \['HGNC'\]"):
-        tests.is_final_external_conversion_robust(database="ensembl_gene", verbose=False)
+    with pytest.raises(
+        UnknownDatabaseError, match="`final_database`='No Such Database' is not an external database .*valid: "
+    ):
+        tests.is_final_external_conversion_robust(final_database="No Such Database", to_release=101, progress=False)
+    with pytest.raises(
+        UnknownDatabaseError, match=r"`final_database`='ensembl_gene' is not an external database .*valid: \['HGNC'\]"
+    ):
+        tests.is_final_external_conversion_robust(final_database="ensembl_gene", progress=False)
     assert asked == []  # refused before an identifier was listed or converted
 
 
@@ -302,27 +337,27 @@ def test_database_that_the_graph_does_not_hold_is_refused_before_anything_is_con
 def test_database_that_is_not_a_string_is_refused_by_the_self_tests(synthetic_track_tests):
     """A database of another type raises the error that names the argument, as the API's does."""
     arguments = dict(
-        from_release=100, from_assembly=38, to_release=101, go_external=False, prioritize_to_one_filter=True,
-        convert_using_release=True, verbose=False,
+        from_release=100, from_assembly=38, to_release=101, allow_bridges=False, strategy="best",
+        convert_using_release=True, progress=False,
     )  # fmt: skip
-    with pytest.raises(TypeError, match="`from_database` must be a string, got None"):
-        synthetic_track_tests.history_travel_testing(from_database=None, to_database="ensembl_gene", **arguments)
-    with pytest.raises(TypeError, match="`to_database` must be a string, got 5"):
-        synthetic_track_tests.history_travel_testing(from_database="ensembl_gene", to_database=5, **arguments)
-    with pytest.raises(TypeError, match="`database` must be a string, got 5"):
-        synthetic_track_tests.is_final_external_conversion_robust(database=5, verbose=False)
+    with pytest.raises(ArgumentTypeError, match="`from_database` must be a string, got NoneType None"):
+        synthetic_track_tests.history_travel_testing(from_database=None, final_database="ensembl_gene", **arguments)
+    with pytest.raises(ArgumentTypeError, match="`final_database` must be a string, got int 5"):
+        synthetic_track_tests.history_travel_testing(from_database="ensembl_gene", final_database=5, **arguments)
+    with pytest.raises(ArgumentTypeError, match="`final_database` must be a string, got int 5"):
+        synthetic_track_tests.is_final_external_conversion_robust(final_database=5, progress=False)
 
 
 def test_history_travel_testing_takes_the_node_types_of_ensembl_ids(synthetic_track_tests, monkeypatch):
     """Ensembl ids are named by their node type, as source and as target."""
 
-    def run(from_database, to_database, **more):
+    def run(from_database, final_database, **more):
         arguments = dict(
-            from_release=100, from_assembly=38, to_release=101, go_external=False, prioritize_to_one_filter=True,
-            convert_using_release=True, verbose=False,
+            from_release=100, from_assembly=38, to_release=101, allow_bridges=False, strategy="best",
+            convert_using_release=True, progress=False,
         )  # fmt: skip
         return synthetic_track_tests.history_travel_testing(
-            from_database=from_database, to_database=to_database, **{**arguments, **more}
+            from_database=from_database, final_database=final_database, **{**arguments, **more}
         )
 
     for source in ("ensembl_gene", "assembly_38_ensembl_gene"):
@@ -331,11 +366,11 @@ def test_history_travel_testing_takes_the_node_types_of_ensembl_ids(synthetic_tr
         "ENSG00000000001": ["ENSG00000000001"],
         "ENSG00000000002": ["ENSG00000000003"],
     }
-    with pytest.raises(ValueError, match="from_fraction must be in range"):
+    with pytest.raises(InvalidArgumentError, match="from_fraction must be in range"):
         run("ensembl_gene", "ensembl_gene", from_fraction=0.0)
 
     # a gene id that is lost although its id exists at the target release is counted as such
-    monkeypatch.setattr(synthetic_track_tests, "convert", lambda **arguments: None, raising=False)
+    monkeypatch.setattr(synthetic_track_tests.track, "convert", _nothing_found)
     lost = run("ensembl_gene", "ensembl_gene")
     assert lost["lost_item"] == ["ENSG00000000001.1", "ENSG00000000002.1"]
     assert lost["lost_item_but_the_same_id_exists"] == ["ENSG00000000001.1"]
@@ -355,7 +390,7 @@ def test_random_arguments_are_releases_and_databases_of_the_graph(synthetic_trac
         if (
             drawn["to_release"] not in graph.graph["confident_for_release"]
             or drawn["to_release"] < drawn["from_release"]
-            or drawn["to_database"] != "HGNC"
+            or drawn["final_database"] != "HGNC"
             or drawn["from_database"] != "ensembl_gene"
         ):
             wrong.append((seed, drawn))
@@ -364,10 +399,11 @@ def test_random_arguments_are_releases_and_databases_of_the_graph(synthetic_trac
 
     random.seed(0)
     metrics = synthetic_track_tests.history_travel_testing_random(
-        1.0, False, False, False, True, verbose=False, strict_forward=True, return_result=True
+        1.0, False, False, False, True, progress=False, strict_forward=True
     )
     assert metrics["parameters"]["to_release"] >= metrics["parameters"]["from_release"] and metrics["conversion"]
-    assert synthetic_track_tests.history_travel_testing_random(1.0, verbose=False) is None
+    drawn = synthetic_track_tests.history_travel_testing_random(1.0, progress=False)  # the report is always returned
+    assert set(drawn["parameters"]) >= {"from_release", "to_release", "from_database", "final_database"}
 
 
 def test_draw_without_a_candidate_is_one_value_and_the_attempts_are_bounded(synthetic_track_tests, monkeypatch):
@@ -379,7 +415,7 @@ def test_draw_without_a_candidate_is_one_value_and_the_attempts_are_bounded(synt
     assert tests.random_dataset_source_generator(38, release_lower_limit=101, **switches) == ("HGNC", 38, 101)
     assert tests.random_dataset_source_generator(38, release_lower_limit=102, **switches) is None
     assert tests.random_dataset_source_generator(37, **switches) is None  # an assembly without external ids
-    with pytest.raises(ValueError, match="leave no database to draw from"):
+    with pytest.raises(InvalidArgumentError, match="leave no database to draw from"):
         tests.random_dataset_source_generator(
             38, include_external=False, include_ensembl=False, for_final_database=True, only_backbone_tests=False
         )
@@ -392,7 +428,7 @@ def test_draw_without_a_candidate_is_one_value_and_the_attempts_are_bounded(synt
         return None if arguments["for_final_database"] else real(self, assembly, **arguments)
 
     monkeypatch.setattr(type(tests), "random_dataset_source_generator", never_a_target)
-    with pytest.raises(ValueError, match="could be drawn in 100 attempts"):
+    with pytest.raises(InvalidArgumentError, match="could be drawn in 100 attempts"):
         tests.history_travel_testing_random_arguments_generator(False, [True, True, True, True])
     assert calls.count(True) == 100  # bounded: one target draw per attempt
 
@@ -400,14 +436,14 @@ def test_draw_without_a_candidate_is_one_value_and_the_attempts_are_bounded(synt
 def test_versions_of_one_id_active_at_the_same_release_are_reported(synthetic_track_tests, monkeypatch):
     """Two versions of one gene id that are both active at a release violate the history; the check must say so."""
     graph = synthetic_track_tests.graph
-    assert synthetic_track_tests.is_range_functions_robust(verbose=False).holds is True
+    assert synthetic_track_tests.is_range_functions_robust(progress=False).holds is True
     real = type(graph).active_ranges
 
     def overlapping(self, node):
         return [[100, 101]] if node == "ENSG00000000001.1" else real(self, node)  # version 2 is active from 101
 
     monkeypatch.setattr(type(graph), "active_ranges", overlapping)
-    result = synthetic_track_tests.is_range_functions_robust(verbose=False)
+    result = synthetic_track_tests.is_range_functions_robust(progress=False)
     assert result.holds is False
     assert result.details["n_overlapping"] == 1
     (pair,) = result.details["overlapping"]
@@ -424,7 +460,7 @@ def test_gene_version_whose_edges_and_history_disagree_is_reported(synthetic_tra
         return ReleaseSet.of([100, 101]) if node == "ENSG00000000002.1" else real(self, node)
 
     monkeypatch.setattr(type(graph), "active_releases", one_release_more)
-    result = synthetic_track_tests.is_id_functions_consistent_ensembl_2(verbose=False)
+    result = synthetic_track_tests.is_id_functions_consistent_ensembl_2(progress=False)
     assert result.holds is False and result.details["n_differing"] == 1
     assert result.details["differing"] == [
         {"node": "ENSG00000000002.1", "edges": [[100, 100]], "history": [[100, 101]]}
@@ -437,12 +473,12 @@ def test_gene_ids_of_the_graph_are_compared_with_the_id_tables_both_ways(synthet
 
     def other_ids(self, frame):
         ids = real(self, frame)
-        if int(self.ensembl_release) == 101 and int(self.genome_assembly) == 38:
+        if int(self.release) == 101 and int(self.assembly) == 38:
             ids = [i for i in ids if i != "ENSG00000000003.1"] + ["ENSG00000000009.1"]
         return ids
 
     monkeypatch.setattr(DatabaseManager, "id_ver_from_df", other_ids)
-    result = synthetic_track_tests.is_id_functions_consistent_ensembl(verbose=False)
+    result = synthetic_track_tests.is_id_functions_consistent_ensembl(progress=False)
     assert result.holds is False and result.details["compared"] == 4 and result.details["n_differing"] == 1
     assert result.details["differing"] == [
         {
@@ -463,15 +499,15 @@ def serve_external_table(monkeypatch, rows):
     """
     real = DatabaseManager.get_db
 
-    def get_db(self, df_indicator, *args, **kwargs):
-        if df_indicator != "external_relevant":
-            return real(self, df_indicator, *args, **kwargs)
-        release = int(self.ensembl_release)
+    def get_db(self, table_key, *args, **kwargs):
+        if table_key != "external_relevant":
+            return real(self, table_key, *args, **kwargs)
+        release = int(self.release)
         frame = pd.DataFrame(
             [
                 {"release": release, "graph_id": graph_id, "id_db": external, "name_db": database}
                 for at, graph_id, external, database in rows
-                if at == release and int(self.genome_assembly) == 38
+                if at == release and int(self.assembly) == 38
             ],
             columns=["release", "graph_id", "id_db", "name_db"],
         )
@@ -486,14 +522,14 @@ TP53_ROWS = [(100, "ENSG00000000001.1", "TP53", "HGNC"), (101, "ENSG00000000001.
 def test_external_ids_of_the_graph_are_compared_with_the_tables(synthetic_track_tests, monkeypatch):
     """The check passes when graph and tables agree and fails when the graph lacks an id of the tables."""
     serve_external_table(monkeypatch, TP53_ROWS)
-    agree = synthetic_track_tests.is_id_functions_consistent_external(verbose=False)
+    agree = synthetic_track_tests.is_id_functions_consistent_external(progress=False)
     assert agree.holds is True and agree.details == {"compared": 2, "n_differing": 0, "differing": []}
     # one node per identifier whatever its letter case: the tables may write it otherwise
     serve_external_table(monkeypatch, [(release, gene, "Tp53", database) for release, gene, _, database in TP53_ROWS])
-    assert synthetic_track_tests.is_id_functions_consistent_external(verbose=False).holds is True
+    assert synthetic_track_tests.is_id_functions_consistent_external(progress=False).holds is True
 
     serve_external_table(monkeypatch, TP53_ROWS + [(101, "ENSG00000000003.1", "KRAS", "HGNC")])
-    lacking = synthetic_track_tests.is_id_functions_consistent_external(verbose=False)
+    lacking = synthetic_track_tests.is_id_functions_consistent_external(progress=False)
     assert lacking.holds is False
     assert lacking.details["differing"] == [
         {
@@ -508,14 +544,14 @@ def test_external_ids_of_the_graph_are_compared_with_the_tables(synthetic_track_
     ]
     # a database of the tables that the graph does not have at all is a difference too
     serve_external_table(monkeypatch, TP53_ROWS + [(100, "ENSG00000000002.1", "Q1", "UniProt")])
-    other = synthetic_track_tests.is_id_functions_consistent_external(verbose=False)
+    other = synthetic_track_tests.is_id_functions_consistent_external(progress=False)
     assert other.holds is False and other.details["differing"][0]["database"] == "UniProt"
 
 
 def test_external_id_that_only_the_graph_has_is_reported(synthetic_track_tests, monkeypatch):
     """An external id in the graph that Ensembl's tables do not hold is an inconsistency."""
     serve_external_table(monkeypatch, [])  # the tables hold no id of HGNC; the graph has TP53 at both releases
-    result = synthetic_track_tests.is_id_functions_consistent_external(verbose=False)
+    result = synthetic_track_tests.is_id_functions_consistent_external(progress=False)
     assert result.holds is False and result.details["n_differing"] == 2
     assert [(d["release"], d["missing"], d["extra"]) for d in result.details["differing"]] == [
         (100, [], ["tp53"]),
@@ -524,14 +560,14 @@ def test_external_id_that_only_the_graph_has_is_reported(synthetic_track_tests, 
     # an identifier of the tables that is an Ensembl id of the graph is no external identifier there
     serve_external_table(monkeypatch, TP53_ROWS + [(101, "ENSG00000000003.1", "ENSG00000000001", "HGNC")])
     monkeypatch.setitem(synthetic_track_tests.graph.graph, "misplaced_external_entry", {"ENSG00000000001"})
-    assert synthetic_track_tests.is_id_functions_consistent_external(verbose=False).holds is True
+    assert synthetic_track_tests.is_id_functions_consistent_external(progress=False).holds is True
 
 
 def test_final_conversion_check_passes_when_the_conversions_equal_the_tables(synthetic_track_tests, monkeypatch):
     """The check of gene-to-database conversions converts the genes of the release and compares with the tables."""
     serve_external_table(monkeypatch, TP53_ROWS)
     result = synthetic_track_tests.is_final_external_conversion_robust(
-        database="HGNC", ens_rel=101, verbose=False, convert_using_release=True
+        final_database="HGNC", to_release=101, progress=False, convert_using_release=True
     )
     assert result.holds is True and bool(result) is True
     details = result.details
@@ -543,14 +579,14 @@ def test_final_conversion_check_passes_when_the_conversions_equal_the_tables(syn
 
     serve_external_table(monkeypatch, [(101, "ENSG00000000001.2", "KRAS", "HGNC")])  # the tables say otherwise
     result = synthetic_track_tests.is_final_external_conversion_robust(
-        database="HGNC", ens_rel=101, verbose=False, convert_using_release=True
+        final_database="HGNC", to_release=101, progress=False, convert_using_release=True
     )
     assert result.holds is False and not result
     assert result.details["different"] == [{"id": "ENSG00000000001.2", "converted": ["TP53"], "expected": ["KRAS"]}]
 
     serve_external_table(monkeypatch, [])  # the tables give the gene no id, and it is converted to one
     result = synthetic_track_tests.is_final_external_conversion_robust(
-        database="HGNC", ens_rel=101, verbose=False, convert_using_release=True
+        final_database="HGNC", to_release=101, progress=False, convert_using_release=True
     )
     assert result.holds is False
     assert result.details["unexpected"] == [{"id": "ENSG00000000001.2", "converted": ["TP53"]}]
@@ -559,9 +595,9 @@ def test_final_conversion_check_passes_when_the_conversions_equal_the_tables(syn
 def test_final_conversion_check_fails_when_a_gene_with_an_id_is_lost(synthetic_track_tests, monkeypatch):
     """A gene that the tables give an id in the database and that the converter loses is a failure of the check."""
     serve_external_table(monkeypatch, TP53_ROWS)
-    monkeypatch.setattr(synthetic_track_tests, "convert", lambda **arguments: None, raising=False)
+    monkeypatch.setattr(synthetic_track_tests.track, "convert", _nothing_found)
     result = synthetic_track_tests.is_final_external_conversion_robust(
-        database="HGNC", ens_rel=101, verbose=False, convert_using_release=True
+        final_database="HGNC", to_release=101, progress=False, convert_using_release=True
     )
     assert result.details["run"]["conversion"] == {}
     assert result.details["lost_with_id"] == ["ENSG00000000001.2"]  # the converter lost the gene of TP53
@@ -571,9 +607,9 @@ def test_final_conversion_check_fails_when_a_gene_with_an_id_is_lost(synthetic_t
     def crashes(**arguments):
         raise RuntimeError("the converter crashed")
 
-    monkeypatch.setattr(synthetic_track_tests, "convert", crashes, raising=False)
+    monkeypatch.setattr(synthetic_track_tests.track, "convert", crashes)
     result = synthetic_track_tests.is_final_external_conversion_robust(
-        database="HGNC", ens_rel=101, verbose=False, convert_using_release=True
+        final_database="HGNC", to_release=101, progress=False, convert_using_release=True
     )
     assert result.holds is False and result.details["failed"] == ["ENSG00000000001.2", "ENSG00000000003.1"]
 
@@ -584,11 +620,11 @@ def test_final_conversion_check_draws_a_database_of_gene_ids_at_a_release_it_has
     drawn = set()
     for seed in range(12):
         random.seed(seed)
-        result = synthetic_track_tests.is_final_external_conversion_robust(verbose=False, convert_using_release=True)
+        result = synthetic_track_tests.is_final_external_conversion_robust(progress=False, convert_using_release=True)
         assert result.holds is True, result.details
         drawn.add((result.details["database"], result.details["release"]))
     assert drawn == {("HGNC", 100), ("HGNC", 101)}
-    only = synthetic_track_tests.is_final_external_conversion_robust(database="HGNC", verbose=False)
+    only = synthetic_track_tests.is_final_external_conversion_robust(final_database="HGNC", progress=False)
     assert only.holds is True and only.details["database"] == "HGNC"
-    at_100 = synthetic_track_tests.is_final_external_conversion_robust(ens_rel=100, verbose=False)
+    at_100 = synthetic_track_tests.is_final_external_conversion_robust(to_release=100, progress=False)
     assert at_100.holds is True and at_100.details["release"] == 100

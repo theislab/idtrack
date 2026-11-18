@@ -28,7 +28,7 @@ jobs:
 
         steps:
             - name: Check out source-code repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
 
             # nbsphinx/nbconvert uses the pandoc CLI for some conversions.
             - name: Install pandoc
@@ -37,18 +37,21 @@ jobs:
                   sudo apt-get install -y pandoc
 
             - name: Set up Python
-              uses: actions/setup-python@v5
+              uses: actions/setup-python@v7
               with:
                   python-version: "3.12"
                   cache: pip
                   cache-dependency-path: |
+                      pyproject.toml
                       docs/requirements.txt
 
             - name: Upgrade pip
               run: python -m pip install --upgrade pip
 
-            - name: Install doc dependencies
-              run: python -m pip install -r docs/requirements.txt
+            # The package with its `harmonize` extra (docs/conf.py reads the version from its installed metadata, and
+            # autodoc imports every module), then the documentation's own tools.
+            - name: Install the package and the doc dependencies
+              run: python -m pip install ".[harmonize]" -r docs/requirements.txt
 
             - name: Build docs (Sphinx HTML)
               run: |
@@ -57,7 +60,7 @@ jobs:
 
             # Upload the rendered site so the deploy job can publish without rebuilding.
             - name: Upload built docs
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: docs-html
                   path: docs/_build/html
@@ -77,7 +80,7 @@ jobs:
 
         steps:
             - name: Download built docs
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v8
               with:
                   name: docs-html
                   path: docs/_build/html

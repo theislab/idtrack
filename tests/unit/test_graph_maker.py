@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for idtrack._graph_maker module.
+"""Unit tests for idtrack.build.builder module.
 
 These tests exercise real GraphMaker logic using tiny synthetic Ensembl tables to
 avoid multi-GB downloads while still validating important graph-building
@@ -13,10 +13,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from idtrack._database_manager import DatabaseManager
-from idtrack._db import DB
-from idtrack._graph_maker import GraphMaker
-from idtrack._the_graph import TheGraph
+from idtrack import ids
+from idtrack.build.builder import GraphMaker
+from idtrack.build.database_manager import DatabaseManager
+from idtrack.errors import ExternalsError, GraphFileError, InvalidArgumentError
+from idtrack.graph import TheGraph, files
 
 
 @dataclass(frozen=True)
@@ -87,12 +88,12 @@ def synthetic_graph_dm(tmp_path, monkeypatch) -> DatabaseManager:
     """Latest-release DatabaseManager backed by synthetic MySQL tables."""
     synthetic = _synthetic_graph_mysql()
 
-    def _fake_core_index(*, organism: str, genome_assembly: int, **_):  # noqa: ARG001
+    def _fake_core_index(*, organism: str, assembly: int, **_):  # noqa: ARG001
         releases = list(synthetic.available_releases)
-        db_for_release = {r: f"{organism}_core_{r}_{genome_assembly}" for r in releases}
+        db_for_release = {r: f"{organism}_core_{r}_{assembly}" for r in releases}
         return {
             "organism": organism,
-            "genome_assembly": genome_assembly,
+            "genome_assembly": assembly,
             "ports": (3306,),
             "releases_by_port": {3306: set(releases)},
             "db_by_port_release": {3306: db_for_release.copy()},
@@ -102,11 +103,11 @@ def synthetic_graph_dm(tmp_path, monkeypatch) -> DatabaseManager:
             "releases_on_mysql": releases,
         }
 
-    def _available_releases_versions(self: DatabaseManager, **kwargs) -> list[int]:
+    def _available_releases(self: DatabaseManager, **kwargs) -> list[int]:
         return list(synthetic.available_releases)
 
     def _download_table(self: DatabaseManager, table_key: str, usecols: list[str] | None = None) -> pd.DataFrame:
-        df = synthetic.tables_by_release[int(self.ensembl_release)].get(table_key)
+        df = synthetic.tables_by_release[int(self.release)].get(table_key)
         if df is None:
             return pd.DataFrame()
         if usecols is None:
@@ -114,9 +115,9 @@ def synthetic_graph_dm(tmp_path, monkeypatch) -> DatabaseManager:
         return df.loc[:, usecols].copy(deep=True)
 
     def _create_external_all(
-        self: DatabaseManager, return_mode: str, narrow_external: bool = True, **kwargs  # noqa: ARG002
+        self: DatabaseManager, narrow_external: bool = True, **kwargs  # noqa: ARG002
     ) -> pd.DataFrame:
-        release = int(self.ensembl_release)
+        release = int(self.release)
         graph_id = "ENSG00000000001.1" if release == 100 else "ENSG00000000001.2"
         return pd.DataFrame(
             [
@@ -141,7 +142,7 @@ def synthetic_graph_dm(tmp_path, monkeypatch) -> DatabaseManager:
             ]
         )
 
-    monkeypatch.setattr(DatabaseManager, "available_releases_versions", _available_releases_versions)
+    monkeypatch.setattr(DatabaseManager, "available_releases", property(_available_releases))
     monkeypatch.setattr(DatabaseManager, "download_table", _download_table)
     monkeypatch.setattr(DatabaseManager, "create_external_all", _create_external_all)
     monkeypatch.setattr(DatabaseManager, "_get_core_db_index", classmethod(lambda cls, **kw: _fake_core_index(**kw)))
@@ -150,50 +151,60 @@ def synthetic_graph_dm(tmp_path, monkeypatch) -> DatabaseManager:
         organism="homo_sapiens",
         form="gene",
         local_repository=str(tmp_path),
-        ensembl_release=101,
-        ignore_before=100,
-        ignore_after=101,
-        genome_assembly=38,
+        release=101,
+        first_release=100,
+        snapshot_release=101,
+        assembly=38,
         store_raw_always=True,
     )
 
 
-def test_construct_graph_form_builds_time_travel_edges(synthetic_graph_dm):
-    """Construct a per-form graph and validate backbone edges."""
+def _history_of(maker: GraphMaker, database_manager: DatabaseManager) -> tuple[dict, dict]:
+    """Return the history of the gene form as ``{(source, target): [edge attributes]}`` and its report."""
+    edges, report = maker.history(database_manager, narrow=False)
+    by_pair: dict[tuple[str, str], list[dict]] = {}
+    for old, new, old_release, new_release, weight, key in edges:
+        by_pair.setdefault((old, new), []).append(
+            {"old_release": old_release, "new_release": new_release, "weight": weight, "key": key}
+        )
+    return by_pair, report
+
+
+def test_history_builds_time_travel_edges(synthetic_graph_dm):
+    """The history of the gene form: the edges of every id with itself and of Ensembl's events, and its report."""
     gm = GraphMaker(synthetic_graph_dm)
-    g = gm.construct_graph_form(narrow=False, db_manager=synthetic_graph_dm.change_form("gene"))
+    edges, report = _history_of(gm, synthetic_graph_dm.change_form("gene"))
+    nodes = {n for pair in edges for n in pair}
 
-    assert isinstance(g, TheGraph)
-
-    assert "ENSG00000000001.1" in g.nodes
-    assert "ENSG00000000001.2" in g.nodes
-    assert "ENSG00000000002.1" in g.nodes
-    assert "ENSG00000000003.1" in g.nodes
+    assert "ENSG00000000001.1" in nodes
+    assert "ENSG00000000001.2" in nodes
+    assert "ENSG00000000002.1" in nodes
+    assert "ENSG00000000003.1" in nodes
 
     # ID-change edge comes from the stable_id_event row ENSG2 → ENSG3.
-    assert g.has_edge("ENSG00000000002.1", "ENSG00000000003.1")
-    edge_data = next(iter(g.get_edge_data("ENSG00000000002.1", "ENSG00000000003.1").values()))
+    assert ("ENSG00000000002.1", "ENSG00000000003.1") in edges
+    edge_data = edges[("ENSG00000000002.1", "ENSG00000000003.1")][0]
     assert edge_data["old_release"] == 100
     assert edge_data["new_release"] == 101
     # narrow=False path: the session metadata is in the report of the history, not on every edge.
-    (session,) = g.graph["history"]["sessions"]
+    (session,) = report["sessions"]
     assert session["mapping_session_id"] == 1 and session["used"] == [100, 101]
     assert session["new_db_name"] == "homo_sapiens_core_101_38"
 
     # Version-change edge is created from df_w lookup (ENSG1.1 → ENSG1.2).
-    assert g.has_edge("ENSG00000000001.1", "ENSG00000000001.2")
+    assert ("ENSG00000000001.1", "ENSG00000000001.2") in edges
 
     # Birth/retirement scaffolding should exist due to ENSG5 (birth) and ENSG4 (retirement).
-    assert any(data.get("Version") == DB.no_old_node_id for _, data in g.nodes(data=True))
-    assert any(data.get("Version") == DB.no_new_node_id for _, data in g.nodes(data=True))
+    assert any(ids.split(n)[1] == ids.VOID for n in nodes)
+    assert any(ids.split(n)[1] == ids.RETIRED for n in nodes)
 
     # Ids of the latest release carry the self-loop to infinity; earlier versions do not.
-    assert g.get_edge_data("ENSG00000000001.2", "ENSG00000000001.2")[0]["new_release"] == float("inf")
-    assert not g.has_edge("ENSG00000000001.1", "ENSG00000000001.1")
-    assert g.get_edge_data("ENSG00000000001.1", "ENSG00000000001.2")[0]["weight"] == 0.8
+    assert edges[("ENSG00000000001.2", "ENSG00000000001.2")][0]["new_release"] == float("inf")
+    assert ("ENSG00000000001.1", "ENSG00000000001.1") not in edges
+    assert edges[("ENSG00000000001.1", "ENSG00000000001.2")][0]["weight"] == 0.8
 
 
-def test_construct_graph_form_handles_clean_handoff_assemblies(tmp_path, monkeypatch):
+def test_history_handles_clean_handoff_assemblies(tmp_path, monkeypatch):
     """The GraphMaker should traverse releases even when assemblies change across the snapshot window."""
     tables_by_release = {
         100: {
@@ -262,21 +273,21 @@ def test_construct_graph_form_handles_clean_handoff_assemblies(tmp_path, monkeyp
         },
     }
 
-    def _fake_core_index(*, organism: str, genome_assembly: int, **_):
+    def _fake_core_index(*, organism: str, assembly: int, **_):
         if organism != "mus_musculus":
             raise ValueError("unexpected organism")
-        if int(genome_assembly) == 39:
+        if int(assembly) == 39:
             releases = [101]
-        elif int(genome_assembly) == 38:
+        elif int(assembly) == 38:
             releases = [100]
-        elif int(genome_assembly) == 37:
+        elif int(assembly) == 37:
             releases = []
         else:
             releases = []
-        db_for_release = {r: f"{organism}_core_{r}_{genome_assembly}" for r in releases}
+        db_for_release = {r: f"{organism}_core_{r}_{assembly}" for r in releases}
         return {
             "organism": organism,
-            "genome_assembly": int(genome_assembly),
+            "genome_assembly": int(assembly),
             "ports": (3306,),
             "releases_by_port": {3306: set(releases)},
             "db_by_port_release": {3306: db_for_release.copy()},
@@ -286,12 +297,12 @@ def test_construct_graph_form_handles_clean_handoff_assemblies(tmp_path, monkeyp
             "releases_on_mysql": releases,
         }
 
-    def _available_releases_versions(self: DatabaseManager, **kwargs) -> list[int]:  # noqa: ARG002
-        core_index = _fake_core_index(organism=self.organism, genome_assembly=int(self.genome_assembly))
-        return sorted(r for r in core_index["releases"] if self.ignore_after >= r >= self.ignore_before)
+    def _available_releases(self: DatabaseManager, **kwargs) -> list[int]:  # noqa: ARG002
+        core_index = _fake_core_index(organism=self.organism, assembly=int(self.assembly))
+        return sorted(r for r in core_index["releases"] if self.snapshot_release >= r >= self.first_release)
 
     def _download_table(self: DatabaseManager, table_key: str, usecols: list[str] | None = None) -> pd.DataFrame:
-        df = tables_by_release[int(self.ensembl_release)].get(table_key)
+        df = tables_by_release[int(self.release)].get(table_key)
         if df is None:
             return pd.DataFrame()
         if usecols is None:
@@ -299,35 +310,36 @@ def test_construct_graph_form_handles_clean_handoff_assemblies(tmp_path, monkeyp
         return df.loc[:, usecols].copy(deep=True)
 
     monkeypatch.setattr(DatabaseManager, "_get_core_db_index", classmethod(lambda cls, **kw: _fake_core_index(**kw)))
-    monkeypatch.setattr(DatabaseManager, "available_releases_versions", _available_releases_versions)
+    monkeypatch.setattr(DatabaseManager, "available_releases", property(_available_releases))
     monkeypatch.setattr(DatabaseManager, "download_table", _download_table)
 
     dm = DatabaseManager(
         organism="mus_musculus",
         form="gene",
         local_repository=str(tmp_path),
-        ensembl_release=101,
-        ignore_before=100,
-        ignore_after=101,
-        genome_assembly=39,
+        release=101,
+        first_release=100,
+        snapshot_release=101,
+        assembly=39,
         store_raw_always=True,
     )
 
-    g = GraphMaker(dm).construct_graph_form(narrow=False, db_manager=dm.change_form("gene"))
+    maker = GraphMaker(dm)
+    edges, _ = _history_of(maker, dm.change_form("gene"))
 
-    assert g.has_edge("ENSG00000000001.1", "ENSG00000000001.2")
-    assert 100 in set(g.graph.get("confident_for_release", []))
-    assert 101 in set(g.graph.get("confident_for_release", []))
+    assert ("ENSG00000000001.1", "ENSG00000000001.2") in edges
+    assert 100 in set(maker.graph_releases())
+    assert 101 in set(maker.graph_releases())
 
 
 def test_construct_graph_adds_base_nodes_and_merges_case_insensitive_externals(synthetic_graph_dm):
     """Ensure base nodes exist and externals are case-insensitive."""
     gm = GraphMaker(synthetic_graph_dm)
-    g = gm.construct_graph(narrow=True, form_list=["gene"], narrow_external=True)
+    g = gm.construct_graph(narrow=True, forms=["gene"], narrow_external=True)
 
     # Versionless base nodes should be connected for versioned organisms.
     assert "ENSG00000000001" in g.nodes
-    assert g.nodes["ENSG00000000001"][DB.node_type_str] == DB.nts_base_ensembl["gene"]
+    assert g.nodes["ENSG00000000001"][ids.NODE_TYPE_KEY] == ids.BASE_ENSEMBL_TYPE["gene"]
     assert g.has_edge("ENSG00000000001", "ENSG00000000001.1") or g.has_edge("ENSG00000000001", "ENSG00000000001.2")
 
     # External IDs differing only by case are one node, named with the upper-case spelling here (both spellings
@@ -340,7 +352,7 @@ def test_construct_graph_adds_base_nodes_and_merges_case_insensitive_externals(s
     assert targets, "Expected at least one external → Ensembl edge"
     target = targets[0]
     edge_data = next(iter(g.get_edge_data(ext_node, target).values()))
-    assert DB.connection_dict in edge_data
+    assert ids.CONNECTION_KEY in edge_data
     assert "available_releases" in edge_data
     assert 100 in edge_data["available_releases"] or 101 in edge_data["available_releases"]
 
@@ -359,8 +371,6 @@ def test_construct_graph_warns_once_about_releases_missing_from_externals_yaml(s
                     "gene": {
                         "HGNC": {
                             "Assembly": {"38": {"Ensembl release": "101", "Include": True}},
-                            "Database Index": 0,
-                            "Potential Synonymous": "",
                         }
                     }
                 }
@@ -371,7 +381,7 @@ def test_construct_graph_warns_once_about_releases_missing_from_externals_yaml(s
     gm = GraphMaker(synthetic_graph_dm)
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        g = gm.construct_graph(narrow=True, form_list=["gene"], narrow_external=True)
+        g = gm.construct_graph(narrow=True, forms=["gene"], narrow_external=True)
     messages = [
         str(w.message) for w in caught if issubclass(w.category, UserWarning) and "externals YAML" in str(w.message)
     ]
@@ -388,30 +398,30 @@ def test_construct_graph_warns_once_about_releases_missing_from_externals_yaml(s
 
 def test_construct_graph_without_externals_yaml_fails_before_building(synthetic_graph_dm, monkeypatch):
     """An organism without any externals YAML stops at once with a message naming the file to create."""
-    from idtrack._external_databases import ExternalDatabases
+    from idtrack.build.externals import ExternalDatabases
 
     missing = os.path.join(synthetic_graph_dm.local_repository, "absent", "homo_sapiens_externals_modified.yml")
-    monkeypatch.setattr(ExternalDatabases, "file_name_modified_yaml", lambda self, mode: missing)
+    monkeypatch.setattr(ExternalDatabases, "file_name_modified_yaml", lambda self, location: missing)
 
     def _must_not_run(*args, **kwargs):
         raise AssertionError("the history graph must not be built without an externals YAML")
 
     monkeypatch.setattr(GraphMaker, "history", _must_not_run)
     gm = GraphMaker(synthetic_graph_dm)
-    with pytest.raises(FileNotFoundError, match="create_template_yaml"):
-        gm.construct_graph(narrow=True, form_list=["gene"], narrow_external=True)
+    with pytest.raises(ExternalsError, match="create_template_yaml"):
+        gm.construct_graph(narrow=True, forms=["gene"], narrow_external=True)
 
 
 def test_get_graph_roundtrips_graph_file(synthetic_graph_dm):
     """Ensure get_graph writes the graph file and reads it back."""
     gm = GraphMaker(synthetic_graph_dm)
 
-    file_path = gm.create_file_name(narrow=True, form_list=["gene"])
+    file_path = gm.create_file_name(narrow=True, forms=["gene"])
     g1 = gm.get_graph(
         narrow=True,
         create_even_if_exist=True,
         save_after_calculation=True,
-        form_list=["gene"],
+        forms=["gene"],
     )
     assert os.path.exists(file_path)
 
@@ -419,28 +429,28 @@ def test_get_graph_roundtrips_graph_file(synthetic_graph_dm):
         narrow=True,
         create_even_if_exist=False,
         save_after_calculation=False,
-        form_list=["gene"],
+        forms=["gene"],
     )
     assert isinstance(g2, TheGraph)
     assert list(g1.nodes) == list(g2.nodes)
     assert all(repr(g1.get_edge_data(u, v)) == repr(g2.get_edge_data(u, v)) for u in g1.nodes for v in g1.neighbors(u))
     assert g2.manifest == g1.manifest
 
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(GraphFileError, match="does-not-exist.npz"):
         TheGraph.load(os.path.join(synthetic_graph_dm.local_repository, "does-not-exist.npz"))
 
 
 def test_get_graph_without_saving_writes_nothing(synthetic_graph_dm):
     """save_after_calculation=False leaves the local repository without a graph file."""
     gm = GraphMaker(synthetic_graph_dm)
-    gm.get_graph(narrow=True, save_after_calculation=False, form_list=["gene"])
-    assert GraphMaker.list_graph_files(synthetic_graph_dm.local_repository) == []
+    gm.get_graph(narrow=True, save_after_calculation=False, forms=["gene"])
+    assert files.list_graph_files(synthetic_graph_dm.local_repository) == []
 
 
 def test_graph_maker_requires_latest_release(synthetic_graph_dm):
     """Ensure GraphMaker requires constructing from the latest release."""
     older = synthetic_graph_dm.change_release(100)
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidArgumentError):
         GraphMaker(older)
 
 
@@ -449,12 +459,11 @@ def test_graph_maker_explains_how_to_build_an_older_snapshot():
     """A manager anchored before the end of its window is refused with the call that builds that snapshot."""
     from types import SimpleNamespace
 
-    from idtrack._graph_maker import GraphMaker
+    from idtrack.build.builder import GraphMaker
 
-    dm = SimpleNamespace(ensembl_release=93, available_releases=[92, 93, 94])
-    with pytest.raises(ValueError, match=r"newest release of the manager's window \(94\).*snapshot_release=93"):
+    dm = SimpleNamespace(release=93, available_releases=[92, 93, 94])
+    with pytest.raises(
+        InvalidArgumentError, match=r"newest release of the manager's window \(94\).*snapshot_release=93"
+    ):
         GraphMaker(dm)
-    assert (
-        GraphMaker(SimpleNamespace(ensembl_release=94, available_releases=[92, 93, 94])).db_manager.ensembl_release
-        == 94
-    )
+    assert GraphMaker(SimpleNamespace(release=94, available_releases=[92, 93, 94])).database_manager.release == 94

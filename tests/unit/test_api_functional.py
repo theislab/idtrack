@@ -1,317 +1,159 @@
-#!/usr/bin/env python3
-"""Functional tests for idtrack._api module.
+"""Functional tests of :py:meth:`idtrack.API.classify` and :py:meth:`idtrack.API.classification_summary`.
 
-These tests actually execute code paths to increase coverage.
+The results are made by hand.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from idtrack._api import API
+from idtrack import errors
+from idtrack.api import API
+from idtrack.results import Candidate, ConversionResult
 
 
-class TestClassifyMultipleConversion:
-    """Functional tests for classify_multiple_conversion method."""
-
-    @pytest.fixture
-    def api(self, tmp_path):
-        """Create an API instance without building graph."""
-        return API(str(tmp_path))
-
-    def test_no_corresponding_case(self, api):
-        """Test handling of no_corresponding matches."""
-        matchings = [
-            {
-                "query_id": "INVALID",
-                "target_id": [],
-                "no_corresponding": True,
-                "no_conversion": False,
-                "no_target": False,
-            }
-        ]
-        result = api.classify_multiple_conversion(matchings)
-
-        assert len(result["matching_1_to_0"]) == 1
-        assert len(result["input_identifiers"]) == 1
-        assert len(result["matching_1_to_1"]) == 0
-
-    def test_no_conversion_case(self, api):
-        """Test handling of no_conversion matches."""
-        matchings = [
-            {
-                "query_id": "OLD_ID",
-                "target_id": [],
-                "no_corresponding": False,
-                "no_conversion": True,
-                "no_target": False,
-            }
-        ]
-        result = api.classify_multiple_conversion(matchings)
-
-        assert len(result["matching_1_to_0"]) == 1
-
-    def test_one_to_one_same_id(self, api):
-        """Test 1:1 mapping where target equals query."""
-        matchings = [
-            {
-                "query_id": "GENE1",
-                "target_id": ["GENE1"],
-                "no_corresponding": False,
-                "no_conversion": False,
-                "no_target": False,
-            }
-        ]
-        result = api.classify_multiple_conversion(matchings)
-
-        assert len(result["matching_1_to_1"]) == 1
-        assert len(result["changed_only_1_to_1"]) == 0  # Same ID, not changed
-
-    def test_one_to_one_changed(self, api):
-        """Test 1:1 mapping where target differs from query."""
-        matchings = [
-            {
-                "query_id": "GENE1",
-                "target_id": ["GENE2"],
-                "no_corresponding": False,
-                "no_conversion": False,
-                "no_target": False,
-            }
-        ]
-        result = api.classify_multiple_conversion(matchings)
-
-        assert len(result["matching_1_to_1"]) == 1
-        assert len(result["changed_only_1_to_1"]) == 1
-
-    def test_one_to_n_with_original(self, api):
-        """Test 1:n mapping where original ID is in targets."""
-        matchings = [
-            {
-                "query_id": "GENE1",
-                "target_id": ["GENE1", "GENE2", "GENE3"],
-                "no_corresponding": False,
-                "no_conversion": False,
-                "no_target": False,
-            }
-        ]
-        result = api.classify_multiple_conversion(matchings)
-
-        assert len(result["matching_1_to_n"]) == 1
-        assert len(result["changed_only_1_to_n"]) == 0  # Original ID present
-
-    def test_one_to_n_all_changed(self, api):
-        """Test 1:n mapping where all targets differ."""
-        matchings = [
-            {
-                "query_id": "GENE1",
-                "target_id": ["GENE2", "GENE3"],
-                "no_corresponding": False,
-                "no_conversion": False,
-                "no_target": False,
-            }
-        ]
-        result = api.classify_multiple_conversion(matchings)
-
-        assert len(result["matching_1_to_n"]) == 1
-        assert len(result["changed_only_1_to_n"]) == 1
-
-    def test_alternative_target_one_to_one(self, api):
-        """Test alternative target (no_target=True) with single result."""
-        matchings = [
-            {
-                "query_id": "GENE1",
-                "target_id": ["ENSG123"],  # Ensembl fallback
-                "no_corresponding": False,
-                "no_conversion": False,
-                "no_target": True,
-            }
-        ]
-        result = api.classify_multiple_conversion(matchings)
-
-        assert len(result["alternative_target_1_to_1"]) == 1
-        assert len(result["matching_1_to_1"]) == 0  # Goes to alternative_target
-
-    def test_alternative_target_one_to_n(self, api):
-        """Test alternative target with multiple results."""
-        matchings = [
-            {
-                "query_id": "GENE1",
-                "target_id": ["ENSG123", "ENSG456"],
-                "no_corresponding": False,
-                "no_conversion": False,
-                "no_target": True,
-            }
-        ]
-        result = api.classify_multiple_conversion(matchings)
-
-        assert len(result["alternative_target_1_to_n"]) == 1
-
-    def test_empty_target_raises(self, api):
-        """Test that empty target_id with valid flags raises error."""
-        matchings = [
-            {
-                "query_id": "GENE1",
-                "target_id": [],
-                "no_corresponding": False,
-                "no_conversion": False,
-                "no_target": False,
-            }
-        ]
-        with pytest.raises(ValueError, match="Unexpected"):
-            api.classify_multiple_conversion(matchings)
-
-    def test_multiple_mixed_results(self, api):
-        """Test classification with multiple varied results."""
-        matchings = [
-            # No corresponding
-            {"query_id": "A", "target_id": [], "no_corresponding": True, "no_conversion": False, "no_target": False},
-            # 1:1 same
-            {
-                "query_id": "B",
-                "target_id": ["B"],
-                "no_corresponding": False,
-                "no_conversion": False,
-                "no_target": False,
-            },
-            # 1:1 changed
-            {
-                "query_id": "C",
-                "target_id": ["D"],
-                "no_corresponding": False,
-                "no_conversion": False,
-                "no_target": False,
-            },
-            # 1:n all changed
-            {
-                "query_id": "E",
-                "target_id": ["F", "G"],
-                "no_corresponding": False,
-                "no_conversion": False,
-                "no_target": False,
-            },
-            # Alternative target
-            {"query_id": "H", "target_id": ["I"], "no_corresponding": False, "no_conversion": False, "no_target": True},
-        ]
-        result = api.classify_multiple_conversion(matchings)
-
-        assert len(result["input_identifiers"]) == 5
-        assert len(result["matching_1_to_0"]) == 1
-        assert len(result["matching_1_to_1"]) == 2
-        assert len(result["changed_only_1_to_1"]) == 1
-        assert len(result["matching_1_to_n"]) == 1
-        assert len(result["changed_only_1_to_n"]) == 1
-        assert len(result["alternative_target_1_to_1"]) == 1
+def result(
+    query_id: str, targets: list[str], status: str = "converted", best: list[bool] | None = None
+) -> ConversionResult:
+    """A conversion result of *query_id* with *targets* (each through a gene of its own name), made by hand."""
+    found = status in ("converted", "tie", "no_target")
+    flags = best if best is not None else [True] * len(targets)
+    candidates = tuple(
+        Candidate(
+            gene=t,
+            target=t,
+            best=flag,
+            entry_gene=t,
+            entry_support=1,
+            own_version=False,
+            final_confidence=0,
+            bridges=0,
+            bridge_gap=0,
+            score=1.0,
+            same_as_query=t == query_id,
+            external_steps=0,
+            history_steps=0,
+            annotation=None,
+        )
+        for t, flag in zip(targets, flags)
+    )
+    return ConversionResult(
+        query_id=query_id,
+        graph_id=None if status == "not_found" else query_id,
+        match=None if status == "not_found" else "exact",
+        known_versions=(),
+        from_release=None,
+        from_release_inferred=True,
+        from_release_given=None,
+        from_release_fallback=False,
+        from_databases=(),
+        to_release=101,
+        final_database="ensembl_gene" if found else None,
+        candidates=candidates if found else (),
+        tie=found and len(targets) > 1,
+        decided_by=None,
+        alternative_locus_genes=(),
+        no_target=status == "no_target",
+        no_target_genes=(),
+        status=status,
+        reason=None if found else ("not_in_graph" if status == "not_found" else "no_path_to_target"),
+    )
 
 
-class TestAPIInitialization:
-    """Functional tests for API initialization."""
+class TestClassify:
+    """API.classify bins results by the targets of a view."""
 
-    def test_init_creates_instance(self, tmp_path):
-        """Test API can be initialized."""
-        api = API(str(tmp_path))
-        assert api.local_repository == str(tmp_path)
-        assert api.track is None
+    def test_not_found_case(self):
+        """An id not found goes to the 1-to-0 bin and is counted as an input."""
+        out = API.classify([result("INVALID", [], "not_found")])
+        assert len(out["matching_1_to_0"]) == 1
+        assert len(out["input_identifiers"]) == 1
+        assert len(out["matching_1_to_1"]) == 0
 
-    def test_configure_logger_configures_only_the_package_logger(self, tmp_path):
-        """configure_logger touches the "idtrack" logger, never the root logger, and adds one handler only."""
-        import logging
+    def test_no_conversion_case(self):
+        """A result without a conversion goes to the 1-to-0 bin."""
+        out = API.classify([result("OLD_ID", [], "no_conversion")])
+        assert len(out["matching_1_to_0"]) == 1
 
-        root = logging.getLogger()
-        package = logging.getLogger("idtrack")
-        saved = (root.level, list(root.handlers), package.level, list(package.handlers))
-        try:
-            API(str(tmp_path)).configure_logger()
-            API(str(tmp_path)).configure_logger(level=logging.DEBUG)
-            assert (root.level, list(root.handlers)) == saved[:2]
-            assert package.level == logging.DEBUG
-            assert len(package.handlers) == len(saved[3]) + 1
-        finally:
-            package.setLevel(saved[2])
-            package.handlers[:] = saved[3]
+    def test_one_to_one_same_id(self):
+        """A single target equal to the query is 1-to-1 and not changed."""
+        out = API.classify([result("GENE1", ["GENE1"])])
+        assert len(out["matching_1_to_1"]) == 1
+        assert len(out["changed_only_1_to_1"]) == 0  # Same ID, not changed
+
+    def test_one_to_one_changed(self):
+        """A single target other than the query is 1-to-1 and changed."""
+        out = API.classify([result("GENE1", ["GENE2"])])
+        assert len(out["matching_1_to_1"]) == 1
+        assert len(out["changed_only_1_to_1"]) == 1
+
+    def test_one_to_n_with_original(self):
+        """Several targets that include the query are 1-to-n and not changed."""
+        out = API.classify([result("GENE1", ["GENE1", "GENE2", "GENE3"], "tie")])
+        assert len(out["matching_1_to_n"]) == 1
+        assert len(out["changed_only_1_to_n"]) == 0  # Original ID present
+
+    def test_one_to_n_all_changed(self):
+        """Several targets that exclude the query are 1-to-n and changed."""
+        out = API.classify([result("GENE1", ["GENE2", "GENE3"], "tie")])
+        assert len(out["matching_1_to_n"]) == 1
+        assert len(out["changed_only_1_to_n"]) == 1
+
+    def test_the_view_decides(self):
+        """With strategy "best" only the best candidates count; with "all" every candidate."""
+        mixed = result("GENE1", ["GENE2", "GENE3"], best=[True, False])
+        assert len(API.classify([mixed], "best")["matching_1_to_1"]) == 1
+        assert len(API.classify([mixed], "all")["matching_1_to_n"]) == 1
+
+    def test_alternative_target_one_to_one(self):
+        """A single candidate outside the target database goes to the alternative-target 1-to-1 bin."""
+        out = API.classify([result("GENE1", ["ENSG123"], "no_target")])
+        assert len(out["alternative_target_1_to_1"]) == 1
+        assert len(out["matching_1_to_1"]) == 0  # Goes to alternative_target
+
+    def test_alternative_target_one_to_n(self):
+        """Several candidates outside the target database go to the alternative-target 1-to-n bin."""
+        out = API.classify([result("GENE1", ["ENSG123", "ENSG456"], "no_target")])
+        assert len(out["alternative_target_1_to_n"]) == 1
+
+    def test_result_without_a_best_target_is_an_integrity_error(self):
+        """A result with candidates but none in the view is an internal error, never a silent 1-to-0."""
+        broken = result("GENE1", ["GENE2"], best=[False])
+        with pytest.raises(errors.IntegrityError, match="Unexpected"):
+            API.classify([broken])
+
+    def test_multiple_mixed_results(self):
+        """A mix of results fills each bin with its own results."""
+        out = API.classify(
+            [
+                result("A", [], "not_found"),
+                result("B", ["B"]),
+                result("C", ["D"]),
+                result("E", ["F", "G"], "tie"),
+                result("H", ["I"], "no_target"),
+            ]
+        )
+        assert len(out["input_identifiers"]) == 5
+        assert len(out["matching_1_to_0"]) == 1
+        assert len(out["matching_1_to_1"]) == 2
+        assert len(out["changed_only_1_to_1"]) == 1
+        assert len(out["matching_1_to_n"]) == 1
+        assert len(out["changed_only_1_to_n"]) == 1
+        assert len(out["alternative_target_1_to_1"]) == 1
 
 
-class TestAPIRequireTrack:
-    """Functional tests for _require_track method."""
+class TestClassificationSummary:
+    """API.classification_summary counts bins and statuses."""
 
-    def test_require_track_without_graph(self, tmp_path):
-        """Test _require_track raises when no graph is built."""
-        api = API(str(tmp_path))
-        with pytest.raises(RuntimeError, match="No graph is attached"):
-            api._require_track()
+    def test_summary_of_nothing(self):
+        """The summary of no results reports zero processed."""
+        summary = API.classification_summary(API.classify([]))
+        assert "Total processed: 0" in summary
 
-
-class TestPrintBinnedConversion:
-    """Functional tests for print_binned_conversion method."""
-
-    def test_print_binned_empty(self, tmp_path):
-        """Test print_binned_conversion with empty results."""
-        api = API(str(tmp_path))
-        classified = {
-            "input_identifiers": [],
-            "matching_1_to_0": [],
-            "matching_1_to_1": [],
-            "matching_1_to_n": [],
-            "changed_only_1_to_1": [],
-            "changed_only_1_to_n": [],
-            "alternative_target_1_to_1": [],
-            "alternative_target_1_to_n": [],
-        }
-        # Should not raise
-        api.print_binned_conversion(classified)
-
-    def test_print_binned_with_data(self, tmp_path):
-        """Test print_binned_conversion with sample data."""
-        api = API(str(tmp_path))
-        api.configure_logger()
-
-        classified = {
-            "input_identifiers": [
-                {
-                    "query_id": "A",
-                    "target_id": ["B"],
-                    "no_corresponding": False,
-                    "no_conversion": False,
-                    "no_target": False,
-                },
-                {
-                    "query_id": "C",
-                    "target_id": [],
-                    "no_corresponding": True,
-                    "no_conversion": False,
-                    "no_target": False,
-                },
-            ],
-            "matching_1_to_0": [
-                {
-                    "query_id": "C",
-                    "target_id": [],
-                    "no_corresponding": True,
-                    "no_conversion": False,
-                    "no_target": False,
-                },
-            ],
-            "matching_1_to_1": [
-                {
-                    "query_id": "A",
-                    "target_id": ["B"],
-                    "no_corresponding": False,
-                    "no_conversion": False,
-                    "no_target": False,
-                },
-            ],
-            "matching_1_to_n": [],
-            "changed_only_1_to_1": [
-                {
-                    "query_id": "A",
-                    "target_id": ["B"],
-                    "no_corresponding": False,
-                    "no_conversion": False,
-                    "no_target": False,
-                },
-            ],
-            "changed_only_1_to_n": [],
-            "alternative_target_1_to_1": [],
-            "alternative_target_1_to_n": [],
-        }
-        # Should not raise
-        api.print_binned_conversion(classified)
+    def test_summary_with_data(self):
+        """The summary reports the totals, the share of each bin and the count of each status."""
+        classified = API.classify([result("A", ["B"]), result("C", [], "not_found")])
+        summary = API.classification_summary(classified)
+        assert "Total processed: 2" in summary
+        assert "1→0: 1 (50.0%)" in summary and "1→1: 1 (50.0%)" in summary
+        assert "converted: 1" in summary and "not_found: 1" in summary

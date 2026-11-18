@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 SCRIPT = r"""
-import json, sys
+import dataclasses, json, sys
 sys.path.insert(0, sys.argv[1])
 from test_track import GraphBuilder
 
@@ -31,15 +31,14 @@ track = builder.track()
 answers = []
 for query, arguments in (
     ("A.1", {}),
-    ("A.1", {"prioritize_to_one_filter": True}),
-    ("A.1", {"final_database": "HGNC Symbol", "return_path": True}),
-    ("A.1", {"final_database": "HGNC Symbol", "prioritize_to_one_filter": True, "return_path": True}),
+    ("A.1", {"explain": True}),
+    ("A.1", {"final_database": "HGNC Symbol", "explain": True}),
     ("A", {"to_release": 9}),
-    ("R.1", {"return_path": True}),
-    ("R.1", {"prioritize_to_one_filter": True, "final_database": "EntrezGene"}),
+    ("R.1", {"explain": True}),
+    ("R.1", {"final_database": "EntrezGene"}),
 ):
-    answers.append(track.convert(query, **arguments))
-answers.append(track.identify_source([f"{name}.1" for name in names] + ["A.1"], "ensembl_release"))
+    answers.append(dataclasses.asdict(track.convert(query, **arguments)))
+answers.append(track.identify_source([f"{name}.1" for name in names] + ["A.1"], "release"))
 answers.append(track.identify_source([f"sym_{name}_0" for name in names], "complete"))
 print(json.dumps(answers))
 """
@@ -64,6 +63,7 @@ def test_answers_are_identical_across_hash_seeds(seeds, tmp_path):
         outputs.append(completed.stdout)
     assert len(set(outputs)) == 1
     answers = json.loads(outputs[0])
-    # The split into eight equal genes is truly several: all are returned, in one fixed order.
-    assert list(answers[1]) == sorted(answers[1])
-    assert len(answers[1]) == 8
+    # The split into eight equal genes is truly several: all are the best answer, in one fixed order.
+    best = [c["gene"] for c in answers[1]["candidates"] if c["best"]]
+    assert best == sorted(best)
+    assert len(best) == 8 and answers[1]["tie"] is True

@@ -8,7 +8,6 @@ This module provides:
 - Utility fixtures for common test patterns
 """
 
-import importlib.util
 import os
 import tempfile
 from collections.abc import Generator
@@ -18,7 +17,7 @@ from unittest.mock import MagicMock, patch
 import networkx as nx
 import pytest
 
-from idtrack._db import DB
+from idtrack import settings
 
 # =============================================================================
 # PYTEST CONFIGURATION
@@ -147,7 +146,7 @@ def minimal_multigraph() -> nx.MultiDiGraph:
 @pytest.fixture
 def mock_the_graph(minimal_multigraph):
     """Create a mock TheGraph instance for testing."""
-    from idtrack._the_graph import TheGraph
+    from idtrack.graph import TheGraph
 
     # Create TheGraph and copy data from minimal graph
     graph = TheGraph()
@@ -216,8 +215,6 @@ def sample_external_db_yaml() -> dict:
         "homo_sapiens": {
             "gene": {
                 "HGNC Symbol": {
-                    "Database Index": 0,
-                    "Potential Synonymous": "",
                     "Assembly": {
                         "38": {
                             "Ensembl release": "100,101,102,103,104,105,106,107,108,109,110",
@@ -230,8 +227,6 @@ def sample_external_db_yaml() -> dict:
                     },
                 },
                 "UniProtKB": {
-                    "Database Index": 1,
-                    "Potential Synonymous": "",
                     "Assembly": {
                         "38": {
                             "Ensembl release": "100,101,102,103,104,105,106,107,108,109,110",
@@ -242,8 +237,6 @@ def sample_external_db_yaml() -> dict:
             },
             "transcript": {
                 "RefSeq mRNA": {
-                    "Database Index": 0,
-                    "Potential Synonymous": "",
                     "Assembly": {
                         "38": {
                             "Ensembl release": "100,101,102,103,104,105,106,107,108,109,110",
@@ -257,25 +250,6 @@ def sample_external_db_yaml() -> dict:
 
 
 # =============================================================================
-# SKIP FIXTURES FOR OPTIONAL DEPENDENCIES
-# =============================================================================
-
-
-@pytest.fixture
-def skip_if_no_mygene():
-    """Skip test if mygene is not installed."""
-    if importlib.util.find_spec("mygene") is None:
-        pytest.skip("mygene not installed")
-
-
-@pytest.fixture
-def skip_if_no_gprofiler():
-    """Skip test if gprofiler-official is not installed."""
-    if importlib.util.find_spec("gprofiler") is None:
-        pytest.skip("gprofiler-official not installed")
-
-
-# =============================================================================
 # GRAPHS OF REAL ORGANISMS (BUILT FROM THE CUT ENSEMBL TABLES OF tests/data/real, NO NETWORK)
 # =============================================================================
 
@@ -284,7 +258,7 @@ def skip_if_no_gprofiler():
 def real_world(tmp_path_factory):
     """Return ``get(organism)``: the graph of a real organism, built once per session from its cut tables.
 
-    The graph is built by ``API.build_graph`` from the tables of ``tests/data/real`` with the network refused
+    The graph is built by ``API.build`` from the tables of ``tests/data/real`` with the network refused
     (:py:class:`tests._real_tables.RealWorld`); organisms: ``tests._real_tables.ORGANISMS``.
     """
     from tests._real_tables import RealWorld
@@ -302,7 +276,7 @@ def real_world(tmp_path_factory):
 @pytest.fixture(autouse=True)
 def _fresh_species_cache(monkeypatch):
     """Give every test its own (empty) per-process cache of the Ensembl species list, and no retry waits."""
-    from idtrack._verify_organism import VerifyOrganism
+    from idtrack.build.species import VerifyOrganism
 
     monkeypatch.setattr(VerifyOrganism, "_species_cache", {})
-    monkeypatch.setattr(DB, "rest_retry_wait", 0.0)
+    monkeypatch.setattr(settings.ENSEMBL, "rest_retry_wait", 0.0)
